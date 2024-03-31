@@ -1,10 +1,10 @@
-import './App.css';
 import React from 'react';
-import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
-import { Navigate } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import './App.css';
 
-import Login from "./pages/login";
 import ForgotPassword from './pages/forgotPassword';
+import Login from "./pages/login";
+import SignUp from './pages/sign-up';
 
 function App() {
   return (
@@ -14,6 +14,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<Login/>}/>
           <Route path="/forgot-password" element={<ForgotPassword/>}/>
+          <Route path="/sign-up" element={<SignUp/>}/>
         </Routes>
       </Router>
     </div>
