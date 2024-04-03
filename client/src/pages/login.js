@@ -1,14 +1,7 @@
-<<<<<<< HEAD
-import React, { useState } from 'react';
-import { VscEye, VscEyeClosed } from "react-icons/vsc";
-import { useNavigate } from 'react-router-dom';
-import logo from '../assets/sprachins_logo.png';
-=======
 import React, { useState } from 'react'
 import {Link, useNavigate  } from 'react-router-dom';
 import logo from '../assets/sprachins_logo.png'
 import { VscEyeClosed, VscEye } from "react-icons/vsc";
->>>>>>> parent of c8a5c20 (DELETE everything)
 
 
 function Login() {
