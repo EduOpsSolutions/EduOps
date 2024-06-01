@@ -4,18 +4,18 @@ module.exports = {
   theme: {
     extend: {
         colors:{
-          germanRed: '#DE0000',
-          brightRed: '#FD0100',
-          darkRed: '#890E07',
-          darkRed2: '#700A06',
-          darkRed3: '#550702',
-          darkRed4: '#9F090A',
-          germanBlack: '#000000',
-          germanYellow: '#FFCF00',
-          whiteYellowTone: '#FFFDF2',
-          blackRedTone: '#0A0202'
+          'german-yellow': '#FFCF00',
+          'german-black': '#000000',
+          'german-red': '#DE0000',
+          'bright-red': '#FD0100',
+          'dark-red': '#890E07',
+          'dark-red-2': '#700A06',
+          'dark-red-3': '#550702',
+          'dark-red-4': '#9F090A',
+          'white-yellow-tone': '#FFFDF2',
+          'black-red-tone': '#0A0202',
+          'grey-1': '#D9D9D9'
         }
-
     },
   },
   plugins: [
