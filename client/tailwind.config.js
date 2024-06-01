@@ -13,7 +13,7 @@ module.exports = {
           germanBlack: '#000000',
           germanYellow: '#FFCF00',
           whiteYellowTone: '#FFFDF2',
-          blackRedTome: '#0A0202'
+          blackRedTone: '#0A0202'
         }
 
     },
