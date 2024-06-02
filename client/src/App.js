@@ -8,8 +8,9 @@ import Login from "./pages/login";
 import ForgotPassword from './pages/forgotPassword';
 
 /* Student Pages */
-import Layout from './components/layout/StudentLayout';
+import StudentLayout from './components/layout/StudentLayout';
 import Home from './pages/student/home/Home';
+import Documents from './pages/student/documents/Documents';
 
 
 function App() {
@@ -22,8 +23,9 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword/>}/>
 
           {/* Student Page Routes */}
-          <Route path="student" element={<Layout />}>
+          <Route path="student" element={<StudentLayout />}>
             <Route index element={<Home />} />                            {/* localhost/student */}
+            <Route path="documents"  element={<Documents />}/> 
           </Route>
         </Routes>
       </Router>

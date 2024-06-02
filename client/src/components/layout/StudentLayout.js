@@ -1,11 +1,11 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Navbar from '../navbar/StudentNavbar';
+import StudentNavbar from '../navbar/StudentNavbar';
 
-function Layout() {
+function StudentLayout() {
   return (
     <div className="h-screen flex flex-col">
-      <Navbar />
+      <StudentNavbar />
       <div className="w-full h-full">
         <Outlet />
       </div>
@@ -13,4 +13,4 @@ function Layout() {
   )
 }
 
-export default Layout
+export default StudentLayout
