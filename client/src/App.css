@@ -1,3 +1,26 @@
+*{
+  margin: 0;
+  padding: 0;
+}
+
 .App {
-  text-align: center;
+  /* text-align: center; */
+  font-family: "Open Sans", sans-serif;
+}
+
+.bg_custom{
+  position: relative;
+  min-height: 100vh;
+}
+
+.bg_custom::after{
+  position: absolute;
+  top: -516px;
+  left: 0;
+  background: url(./assets/background_2.png);
+  background-repeat: repeat-y;
+  content: '';
+  width: 100%;
+  height: calc(100% + 516px);
+  z-index: 1;
 }

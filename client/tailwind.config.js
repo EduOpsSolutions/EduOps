@@ -4,21 +4,18 @@ module.exports = {
   theme: {
     extend: {
         colors:{
+          'german-yellow': '#FFCF00',
+          'german-black': '#000000',
           'german-red': '#DE0000',
           'bright-red': '#FD0100',
-          'dark-red-2': '#890E07',
-          'dark-red-3': '#700A06',
-          'dark-red-4': '#550702',
-          'dark-red-5': '#9F090A',
-          'german-yellow': '#FFCF00',
-          'white-yellow': '#FFFDF2',
-          'black-red': '#0A0202',
-          'modal-overlay': '#00000066',
-          'grey-1': '#D9D9D9',
-        },
-        fontSize:{
-          'modal-head': ['1.5rem', '2rem'],
-        },
+          'dark-red': '#890E07',
+          'dark-red-2': '#700A06',
+          'dark-red-3': '#550702',
+          'dark-red-4': '#9F090A',
+          'white-yellow-tone': '#FFFDF2',
+          'black-red-tone': '#0A0202',
+          'grey-1': '#D9D9D9'
+        }
     },
   },
   plugins: [
