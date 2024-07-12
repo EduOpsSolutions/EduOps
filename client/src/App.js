@@ -6,6 +6,7 @@ import { Navigate } from 'react-router-dom';
 /* General Pages */
 import Login from "./pages/login";
 import ForgotPassword from './pages/forgotPassword';
+import NotFound from './pages/notFound';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
@@ -27,6 +28,11 @@ function App() {
             <Route index element={<Home />} />                            {/* localhost/student */}
             <Route path="documents"  element={<Documents />}/> 
           </Route>
+
+
+          {/* Not Found Page */}
+          <Route path="*" element={<NotFound />} />
+          
         </Routes>
       </Router>
     </div>

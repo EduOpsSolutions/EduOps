@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {Link, useNavigate  } from 'react-router-dom';
 import logo from '../assets/sprachins_logo.png'
 import { VscEyeClosed, VscEye } from "react-icons/vsc";
-
-
+import Cookies from 'js-cookie';
+Cookies.remove();
 function Login() {
   const navigate = useNavigate();
 
@@ -16,8 +16,36 @@ function Login() {
     navigate("/sign-up");
   }
 
-  const submitForm = () =>{
-    
+  const removeAllCookies = () => {
+    const allCookies = Cookies.get();
+    Object.keys(allCookies).forEach(cookieName => {
+      // Remove each cookie with the necessary attributes
+      Cookies.remove(cookieName, { 
+        secure: true, 
+        httpOnly: false,
+        sameSite: 'Strict' });
+    });
+  };
+
+  const submitForm = async () =>{ 
+    removeAllCookies(); //flushes the old cookies to ensure fresh login
+    const expiry = in30Minutes(); //expiry of token for 30 mins
+    Cookies.set('studentId', "01202412312002", //set this when sucessfully logging in. This will store student data and json web tokens to ensure secure communication between server and client    
+              { 
+                secure: true, 
+                httpOnly: false,
+                sameSite: 'Strict', 
+                expires: expiry
+              });
+    Cookies.set('token', "BSQ1361Afadfae213DQ1",  
+              { 
+                secure: true, 
+                httpOnly: false,
+                sameSite: 'Strict', 
+                expires: expiry
+              })
+    navigate("/student")
+
   }
 
   const handlePasswordChange = (e) =>{
@@ -28,14 +56,22 @@ function Login() {
     setEmail(e.target.value);
   }
 
-
+  var in30Minutes = () =>{ //token expiry for 30 mins
+    const date = new Date();
+    date.setTime(date.getTime() + (30 * 60 * 1000));
+    return date;
+  }
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(true);
-
-
   
-
+  useEffect(() => {
+    return () => {
+      Cookies.remove();
+    }
+  }, []);
+  
   
   return (
     <div className='w-[100vw] h-[100vh] flex justify-center items-center'>
