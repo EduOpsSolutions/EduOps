@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/bg_1.png';
-import logo from '../assets/sprachins_logo.png';
+import React, { useState } from 'react'
+import {Link, useNavigate  } from 'react-router-dom';
+import logo from '../assets/sprachins_logo.png'
+import { VscEyeClosed, VscEye } from "react-icons/vsc";
 
 
 function Login() {
@@ -39,7 +39,7 @@ function Login() {
 
   
   return (
-    <div className='flex justify-center items-center bg-dark-red-5' style={{ backgroundImage: `url(${bg_image})`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: '100vh' }}>
+    <div className='flex justify-center items-center bg-dark-red-5' style={{ backgroundImage: `url()`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: '100vh' }}>
     {/* <div className='flex bg_1 justify-center items-center '> */}
       {/* Login Form */ }
       <div className="flex flex-col items-center justify-center bg-white-yellow w-[500px] h-[430px]">
