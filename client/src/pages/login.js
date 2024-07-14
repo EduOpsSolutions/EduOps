@@ -83,7 +83,7 @@ function Login() {
     <div className='absolute inset-0 bg-white-yellow-tone opacity-75'></div>
     
     {/* Login Form */ }
-    <div className="relative flex bg-dark-red-3 w-[1230px] h-[670px] z-10 overflow-hidden shadow-login-form rounded-tr-md rounded-bl-md rounded-tl-[5rem] rounded-br-[5rem]">
+    <div className="relative flex bg-dark-red-3 w-[1200px] h-[640px] z-10 overflow-hidden shadow-login-form rounded-tr-md rounded-bl-md rounded-tl-[5rem] rounded-br-[5rem]">
     <div className="flex w-full h-full relative">
     
     <div className="flex-[1.3] flex items-center justify-center relative">
@@ -130,21 +130,21 @@ function Login() {
       </form>
 
       {/* New Student and Enrollment Tracker Area */}
-      <div className='container flex items-center justify-center mt-24'> 
-        <div className="flex flex-col items-center justify-center mt-4 w-1/3">
-          <p className="text-white-yellow-tone text-sm -mb-5 font-sans">
+      <div className='container flex items-center justify-center mt-20'> 
+        <div className="flex flex-col items-center justify-center w-1/3">
+          <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
             New Student?
           </p>
-          <SecondaryButton className="w-full">
+          <SecondaryButton>
             Enroll Now
           </SecondaryButton>
         </div>
 
-        <div className="flex flex-col items-center justify-center mt-4 w-1/3">
+        <div className="flex flex-col items-center justify-center w-1/3">
           <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
             Track your enrollment?
           </p>
-          <SecondaryButton className="w-20">
+          <SecondaryButton>
             Track Here
           </SecondaryButton>
         </div>
