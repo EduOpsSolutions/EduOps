@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import Cookies from 'js-cookie';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/login_bg.png';
-import left_section_image from '../assets/php_german_flag.jpg';
+import bg_image from '../assets/bg_1.png';
 import logo from '../assets/sprachins_logo.png';
-import RedButton from '../components/redButton';
+Cookies.remove();
 
 
 function Login() {
@@ -18,8 +18,36 @@ function Login() {
     navigate("/sign-up");
   }
 
-  const submitForm = () =>{
-    
+  const removeAllCookies = () => {
+    const allCookies = Cookies.get();
+    Object.keys(allCookies).forEach(cookieName => {
+      // Remove each cookie with the necessary attributes
+      Cookies.remove(cookieName, { 
+        secure: true, 
+        httpOnly: false,
+        sameSite: 'Strict' });
+    });
+  };
+
+  const submitForm = async () =>{ 
+    removeAllCookies(); //flushes the old cookies to ensure fresh login
+    const expiry = in30Minutes(); //expiry of token for 30 mins
+    Cookies.set('studentId', "01202412312002", //set this when sucessfully logging in. This will store student data and json web tokens to ensure secure communication between server and client    
+              { 
+                secure: true, 
+                httpOnly: false,
+                sameSite: 'Strict', 
+                expires: expiry
+              });
+    Cookies.set('token', "BSQ1361Afadfae213DQ1",  
+              { 
+                secure: true, 
+                httpOnly: false,
+                sameSite: 'Strict', 
+                expires: expiry
+              })
+    navigate("/student")
+
   }
 
   const handlePasswordChange = (e) =>{
@@ -30,10 +58,22 @@ function Login() {
     setEmail(e.target.value);
   }
 
-
+  var in30Minutes = () =>{ //token expiry for 30 mins
+    const date = new Date();
+    date.setTime(date.getTime() + (30 * 60 * 1000));
+    return date;
+  }
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(true);
+  
+  useEffect(() => {
+    return () => {
+      Cookies.remove();
+    }
+  }, []);
+  
   
   return (
     // Backgroung image and overlay
