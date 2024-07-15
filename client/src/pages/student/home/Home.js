@@ -7,7 +7,7 @@ import Cookies from 'js-cookie';
 
 
 function Home() {
-  console.log(Cookies.get("studentId"));
+  console.log(Cookies.get("token")); // delete this, jsut testing
   return (
     <div class="bg_custom bg-white-yellow-tone">
       <div class="relative z-[2]">

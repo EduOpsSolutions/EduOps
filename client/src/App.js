@@ -3,6 +3,9 @@ import React from 'react';
 import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
 import { Navigate } from 'react-router-dom';
 
+/*Utility Pages*/
+import Assets from "./pages/Assets";
+
 /* General Pages */
 import Login from "./pages/login";
 import ForgotPassword from './pages/forgotPassword';
@@ -22,7 +25,7 @@ function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<Login/>}/>
           <Route path="/forgot-password" element={<ForgotPassword/>}/>
-
+          <Route path="assets" element={<Assets/>}/>
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>
             <Route index element={<Home />} />                            {/* localhost/student */}
