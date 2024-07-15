@@ -6,7 +6,7 @@ function forgotPassword() {
     <div className="flex bg_1 justify-center items-center h-screen bg-dark-red-5" style={{ backgroundImage: `url(${bg_image})`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: '100vh' }}>
       <div className='flex flex-col items-center justify-center bg-white-yellow md:h-auto md:min-h-[50vh] min-w-[30%]'> 
 
-          <p className="text-2xl font-bold">Reset Password</p>
+          <p className="text-2xl font-bold">Forgot Password</p>
       
           <form className="flex flex-col items-center w-5/6 my-2">
             <p className="self-start mt-5">New Password:</p>

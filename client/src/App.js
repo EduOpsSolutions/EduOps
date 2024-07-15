@@ -1,17 +1,19 @@
-import './App.css';
 import React from 'react';
-import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
-import { Navigate } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import './App.css';
 
 /* General Pages */
-import Login from "./pages/login";
 import ForgotPassword from './pages/forgotPassword';
+import Login from './pages/login';
 import NotFound from './pages/notFound';
+import SignUp from './pages/signUp';
+
+
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
-import Home from './pages/student/home/Home';
 import Documents from './pages/student/documents/Documents';
+import Home from './pages/student/home/Home';
 
 
 function App() {
@@ -19,9 +21,11 @@ function App() {
     <div className="App">
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/" element={<Navigate to="/login" />}/>
           <Route path="/login" element={<Login/>}/>
-          <Route path="/forgot-password" element={<ForgotPassword/>}/>
+          <Route path="/signUp" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />}/>
+          
 
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>

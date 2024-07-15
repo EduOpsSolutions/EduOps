@@ -1,9 +1,10 @@
 import Cookies from 'js-cookie';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/login_bg.png';
+import bg_image from '../assets/germany_bg.png';
 import left_section_image from '../assets/php_german_flag.jpg';
 import logo from '../assets/sprachins_logo.png';
+
 import PrimaryButton from '../components/primaryButton';
 import SecondaryButton from '../components/secondaryButton';
 Cookies.remove();
@@ -12,12 +13,12 @@ function Login() {
   const navigate = useNavigate();
 
   //hyperlink to another page
-  const navigateToForgotPassword = (/*these are for parameters*/) => {
+  const navigateToForgotPassword = () => {
     navigate("/forgot-password");
   };
 
   const navigateToSignUp = () => {
-    navigate("/sign-up");
+    navigate("/signUp");
   }
 
   const removeAllCookies = () => {
@@ -76,6 +77,7 @@ function Login() {
     }
   }, []);
   
+  // Editor's Note: Need to fix responsiveness of the page. 
   
   return (
     // Backgroung image and overlay
@@ -110,11 +112,13 @@ function Login() {
         </div>
 
         {/* Password text field */}
+        {/* Note: There is bug where if you click out of the textbox after typing your password,
+        the password eye button thingy disappears*/}
         <div className="relative w-full bg-white">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="absolute top-1/2 left-3 transform -translate-y-1/2 w-6 h-6 text-black">
             <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clipRule="evenodd" />
           </svg>
-          <input type="password" id="password" name="password" className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full" placeholder="Password" />
+          <input type="password" id="password" name="password" className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full" placeholder="Password" onChange={handlePasswordChange}/>
         </div>
 
         {/* need to change hover color */}
@@ -123,6 +127,12 @@ function Login() {
             Forgot password?
           </p>
         </div>
+
+        {/* Add Open Modal Logic */}
+              {/* onClick={
+                navigateToForgotPassword
+              } onclick="openModal('forget-password-modal', 'overlay-2')"*/}
+
         {/* Need to edit on hover color */}
         <PrimaryButton>
           Login
@@ -135,7 +145,7 @@ function Login() {
           <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
             New Student?
           </p>
-          <SecondaryButton>
+          <SecondaryButton onClick={navigateToSignUp}>
             Enroll Now
           </SecondaryButton>
         </div>
