@@ -5,8 +5,8 @@ import bg_image from '../assets/germany_bg.png';
 import left_section_image from '../assets/php_german_flag.jpg';
 import logo from '../assets/sprachins_logo.png';
 
-import PrimaryButton from '../components/primaryButton';
-import SecondaryButton from '../components/secondaryButton';
+import PrimaryButton from '../components/buttons/primaryButton';
+import SecondaryButton from '../components/buttons/secondaryButton';
 Cookies.remove();
 
 function Login() {

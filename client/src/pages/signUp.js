@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import bg_image from '../assets/bg_7.jpg';
-import FileUploadButton from '../components/fileUploadButton';
-import LabelledInputField from '../components/labelledInputField';
+import SmallButton from '../components/buttons/smallButton';
 import SignUpNav from '../components/navbars/signUpNav';
-import NotLabelledInputField from '../components/notLabelledInputField';
-import SelectField from '../components/selectField';
+import FileUploadButton from '../components/textFields/fileUploadButton';
+import LabelledInputField from '../components/textFields/labelledInputField';
+import NotLabelledInputField from '../components/textFields/notLabelledInputField';
+import SelectField from '../components/textFields/selectField';
 
 function SignUp() {
     const navigate = useNavigate();
@@ -76,7 +77,7 @@ function SignUp() {
                             <label htmlFor="deceased" className="mb-2 text-sm font-medium dark:text-white">
                             Deceased
                             </label>
-                            <input type="checkbox" name="mother_deceased" id="mother_deceased" className="peer mt-3" />
+                            <input type="checkbox" name="mother_deceased" id="mother_deceased" className="peer mt-3 text-dark-red focus:border-dark-red focus:ring-dark-red-2" />
                         </div>
                         <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                     </div>
@@ -85,7 +86,7 @@ function SignUp() {
                     <LabelledInputField name="father_name" id="father_name" label="Father's Full Name" type="text" required={false} placeholder="" />
                     <div class="grid md:grid-cols-2 md:gap-6">
                         <div className="flex justify-center items-center">
-                            <input type="checkbox" name="father_deceased" id="father_deceased" className="" />
+                            <input type="checkbox" name="father_deceased" id="father_deceased" className="peer text-dark-red focus:border-dark-red focus:ring-dark-red-2" />
                         </div>
                         <LabelledInputField name="father_contact_number" id="father_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                     </div>
@@ -94,7 +95,7 @@ function SignUp() {
                     <LabelledInputField name="guardian_name" id="guardian_name" label="Guardian's Full Name" type="text" required={false} placeholder="" />
                     <div class="grid md:grid-cols-2 md:gap-6">
                         <div className="flex justify-center items-center">
-                            <input type="checkbox" name="guardian_deceased" id="guardian_deceased" className="peer mt-4" />
+                            <input type="checkbox" name="guardian_deceased" id="guardian_deceased" className="peer text-dark-red focus:border-dark-red focus:ring-dark-red-2" />
                         </div>
                         <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                     </div>
@@ -102,10 +103,10 @@ function SignUp() {
                 <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" placeholder="Choose File" ariaDescribedBy="valid_id_help" />
                 <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" placeholder="Choose File" ariaDescribedBy="2x2_id_help" />
 
-                
-                <button type="submit" className="text-white bg-dark-red-5 hover:bg-bright-red focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-14 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 mx-auto">
+                <SmallButton onClick={""}>
                     Proceed
-                </button>
+                </SmallButton>                
+                
             </form>
 
         </section>
