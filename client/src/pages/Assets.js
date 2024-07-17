@@ -1,4 +1,5 @@
 import React from 'react'
+import { RxCrossCircled, RxCircle, RxCheckCircled, RxCountdownTimer } from "react-icons/rx";
 
 function Assets() {
   return (
@@ -14,9 +15,24 @@ function Assets() {
             </svg>
             </a>
 
-            
-        
-
+        <div className='flex flex-row mt-4 mb-4'>
+            <div className='flex flex-col justify-center items-center'>
+                <RxCheckCircled size='12rem' color='#86de5d'/> {/*this is for the success indicator */}
+                <p>Success</p>
+            </div>
+            <div className='flex flex-col justify-center items-center'>
+                <RxCircle size='12rem' /> {/*this is for the in progress indicator */}
+                <p>Not Yet Started</p>
+            </div>
+            <div className='flex flex-col justify-center items-center'>
+                <RxCountdownTimer size='12rem' /> {/*this is for the in progress indicator */}
+                <p>In Progress</p>
+            </div>
+            <div className='flex flex-col justify-center items-center'>
+                <RxCrossCircled size='12rem' color='#c81e1e'/> {/*this is for the fail indicator */}
+                <p>Failed</p>
+            </div>
+        </div>
         <div className='flex-row justify-start items-start'>
             <br/>
             <p class="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Buttons</p>
@@ -34,12 +50,9 @@ function Assets() {
                 class="w-[10rem] focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-md text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
                 L
             </button>
-
-
-        
         </div>
 
-        <br></br>
+        <br/>
 <form class="flex items-center max-w-sm mx-auto">   
     <label for="simple-search" class="sr-only">Search</label>
     <div class="relative w-60">
