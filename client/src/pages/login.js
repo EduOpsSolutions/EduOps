@@ -21,6 +21,10 @@ function Login() {
     navigate("/signUp");
   }
 
+  const navigateToStudent = () => {
+    navigate("/student");
+  }
+
   const removeAllCookies = () => {
     const allCookies = Cookies.get();
     Object.keys(allCookies).forEach(cookieName => {
@@ -134,7 +138,7 @@ function Login() {
               } onclick="openModal('forget-password-modal', 'overlay-2')"*/}
 
         {/* Need to edit on hover color */}
-        <PrimaryButton>
+        <PrimaryButton onClick={navigateToStudent}>
           Login
         </PrimaryButton>
       </form>
