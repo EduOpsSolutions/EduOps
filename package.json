@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "flowbite": "^2.4.1",
     "js-cookie": "^3.0.5"
   }
 }
