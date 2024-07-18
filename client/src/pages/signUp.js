@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/bg_7.jpg';
+import bg_image from '../assets/images/bg_7.jpg';
 import BackButton from '../components/buttons/backButton';
 import SmallButton from '../components/buttons/smallButton';
 import SignUpNav from '../components/navbars/signUpNav';
@@ -117,10 +117,10 @@ function SignUp() {
                     {/* Temporary code. Replace with actual logic to select courses like modal or someth */}
                     <div class="grid md:grid-cols-3 md:gap-6">
                         <div>
-                            <SelectField name="courses_to_enroll" id="courses_to_enroll" label="Select Course(s) to Enroll*" required={true} options={courseOptions} />
+                            <SelectField name="courses_to_enroll" id="courses_to_enroll" label="Select Course(s) to Enroll* [TEMPORARY]" required={true} options={courseOptions} />
                         </div>
                     </div>
-                    
+
                     {/* Need to find way how to change the add file button's color to red from gray */}
                     <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" ariaDescribedBy="valid_id_help" />
                     <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" ariaDescribedBy="2x2_id_help" />

@@ -1,7 +1,7 @@
 import Cookies from 'js-cookie';
 import React from 'react';
-import john_logo from '../../../assets/john.jpg';
-import tricia_logo from '../../../assets/tricia.png';
+import john_logo from '../../../assets/images/john.jpg';
+import tricia_logo from '../../../assets/images/tricia.png';
 import BroadcastTag from '../../../components/buttons/BroadcastTag';
 import GlobalTag from '../../../components/buttons/GlobalTag';
 

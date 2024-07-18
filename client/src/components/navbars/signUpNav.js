@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '../../assets/sprachins_logo.png';
+import logo from '../../assets/images/sprachins_logo.png';
 
 function SignUpNav() {
     return (

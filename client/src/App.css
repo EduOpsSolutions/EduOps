@@ -3,7 +3,7 @@
   padding: 0;
 }
 
- .App {
+.App {
   /* text-align: center; */
   font-family: "Open Sans", sans-serif;
 } 
@@ -17,7 +17,7 @@
   position: absolute;
   top: -516px;
   left: 0;
-  background: url(./assets/background_2.png);
+  background: url(./assets/images/bg_2.png);
   background-repeat: repeat-y;
   content: '';
   width: 100%;

@@ -1,9 +1,9 @@
 import Cookies from 'js-cookie';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/germany_bg.png';
-import left_section_image from '../assets/php_german_flag.jpg';
-import logo from '../assets/sprachins_logo.png';
+import bg_image from '../assets/images/germany_bg.png';
+import left_section_image from '../assets/images/php_german_flag.jpg';
+import logo from '../assets/images/sprachins_logo.png';
 
 import PrimaryButton from '../components/buttons/primaryButton';
 import SecondaryButton from '../components/buttons/secondaryButton';
