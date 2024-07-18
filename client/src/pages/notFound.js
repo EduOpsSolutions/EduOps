@@ -1,5 +1,5 @@
-import React from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function NotFound() {
   const navigate = useNavigate();

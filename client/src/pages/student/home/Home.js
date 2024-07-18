@@ -1,9 +1,9 @@
-import React from 'react'
+import Cookies from 'js-cookie';
+import React from 'react';
 import john_logo from '../../../assets/john.jpg';
 import tricia_logo from '../../../assets/tricia.png';
-import GlobalTag from '../../../components/buttons/GlobalTag';
 import BroadcastTag from '../../../components/buttons/BroadcastTag';
-import Cookies from 'js-cookie';
+import GlobalTag from '../../../components/buttons/GlobalTag';
 
 
 function Home() {
