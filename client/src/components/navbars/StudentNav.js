@@ -10,7 +10,7 @@ function StudentNavbar() {
       </Link>
       <div className="flex w-full justify-center items-center font-bold text-lg">
         <Link to='/student' className="me-6 hover:text-gray-500">Home</Link>
-        <Link to='/student' className="me-6 hover:text-gray-500">Enrollment</Link> 
+        <Link to='/student/enrollment' className="me-6 hover:text-gray-500">Enrollment</Link> 
         <Link to='/student' className="me-6 hover:text-gray-500">Grades</Link> 
         <Link to='/student' className="me-6 hover:text-gray-500">Payment</Link> 
         <Link to='/student/documents' className="hover:text-gray-500">Documents</Link> 
