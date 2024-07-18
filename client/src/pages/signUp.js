@@ -113,14 +113,17 @@ function SignUp() {
                             <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                         </div>
                     </div>
+
+                    {/* Temporary code. Replace with actual logic to select courses like modal or someth */}
                     <div class="grid md:grid-cols-3 md:gap-6">
                         <div>
                             <SelectField name="courses_to_enroll" id="courses_to_enroll" label="Select Course(s) to Enroll*" required={true} options={courseOptions} />
                         </div>
                     </div>
+                    
                     {/* Need to find way how to change the add file button's color to red from gray */}
-                    <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" placeholder="Choose File" ariaDescribedBy="valid_id_help" />
-                    <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" placeholder="Choose File" ariaDescribedBy="2x2_id_help" />
+                    <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" ariaDescribedBy="valid_id_help" />
+                    <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" ariaDescribedBy="2x2_id_help" />
                     {/* Add Onclick function to go to enrollment */}
                     <SmallButton onClick={""}>
                         Proceed
