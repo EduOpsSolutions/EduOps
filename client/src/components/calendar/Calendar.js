@@ -15,7 +15,23 @@ function Calendar(props) {
     const current_year_ref = useRef(null);
     const year_range = Array.from({ length: 21 }, (_, i) => current_year - 10 + i);
     const [mode, setmode] = useState(0);
+    
+    const [first_day, setfirst_day] = useState('')
+    const weekdays = [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+    ]
 
+    const getFirstDay = ()=>{
+        const data = String(new Date(current_year, current_month-1, 1)); //gets the day of the week for the 1st day of the month
+        const week_day = data.split(" ");
+        setfirst_day(weekdays.indexOf(week_day[0]));
+    }
     const monthName = [
         "January",
         "February",
@@ -37,6 +53,9 @@ function Calendar(props) {
             addYear()
             setcurrent_month(0)
         }
+        setshow_dropdown(false)
+        setshow_year_dropdown(false)
+        getFirstDay()
         
     }
     const subMonth = () =>{
@@ -46,7 +65,9 @@ function Calendar(props) {
             subYear()
             setcurrent_month(11)
         }
-        
+        getFirstDay()
+        setshow_dropdown(false)
+        setshow_year_dropdown(false)
     }
 
     const changeMonth = (num) =>{
@@ -57,15 +78,22 @@ function Calendar(props) {
         }
         setshow_dropdown(false)
         setshow_year_dropdown(false)
+        getFirstDay()
         
     }
 
     const addYear = () =>{
         setcurrent_year(current_year + 1)
+        setshow_dropdown(false)
+        setshow_year_dropdown(false)
+        getFirstDay()
     }
 
     const subYear = () =>{
         setcurrent_year(current_year - 1)
+        setshow_dropdown(false)
+        setshow_year_dropdown(false)
+        getFirstDay()
     }
 
     const changeYear = (num) =>{
@@ -76,6 +104,7 @@ function Calendar(props) {
         }
         setshow_year_dropdown(!show_year_dropdown);
         setshow_dropdown(false)
+        getFirstDay()
     }
 
 
@@ -83,7 +112,9 @@ function Calendar(props) {
         if (show_year_dropdown && current_year_ref.current) {
             current_year_ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
-    }, [number_of_days]);
+          getFirstDay();
+          console.log("THE FIRST DAY BEH: ",weekdays[first_day])
+    }, [number_of_days, current_year, current_month]);
 
 
 
@@ -219,8 +250,11 @@ function Calendar(props) {
                     <DaysWeek day={6} title={'Saturday'}/>
                 </div>
                 <div className='flex flex-row'>
-                    <DateTile/>
-                    <DateTile/>
+                    {
+
+                    }
+                    <DateTile day = {1}/>
+                    <DateTile day = {2}/>
                     <DateTile/>
                     <DateTile/>
                     <DateTile/>
