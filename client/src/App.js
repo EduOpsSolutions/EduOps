@@ -1,4 +1,3 @@
-import './App.css';
 import React from 'react';
 import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
 import { Navigate } from 'react-router-dom';
@@ -7,9 +6,12 @@ import { Navigate } from 'react-router-dom';
 import Assets from "./pages/Assets";
 
 /* General Pages */
-import Login from "./pages/login";
 import ForgotPassword from './pages/forgotPassword';
+import Login from './pages/login';
 import NotFound from './pages/notFound';
+import SignUp from './pages/signUp';
+
+
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
@@ -28,6 +30,7 @@ function App() {
           <Route path="login" element={<Login/>}/>
           <Route path="forgot-password" element={<ForgotPassword/>}/>
           <Route path="assets" element={<Assets/>}/>
+          
 
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>
