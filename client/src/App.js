@@ -1,6 +1,6 @@
+import './App.css';
 import React from 'react';
-import { Routes, Route, BrowserRouter as Router } from "react-router-dom";
-import { Navigate } from 'react-router-dom';
+import { Navigate, Routes, Route, BrowserRouter as Router } from "react-router-dom";
 
 /*Utility Pages*/
 import Assets from "./pages/Assets";
