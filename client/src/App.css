@@ -13,14 +13,3 @@
   min-height: 100vh;
 }
 
-.bg_custom::after{
-  position: absolute;
-  top: -516px;
-  left: 0;
-  background: url(./assets/images/bg_2.png);
-  background-repeat: repeat-y;
-  content: '';
-  width: 100%;
-  height: calc(100% + 516px);
-  z-index: 1;
-}

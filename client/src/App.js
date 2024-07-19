@@ -6,9 +6,9 @@ import './App.css';
 import Assets from "./pages/Assets";
 
 /* General Pages */
-import Login from './pages/login';
-import NotFound from './pages/notFound';
-import SignUp from './pages/signUp';
+import Login from './pages/public/Login';
+import NotFound from './pages/public/NotFound';
+import SignUp from './pages/public/SignUp';
 
 
 

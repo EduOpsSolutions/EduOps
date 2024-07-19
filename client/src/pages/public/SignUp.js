@@ -1,13 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/images/bg_7.jpg';
-import BackButton from '../components/buttons/backButton';
-import SmallButton from '../components/buttons/smallButton';
-import SignUpNav from '../components/navbars/signUpNav';
-import FileUploadButton from '../components/textFields/fileUploadButton';
-import LabelledInputField from '../components/textFields/labelledInputField';
-import NotLabelledInputField from '../components/textFields/notLabelledInputField';
-import SelectField from '../components/textFields/selectField';
+import bg_image from '../../assets/images/Bg7.jpg';
+import BackButton from '../../components/buttons/BackButton';
+import SmallButton from '../../components/buttons/SmallButton';
+import SignUpNav from '../../components/navbars/SignUpNav';
+import FileUploadButton from '../../components/textFields/FileUploadButton';
+import LabelledInputField from '../../components/textFields/LabelledInputField';
+import NotLabelledInputField from '../../components/textFields/NotLabelledInputField';
+import SelectField from '../../components/textFields/SelectField';
 
 function SignUp() {
     const navigate = useNavigate();

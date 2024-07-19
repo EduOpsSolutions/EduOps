@@ -1,5 +1,5 @@
 import React from 'react';
-import bg_image from '../assets/images/bg_1.png';
+import bg_image from '../assets/images/Bg1.png';
 
 function resetPassword() {
     return (

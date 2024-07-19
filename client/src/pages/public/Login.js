@@ -1,14 +1,13 @@
 import Cookies from 'js-cookie';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../assets/images/germany_bg.png';
-import left_section_image from '../assets/images/php_german_flag.jpg';
-import logo from '../assets/images/sprachins_logo.png';
+import bg_image from '../../assets/images/GermanyBg.png';
+import left_section_image from '../../assets/images/PhpGermanFlag.jpg';
+import Logo from '../../assets/images/SprachinsLogo.png';
 
-import PrimaryButton from '../components/buttons/primaryButton';
-import SecondaryButton from '../components/buttons/secondaryButton';
+import PrimaryButton from '../../components/buttons/PrimaryButton';
+import SecondaryButton from '../../components/buttons/SecondaryButton';
 Cookies.remove();
-
 function Login() {
   const navigate = useNavigate();
 
@@ -103,7 +102,7 @@ function Login() {
     {/* Right Section */}
     <div className="flex-1 flex flex-col items-center relative z-10 mt-24">
       <p className="font-semibold text-[28px] text-white font-sans">WELCOME TO</p>
-      <img className='w-[60%] h-auto mt-2' src={logo} />
+      <img className='w-[60%] h-auto mt-2' src={Logo} />
       
       {/* Login form */}
       <form className="flex flex-col items-center w-2/3 mt-2">
