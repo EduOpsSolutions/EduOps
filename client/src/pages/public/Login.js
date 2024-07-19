@@ -1,8 +1,8 @@
 import Cookies from 'js-cookie';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../../assets/images/GermanyBg.png';
-import left_section_image from '../../assets/images/PhpGermanFlag.jpg';
+import Bg_image from '../../assets/images/GermanyBg.png';
+import Left_section_image from '../../assets/images/PhpGermanFlag.jpg';
 import Logo from '../../assets/images/SprachinsLogo.png';
 
 import PrimaryButton from '../../components/buttons/PrimaryButton';
@@ -84,7 +84,7 @@ function Login() {
   
   return (
     // Backgroung image and overlay
-    <div className='flex justify-center items-center bg-white-yellow-tone' style={{ backgroundImage: `url(${bg_image})`, backgroundSize: '135%', backgroundPosition: '20% 70%', minHeight: '100vh' }}>
+    <div className='flex justify-center items-center bg-white-yellow-tone' style={{ backgroundImage: `url(${Bg_image})`, backgroundSize: '135%', backgroundPosition: '20% 70%', minHeight: '100vh' }}>
     <div className='absolute inset-0 bg-white-yellow-tone opacity-75'></div>
     
     {/* Login Form */ }
@@ -93,7 +93,7 @@ function Login() {
     
     <div className="flex-[1.3] flex items-center justify-center relative">
     {/* Left Section */}
-      <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${left_section_image})`, backgroundSize: '115%', backgroundPosition: '100% 40%', clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)'}}></div>
+      <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${Left_section_image})`, backgroundSize: '115%', backgroundPosition: '100% 40%', clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)'}}></div>
 
     {/* Slanted Divider */}
       <div className="absolute inset-y-0 right-[4.3rem] w-0.5 bg-german-yellow transform -skew-x-12"></div>

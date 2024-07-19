@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import bg_image from '../../assets/images/Bg7.jpg';
+import Bg_image from '../../assets/images/Bg7.jpg';
 import BackButton from '../../components/buttons/BackButton';
 import SmallButton from '../../components/buttons/SmallButton';
 import SignUpNav from '../../components/navbars/SignUpNav';
@@ -46,7 +46,7 @@ function SignUp() {
 
 
     return (
-        <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
+        <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
             <SignUpNav />
             <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-32 mb-12 flex flex-col">
                 <BackButton onClick={navigateToLogin} />

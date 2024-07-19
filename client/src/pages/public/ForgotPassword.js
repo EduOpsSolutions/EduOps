@@ -1,9 +1,9 @@
 import React from 'react';
-import bg_image from '../assets/images/bg_1.png';
+import Bg_image from '../assets/images/bg_1.png';
 
 function forgotPassword() {
   return (
-    <div className="flex bg_1 justify-center items-center h-screen bg-dark-red-5" style={{ backgroundImage: `url(${bg_image})`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: '100vh' }}>
+    <div className="flex bg_1 justify-center items-center h-screen bg-dark-red-5" style={{ backgroundImage: `url(${Bg_image})`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: '100vh' }}>
       <div className='flex flex-col items-center justify-center bg-white-yellow md:h-auto md:min-h-[50vh] min-w-[30%]'> 
 
           <p className="text-2xl font-bold">Forgot Password</p>

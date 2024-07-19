@@ -1,7 +1,7 @@
 import Cookies from 'js-cookie';
 import React from 'react';
-import john_logo from '../../../assets/images/John.jpg';
-import tricia_logo from '../../../assets/images/Tricia.png';
+import John_logo from '../../../assets/images/John.jpg';
+import Tricia_logo from '../../../assets/images/Tricia.png';
 import BroadcastTag from '../../../components/buttons/BroadcastTag';
 import GlobalTag from '../../../components/buttons/GlobalTag';
 
@@ -18,7 +18,7 @@ function Home() {
             {/* ADMIN POST  */}
             <div className="mb-14 bg-white rounded-3xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
               <div className=" grid grid-cols-[auto_1fr_auto] items-center mb-6 gap-x-6">
-                <img src={john_logo} alt="" className="size-20 border-[3px] border-german-yellow rounded-full" />
+                <img src={John_logo} alt="" className="size-20 border-[3px] border-german-yellow rounded-full" />
                 <div>
                     <div className="font-bold">John Carlo</div>
                     <p>Department Office</p>
@@ -37,7 +37,7 @@ function Home() {
             {/* TEACHER POST */}
             <div className="bg-white rounded-3xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
               <div className=" grid grid-cols-[auto_1fr_auto] items-center mb-6 gap-x-5">
-                <img src={tricia_logo} alt="" class="size-20 border-[3px] border-german-yellow rounded-full" />
+                <img src={Tricia_logo} alt="" class="size-20 border-[3px] border-german-yellow rounded-full" />
                 <div>
                   <div className="font-bold">Tricia Diaz</div>
                   <p>Department Office</p>
