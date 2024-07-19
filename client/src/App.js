@@ -1,23 +1,22 @@
-import './App.css';
 import React from 'react';
-import { Navigate, Routes, Route, BrowserRouter as Router } from "react-router-dom";
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import './App.css';
 
 /*Utility Pages*/
 import Assets from "./pages/Assets";
 
 /* General Pages */
-import ForgotPassword from './pages/forgotPassword';
-import Login from './pages/login';
-import NotFound from './pages/notFound';
-import SignUp from './pages/signUp';
+import Login from './pages/public/Login';
+import NotFound from './pages/public/NotFound';
+import SignUp from './pages/public/SignUp';
 
 
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
+import Documents from './pages/student/documents/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Home from './pages/student/home/Home';
-import Documents from './pages/student/documents/Documents';
 import StudentSchedule from './pages/student/StudentSchedule';
 
 
@@ -28,8 +27,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="login" element={<Login/>}/>
-          <Route path="forgot-password" element={<ForgotPassword/>}/>
           <Route path="assets" element={<Assets/>}/>
+          <Route path="signUp" element={<SignUp/>}/>
+
           
 
           {/* Student Page Routes */}
