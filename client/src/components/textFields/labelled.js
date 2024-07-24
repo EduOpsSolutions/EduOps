@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LabelledInputField = ({ name, id, label, type = "text", required = true , placeholder={}}) => {
+const Labelled = ({ name, id, label, type = "text", required = true , placeholder={}}) => {
     return (
         <div className="relative z-0 w-full mb-5 group">
             <label htmlFor={id} class="block mb-2 text-sm font-medium dark:text-white">
@@ -11,4 +11,4 @@ const LabelledInputField = ({ name, id, label, type = "text", required = true , 
     );
 }
 
-export default LabelledInputField;
+export default Labelled;

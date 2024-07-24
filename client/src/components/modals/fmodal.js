@@ -1,6 +1,6 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React from 'react';
-import SmallButton from "../buttons/SmallButton";
+import SmallButton from "../buttons/smolbutton";
 import LabelledInputField from "../textFields/LabelledInputField";
 
 const customModalTheme = {
@@ -35,7 +35,7 @@ const customModalTheme = {
     }  
 };
 
-function ForgetPasswordModal(props) {
+function fmodal(props) {
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
@@ -79,4 +79,4 @@ function ForgetPasswordModal(props) {
     );
 }
 
-export default ForgetPasswordModal;
+export default fmodal;
