@@ -8,7 +8,7 @@ function TileEvent({event}) {
             backgroundColor: event.color
         }} 
         className={`w-[100%] 2xl:h-6 lg:h-2 2xl:p-1 lg:p-1 text-[0.6vw] overflow-hidden bg-[${event.color}]`}>
-          <span className=' font-bold'>{event.time + ' '} </span>
+          <span className='font-bold'>{event.time + ' '} </span>
           - 
           {' '+ event.title}
           </div>

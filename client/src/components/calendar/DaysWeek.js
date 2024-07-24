@@ -10,7 +10,7 @@ function DaysWeek({
     return null;
   }
   return (
-    <div className={`flex flex-col m-2 rounded-md p-2 2xl:w-48 2xl:h-8 items-center justify-center border-solid border-2 border-neutral-400`}>
+    <div className={`hover:bg-red-100 items-center transition duration-75 cursor-pointer flex flex-col m-0  p-2 2xl:w-[14.5rem] border-solid border border-neutral-400`}>
         
         <p className='text-l font-bold'>{title}</p>
     </div>
