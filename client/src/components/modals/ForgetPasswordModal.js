@@ -1,6 +1,6 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React from 'react';
-import SmallButton from "../buttons/smolbutton";
+import SmallButton from "../buttons/SmallButton";
 import LabelledInputField from "../textFields/LabelledInputField";
 
 const customModalTheme = {
