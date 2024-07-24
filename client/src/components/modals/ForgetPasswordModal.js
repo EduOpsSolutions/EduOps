@@ -35,7 +35,7 @@ const customModalTheme = {
     }  
 };
 
-function fmodal(props) {
+function ForgetPasswordModal(props) {
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
@@ -79,4 +79,4 @@ function fmodal(props) {
     );
 }
 
-export default fmodal;
+export default ForgetPasswordModal;

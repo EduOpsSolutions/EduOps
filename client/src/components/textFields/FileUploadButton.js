@@ -1,6 +1,6 @@
 import React from 'react';
 
-const upload = ({ label, id, ariaDescribedBy }) => {
+const FileUploadButton = ({ label, id, ariaDescribedBy }) => {
     return (
         <div className="relative z-0 w-1/3 mb-5 group">
             <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for={id}>
@@ -20,4 +20,4 @@ const upload = ({ label, id, ariaDescribedBy }) => {
 };
 
 
-export default upload;
+export default FileUploadButton;

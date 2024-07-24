@@ -1,6 +1,6 @@
 import React from 'react';
 
-const select = ({ name, id, label, required, options }) => {
+const SelectField = ({ name, id, label, required, options }) => {
     return (
         <div className="relative z-0 w-full group mb-5 group">
             <label htmlFor={id} className="block mb-2 text-sm font-medium dark:text-gray-400"
@@ -20,4 +20,4 @@ const select = ({ name, id, label, required, options }) => {
     );
     };
 
-export default select;
+export default SelectField;
