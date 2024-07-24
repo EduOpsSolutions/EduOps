@@ -1,25 +1,83 @@
-import React from 'react'
+import { Flowbite, Modal } from "flowbite-react";
+import React from 'react';
+import SmallButton from "../buttons/SmallButton";
+import LabelledInputField from "../textFields/LabelledInputField";
 
-function forgetPasswordModal() {
+const customModalTheme = {
+    modal: {
+        "root": {
+            "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
+            "show": {
+            "on": "flex bg-gray-900 bg-opacity-40 dark:bg-opacity-80 ease-in",
+            "off": "hidden ease-out"
+            },
+        },
+        "content": {
+            "base": "relative h-full w-full p-4 md:h-auto",
+            "inner": "relative flex max-h-[90dvh] flex-col rounded-lg bg-white shadow dark:bg-gray-700"
+        },
+        "body": {
+            "base": "flex-1 overflow-auto p-6",
+            "popup": "pt-0"
+        },
+        "header": {
+            "base": "flex items-start justify-between rounded-t border-b p-5 dark:border-gray-600",
+            "popup": "border-b-0 p-2",
+            "title": "text-xl font-medium text-gray-900 dark:text-white",
+            "close": {
+                "base": "ml-auto inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white",
+                "icon": "h-5 w-5"
+            }
+        },
+        "footer": {
+            "base": "flex items-center rounded-b",
+        }
+    }  
+};
+
+function ForgetPasswordModal(props) {
     return (
-        <div className='modal-container'>
-            <div id="overlay-2" class="hidden fixed size-full bg-modal-overlay transition-all ease-in duration-300 opacity-0" onclick="closeModal('forget-password-modal', 'overlay-2')"></div>
-            <div id="forget-password-modal" class="hidden fixed min-h-48 w-full sm:w-2/3 md:w-1/2 lg:w-1/3 xl:w-1/4 p-6 bg-white-yellow items-center justify-center flex-col transition-all ease-in duration-300 opacity-0">
-
-                <h1 class="text-modal-head font-bold">Forgot Password?</h1>
-                <p class="text-center mt-2">Please provide the email that you used when you signed up for your account</p>
-
-                <form class="flex flex-col mb-0">
-                    <div>
-                        <p class="mt-5">Email Address</p>
-                        <input type="text" name="email" class="border border-black pl-2 mb-3 mt-1 py-1 h-10 focus:outline-none w-full"></input>
-                    </div>
-                    <p class="text-xs text-center">We will send you an email that will allow you to reset your password.</p>  
-                    <a href="reset-pass.html" class="self-center"><button class="mt-5 w-36 h-10 self-center size-8 font-bold bg-dark-red-2 text-white-yellow hover:bg-german-red ease-in duration-150" type="button">Reset Password</button></a>
-                </form>
-            </div>
-        </div>
-    )
+        <Flowbite theme={{ theme: customModalTheme }}>
+            <Modal
+                dismissible
+                show={props.forget_pass_modal}
+                size="md"
+                onClose={() => props.setForgetPasswordModal(false)}
+                popup
+                className="transition duration-150 ease-out"
+            >
+                <div className="py-4 flex flex-col bg-white-yellow-tone transition duration-150 ease-out">
+                    <Modal.Header className="z-10 transition ease-in-out duration-300" />
+                    <p className="font-bold -mt-10 mb-4 text-center text-2xl transition ease-in-out duration-300">
+                        Forgot Password?
+                    </p>
+                    <Modal.Body>
+                        <p className="text-base text-center mb-2 transition ease-in-out duration-300">
+                            Please provide the email that you used when you signed up for your
+                            account.
+                        </p>
+                        <LabelledInputField
+                            name="email"
+                            id="email"
+                            label="Email Address"
+                            type="email"
+                            required={true}
+                            placeholder=""
+                        />
+                        <p className="text-center text-xs -my-2 transition ease-in-out duration-300">
+                            We will send you an email that will allow you to reset your
+                            password.
+                        </p>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <SmallButton onClick={() => props.setForgetPasswordModal(false)}>
+                            Reset Password
+                        </SmallButton>
+                    </Modal.Footer>
+                </div>
+            </Modal>
+        </Flowbite>
+    );
 }
 
-export default forgetPasswordModal
+export default ForgetPasswordModal;
