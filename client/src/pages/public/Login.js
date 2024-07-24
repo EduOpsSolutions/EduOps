@@ -7,6 +7,7 @@ import Logo from "../../assets/images/SprachinsLogo.png";
 import PrimaryButton from "../../components/buttons/PrimaryButton";
 import SecondaryButton from "../../components/buttons/SecondaryButton";
 import ForgetPasswordModal from "../../components/modals/ForgetPasswordModal";
+import PasswordResetModal from "../../components/modals/PasswordResetModal";
 
 Cookies.remove();
 
@@ -14,6 +15,8 @@ Cookies.remove();
 
 function Login() {
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
+  const [password_reset_modal, setPasswordResetModal] = useState(false);
+
 
   const navigate = useNavigate();
 
@@ -191,11 +194,24 @@ function Login() {
                   Forgot password?
                 </p>
               </div>
+
+              {/* Modals */}
+              {/* Note: Need to add transition effect on modals */}
           
+              {/* Forget Password Modal */}
               <ForgetPasswordModal
                 forget_pass_modal={forget_pass_modal}
                 setForgetPasswordModal={setForgetPasswordModal}
-              ></ForgetPasswordModal>
+                password_reset_modal={password_reset_modal}
+                setPasswordResetModal={setPasswordResetModal}
+              />
+
+              {/* Succesfully sent email to reset password modal */}
+              <PasswordResetModal
+                password_reset_modal={password_reset_modal}
+                setPasswordResetModal={setPasswordResetModal}
+              />
+
 
               <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton>
             </form>

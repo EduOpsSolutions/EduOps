@@ -36,6 +36,7 @@ const customModalTheme = {
 };
 
 function ForgetPasswordModal(props) {
+
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
             <Modal
@@ -56,27 +57,25 @@ function ForgetPasswordModal(props) {
                             Please provide the email that you used when you signed up for your
                             account.
                         </p>
-                        <LabelledInputField
-                            name="email"
-                            id="email"
-                            label="Email Address"
-                            type="email"
-                            required={true}
-                            placeholder=""
-                        />
+                        <LabelledInputField name="email" id="email" label="Email Address" type="email" required={true} placeholder=""/>
                         <p className="text-center text-xs -my-2 transition ease-in-out duration-300">
                             We will send you an email that will allow you to reset your
                             password.
                         </p>
                     </Modal.Body>
                     <Modal.Footer>
-                        <SmallButton onClick={() => props.setForgetPasswordModal(false)}>
+                        {/* Add code logic on sending a message to the emial */}
+                        <SmallButton onClick={() => {
+                            props.setForgetPasswordModal(false);
+                            props.setPasswordResetModal(true);
+                        }}>
                             Reset Password
                         </SmallButton>
                     </Modal.Footer>
                 </div>
             </Modal>
         </Flowbite>
+        
     );
 }
 
