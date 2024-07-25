@@ -17,12 +17,20 @@ function Login() {
   };
 
   const navigateToSignUp = () => {
-    navigate("/signUp");
+    navigate("/sign-up");
   }
 
   const navigateToStudent = () => {
     navigate("/student");
   }
+
+  const navigateToPrivacyPolicy = () => {
+    navigate("/privacy-policy");
+  };
+
+  const navigateToTerms = () => {
+    navigate("/terms");
+  };
 
   const removeAllCookies = () => {
     const allCookies = Cookies.get();
@@ -167,11 +175,11 @@ function Login() {
       <div className='w-80'>
         <p className="text-sm mt-2 text-white-yellow-tone text-center">By using this service, you understood and agree to our {' '}
         <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
-          <a onClick={navigateToSignUp}>Terms</a>
+          <a onClick={navigateToTerms}>Terms</a>
         </span>
         {' and '}
         <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
-          <a onClick={navigateToSignUp}>Privacy Policy</a>
+          <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
         </span>
 
         </p>
