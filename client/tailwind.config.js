@@ -1,9 +1,11 @@
 /** @type {import('tailwindcss').Config} */
+
 module.exports = {
   content: [ 
     "./src/**/*.{js,jsx,ts,tsx}",  
     'node_modules/flowbite-react/lib/esm/**/*.js',
     "./node_modules/flowbite/**/*.js"
+    
   ], 
   theme: {
     extend: {
@@ -19,7 +21,8 @@ module.exports = {
           'dark-red-5': '#9F090A',
           'white-yellow-tone': '#FFFDF2',
           'black-red-tone': '#0A0202',
-          'grey-1': '#D9D9D9'
+          'grey-1': '#D9D9D9',
+          'grey-2': '#B9B9B9'
         },
         fontFamily: {
           'sans': ['"Open Sans"'],
