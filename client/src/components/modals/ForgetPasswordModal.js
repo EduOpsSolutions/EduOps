@@ -45,7 +45,7 @@ function ForgetPasswordModal(props) {
                 size="md"
                 onClose={() => props.setForgetPasswordModal(false)}
                 popup
-                className="transition duration-150 ease-out"
+                className="transition duration-150 ease-out -p-16"
             >
                 <div className="py-4 flex flex-col bg-white-yellow-tone transition duration-150 ease-out">
                     <Modal.Header className="z-10 transition ease-in-out duration-300" />
