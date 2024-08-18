@@ -40,10 +40,10 @@ function RequestDocumentModal(props) {
                 </Modal.Header>
                 <Modal.Body>
                     {/* Document Form */}
-                    <form action="">
+                    <form>
                         <div className="grid md:grid-cols-5 md:gap-6">
                             <div class="flex flex-col col-span-2">
-                                <SelectField name="payment_method" id="payment_method" label="Select Payment Method*" required={true} options={paymentOptions} />
+                                <SelectField name="payment_method" id="payment_method" label="Select Payment Method" required={true} options={paymentOptions} />
                                 <SelectField name="mode" id="mode" label="Mode" required={true} options={pickupOptions} />
                             </div>
                             <div className="col-span-2">
@@ -77,7 +77,10 @@ function RequestDocumentModal(props) {
                                 <p className="text-xs italic">By submitting, you confirm that the information above is true and any false information may void your document request.</p>
                                 <p className="text-xs italic">For further questions please contact: +63 923 0321 023</p>
                             </div>
-                            <SmallButton onClick={"wat"}>
+                            <SmallButton onClick={() => {
+                                props.setRequestDocumentModal(false);
+                                props.setRequestSentModal(true);
+                            }}>
                                 Confirm
                             </SmallButton>
                         </div>

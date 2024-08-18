@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import DownloadButton from "../../../components/buttons/DownloadButton";
 import RequestButton from "../../../components/buttons/RequestButton";
 import RequestDocumentModal from "../../../components/modals/RequestDocumentModal";
-
+import RequestSentModal from "../../../components/modals/RequestDocumentSentModal";
 
 function Documents() {
   const [request_document_modal, setRequestDocumentModal] = useState(false);
+  const [request_sent_modal, setRequestSentModal] = useState(false);
 
 
   return (
@@ -185,6 +186,13 @@ function Documents() {
         <RequestDocumentModal
           request_document_modal={request_document_modal}
           setRequestDocumentModal={setRequestDocumentModal}
+          request_sent_modal={request_sent_modal}
+          setRequestSentModal={setRequestSentModal}
+        />
+
+        <RequestSentModal
+          request_sent_modal={request_sent_modal}
+          setRequestSentModal={setRequestSentModal}
         />
 
       </div>
