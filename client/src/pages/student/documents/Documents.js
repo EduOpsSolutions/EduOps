@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import DownloadButton from "../../../components/buttons/DownloadButton";
 import RequestButton from "../../../components/buttons/RequestButton";
+import DocRequestsModal from "../../../components/modals/DocumentRequestsModal";
 import RequestDocumentModal from "../../../components/modals/RequestDocumentModal";
 import RequestSentModal from "../../../components/modals/RequestDocumentSentModal";
 
 function Documents() {
   const [request_document_modal, setRequestDocumentModal] = useState(false);
   const [request_sent_modal, setRequestSentModal] = useState(false);
+  const [doc_requests_modal, setDocRequestsModal] = useState(false);
 
 
   return (
@@ -30,12 +32,11 @@ function Documents() {
           </svg>
           <p className="text-3xl font-semibold ml-2">Documents</p>
           {/* See requests button */}
-          <div>
+          <div onClick={() => setDocRequestsModal(true)}>
             {/* Change Icon to follow what's in the Figma later on */}
             <button
               type="button"
               className="flex items-center px-4 ml-20 w-4/5 h-auto bg-blue-1 text-white text-lg drop-shadow-md hover:bg-blue-800 ease-in duration-150"
-              onClick={""}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -193,6 +194,11 @@ function Documents() {
         <RequestSentModal
           request_sent_modal={request_sent_modal}
           setRequestSentModal={setRequestSentModal}
+        />
+
+        <DocRequestsModal
+          doc_requests_modal={doc_requests_modal}
+          setDocRequestsModal={setDocRequestsModal}
         />
 
       </div>
