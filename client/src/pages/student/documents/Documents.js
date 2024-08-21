@@ -71,7 +71,8 @@ function Documents() {
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              className="w-6 h-6 absolute right-3 top-1/2 transform -translate-y-1/2"
+              className="w-6 h-6 absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+              onClick={() => {}}
             >
               <path
                 stroke-linecap="round"
