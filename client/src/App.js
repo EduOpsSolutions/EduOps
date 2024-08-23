@@ -9,7 +9,7 @@ import Assets from "./pages/Assets";
 import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import SignUp from './pages/public/SignUp';
-
+import PaymentForm from './pages/public/PaymentForm';
 
 
 /* Student Pages */
@@ -29,7 +29,7 @@ function App() {
           <Route path="login" element={<Login/>}/>
           <Route path="assets" element={<Assets/>}/>
           <Route path="signUp" element={<SignUp/>}/>
-
+          <Route path="paymentForm" element={<PaymentForm/>}/>
           
 
           {/* Student Page Routes */}
