@@ -9,9 +9,9 @@ function RequestDocumentModal(props) {
 
     // Insert other payment options
     const paymentOptions = [
-        { value: 'maya', label: 'Maya' },
-        { value: 'gCash', label: 'GCash' },
-        { value: 'debit', label: 'Debit' },
+        { value: 'online', label: 'Online (Maya)' },
+        { value: 'cod', label: 'Cash on Delivery' },
+        { value: 'cashPickup', label: 'Cash (Pay upon Pickup)' },
     ];
 
     // Insert other mode options
