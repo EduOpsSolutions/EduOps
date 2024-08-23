@@ -48,6 +48,8 @@ function Grades() {
                                     </svg>
                                 </td>
                             </tr>
+                            {/* TODO: create a modal that displays the grades of the student with an ingrained file
+                            viewer */}
                             <tr class=" dark:bg-gray-800 border-b border-b-gray-500">
                                 <td scope="row" class="px-6 py-2 font-medium text-gray-900 dark:text-white">
                                     A2 German Basic Course
