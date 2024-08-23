@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from "react";
 import Bg_image from '../../../assets/images/Bg2.png';
+import GradeNotReadyModal from '../../../components/modals/GradeNotReadyModal';
 
 function Grades() {
+    const [grade_not_ready_modal, setGradeNotReadyModal] = useState(false);
+
+
     return (
         <section className='flex flex-col items-start justify-start bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh'}}>
             <div className="flex m-4">
@@ -36,8 +40,10 @@ function Grades() {
                                 <td class="px-6 py-2 text-center">
                                     NO GRADE
                                 </td>
+                                {/* Add backend logic when If grade is == no grade, make the color of the icon grey */}
+                                {/* Also, change icon later on for a better icon */}
                                 <td class="px-6 py-2 flex justify-center items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 cursor-pointer">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="text-gray-300 size-6 cursor-pointer" onClick={() => setGradeNotReadyModal(true)}>
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                                     </svg>
                                 </td>
@@ -83,6 +89,11 @@ function Grades() {
                             </tr>
                         </tbody>
                     </table>
+
+                    <GradeNotReadyModal
+                        grade_not_ready_modal={grade_not_ready_modal}
+                        setGradeNotReadyModal={setGradeNotReadyModal}
+                    />
                 </div>
 
             </div>
