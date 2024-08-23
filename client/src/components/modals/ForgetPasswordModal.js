@@ -8,7 +8,7 @@ const customModalTheme = {
         "root": {
             "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
             "show": {
-            "on": "flex bg-gray-900 bg-opacity-40 dark:bg-opacity-80 ease-in",
+            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
             "off": "hidden ease-out"
             },
         },
