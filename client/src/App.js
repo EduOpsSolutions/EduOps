@@ -10,7 +10,7 @@ import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import SignUp from './pages/public/SignUp';
 import PaymentForm from './pages/public/PaymentForm';
-
+import RedirectPage from './pages/public/RedirectPage';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
@@ -30,7 +30,7 @@ function App() {
           <Route path="assets" element={<Assets/>}/>
           <Route path="signUp" element={<SignUp/>}/>
           <Route path="paymentForm" element={<PaymentForm/>}/>
-          
+          <Route path="redirectPage" element={<RedirectPage/>}/>
 
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>

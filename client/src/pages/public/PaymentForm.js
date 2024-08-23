@@ -7,14 +7,16 @@ import SignUpNav from '../../components/navbars/SignUpNav';
 import LabelledInputField from '../../components/textFields/LabelledInputField';
 import SelectField from '../../components/textFields/SelectField';
 
-
-
 function PaymentForm() {
     const navigate = useNavigate();
 
     const navigateToLogin = () => {
         navigate("/");
     };
+    const navigateToRedirectPage = () => {
+        navigate("/redirectPage");
+    };
+    
 
     const feesOptions = [
         { value: 'course_fee', label: 'Course Fee' },
@@ -50,7 +52,7 @@ function PaymentForm() {
                             </div>
                         </form>
                     <div className='justify-end self-end'>
-                        <SmallButton onClick={'Maya'}>
+                        <SmallButton onClick={navigateToRedirectPage}>
                             Submit
                         </SmallButton>
                     </div>
