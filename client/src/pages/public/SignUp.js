@@ -125,7 +125,7 @@ function SignUp() {
                     <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" ariaDescribedBy="valid_id_help" />
                     <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" ariaDescribedBy="2x2_id_help" />
                     {/* Add Onclick function to go to enrollment */}
-                    <SmallButton onClick={""}>
+                    <SmallButton onClick={() => {}}>
                         Proceed
                     </SmallButton>
                 </form>
