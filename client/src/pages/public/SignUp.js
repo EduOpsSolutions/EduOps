@@ -52,7 +52,7 @@ function SignUp() {
                 <BackButton onClick={navigateToLogin} className="top-0 left-0 mt-2 ml-2" />
                 <form className="px-8 py-4 flex flex-col">
                     <h1 className='text-center text-3xl font-bold'>Enrollment Form</h1>
-                    <p className='italic mb-5'>Items with (*) are required fields</p>
+                    <p className='italic mb-5 font-semibold'>Items with (*) are required fields</p>
                     <div className="grid md:grid-cols-3 md:gap-6">
                         <NotLabelledInputField name="first_name" id="first_name" label="First name*" type="text" required={true} />
                         <NotLabelledInputField name="middle_name" id="middle_name" label="Middle name*" type="text" required={true} />
