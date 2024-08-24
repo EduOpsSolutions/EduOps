@@ -26,11 +26,19 @@ function Login() {
   };
 
   const navigateToSignUp = () => {
-    navigate("/signUp");
-  };
+    navigate("/sign-up");
+  }
 
   const navigateToStudent = () => {
     navigate("/student");
+  };
+
+  const navigateToPrivacyPolicy = () => {
+    navigate("/privacy-policy");
+  };
+
+  const navigateToTerms = () => {
+    navigate("/terms");
   };
 
   const removeAllCookies = () => {
@@ -235,24 +243,25 @@ function Login() {
               </div>
             </div>
 
-            {/* Terms and Privacy Policy Section*/}
-            <div className="w-80">
-              <p className="text-sm mt-2 text-white-yellow-tone text-center">
-                By using this service, you understood and agree to our{" "}
-                <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
-                  <a onClick={navigateToSignUp}>Terms</a>
-                </span>
-                {" and "}
-                <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
-                  <a onClick={navigateToSignUp}>Privacy Policy</a>
-                </span>
+              {/* Terms and Privacy Policy Section*/}
+            <div className='w-80'>
+              <p className="text-sm mt-2 text-white-yellow-tone text-center">By using this service, you understood and agree to our {' '}
+              <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
+                <a onClick={navigateToTerms}>Terms</a>
+              </span>
+              {' and '}
+              <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
+                <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
+              </span>
+
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <script src="../path/to/flowbite/dist/flowbite.min.js"></script>
+    
+      
     </div>
   );
 }

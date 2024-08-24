@@ -6,6 +6,8 @@ import './App.css';
 import Assets from "./pages/Assets";
 
 /* General Pages */
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import Terms from './pages/legal/Terms';
 import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import SignUp from './pages/public/SignUp';
@@ -29,7 +31,9 @@ function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="login" element={<Login/>}/>
           <Route path="assets" element={<Assets/>}/>
-          <Route path="signUp" element={<SignUp/>}/>
+          <Route path="sign-up" element={<SignUp/>}/>
+          <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
+          <Route path="terms" element={<Terms/>}/>
 
           
 
