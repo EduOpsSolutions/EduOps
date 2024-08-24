@@ -3,12 +3,13 @@ import React from 'react';
 import SmallButton from "../buttons/SmallButton";
 import LabelledInputField from "../textFields/LabelledInputField";
 
+// To customize measurements of header
 const customModalTheme = {
     modal: {
         "root": {
             "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
             "show": {
-            "on": "flex bg-gray-900 bg-opacity-40 dark:bg-opacity-80 ease-in",
+            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
             "off": "hidden ease-out"
             },
         },
@@ -45,7 +46,7 @@ function ForgetPasswordModal(props) {
                 size="md"
                 onClose={() => props.setForgetPasswordModal(false)}
                 popup
-                className="transition duration-150 ease-out"
+                className="transition duration-150 ease-out -p-16"
             >
                 <div className="py-4 flex flex-col bg-white-yellow-tone transition duration-150 ease-out">
                     <Modal.Header className="z-10 transition ease-in-out duration-300" />

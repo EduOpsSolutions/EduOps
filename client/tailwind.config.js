@@ -22,7 +22,9 @@ module.exports = {
           'white-yellow-tone': '#FFFDF2',
           'black-red-tone': '#0A0202',
           'grey-1': '#D9D9D9',
-          'grey-2': '#B9B9B9'
+          'grey-2': '#B9B9B9',
+          'blue-1': '#1738D9',
+          'green-1': '#108940'
         },
         fontFamily: {
           'sans': ['"Open Sans"'],

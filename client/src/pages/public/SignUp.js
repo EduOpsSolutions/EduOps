@@ -53,10 +53,10 @@ function SignUp() {
         <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
             <SignUpNav />
             <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-32 mb-12 flex flex-col">
-                <BackButton onClick={navigateToLogin} />
+                <BackButton onClick={navigateToLogin} className="top-0 left-0 mt-2 ml-2" />
                 <form className="px-8 py-4 flex flex-col">
                     <h1 className='text-center text-3xl font-bold'>Enrollment Form</h1>
-                    <p className='italic mb-5'>Items with (*) are required fields</p>
+                    <p className='italic mb-5 font-semibold'>Items with (*) are required fields</p>
                     <div className="grid md:grid-cols-3 md:gap-6">
                         <NotLabelledInputField name="first_name" id="first_name" label="First name*" type="text" required={true} />
                         <NotLabelledInputField name="middle_name" id="middle_name" label="Middle name*" type="text" required={true} />
@@ -130,6 +130,7 @@ function SignUp() {
                     <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" ariaDescribedBy="2x2_id_help" />
                     {/* Add Onclick function to go to enrollment */}
                     <SmallButton onClick={navigateToPaymentForm}>
+
                         Proceed
                     </SmallButton>
                 </form>
