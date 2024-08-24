@@ -17,6 +17,10 @@ function SignUp() {
         navigate("/");
     };
 
+    const navigateToPaymentForm = () => {
+        navigate("/paymentForm");
+      };
+    
     // Add any missing options
     const civilStatusOptions = [
         { value: 'single', label: 'Single' },
@@ -125,7 +129,8 @@ function SignUp() {
                     <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" ariaDescribedBy="valid_id_help" />
                     <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" ariaDescribedBy="2x2_id_help" />
                     {/* Add Onclick function to go to enrollment */}
-                    <SmallButton onClick={() => {}}>
+                    <SmallButton onClick={navigateToPaymentForm}>
+
                         Proceed
                     </SmallButton>
                 </form>
