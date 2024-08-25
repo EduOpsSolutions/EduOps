@@ -13,6 +13,14 @@ function DevLoginModal(props) {
         navigate("/student");
     };
 
+    const navigateToTeacher = () => {
+        navigate("/teacher");
+    };
+
+    const navigateToAdmin = () => {
+        navigate("/admin");
+    };
+
     return (
         <Modal
             dismissible
@@ -34,12 +42,12 @@ function DevLoginModal(props) {
                             <SmallButton onClick={navigateToStudent}>
                                 Student
                             </SmallButton>
-                            <SmallButton onClick={navigateToStudent}>
+                            <SmallButton onClick={navigateToTeacher}>
                                 Teacher
                             </SmallButton>
                         </div>
                         <div className="w-full flex">
-                            <SmallButton onClick={navigateToStudent}>
+                            <SmallButton onClick={navigateToAdmin}>
                                 Admin
                             </SmallButton>
                         </div>

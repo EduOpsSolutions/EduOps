@@ -10,9 +10,9 @@ import PrivacyPolicy from './pages/legal/PrivacyPolicy';
 import Terms from './pages/legal/Terms';
 import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
-import SignUp from './pages/public/SignUp';
 import PaymentForm from './pages/public/PaymentForm';
 import RedirectPage from './pages/public/RedirectPage';
+import SignUp from './pages/public/SignUp';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
@@ -21,6 +21,16 @@ import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/grades/Grades';
 import Home from './pages/student/home/Home';
 import StudentSchedule from './pages/student/StudentSchedule';
+
+/* Teacher Pages */
+import TeacherLayout from './components/layout/TeacherLayout';
+import TeacherHome from './pages/teacher/home/Home';
+
+/* Teacher Pages */
+import AdminLayout from './components/layout/AdminLayout';
+import AdminHome from './pages/admin/home/Home';
+
+
 
 
 function App() {
@@ -47,6 +57,17 @@ function App() {
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
           </Route>
+
+          {/* Teacher Page Routes */}
+          <Route path="teacher" element={<TeacherLayout />}>
+            <Route index element={<TeacherHome />} />            
+          </Route>
+
+          {/* Admin Page Routes */}
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<AdminHome />} />            
+          </Route>
+
 
 
           {/* Not Found Page */}
