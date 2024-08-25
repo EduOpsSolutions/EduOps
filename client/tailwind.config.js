@@ -1,21 +1,37 @@
 /** @type {import('tailwindcss').Config} */
+
 module.exports = {
-  content: [ "./src/**/*.{js,jsx,ts,tsx}",  'node_modules/flowbite-react/lib/esm/**/*.js'], 
+  content: [ 
+    "./src/**/*.{js,jsx,ts,tsx}",  
+    'node_modules/flowbite-react/lib/esm/**/*.js',
+    "./node_modules/flowbite/**/*.js"
+    
+  ], 
   theme: {
     extend: {
         colors:{
-          germanRed: '#DE0000',
-          brightRed: '#FD0100',
-          darkRed: '#890E07',
-          darkRed2: '#700A06',
-          darkRed3: '#550702',
-          darkRed4: '#9F090A',
-          germanBlack: '#000000',
-          germanYellow: '#FFCF00',
-          whiteYellowTone: '#FFFDF2',
-          blackRedTome: '#0A0202'
+          'german-yellow': '#FFCF00',
+          'german-black': '#000000',
+          'german-red': '#DE0000',
+          'bright-red': '#FD0100',
+          'dark-red': '#890E07',
+          'dark-red-2': '#890E07',
+          'dark-red-3': '#700A06',
+          'dark-red-4': '#550702',
+          'dark-red-5': '#9F090A',
+          'white-yellow-tone': '#FFFDF2',
+          'black-red-tone': '#0A0202',
+          'grey-1': '#D9D9D9',
+          'grey-2': '#B9B9B9',
+          'blue-1': '#1738D9',
+          'green-1': '#108940'
+        },
+        fontFamily: {
+          'sans': ['"Open Sans"'],
+        },
+        boxShadow: {
+          'login-form': '0px 10px 50px rgba(0, 0, 0, 0.6)', 
         }
-
     },
   },
   plugins: [
