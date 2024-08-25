@@ -6,6 +6,7 @@ import Left_section_image from "../../assets/images/PhpGermanFlag.jpg";
 import Logo from "../../assets/images/SprachinsLogo.png";
 import PrimaryButton from "../../components/buttons/PrimaryButton";
 import SecondaryButton from "../../components/buttons/SecondaryButton";
+import DevLoginModal from "../../components/modals/DevLoginModal";
 import ForgetPasswordModal from "../../components/modals/ForgetPasswordModal";
 import PasswordResetModal from "../../components/modals/PasswordResetModal";
 
@@ -16,7 +17,7 @@ Cookies.remove();
 function Login() {
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
   const [password_reset_modal, setPasswordResetModal] = useState(false);
-
+  const [dev_login_modal, setDevLoginModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -220,8 +221,20 @@ function Login() {
                 setPasswordResetModal={setPasswordResetModal}
               />
 
+              {/* UNCOMMENT AFTER IMPLMENTING BACKEND LOGIC FOR LOGGING IN DIFFERENT USERS
+              <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton> 
+              
+              */}
 
-              <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton>
+              {/* DELETE THIS AFTER IMPLEMENTING BACKEND LOGIC FOR LOGGING IN */}
+              <PrimaryButton onClick={() => setDevLoginModal(true)}>Login</PrimaryButton> 
+
+              
+              {/* ALSO DELETE THIS AFTER BACKEND LOGIC FOR LOGGING IN */}
+              <DevLoginModal
+                dev_login_modal={dev_login_modal}
+                setDevLoginModal={setDevLoginModal}
+              />
             </form>
 
             {/* New Student and Enrollment Tracker Area */}
