@@ -11,6 +11,7 @@ function TeacherNavbar() {
             <div className="flex w-full justify-center items-center font-bold text-lg">
                 <Link to='/teacher' className="me-6 hover:text-gray-500">Home</Link>
                 <Link to='/teacher/tasks' className="me-6 hover:text-gray-500">Tasks</Link> 
+                <Link to='/teacher/grades' className="me-6 hover:text-gray-500">Grades</Link>
                 <Link to='/teacher/documents' className="me-6 hover:text-gray-500">Documents</Link>
             </div>
             <div className="h-full flex items-center">
