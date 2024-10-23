@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Bg_image from '../../../assets/images/Bg2.png';
+import ThinRedButton from "../../../components/buttons/ThinRedButton";
 import GradeDetailsModal from "../../../components/modals/GradeDetailsModal";
 import GradeNotReadyModal from '../../../components/modals/GradeNotReadyModal';
 
@@ -22,13 +23,19 @@ function Grades() {
                         <thead>
                             <tr className='border-b-2 border-b-dark-red-2'>
                                 <th scope="col" class="px-6 py-2">
-                                    Course Name
+                                    Course
                                 </th>
                                 <th scope="col" class="px-6 py-2 text-center">
-                                    Status
+                                    Schedule
                                 </th>
                                 <th scope="col" class="px-6 py-2 text-center">
-                                    Details
+                                    Room
+                                </th>
+                                <th scope="col" class="px-8 py-2 text-center">
+                                    Students
+                                </th>
+                                <th scope="col" class="px-6 py-2 text-center">
+                                    {/* Blank, for locking use */}
                                 </th>
                             </tr>
                         </thead>
@@ -36,60 +43,57 @@ function Grades() {
                             {/* Todo: Insert backend to display courses enrolled */}
                             <tr class=" dark:bg-gray-500 dark:border-gray-700 border-b border-b-gray-500">
                                 <td class="px-6 py-2 font-medium text-gray-900 dark:text-white">
-                                    B1 Aligemein Course
+                                    A1
                                 </td>
                                 <td class="px-6 py-2 text-center">
-                                    NO GRADE
+                                    <p>Tth</p>
+                                    <p>6:30AM - 7:30AM</p>
+                                </td>
+                                <td class="px-6 py-2 text-center">
+                                    Room 01
+                                </td>
+                                <td class="px-6 py-2 text-center">
+                                    
+                                <ThinRedButton onClick={() => {
+                                    ""
+                                }}>
+                                    <p className="text-xs">Grade Students</p>
+                                </ThinRedButton>
                                 </td>
                                 {/* Add backend logic when If grade is == no grade, make the color of the icon grey */}
                                 {/* Also, change icon later on for a better icon */}
-                                <td class="px-6 py-2 flex justify-center items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="text-gray-300 size-6 cursor-pointer" onClick={() => setGradeNotReadyModal(true)}>
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                                    </svg>
+                                <td class="px-6 py-2 text-center">
+                                    
                                 </td>
                             </tr>
-                            {/* TODO: create a modal that displays the grades of the student with an ingrained file
-                            viewer */}
-                            <tr class=" dark:bg-gray-800 border-b border-b-gray-500">
+                            <tr class=" dark:bg-gray-500 dark:border-gray-700 border-b border-b-gray-500">
                                 <td class="px-6 py-2 font-medium text-gray-900 dark:text-white">
-                                    A2 German Basic Course
+                                    A1
                                 </td>
                                 <td class="px-6 py-2 text-center">
-                                    PASS
-                                </td>
-                                <td class="px-6 py-2 flex justify-center items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 cursor-pointer" onClick={() => setGradeDetailsModal(true)}>
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                                    </svg>
-                                </td>
-                            </tr>
-                            <tr class=" dark:bg-gray-800 border-b border-b-gray-500">
-                                <td class="px-6 py-2 font-medium text-gray-900 dark:text-white">
-                                    A1 German Basic Course
+                                    <p>Tth</p>
+                                    <p>6:30AM - 7:30AM</p>
                                 </td>
                                 <td class="px-6 py-2 text-center">
-                                    FAIL
-                                </td>
-                                <td class="px-6 py-2 flex justify-center items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 cursor-pointer">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                                    </svg>
-                                </td>
-                            </tr>
-                            <tr class="dark:bg-gray-800 border-b border-b-gray-500">
-                                <td class="px-6 py-2 font-medium text-gray-900 dark:text-white">
-                                    A1 German Basic Course
+                                    Room 01
                                 </td>
                                 <td class="px-6 py-2 text-center">
-                                    PASS
+                                    <ThinRedButton onClick={() => {
+                                        ""
+                                    }}>
+                                        <p className="text-xs">Grade Students</p>
+                                    </ThinRedButton>
                                 </td>
-                                <td class="px-6 py-2 flex justify-center items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 cursor-pointer">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                                    </svg>
+                                <td class="px-6 py-2 text-center">
+                                    <div className="flex justify-center items-center" title="This cannot be edited anymore. Contact your administrator">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                        </svg>
+                                    </div>
                                 </td>
                             </tr>
+                            
+                        
                         </tbody>
                     </table>
 
@@ -108,5 +112,6 @@ function Grades() {
         </section>
     )
 }
+
 
 export default Grades
