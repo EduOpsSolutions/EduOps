@@ -4,6 +4,13 @@ import React from 'react';
 // To customize measurements of header 
 const customModalTheme = {
     modal: {
+        "root": {
+            "base": "fixed inset-x-0 top-0 z-50 overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
+            "show": {
+            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
+            "off": "hidden ease-out"
+            },
+        },
         "header": {
             "base": "flex items-start justify-between rounded-t border-b p-5 dark:border-gray-600",
             "popup": "border-b-0 p-2",
@@ -45,11 +52,15 @@ function GradeDetailsModal(props) {
                     </Modal.Header>
                     
                     <Modal.Body className="mr-9 flex flex-col items-center">
-                        
-                        <div>
-                            Hi
+                        {/* Replace code below with pdf viewer code and backend logic for the pdf */}
+                        <div className="container bg-white border border-black white text-center">
+                            <h1 className="font-bold text-xl">
+                                *Insert PDF Viewer thingy*
+                            </h1>
                         </div>
+                        <iframe title="randomPDF" src="https://drive.google.com/file/d/1hSkiO5j2xQFmxtupu3B57Ut0ZYCLl_Ed/preview" className="h-[300px] w-full mt-2"></iframe>
                     </Modal.Body>
+
                 </div>
             </Modal>
         </Flowbite>
