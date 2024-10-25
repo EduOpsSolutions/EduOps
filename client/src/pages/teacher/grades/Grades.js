@@ -3,11 +3,15 @@ import Bg_image from '../../../assets/images/Bg2.png';
 import ThinRedButton from "../../../components/buttons/ThinRedButton";
 import GradeDetailsModal from "../../../components/modals/GradeDetailsModal";
 import GradeNotReadyModal from '../../../components/modals/GradeNotReadyModal';
+import StudentsGradeModal from "../../../components/modals/teachers/StudentsGradeModal";
 import SearchField from "../../../components/textFields/SearchField";
+
 
 function Grades() {
     const [grade_not_ready_modal, setGradeNotReadyModal] = useState(false);
     const [grade_details_modal, setGradeDetailsModal] = useState(false);
+    const [students_grade_modal, setStudentsGradeModal] = useState(false);
+    
 
     return (
         <section className='flex flex-col items-start justify-start bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh'}}>
@@ -59,14 +63,13 @@ function Grades() {
                                 </td>
                                 <td class="px-6 py-2 text-center">
                                     
-                                <ThinRedButton onClick={() => {
-                                    ""
-                                }}>
+                                <ThinRedButton onClick={() => {setStudentsGradeModal(true)}}>
                                     <p className="text-xs">Grade Students</p>
                                 </ThinRedButton>
+
                                 </td>
-                                {/* Add backend logic when If grade is == no grade, make the color of the icon grey */}
-                                {/* Also, change icon later on for a better icon */}
+                                
+                                {/* Add if statement to display another td if course grading is locked*/}
                                 <td class="px-6 py-2 text-center">
                                     
                                 </td>
@@ -83,12 +86,12 @@ function Grades() {
                                     VR 02
                                 </td>
                                 <td class="px-6 py-2 text-center">
-                                    <ThinRedButton onClick={() => {
-                                        ""
-                                    }}>
+                                    <ThinRedButton onClick={() => {setStudentsGradeModal(true)}}>
                                         <p className="text-xs">Grade Students</p>
                                     </ThinRedButton>
                                 </td>
+
+                                {/* Add if statement to display another td if course grading is locked*/}
                                 <td class="px-6 py-2 text-center">
                                     <div className="flex justify-center items-center" title="This cannot be edited anymore. Contact your administrator">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
@@ -111,6 +114,13 @@ function Grades() {
                         grade_details_modal={grade_details_modal}
                         setGradeDetailsModal={setGradeDetailsModal}
                     />
+
+                    <StudentsGradeModal
+                        students_grade_modal={students_grade_modal}
+                        setStudentsGradeModal={setStudentsGradeModal}
+                    />
+
+
                 </div>
 
             </div>

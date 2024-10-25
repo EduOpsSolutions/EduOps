@@ -91,7 +91,7 @@ function Documents() {
                 </td>
                 <td class="px-4 py-2">Transcript of Records</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2">Free for 1st request</td>
               </tr>
@@ -121,7 +121,7 @@ function Documents() {
                 </td>
                 <td class="px-4 py-2">Student Manual 2024</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2"></td>
               </tr>
@@ -131,7 +131,7 @@ function Documents() {
                 </td>
                 <td class="px-4 py-2">Courses Catalog</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2"></td>
               </tr>
@@ -141,7 +141,7 @@ function Documents() {
                 </td>
                 <td class="px-4 py-2">A1 - B2 Prospectus</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2">Latest Version 4/16/2024</td>
               </tr>
