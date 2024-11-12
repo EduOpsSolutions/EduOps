@@ -3,8 +3,8 @@ import Bg_image from '../../assets/images/Bg2.png';
 import ThinRedButton from "../../components/buttons/ThinRedButton";
 import GradeDetailsModal from "../../components/modals/grades/GradeDetailsModal";
 import GradeNotReadyModal from "../../components/modals/grades/GradeNotReadyModal";
+import StudentsGradeModal from "../../components/modals/grades/StudentsGradeModal";
 import SearchField from "../../components/textFields/SearchField";
-
 
 function Grades() {
     const [grade_not_ready_modal, setGradeNotReadyModal] = useState(false);
