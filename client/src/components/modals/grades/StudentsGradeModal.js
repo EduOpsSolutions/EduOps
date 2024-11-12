@@ -199,7 +199,7 @@ function StudentsGradeModal(props) {
                                 <div className="flex flex-row items-center">
                                     <div class="flex items-center me-4">
                                         <label for="inline-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Visibility:</label>
-                                        <input id="inline-checkbox" type="checkbox" value="" class="w-4 h-4 ml-4 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
+                                        <input id="inline-checkbox" type="checkbox" value="" class="w-4 h-4 ml-4 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-dark-red-2 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                     </div>
                                     <div className="ml-4">
                                         <ThinRedButton onClick={""} color="bg-grey" hoverColor="bg-grey-2">
