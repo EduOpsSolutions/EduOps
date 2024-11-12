@@ -7,7 +7,7 @@ const sign = async (req, res, next) => {
     const token = await new SignJWT(req.body)
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
-      .setExpirationTime("30s")
+      .setExpirationTime(process.env.JWT_EXPIRATION_TIME)
       .sign(secret);
     res.json({ token });
   } catch (error) {
@@ -35,7 +35,7 @@ const verify = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export default {
   sign,
   verify,
 };
