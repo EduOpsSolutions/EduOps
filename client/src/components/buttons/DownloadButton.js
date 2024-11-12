@@ -2,10 +2,7 @@ import React from 'react';
 
 function DownloadButton({ onClick}) {
     return (
-        <button
-        type="button"
-        className="flex items-center w-3/4 h-auto bg-green-1 text-white text-lg drop-shadow-md hover:bg-green-800 ease-in duration-150 rounded-sm text-wrap"
-        onClick={onClick}
+        <button type="button" className="flex items-center w-3/4 h-auto bg-green-1 text-white text-lg drop-shadow-md hover:bg-green-800 ease-in duration-150 rounded-sm text-wrap" onClick={onClick}
         >
             <div className='w-2 flex-row ml-4'>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
