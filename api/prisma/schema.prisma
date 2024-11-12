@@ -22,11 +22,10 @@ model student {
   birthmonth Int
   birthdate Int
   birthyear Int
-  ProfilePicLink String?
-  Status         String?
+  profilePicLink String?
+  status         String?
   email     String   @unique
   password  String
-  enrollment_requests enrollment_request[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
@@ -34,8 +33,7 @@ model student {
 
 model enrollment_request {
   id        String   @id @default(cuid())
-  studentId String
-  student   student  @relation(fields: [studentId], references: [id])
+  studentId String @map("student_id")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
