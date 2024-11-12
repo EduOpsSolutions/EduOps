@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import Bg_image from '../../../assets/images/Bg2.png';
-import GradeNotReadyModal from '../../../components/modals/GradeNotReadyModal';
+import Bg_image from '../../assets/images/Bg2.png';
+import GradeNotReadyModal from "../../components/modals/grades/GradeNotReadyModal";
 
 function Grades() {
     const [grade_not_ready_modal, setGradeNotReadyModal] = useState(false);

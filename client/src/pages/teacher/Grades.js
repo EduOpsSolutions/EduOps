@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import Bg_image from '../../../assets/images/Bg2.png';
-import ThinRedButton from "../../../components/buttons/ThinRedButton";
-import GradeDetailsModal from "../../../components/modals/GradeDetailsModal";
-import GradeNotReadyModal from '../../../components/modals/GradeNotReadyModal';
-import StudentsGradeModal from "../../../components/modals/teachers/StudentsGradeModal";
-import SearchField from "../../../components/textFields/SearchField";
+import Bg_image from '../../assets/images/Bg2.png';
+import ThinRedButton from "../../components/buttons/ThinRedButton";
+import GradeDetailsModal from "../../components/modals/grades/GradeDetailsModal";
+import GradeNotReadyModal from "../../components/modals/grades/GradeNotReadyModal";
+import StudentsGradeModal from "../../components/modals/StudentsGradeModal";
+import SearchField from "../../components/textFields/SearchField";
 
 
 function Grades() {

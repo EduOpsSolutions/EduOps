@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import DownloadButton from "../../../components/buttons/DownloadButton";
-import RequestButton from "../../../components/buttons/RequestButton";
-import DocRequestsModal from "../../../components/modals/DocumentRequestsModal";
-import RequestDocumentModal from "../../../components/modals/RequestDocumentModal";
-import RequestSentModal from "../../../components/modals/RequestDocumentSentModal";
-import SearchField from "../../../components/textFields/SearchField";
+import DownloadButton from "../../components/buttons/DownloadButton";
+import RequestButton from "../../components/buttons/RequestButton";
+import DocRequestsModal from "../../components/modals/documents/DocumentRequestsModal";
+import RequestDocumentModal from "../../components/modals/documents/RequestDocumentModal";
+import RequestSentModal from "../../components/modals/documents/RequestDocumentSentModal";
+import SearchField from "../../components/textFields/SearchField";
 
 function Documents() {
   const [request_document_modal, setRequestDocumentModal] = useState(false);

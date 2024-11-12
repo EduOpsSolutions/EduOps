@@ -1,9 +1,9 @@
 import { Modal } from "flowbite-react";
 import React from 'react';
-import SmallButton from "../buttons/SmallButton";
-import LargeInputField from "../textFields/LargeInputField";
-import NotLabelledInputField from "../textFields/NotLabelledInputField";
-import SelectField from "../textFields/SelectField";
+import SmallButton from "../../buttons/SmallButton";
+import LargeInputField from "../../textFields/LargeInputField";
+import NotLabelledInputField from "../../textFields/NotLabelledInputField";
+import SelectField from "../../textFields/SelectField";
 
 function RequestDocumentModal(props) {
 

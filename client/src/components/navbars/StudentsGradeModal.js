@@ -1,9 +1,10 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React from 'react';
-import GradeDocumentModalButton from "../../buttons/GradeDocumentModalButton";
-import GradeStatusModalButton from "../../buttons/GradeStatusModalButton";
-import ThinRedButton from "../../buttons/ThinRedButton";
-import SmallGreySelectField from "../../textFields/SmallGreySelectField";
+import GradeDocumentModalButton from "../buttons/GradeDocumentModalButton";
+import GradeStatusModalButton from "../buttons/GradeStatusModalButton";
+import ThinRedButton from "../buttons/ThinRedButton";
+import SmallGreySelectField from "../textFields/SmallGreySelectField";
+
 
 // To customize measurements of header 
 const customModalTheme = {
@@ -144,7 +145,7 @@ function StudentsGradeModal(props) {
                                         </tr>
                                         <tr>
                                             <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Dios Mio</td>
+                                            <td class="px-2 py-1">Dios Mio</td> 
                                             <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
                                             <td class="px-2 py-1">
                                                 <GradeStatusModalButton status="NG"></GradeStatusModalButton>
