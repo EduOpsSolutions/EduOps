@@ -1,7 +1,7 @@
 import { Modal } from "flowbite-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import SmallButton from "../buttons/SmallButton";
+import SmallButton from "../../buttons/SmallButton";
 
 // DELETE THIS FILE AFTER BACKEND LOGIC FOR
 // LOGGING IN IS DONE
