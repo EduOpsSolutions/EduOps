@@ -1,6 +1,6 @@
 import { Modal } from "flowbite-react";
 import React from 'react';
-import GrayButton from "../buttons/GrayButton";
+import GrayButton from "../../buttons/GrayButton";
 
 function PasswordResetModal(props) {
     return (

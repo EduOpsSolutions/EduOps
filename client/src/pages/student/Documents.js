@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import DownloadButton from "../../../components/buttons/DownloadButton";
-import RequestButton from "../../../components/buttons/RequestButton";
-import DocRequestsModal from "../../../components/modals/DocumentRequestsModal";
-import RequestDocumentModal from "../../../components/modals/RequestDocumentModal";
-import RequestSentModal from "../../../components/modals/RequestDocumentSentModal";
+import DownloadButton from "../../components/buttons/DownloadButton";
+import RequestButton from "../../components/buttons/RequestButton";
+import DocRequestsModal from "../../components/modals/documents/DocumentRequestsModal";
+import RequestDocumentModal from "../../components/modals/documents/RequestDocumentModal";
+import RequestSentModal from "../../components/modals/documents/RequestDocumentSentModal";
+import SearchField from "../../components/textFields/SearchField";
 
 function Documents() {
   const [request_document_modal, setRequestDocumentModal] = useState(false);
@@ -56,45 +57,10 @@ function Documents() {
 
         {/* Search field */}
         {/* Note: Insert backend logic for search filter */}
-        <div className="flex flex-row mt-6 ml-4 items-center">
-          <div className="relative z-0 mb-5 group w-1/4">
-            <input
-              type="text"
-              name="document"
-              id="document"
-              className="block py-2.5 w-full pl-4 text-sm text-gray-900 bg-white border border-dark-red-2 focus:outline-none focus:ring-0 focus:border-dark-red peer rounded-3xl"
-              placeholder="Search documents"
-            />
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              className="w-6 h-6 absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
-              onClick={() => {}}
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-              />
-            </svg>
-          </div>
-
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-8 self-center transform -translate-y-1/3 ml-4"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"
-            />
+        <div className="flex flex-row mt-6 ml-4 mb-5 items-center">
+          <SearchField name="documents" id="documents" placeholder="Search Documents"></SearchField>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8 self-center transform -translate-y-1/3 ml-4 mt-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
           </svg>
         </div>
         
@@ -120,17 +86,17 @@ function Documents() {
         {/* Note: Replace table body data with backend logic */}
             <tbody>
               <tr>
-                <td scope="row" class="px-4 py-2 text-black dark:text-white">
+                <td class="px-4 py-2 text-black dark:text-white">
                   FREE
                 </td>
                 <td class="px-4 py-2">Transcript of Records</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2">Free for 1st request</td>
               </tr>
               <tr>
-                <td scope="row" class="px-4 py-2 text-black dark:text-white">
+                <td class="px-4 py-2 text-black dark:text-white">
                   FREE
                 </td>
                 <td class="px-4 py-2">Excuse Letter</td>
@@ -140,7 +106,7 @@ function Documents() {
                 <td class="px-4 py-2"></td>
               </tr>
               <tr>
-                <td scope="row" class="px-4 py-2 text-black dark:text-white">
+                <td class="px-4 py-2 text-black dark:text-white">
                   FREE
                 </td>
                 <td class="px-4 py-2">Signed Examination Results</td>
@@ -150,32 +116,32 @@ function Documents() {
                 <td class="px-4 py-2"></td>
               </tr>
               <tr>
-                <td scope="row" class="px-4 py-2 text-black dark:text-white">
+                <td class="px-4 py-2 text-black dark:text-white">
                   FREE
                 </td>
                 <td class="px-4 py-2">Student Manual 2024</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2"></td>
               </tr>
               <tr>
-                <td scope="row" class="px-4 py-2 text-black dark:text-white">
+                <td class="px-4 py-2 text-black dark:text-white">
                   FREE
                 </td>
                 <td class="px-4 py-2">Courses Catalog</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2"></td>
               </tr>
               <tr>
-                <td scope="row" class="px-4 py-2 text-black dark:text-white">
+                <td class="px-4 py-2 text-black dark:text-white">
                   FREE
                 </td>
                 <td class="px-4 py-2">A1 - B2 Prospectus</td>
                 <td class="px-4 py-2">
-                  <DownloadButton/>
+                  <DownloadButton onClick={() => ""}/>
                 </td>
                 <td class="px-4 py-2">Latest Version 4/16/2024</td>
               </tr>

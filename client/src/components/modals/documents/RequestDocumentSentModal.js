@@ -1,6 +1,6 @@
 import { Modal } from "flowbite-react";
 import React from 'react';
-import SmallButton from "../buttons/SmallButton";
+import SmallButton from "../../buttons/SmallButton";
 function RequestSentModal(props) {
     return (
         <Modal
