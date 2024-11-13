@@ -6,9 +6,9 @@ import Left_section_image from "../../assets/images/PhpGermanFlag.jpg";
 import Logo from "../../assets/images/SprachinsLogo.png";
 import PrimaryButton from "../../components/buttons/PrimaryButton";
 import SecondaryButton from "../../components/buttons/SecondaryButton";
-import DevLoginModal from "../../components/modals/DevLoginModal";
-import ForgetPasswordModal from "../../components/modals/ForgetPasswordModal";
-import PasswordResetModal from "../../components/modals/PasswordResetModal";
+import DevLoginModal from "../../components/modals/common/DevLoginModal";
+import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
+import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
 
 Cookies.remove();
 
