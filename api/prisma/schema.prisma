@@ -38,7 +38,7 @@ model enrollment_request {
   updatedAt DateTime @updatedAt
 }
 
-model module {
+model module{
   id        String   @id @default(cuid())
   name      String
   createdAt DateTime @default(now())

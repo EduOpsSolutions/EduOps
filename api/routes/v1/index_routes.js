@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
 
-const students = require("./students");
-const auth = require("./auth");
+import students from "./students_routes";
+import auth from "./auth_routes";
 
 router.get("/", function (req, res, next) {
   res.json({
@@ -14,4 +14,4 @@ router.get("/", function (req, res, next) {
 router.use("/students", students);
 router.use("/auth", auth);
 
-module.exports = router;
+export default router;

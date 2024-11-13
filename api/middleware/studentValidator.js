@@ -1,4 +1,4 @@
-const Joi = require("joi");
+import Joi from "joi";
 
 // Define the validation schema
 const studentSchema = Joi.object({

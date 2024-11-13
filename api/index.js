@@ -1,20 +1,9 @@
-require("dotenv").config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const { createPool } = require("mysql2");
+import "dotenv/config";
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
 
 const app = express();
-
-// const pool = createPool({
-//     host: process.env.DB_HOST,
-//     user: process.env.DB_USER,
-//     password: process.env.DB_PASSWORD,
-//     database: process.env.DB_DATABASE,
-//     waitForConnections: true,
-//     connectionLimit: 10,
-//     queueLimit: 0
-// });
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -27,19 +16,9 @@ app.use(
   })
 );
 
-const routes = require("./routes");
-app.use("/", routes); // Use routes as middleware
-
 const PORT = process.env.PORT || 5555;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// app.get("/", (req, res) => {
-//   res.json({
-//     error: false,
-//     message: "Active",
-//   });
-// });
-
-// module.exports = pool;
+export default app;
