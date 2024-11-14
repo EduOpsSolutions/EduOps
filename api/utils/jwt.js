@@ -1,5 +1,6 @@
-import { SignJWT, jwtVerify, jwtDecrypt } from "jose";
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+import { SignJWT, jwtVerify } from "jose";
+import { createSecretKey } from "crypto";
+const secret = createSecretKey(process.env.JWT_SECRET, "utf-8");
 
 export const signJWT = async (payload) => {
   console.log("PAYLOADKOBEH", payload);
@@ -22,10 +23,10 @@ export const signJWT = async (payload) => {
 export const verifyJWT = async (token) => {
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload;
+    return { payload };
   } catch (error) {
     if (error.code === "ERR_JWT_EXPIRED") {
-      return { expired: true }; // or return whatever you want for expired tokens
+      return { expired: true };
     }
     console.error("Error verifying JWT: " + error.message);
     return null;

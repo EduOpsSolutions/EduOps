@@ -7,7 +7,14 @@ export const verifyToken = async (req, res, next) => {
 
   const token = req.headers.authorization?.split(" ")[1];
   try {
-    const payload = await verifyJWT(token);
+    const { payload, expired } = await verifyJWT(token);
+    if (!payload && !expired) {
+      return res.status(401).json({ error: true, message: "Invalid token" });
+    }
+    if (expired) {
+      return res.status(401).json({ error: true, message: "Token expired" });
+    }
+
     req.user = payload;
     next();
   } catch (error) {
