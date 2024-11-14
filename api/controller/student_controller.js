@@ -1,11 +1,13 @@
-const { PrismaClient } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-const bcrypt = require("bcrypt");
+import bcrypt from "bcrypt";
 const SALT = parseInt(process.env.BCRYPT_SALT);
+import { verifyJWT } from "../utils/jwt.js";
 
 // Get all students
 const getAllStudents = async (req, res) => {
   try {
+    console.log(await verifyJWT(req.headers.authorization.split(" ")[1]));
     const students = await prisma.student.findMany();
     res.json(students);
   } catch (error) {
@@ -27,7 +29,7 @@ const getStudentById = async (req, res) => {
 
     res.json(student);
   } catch (error) {
-    res.status(500).json({ error: "Error fetching student" });
+    res.status(500).json({ error: true, message: "Error fetching student" });
   }
 };
 
@@ -127,7 +129,7 @@ const deleteStudent = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getAllStudents,
   getStudentById,
   createStudent,

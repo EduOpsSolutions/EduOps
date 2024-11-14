@@ -4,11 +4,19 @@ const prisma = new PrismaClient();
 
 async function getUserByEmail(email) {
   try {
-    const data = await prisma.student.findUnique({ where: { email } });
+    let data = await prisma.student.findUnique({
+      where: { email, deletedAt: null },
+    });
+    data.role = "student";
+    if (!data) {
+      return {
+        error: true,
+        message: "Account does not exist",
+      };
+    }
     return {
       error: false,
       data,
-      role: "student",
     };
   } catch (error) {
     console.error(error);

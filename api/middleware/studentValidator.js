@@ -50,7 +50,4 @@ const validateCreateStudent = (req, res, next) => {
   next();
 };
 
-module.exports = {
-  validateUpdateStudent,
-  validateCreateStudent,
-};
+export { validateUpdateStudent, validateCreateStudent };
