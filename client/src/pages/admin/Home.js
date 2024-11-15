@@ -15,8 +15,22 @@ return (
             {/* DETAILS */}
             <div className="w-[70%] my-16">
 
+                <div class="flex items-center mb-14">
+                    {/* CREATE POST */}
+                    <button id="create-post-button" className="flex items-center flex-row w-full bg-white rounded-3xl py-6 px-10 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
+                        <img src={John_logo} alt="" className="size-20 border-[3px] border-german-yellow rounded-full me-5" />
+                        <p>Create an announcement...</p>
+                    </button>
+
+                    {/* ARCHIVE POSTS  */}
+                    <a id="archives-button" href="#" className="ms-10">
+                        <i class="fa-solid fa-box-archive"></i>
+                        <p>Archives</p>
+                    </a>
+                </div>
+
                 {/* ADMIN POST  */}
-                <div className="mb-14 bg-white rounded-3xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
+                <div className="mb-10 bg-white rounded-3xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
                 <div className=" grid grid-cols-[auto_1fr_auto] items-center mb-6 gap-x-6">
                     <img src={John_logo} alt="" className="size-20 border-[3px] border-german-yellow rounded-full" />
                     <div>
