@@ -27,10 +27,10 @@ import TeacherLayout from './components/layout/TeacherLayout';
 import TeacherGrades from './pages/teacher/Grades';
 import TeacherHome from './pages/teacher/Home';
 
-/* Teacher Pages */
+/* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
 import AdminHome from './pages/admin/Home';
-
+import CourseManagement from './pages/admin/CourseManagement';
 
 
 
@@ -67,7 +67,8 @@ function App() {
 
           {/* Admin Page Routes */}
           <Route path="admin" element={<AdminLayout />}>
-            <Route index element={<AdminHome />} />            
+            <Route index element={<AdminHome />} />  
+            <Route path="coursemanagement"  element={<CourseManagement />}/>           
           </Route>
 
 
