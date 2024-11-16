@@ -3,11 +3,19 @@ import React, { useState } from 'react';
 import SearchField from "../../components/textFields/SearchField";
 import ThinRedButton from "../../components/buttons/ThinRedButton";
 import CreateCourseModal from '../../components/modals/courses/CreateCourseModal';
-
+import EditCourseModal from '../../components/modals/courses/EditCourseModal';
 
 
 function Home() {
   const [create_course_modal, setCreateCourseModal] = useState(false);
+  const [edit_course_modal, setEditCourseModal] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
+
+  const handleRowClick = (courseId) => {
+    setSelectedCourseId(courseId);
+    setEditCourseModal(true);
+  };
+
 
 return (
     <div class="bg_custom bg-white-yellow-tone">
@@ -42,7 +50,7 @@ return (
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
+                        <tr onClick={() => {setEditCourseModal(true)}}>
                             <td>1</td>
                             <td>A1</td>
                             <td>10/15</td>
@@ -58,6 +66,11 @@ return (
             <CreateCourseModal
                 create_course_modal={create_course_modal}
                 setCreateCourseModal={setCreateCourseModal}
+            />
+            <EditCourseModal 
+                edit_course_modal={edit_course_modal} 
+                setEditCourseModal={setEditCourseModal} 
+                //selectedCourseId={selectedCourseId}
             />
     </div>
     
