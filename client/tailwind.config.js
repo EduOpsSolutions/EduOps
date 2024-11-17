@@ -24,7 +24,10 @@ module.exports = {
           'grey-1': '#D9D9D9',
           'grey-2': '#B9B9B9',
           'blue-1': '#1738D9',
-          'green-1': '#108940'
+          'green-1': '#108940',
+          'green-2': '#29CC6A',
+          // Please find a better color for green 3. Button that uses this is in the grades modal for teachers and admins
+          'green-3': '#22A958',
         },
         fontFamily: {
           'sans': ['"Open Sans"'],
