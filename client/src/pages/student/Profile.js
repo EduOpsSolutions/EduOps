@@ -3,7 +3,8 @@ import John_logo from '../../assets/images/John.jpg';
 import Bg_image from '../../assets/images/Bg2.png';
 import EditPasswordModal from '../../components/modals/EditPasswordModal';
 import axios from 'axios';
-
+import { MdClose } from "react-icons/md";
+import {BsPencilFill} from 'react-icons/bs';
 function Profile() {
   const [editPasswordModal, setEditPasswordModal] = useState(false);
   const [studentID, setStudentID] = useState("");
@@ -32,37 +33,61 @@ function Profile() {
 
   return (
     <section className='flex flex-col items-center justify-center bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, height: '100%' }}>
-      <div className="flex flex-row">
-        <div className="mb-14 bg-white-yellow-tone rounded-2xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] flex flex-col justify-center items-center" style={{ marginRight: '50px' }}>
+      <div className="flex flex-row w-full justify-center items-stretch">
+      <div className="bg-white-yellow-tone rounded-2xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] flex flex-col justify-center items-center m-5">
           <img src={John_logo} alt="" className="size-80 border-[3px] rounded-full mb-4" />
-          <button className="py-2 px-4 rounded">Edit Profile Picture</button>
-          <button className="py-2 px-4 rounded mb-6">Remove Photo</button>
-          <div className="flex space-x-2">
-            <button className="bg-german-red text-white py-2 px-4 rounded" onClick={() => setEditPasswordModal(true)}>Change Password</button>
+          <button className="py-2 px-4 rounded flex items-center text-lg">
+            <BsPencilFill color='#5A5A5A' className="mr-2 text-2xl" />
+            Edit Profile Picture
+          </button>          
+          <button className="py-2 px-4 rounded flex items-center text-lg">
+            <MdClose color='#5A5A5A' className="mr-1 text-4xl" />
+            Remove Photo
+          </button>          
+          <div className="flex space-x-2 pt-6">
+            <button className="bg-dark-red text-white py-2 px-4 rounded" onClick={() => setEditPasswordModal(true)}><strong>Change Password</strong></button>
           </div>
         </div>
-        <div className="bg-white-yellow-tone rounded-2xl p-10 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
-          <h1 className="text-6xl font-bold mb-6">{name}</h1>
-          <h2 className="text-2xl mb-4">Personal Details</h2>
+        <div className="bg-white-yellow-tone rounded-2xl py-8 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] m-5">
+          <h1 className="text-5xl font-bold mb-10">Name{name}</h1>
+          <hr className="border-t-2 border-gray-400 mb-10" />
+          <h2 className="text-4xl mb-10">Personal Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="mb-2">
-                <strong>Student ID:</strong> {studentID}
+              <p className="text-xl mb-4">
+                <strong>Student ID:</strong>
               </p>
-              <p className="mb-2">
-                <strong>Email:</strong> {email}
+                <p className='mb-7 text-lg'>
+                studentID{studentID}
+                </p>
+              <p className="text-xl mb-4">
+                <strong>Email:</strong>
               </p>
-              <p className="mb-2">
-                <strong>Phone Number:</strong> {phoneNumber}
+                <p className='mb-7 text-lg'>
+                Email{email}
+                </p>
+              <p className="text-xl mb-4">
+                <strong>Phone Number:</strong> 
+              </p>
+                <p className='text-lg mb-8'>
+                Phone{phoneNumber}
               </p>
             </div>
-            <div>
-              <p className="mb-2">
+            <div className='m-20 mt-0 mr-40'>
+              <p className="text-xl mb-4">
                 <strong>Course:</strong> {course}
               </p>
-              <p className="mb-2">
+                <p className='mb-7 text-lg'>
+                  Course
+                  {course}
+                </p>
+              <p className="text-xl mb-4">
                 <strong>Birthday:</strong> {birthday}
               </p>
+                <p className='mb-7 text-lg'>
+                  Birthday
+                  {birthday}
+                </p>
             </div>
           </div>
         </div>
