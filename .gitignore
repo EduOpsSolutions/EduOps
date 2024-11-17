@@ -1,2 +1,5 @@
 /client/node_modules
 /api/node_modules
+/api/.env
+/api/.DS_Store
+/client/build

@@ -22,7 +22,7 @@ function StudentNavbar() {
           </svg>
         </div>
         <div className="h-[48px] w-[48px] flex justify-center items-center font-bold text-xl border-2 rounded-full cursor-pointer">
-          PD
+          <Link to='/student/profile' className="hover:text-gray-500">PD</Link>
         </div>
       </div>
     </nav>
