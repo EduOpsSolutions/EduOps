@@ -13,9 +13,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model student {
+model users {
   id        String   @id @default(cuid())
-  studentId String   @unique
+  userId String   @unique
   firstName String
   middleName String?
   lastName  String
@@ -26,16 +26,33 @@ model student {
   status         String?
   email     String   @unique
   password  String
+  role      String? @default("student")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
+  firstLogin Boolean @default(true)
+  resetToken String?
+  resetTokenExpiry DateTime?
 }
 
 model enrollment_request {
   id        String   @id @default(cuid())
-  studentId String @map("student_id")
+  enrollmentId String @unique
+  enrollmentStatus String @default("pending")
+  enrollmentData String?
+  studentId String? @map("student_id")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model course {
+  id        String   @id @default(cuid())
+  name      String
+  price     Decimal @db.Decimal(10, 2)
+  details   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 model module{

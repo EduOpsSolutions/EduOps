@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 async function getUserByEmail(email) {
   try {
-    let data = await prisma.student.findUnique({
+    let data = await prisma.users.findUnique({
       where: { email, deletedAt: null },
     });
     data.role = "student";
@@ -27,4 +27,20 @@ async function getUserByEmail(email) {
   }
 }
 
-export { getUserByEmail };
+async function getUserByToken(token) {
+  try {
+    let data = await prisma.users.findUnique({ where: { resetToken: token } });
+    return {
+      error: false,
+      data,
+    };
+  } catch (error) {
+    console.error(error);
+    return {
+      error: true,
+      message: error.message,
+    };
+  }
+}
+
+export { getUserByEmail, getUserByToken };

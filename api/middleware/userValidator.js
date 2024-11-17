@@ -1,17 +1,18 @@
 import Joi from "joi";
 
 // Define the validation schema
-const studentSchema = Joi.object({
-  studentId: Joi.string().min(1).max(100),
+const userSchema = Joi.object({
+  userId: Joi.string().min(1).max(100),
   firstName: Joi.string().min(2).trim(),
   lastName: Joi.string().min(2).trim(),
   email: Joi.string().email(),
   password: Joi.string().min(8).max(100),
+  role: Joi.string().valid("student", "teacher", "admin"),
 }).min(1); // Require at least one field to be present
 
 // Middleware function
-const validateUpdateStudent = (req, res, next) => {
-  const { error } = studentSchema.validate(req.body, {
+const validateUpdateUser = (req, res, next) => {
+  const { error } = userSchema.validate(req.body, {
     abortEarly: false, // Return all errors, not just the first one
     stripUnknown: true, // Remove unknown fields
   });
@@ -30,8 +31,8 @@ const validateUpdateStudent = (req, res, next) => {
   next();
 };
 
-const validateCreateStudent = (req, res, next) => {
-  const { error } = studentSchema.validate(req.body, {
+const validateCreateUser = (req, res, next) => {
+  const { error } = userSchema.validate(req.body, {
     abortEarly: false,
     stripUnknown: true,
   });
@@ -50,4 +51,4 @@ const validateCreateStudent = (req, res, next) => {
   next();
 };
 
-export { validateUpdateStudent, validateCreateStudent };
+export { validateUpdateUser, validateCreateUser };
