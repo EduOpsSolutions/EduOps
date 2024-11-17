@@ -21,6 +21,7 @@ import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
 import StudentSchedule from './pages/student/StudentSchedule';
+import Profile from './pages/student/Profile';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -57,6 +58,7 @@ function App() {
             <Route path="documents"  element={<Documents />}/> 
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
+            <Route path="profile" element={<Profile/>}/>
           </Route>
 
           {/* Teacher Page Routes */}
