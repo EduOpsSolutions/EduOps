@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import John_logo from '../../assets/images/John.jpg';
 import Bg_image from '../../assets/images/Bg2.png';
-import EditPasswordModal from '../../components/modals/EditPasswordModal';
+import EditPasswordModal from '../../components/modals/common/EditPasswordModal';
 import axios from 'axios';
 import { MdClose } from "react-icons/md";
 import {BsPencilFill} from 'react-icons/bs';
+import PrimaryButton from '../../components/buttons/PrimaryButton';
+import SmallButton from '../../components/buttons/SmallButton';
 function Profile() {
   const [editPasswordModal, setEditPasswordModal] = useState(false);
   const [studentID, setStudentID] = useState("");
@@ -36,16 +38,16 @@ function Profile() {
       <div className="flex flex-row w-full justify-center items-stretch">
       <div className="bg-white-yellow-tone rounded-2xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] flex flex-col justify-center items-center m-5">
           <img src={John_logo} alt="" className="size-80 border-[3px] rounded-full mb-4" />
-          <button className="py-2 px-4 rounded flex items-center text-lg">
+          <button className="py-2 px-4 rounded flex items-center text-lg hover:bg-gray-50">
             <BsPencilFill color='#5A5A5A' className="mr-2 text-2xl" />
             Edit Profile Picture
           </button>          
-          <button className="py-2 px-4 rounded flex items-center text-lg">
+          <button className="py-2 px-4 rounded flex items-center text-lg hover:bg-gray-50 ">
             <MdClose color='#5A5A5A' className="mr-1 text-4xl" />
             Remove Photo
           </button>          
           <div className="flex space-x-2 pt-6">
-            <button className="bg-dark-red text-white py-2 px-4 rounded" onClick={() => setEditPasswordModal(true)}><strong>Change Password</strong></button>
+            <SmallButton onClick={() => setEditPasswordModal(true)}>Change Password</SmallButton>
           </div>
         </div>
         <div className="bg-white-yellow-tone rounded-2xl py-8 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] m-5">

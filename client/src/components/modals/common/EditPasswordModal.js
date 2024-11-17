@@ -1,7 +1,8 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React, { useState } from 'react';
-import SmallButton from "../buttons/SmallButton";
-import LabelledInputField from "../textFields/LabelledInputField";
+import SmallButton from "../../buttons/SmallButton";
+import LabelledInputField from "../../textFields/LabelledInputField";
+import GrayButton from "../../buttons/GrayButton";
 
 // To customize measurements of header
 const customModalTheme = {
@@ -68,16 +69,16 @@ function EditPasswordModal(props) {
                         Change Password
                     </p>
                     <Modal.Body>
-                        <LabelledInputField name="currentPassword" id="currentPassword" label="Current Password" type="password" required={true} placeholder="" onChange={(e) => setCurrentPassword(e.target.value)} />
-                        <LabelledInputField name="newPassword" id="newPassword" label="New Password" type="password" required={true} placeholder="" onChange={(e) => setNewPassword(e.target.value)} />
-                        <LabelledInputField name="confirmNewPassword" id="confirmNewPassword" label="Confirm New Password" type="password" required={true} placeholder="" onChange={(e) => setConfirmNewPassword(e.target.value)} />
+                        <LabelledInputField name="currentPassword" id="currentPassword" label="Old Password:" type="password" required={true} placeholder="" onChange={(e) => setCurrentPassword(e.target.value)} />
+                        <LabelledInputField name="newPassword" id="newPassword" label="New Password:" type="password" required={true} placeholder="" onChange={(e) => setNewPassword(e.target.value)} />
+                        <LabelledInputField name="confirmNewPassword" id="confirmNewPassword" label="Confirm Password:" type="password" required={true} placeholder="" onChange={(e) => setConfirmNewPassword(e.target.value)} />
                     </Modal.Body>
                     <Modal.Footer>
-                        <SmallButton onClick={handleCancel} className="ml-2">
+                        <GrayButton onClick={handleCancel}>
                             Cancel
-                        </SmallButton>
-                        <SmallButton onClick={handlePasswordChange} className="ml-2">
-                            Change Password
+                        </GrayButton>
+                        <SmallButton onClick={handlePasswordChange}>
+                            Confirm
                         </SmallButton>
                     </Modal.Footer>
                 </div>
