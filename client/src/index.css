@@ -26,4 +26,13 @@
   background-color: rgb(65, 64, 64);
 }
 
+.course-table {
+  border-collapse: collapse; 
+}
 
+.course-table td {
+  border-top: 1px solid darkred;
+  border-bottom: 1px solid darkred;
+  padding: 8px;
+  text-align: center;
+}
