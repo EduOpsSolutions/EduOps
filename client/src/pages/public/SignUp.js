@@ -19,7 +19,7 @@ function SignUp() {
 
     const navigateToPaymentForm = () => {
         navigate("/paymentForm");
-      };
+    };
     
     // Add any missing options
     const civilStatusOptions = [
@@ -87,35 +87,17 @@ function SignUp() {
                         <LabelledInputField name="preferred_email" id="preferred_email" label="Preferred Email Address*" type="email" required={true} placeholder="johndoe@gmail.com" />
                         <LabelledInputField name="alt_email" id="alt_email" label="Alternate Email Address" type="email" required={false} placeholder="example@gmail.com" />
                     </div>
-                    <div class="grid md:grid-cols-3 md:gap-6">
+                    <div class="grid md:grid-cols-2 md:gap-6">
                         <LabelledInputField name="mother_name" id="mother_name" label="Mother's Maiden Full Name" type="text" required={false} placeholder="" />
-                        <div class="grid md:grid-cols-2 md:gap-6">
-                            <div className="flex flex-col items-center">
-                                <label htmlFor="deceased" className="mb-2 text-sm font-medium dark:text-white">
-                                Deceased?
-                                </label>
-                                <input type="checkbox" name="mother_deceased" id="mother_deceased" className="peer mt-3 text-dark-red focus:border-dark-red focus:ring-dark-red-2" />
-                            </div>
-                            <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                        </div>
+                        <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                     </div>
-                    <div class="grid md:grid-cols-3 md:gap-6">
+                    <div class="grid md:grid-cols-2 md:gap-6">
                         <LabelledInputField name="father_name" id="father_name" label="Father's Full Name" type="text" required={false} placeholder="" />
-                        <div class="grid md:grid-cols-2 md:gap-6">
-                            <div className="flex justify-center items-center">
-                                <input type="checkbox" name="father_deceased" id="father_deceased" className="peer text-dark-red focus:border-dark-red focus:ring-dark-red-2" />
-                            </div>
-                            <LabelledInputField name="father_contact_number" id="father_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                        </div>
+                        <LabelledInputField name="father_contact_number" id="father_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                     </div>
-                    <div class="grid md:grid-cols-3 md:gap-6">
+                    <div class="grid md:grid-cols-2 md:gap-6">
                         <LabelledInputField name="guardian_name" id="guardian_name" label="Guardian's Full Name" type="text" required={false} placeholder="" />
-                        <div class="grid md:grid-cols-2 md:gap-6">
-                            <div className="flex justify-center items-center">
-                                <input type="checkbox" name="guardian_deceased" id="guardian_deceased" className="peer text-dark-red focus:border-dark-red focus:ring-dark-red-2" />
-                            </div>
-                            <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                        </div>
+                        <LabelledInputField name="mother_contact_number" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                     </div>
 
                     {/* Temporary code. Replace with actual logic to select courses like modal or someth */}
@@ -125,7 +107,6 @@ function SignUp() {
                         </div>
                     </div>
 
-                    {/* Need to find way how to change the add file button's color to red from gray */}
                     <FileUploadButton label="Upload Valid ID (front and back)" id="valid_id" ariaDescribedBy="valid_id_help" />
                     <FileUploadButton label="Upload 2X2 ID Photo (white background)" id="2x2_id" ariaDescribedBy="2x2_id_help" />
                     {/* Add Onclick function to go to enrollment */}
