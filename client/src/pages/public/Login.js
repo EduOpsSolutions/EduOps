@@ -1,8 +1,6 @@
 import Cookies from "js-cookie";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Swal from 'sweetalert2';
-import withReactContent from 'sweetalert2-react-content';
 import Bg_image from "../../assets/images/GermanyBg.png";
 import Left_section_image from "../../assets/images/PhpGermanFlag.jpg";
 import Logo from "../../assets/images/SprachinsLogo.png";
@@ -12,19 +10,7 @@ import DevLoginModal from "../../components/modals/common/DevLoginModal";
 import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
 import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
 
-const MySwal = withReactContent(Swal)
 Cookies.remove();
-
-
-// MySwal.fire({
-//   title: <p>Hello World</p>,
-//   didOpen: () => {
-//     // `MySwal` is a subclass of `Swal` with all the same instance & static methods
-//     MySwal.showLoading()
-//   },
-// }).then(() => {
-//   return MySwal.fire(<p>Shorthand works too</p>)
-// })
 
 function Login() {
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
