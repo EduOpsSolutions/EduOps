@@ -1,8 +1,9 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import SmallButton from "../../buttons/SmallButton";
 import GrayButton from "../../buttons/GrayButton";
 import PostTagButton from '../../buttons/PostTagButton';
+import EmojiPicker from 'emoji-picker-react';
 
 
 // To customize measurements of header 
@@ -30,13 +31,17 @@ function CreatePostModal(props) {
     const [tag, setTag] = useState("global");
     const [selectedImages, setselectedImages] = useState([]);
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [inputStr, setInputStr] = useState('');
+    const [showPicker, setShowPicker] = useState(false);
+    const emojiPickerRef = useRef(null);
+    const textAreaRef = useRef(null);
 
     const handleTagChange = (newTag) => {
         setTag(newTag);
         document.getElementById("post-tag").value = newTag;
     };
 
-    const handleFileChange = (event, type) => {
+    const handleFileUpload = (event, type) => {
         const selectedFiles = event.target.files;
 
         if (type === "photo") {
@@ -53,6 +58,41 @@ function CreatePostModal(props) {
             setSelectedFiles((previousFiles) => previousFiles.concat(filesArray));
         }
     };
+
+    const handleEmojiSelection = (emoji) => {
+        if (textAreaRef.current) {
+            const { selectionStart, selectionEnd } = textAreaRef.current;
+            const updatedText =
+                inputStr.substring(0, selectionStart) +
+                emoji.emoji +
+                inputStr.substring(selectionEnd);
+
+            setInputStr(updatedText);
+
+            setTimeout(() => {
+                textAreaRef.current.setSelectionRange(
+                    selectionStart + emoji.emoji.length,
+                    selectionStart + emoji.emoji.length
+                );
+                textAreaRef.current.focus();
+            }, 0);
+        }
+        setShowPicker(false);
+    };
+
+    const handleClickOutside = (event) => {
+        if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+            setShowPicker(false);
+        }
+    };
+
+    React.useEffect(() => {
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
@@ -78,7 +118,7 @@ function CreatePostModal(props) {
                     <p className="font-bold -mt-12 ml-6 mb-6 text-center text-3xl transition ease-in-out duration-300">
                         Create Post
                     </p>
-                    <Modal.Body>
+                    <Modal.Body className="overflow-visible">
                         {/* Add action for form */}
                         <form action="">
                             <div className="h-[550px] flex flex-col mt-1"> 
@@ -98,6 +138,9 @@ function CreatePostModal(props) {
                                             placeholder="Write Here..." 
                                             className="bg-transparent border-0 size-full resize-none py-0 ps-0 placeholder:text-[#575757] focus:outline-none focus:ring-0"
                                             required
+                                            ref={textAreaRef}
+                                            value={inputStr}
+                                            onChange={e => setInputStr(e.target.value)}
                                         ></textarea>
                                         <div className={`${ (selectedFiles.length > 0 || selectedImages.length > 0)? 'h-40' : 'hidden'} flex flex-row items-center gap-5 overflow-x-auto pt-2`}>
                                             {selectedImages && (
@@ -170,7 +213,7 @@ function CreatePostModal(props) {
                                             accept="image/png, image/jpeg" 
                                             className="hidden" 
                                             multiple
-                                            onChange={(e) => handleFileChange(e, "photo")}
+                                            onChange={(e) => handleFileUpload(e, "photo")}
                                         />
                                         
                                         <label htmlFor="new-post-docs" className="hover:cursor-pointer">
@@ -185,10 +228,19 @@ function CreatePostModal(props) {
                                             accept=".doc,.docx,.pdf" 
                                             className="hidden"
                                             multiple
-                                            onChange={(e) => handleFileChange(e, "file")}
+                                            onChange={(e) => handleFileUpload(e, "file")}
                                         />
 
-                                        <button type="button" id="emoji-button" className="ml-auto">
+                                        <button 
+                                            type="button" 
+                                            className="relative ml-auto"
+                                            onClick={() => setShowPicker(val => !val)}
+                                        >
+                                            {showPicker && (
+                                                <div ref={emojiPickerRef} className="absolute -right-3 bottom-10" onClick={(e) => e.stopPropagation()}>
+                                                    <EmojiPicker pickerStyle={{ width: '100%' }} onEmojiClick={handleEmojiSelection} />
+                                                </div>
+                                            )}
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#666666" className="size-9">
                                                 <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-2.625 6c-.54 0-.828.419-.936.634a1.96 1.96 0 0 0-.189.866c0 .298.059.605.189.866.108.215.395.634.936.634.54 0 .828-.419.936-.634.13-.26.189-.568.189-.866 0-.298-.059-.605-.189-.866-.108-.215-.395-.634-.936-.634Zm4.314.634c.108-.215.395-.634.936-.634.54 0 .828.419.936.634.13.26.189.568.189.866 0 .298-.059.605-.189.866-.108.215-.395.634-.936.634-.54 0-.828-.419-.936-.634a1.96 1.96 0 0 1-.189-.866c0-.298.059-.605.189-.866Zm2.023 6.828a.75.75 0 1 0-1.06-1.06 3.75 3.75 0 0 1-5.304 0 .75.75 0 0 0-1.06 1.06 5.25 5.25 0 0 0 7.424 0Z" clipRule="evenodd" />
                                             </svg>
