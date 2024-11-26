@@ -10,7 +10,6 @@ import DevLoginModal from "../../components/modals/common/DevLoginModal";
 import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
 import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
 
-
 Cookies.remove();
 
 function Login() {
