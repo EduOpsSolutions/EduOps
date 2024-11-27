@@ -12,8 +12,6 @@ import PasswordResetModal from "../../components/modals/common/PasswordResetModa
 
 Cookies.remove();
 
-
-
 function Login() {
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
   const [password_reset_modal, setPasswordResetModal] = useState(false);
