@@ -1,10 +1,9 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React, { useState, useRef } from 'react';
-import SmallButton from "../../buttons/SmallButton";
 import GrayButton from "../../buttons/GrayButton";
 import PostTagButton from '../../buttons/PostTagButton';
 import EmojiPicker from 'emoji-picker-react';
-
+import Config from "../../../utils/config.js";
 
 // To customize measurements of header 
 const customModalTheme = {
@@ -29,7 +28,7 @@ const customModalTheme = {
 
 function CreatePostModal(props) {
     const [tag, setTag] = useState("global");
-    const [selectedImages, setselectedImages] = useState([]);
+    const [selectedImages, setSelectedImages] = useState([]);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [inputStr, setInputStr] = useState('');
     const [showPicker, setShowPicker] = useState(false);
@@ -43,18 +42,15 @@ function CreatePostModal(props) {
 
     const handleFileUpload = (event, type) => {
         const selectedFiles = event.target.files;
+        const selectedFilesArray = Array.from(selectedFiles);
 
         if (type === "photo") {
-            const selectedFilesArray = Array.from(selectedFiles);
             const imagesArray = selectedFilesArray.map((file) => {
                 return URL.createObjectURL(file);
             });
-
-            setselectedImages((previousImages) => previousImages.concat(imagesArray));
+            setSelectedImages((previousImages) => previousImages.concat(imagesArray));
         } else if (type === "file") {
-            const selectedFilesArray = Array.from(selectedFiles);
             const filesArray = selectedFilesArray.map((file) => file.name);
-
             setSelectedFiles((previousFiles) => previousFiles.concat(filesArray));
         }
     };
@@ -93,6 +89,22 @@ function CreatePostModal(props) {
         };
     }, []);
 
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        var isValid = true;
+        const attachmentCount = selectedImages.length + selectedFiles.length;
+
+        if(attachmentCount > 0 && attachmentCount > Config.MAX_ATTACHMENTS){
+            console.log("You can't upload more than " +  Config.MAX_ATTACHMENTS + " attachments.")
+            isValid = false;
+        }
+
+        if(isValid){
+            props.setCreatePostModal(false);
+            setSelectedImages([]);
+            setSelectedFiles([]);
+        }
+    }
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
@@ -119,8 +131,7 @@ function CreatePostModal(props) {
                         Create Post
                     </p>
                     <Modal.Body className="overflow-visible">
-                        {/* Add action for form */}
-                        <form action="">
+                        <form onSubmit={handleSubmit}>
                             <div className="h-[550px] flex flex-col mt-1"> 
                                 <input 
                                     type="text" 
@@ -151,7 +162,7 @@ function CreatePostModal(props) {
                                                                 type="button"
                                                                 className="absolute -right-2 -top-[6px] bg-[#777777] rounded-full p-1"
                                                                 onClick={() => 
-                                                                    setselectedImages(selectedImages.filter((e) => e !== image))
+                                                                    setSelectedImages(selectedImages.filter((e) => e !== image))
                                                                 }
                                                             >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="#F5F5F5" className="size-5">
@@ -166,7 +177,7 @@ function CreatePostModal(props) {
                                             {selectedFiles && (
                                                 selectedFiles.map((files, index) => {
                                                     return (
-                                                        <div key={files} className="flex-none relative h-16 w-40 bg-[#777777] rounded-2xl">
+                                                        <div key={`${files}-${index}`} className="flex-none relative h-16 w-40 bg-[#777777] rounded-2xl">
                                                             <button 
                                                                 type="button"
                                                                 className="absolute -right-2 -top-[6px] bg-[#777777] rounded-full p-1 drop-shadow-[0px_2px_1px_rgba(0,0,0,.5)]"
@@ -180,8 +191,8 @@ function CreatePostModal(props) {
                                                             </button>
                                                             <div className="size-full flex flex-row items-center justify-center p-2 text-sm text-[#F5F5F5] font-bold select-none">
                                                                 <div className="min-h-10 min-w-10 flex justify-center pt-[7px] rounded-full bg-[#333333] me-2">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F5F5F5" class="size-6">
-                                                                        <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z" clip-rule="evenodd" />
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F5F5F5" className="size-6">
+                                                                        <path fillRule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z" clipRule="evenodd" />
                                                                         <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
                                                                     </svg>
                                                                 </div>
@@ -215,7 +226,7 @@ function CreatePostModal(props) {
                                             multiple
                                             onChange={(e) => handleFileUpload(e, "photo")}
                                         />
-                                        
+
                                         <label htmlFor="new-post-docs" className="hover:cursor-pointer">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="#666666" className="size-8">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
@@ -258,8 +269,9 @@ function CreatePostModal(props) {
                                         {/* No backend yet for error handling */}
                                         <GrayButton onClick={() => props.setCreatePostModal(false)}>Cancel</GrayButton>
                                         <span className="mx-3"></span>
-                                        {/* Change onclick function for submitting the form */}
-                                        <SmallButton onClick={() => props.setCreatePostModal(false)}>Create</SmallButton>
+                                        <button type="submit" className="text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-md w-full sm:w-auto px-12 py-2.5 text-center mx-auto shadow-sm shadow-black  ease-in duration-150">
+                                            Create
+                                        </button>
                                     </div>
                                 </div>
                             </div>
