@@ -1,8 +1,11 @@
-import { React } from 'react';
+import React, { useState } from 'react';
 import { Link } from "react-router-dom";
 import ThinRedButton from '../../components/buttons/ThinRedButton';
+import TransactionHistoryModal from '../../components/modals/common/TransactionHistoryModal';
 
 function Assessment() {
+    const [transaction_history_modal, setTransactionHistoryModal] = useState(false);
+
     return(
         <div className='bg-white-yellow-tone h-full flex flex-col py-16 px-20'>
             <div className='flex flex-row gap-16'>
@@ -51,7 +54,7 @@ function Assessment() {
                     <div className='flex flex-row items-end pb-3 border-b-2 border-dark-red-2'>
                         <p className='uppercase grow'>Dolor, Polano I</p>
                         <div className='m-0'>
-                            <ThinRedButton>Transaction History</ThinRedButton>
+                            <ThinRedButton onClick={() => {setTransactionHistoryModal(true)}}>Transaction History</ThinRedButton>
                             <span className='mx-2'></span>
                             <Link to='/student/ledger'><ThinRedButton>Ledger</ThinRedButton></Link>
                         </div>
@@ -91,6 +94,11 @@ function Assessment() {
                     </div>
                 </div>
             </div>
+
+            <TransactionHistoryModal
+                transaction_history_modal={transaction_history_modal}
+                setTransactionHistoryModal={setTransactionHistoryModal}
+            />
         </div>
     )
 }
