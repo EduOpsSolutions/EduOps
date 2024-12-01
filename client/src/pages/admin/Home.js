@@ -31,6 +31,7 @@ function Home() {
                             </a>
                         </div>
 
+                        {/* Replace props with backend logic */}
                         {/* ADMIN POST  */}
                         <PostCard
                             profilePic={John_logo}
@@ -44,9 +45,9 @@ function Home() {
                             updatedAt=""
                         />
                         
+                        {/* Replace props with backend logic */}
                         {/* TEACHER POST */}
-                        <PostCard
-                            profilePic={Tricia_logo}
+                        <PostCard profilePic={Tricia_logo}
                             postedBy="Tricia Diaz"
                             department="Department Office"
                             title="Another Post"
