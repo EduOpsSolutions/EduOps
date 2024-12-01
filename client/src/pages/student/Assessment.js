@@ -92,6 +92,11 @@ function Assessment() {
                         <p className='text-center'>0.00</p>
                         <p className='text-center'>28,650.00</p>
                     </div>
+                    <Link to='' className='flex flex-row justify-end mt-10'>
+                        <span className='m-0'>
+                            <ThinRedButton>Proceed to Payment</ThinRedButton>
+                        </span>
+                    </Link>
                 </div>
             </div>
 
