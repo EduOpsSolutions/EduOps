@@ -9,7 +9,7 @@ function Assessment() {
     return(
         <div className='bg-white-yellow-tone h-full flex flex-col py-16 px-20'>
             <div className='flex flex-row gap-16'>
-                <div className='h-fit grow-0 basis-3/12 bg-white border-dark-red-2 border-2 rounded-lg p-7'>
+                <div className='h-fit grow-0 basis-3/12 bg-white border-dark-red-2 border-2 rounded-lg p-7 shadow-[0_4px_3px_0_rgba(0,0,0,0.5)]'>
                     <form className='flex flex-col gap-7'>
                         <div className='flex flex-row gap-2 items-center'>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className='size-6'>
@@ -49,7 +49,7 @@ function Assessment() {
                         </div>
                     </form>
                 </div>
-                <div className='basis-9/12 bg-white border-dark-red-2 border-2 rounded-lg p-10'>
+                <div className='basis-9/12 bg-white border-dark-red-2 border-2 rounded-lg p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]'>
                     <p className='font-bold text-lg text-center mb-5'>A1: Batch 1 | 2024</p>
                     <div className='flex flex-row items-end pb-3 border-b-2 border-dark-red-2'>
                         <p className='uppercase grow'>Dolor, Polano I</p>
