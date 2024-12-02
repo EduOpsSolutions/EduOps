@@ -22,6 +22,7 @@ import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
 import StudentSchedule from './pages/student/StudentSchedule';
 import Profile from './pages/student/Profile';
+import Assessment from './pages/student/Assessment';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -54,10 +55,11 @@ function App() {
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>
             <Route index element={<Home />} />                            {/* localhost/student */}
-            <Route path="grades"  element={<Grades />}/> 
-            <Route path="documents"  element={<Documents />}/> 
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
+            <Route path="grades"  element={<Grades />}/> 
+            <Route path="assessment" element={<Assessment/>}/>
+            <Route path="documents"  element={<Documents />}/> 
             <Route path="profile" element={<Profile/>}/>
           </Route>
 
