@@ -56,7 +56,9 @@ function Assessment() {
                         <div className='m-0'>
                             <ThinRedButton onClick={() => {setTransactionHistoryModal(true)}}>Transaction History</ThinRedButton>
                             <span className='mx-2'></span>
-                            <Link to='/student/ledger'><ThinRedButton>Ledger</ThinRedButton></Link>
+                            <Link to='/student/ledger' state={{ status: "fromAssessment" }}>
+                                <ThinRedButton>Ledger</ThinRedButton>
+                            </Link>
                         </div>
                     </div>
                     <p className='font-bold text-lg text-center mt-9 mb-1'>FEES</p>
