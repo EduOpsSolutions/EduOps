@@ -22,6 +22,7 @@ import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
 import StudentSchedule from './pages/student/StudentSchedule';
 import Profile from './pages/student/Profile';
+import Ledger from './pages/student/Ledger';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -58,6 +59,7 @@ function App() {
             <Route path="documents"  element={<Documents />}/> 
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
+            <Route path="ledger" element={<Ledger/>}/>
             <Route path="profile" element={<Profile/>}/>
           </Route>
 
