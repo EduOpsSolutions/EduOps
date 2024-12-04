@@ -39,8 +39,27 @@ model enrollment_request {
   id        String   @id @default(cuid())
   enrollmentId String @unique
   enrollmentStatus String @default("pending")
-  enrollmentData String?
   studentId String? @map("student_id")
+  firstName         String
+  middleName        String?
+  lastName          String
+  birthDate         DateTime
+  civilStatus       String
+  address           String
+  referredBy        String
+  contactNumber     String
+  altContactNumber  String?
+  preferredEmail    String
+  altEmail          String?
+  motherName        String?
+  motherContact     String?
+  fatherName        String?
+  fatherContact     String?
+  guardianName      String?
+  guardianContact   String?
+  coursesToEnroll   String
+  validIdPath       String?  
+  idPhotoPath       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
