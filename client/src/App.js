@@ -36,7 +36,7 @@ import AdminLayout from './components/layout/AdminLayout';
 import AdminHome from './pages/admin/Home';
 import CourseManagement from './pages/admin/CourseManagement';
 import EnrollmentRequests from './pages/admin/EnrollmentRequests';
-
+import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 
 function App() {
   return (
@@ -74,7 +74,8 @@ function App() {
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<AdminHome />} />  
             <Route path="coursemanagement" element={<CourseManagement />}/>           
-            <Route path="enrollmentrequests" element={<EnrollmentRequests />}/>              
+            <Route path="enrollmentrequests" element={<EnrollmentRequests />}/>           
+            <Route path="enrollmentperiod" element={<EnrollmentPeriod />}/>           
           </Route>
 
 
