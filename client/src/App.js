@@ -2,6 +2,9 @@ import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import './App.css';
 
+// Import axios instance
+import axios from './utils/axios';
+
 /*Utility Pages*/
 import Assets from "./pages/Assets";
 
@@ -33,8 +36,8 @@ import TeacherHome from './pages/teacher/Home';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminHome from './pages/admin/Home';
 import CourseManagement from './pages/admin/CourseManagement';
-
-
+import EnrollmentRequests from './pages/admin/EnrollmentRequests';
+import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 
 function App() {
   return (
@@ -72,7 +75,9 @@ function App() {
           {/* Admin Page Routes */}
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<AdminHome />} />  
-            <Route path="coursemanagement"  element={<CourseManagement />}/>           
+            <Route path="coursemanagement" element={<CourseManagement />}/>           
+            <Route path="enrollmentrequests" element={<EnrollmentRequests />}/>           
+            <Route path="enrollmentperiod" element={<EnrollmentPeriod />}/>           
           </Route>
 
 
