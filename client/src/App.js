@@ -25,6 +25,7 @@ import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
 import StudentSchedule from './pages/student/StudentSchedule';
 import Profile from './pages/student/Profile';
+import Ledger from './pages/student/Ledger';
 import Assessment from './pages/student/Assessment';
 
 /* Teacher Pages */
@@ -62,6 +63,7 @@ function App() {
             <Route path="schedule" element={<StudentSchedule/>}/>
             <Route path="grades"  element={<Grades />}/> 
             <Route path="assessment" element={<Assessment/>}/>
+            <Route path="ledger" element={<Ledger/>}/>
             <Route path="documents"  element={<Documents />}/> 
             <Route path="profile" element={<Profile/>}/>
           </Route>
