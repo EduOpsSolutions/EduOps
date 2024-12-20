@@ -2,10 +2,10 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import UserNav from '../navbars/UserNav';
 
-function TeacherLayout() {
+function AdminLayout() {
     return (
         <div className="h-screen flex flex-col">
-            <UserNav />
+            <UserNav role="admin" />
             <div className="w-full h-full">
                 <Outlet />
             </div>
@@ -13,4 +13,4 @@ function TeacherLayout() {
     )
 }
 
-export default TeacherLayout
+export default AdminLayout
