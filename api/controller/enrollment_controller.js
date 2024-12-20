@@ -2,13 +2,35 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// In-memory counter (not persistent)
-let enrollmentCounter = 0;
+function generateRandomId() {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  
+  let randomLetters = '';
+  for (let i = 0; i < 5; i++) {
+    randomLetters += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
 
-// Generate custom enrollmentId
-function generateEnrollmentId() {
-  enrollmentCounter += 1;
-  return `eReq${String(enrollmentCounter).padStart(3, "0")}`;
+  let randomNumbers = '';
+  for (let i = 0; i < 3; i++) {
+    randomNumbers += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+
+  return randomLetters + randomNumbers;
+}
+
+async function generateEnrollmentId() {
+  let newId;
+  let exists = true;
+
+  while (exists) {
+    newId = generateRandomId();
+    exists = await prisma.enrollment_request.findUnique({
+      where: { enrollmentId: newId },
+    });
+  }
+
+  return newId;
 }
 
 // Create new enrollment request
@@ -38,7 +60,7 @@ const createEnrollmentRequest = async (req, res) => {
     const validIdPath = null;
     const idPhotoPath = null;
 
-    const enrollmentId = generateEnrollmentId();
+    const enrollmentId = await generateEnrollmentId();
 
     const enrollmentRequest = await prisma.enrollment_request.create({
       data: {
