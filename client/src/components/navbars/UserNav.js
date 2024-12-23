@@ -74,9 +74,7 @@ function UserNavbar({ role }) {
                     )}
                 </Dropdown>
                 
-                { ['student', 'admin'].includes(role) && ( 
-                    <Link to={`/${role}/grades`} className="me-6 hover:text-dark-red-4"> Grades </Link>
-                )}
+                <Link to={`/${role}/grades`} className="me-6 hover:text-dark-red-4"> Grades </Link>
                 
                 { ['student', 'admin'].includes(role) && ( 
                     <Dropdown 
