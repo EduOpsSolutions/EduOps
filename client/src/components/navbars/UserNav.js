@@ -4,9 +4,10 @@ import { Link } from "react-router-dom";
 import logo from "../../assets/images/SprachinsLogo.png";
 
 function UserNavbar({ role }) {
+    // Only returns this navbar if user not logged in
     if (role === "public") {
         return (
-            <nav className="bg-german-red dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b-[5px] border-dark-red-2">
+            <nav className="w-full h-20 flex flex-row justify-center items-center bg-german-red text-white px-8 py-2 border-b-[5px] border-dark-red-2 z-10 select-none">
                 <div className="flex flex-wrap items-center justify-between mx-auto p-2 ml-4">
                     <a href="/" className="flex">
                         <img src={logo} className="h-14 w-auto" alt="Logo" />
@@ -15,7 +16,7 @@ function UserNavbar({ role }) {
             </nav>
         );
     }
-    
+
     return (
         <nav className="w-full h-20 flex flex-row justify-center items-center bg-german-red text-white px-8 py-2 border-b-[5px] border-dark-red-2 z-10 select-none">
             <Link to={`/${role}`} className="">
@@ -184,9 +185,9 @@ function UserNavbar({ role }) {
                     </Dropdown.Item>
                     <Dropdown.Divider className="bg-black mx-4" />
                     <Dropdown.Item className="text-xs text-white hover:bg-transparent focus:bg-transparent">
-                        <Link to={`/${role}/terms`} className=""> Terms </Link> 
+                        <Link to={`/${role}/legal/terms`} className=""> Terms </Link> 
                         <span className="mx-1"> • </span>
-                        <Link to={`/${role}/privacy-policy`} className=""> Privacy </Link> 
+                        <Link to={`/${role}/legal/privacy-policy`} className=""> Privacy </Link> 
                         <span className="mx-1"> • </span>
                         <span> EduOps © 2024 </span>
                     </Dropdown.Item>

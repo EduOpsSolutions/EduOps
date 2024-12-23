@@ -51,13 +51,10 @@ function App() {
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>
-            <Route index element={<Login />} />                            {/* localhost/student */}
+            <Route index element={<Login />} />                          
             <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
             <Route path="terms" element={<Terms/>}/>
           </Route>
-
-
-
 
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>
@@ -67,18 +64,30 @@ function App() {
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
             <Route path="profile" element={<Profile/>}/>
+            <Route path="legal">
+              <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
+              <Route path="terms" element={<Terms/>}/>
+            </Route>
           </Route>
 
           {/* Teacher Page Routes */}
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />   
-            <Route path="grades"  element={<TeacherGrades />}/>          
+            <Route path="grades"  element={<TeacherGrades />}/>
+            <Route path="legal">
+              <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
+              <Route path="terms" element={<Terms/>}/>
+            </Route>
           </Route>
 
           {/* Admin Page Routes */}
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<AdminHome />} />  
-            <Route path="coursemanagement"  element={<CourseManagement />}/>           
+            <Route path="coursemanagement"  element={<CourseManagement />}/>     
+            <Route path="legal">
+              <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
+              <Route path="terms" element={<Terms/>}/>
+            </Route>
           </Route>
 
 
