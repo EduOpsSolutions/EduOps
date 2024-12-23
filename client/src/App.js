@@ -6,6 +6,7 @@ import './App.css';
 import Assets from "./pages/Assets";
 
 /* General Pages */
+import PublicLayout from './components/layout/PublicLayout';
 import PrivacyPolicy from './pages/legal/PrivacyPolicy';
 import Terms from './pages/legal/Terms';
 import Login from './pages/public/Login';
@@ -20,8 +21,8 @@ import Documents from './pages/student/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
-import StudentSchedule from './pages/student/StudentSchedule';
 import Profile from './pages/student/Profile';
+import StudentSchedule from './pages/student/StudentSchedule';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -30,8 +31,8 @@ import TeacherHome from './pages/teacher/Home';
 
 /* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
-import AdminHome from './pages/admin/Home';
 import CourseManagement from './pages/admin/CourseManagement';
+import AdminHome from './pages/admin/Home';
 
 
 
@@ -47,8 +48,15 @@ function App() {
           <Route path="paymentForm" element={<PaymentForm/>}/>
           <Route path="redirectPage" element={<RedirectPage/>}/>
           <Route path="sign-up" element={<SignUp/>}/>
-          <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
-          <Route path="terms" element={<Terms/>}/>
+
+          {/* Public legal Routes */}
+          <Route path="legal" element={<PublicLayout />}>
+            <Route index element={<Login />} />                            {/* localhost/student */}
+            <Route path="privacy-policy" element={<PrivacyPolicy/>}/>
+            <Route path="terms" element={<Terms/>}/>
+          </Route>
+
+
 
 
           {/* Student Page Routes */}

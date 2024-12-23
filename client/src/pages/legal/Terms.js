@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Bg_image from '../../assets/images/Bg2.png';
 import BackButton from '../../components/buttons/BackButton';
-import SignUpNav from '../../components/navbars/SignUpNav';
 
 function Terms() {
     const navigate = useNavigate();
@@ -14,9 +13,6 @@ function Terms() {
 
     return (
         <section className='flex items-start justify-start flex-row bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh'}}>
-            
-            {/* Insert backend logic to change navbar depending on user role signed in */}
-            <SignUpNav />
 
             <div className="relative max-w-full mx-auto bg-transparent w-full px-8 py-4 mt-20 mb-12 flex flex-col">
 

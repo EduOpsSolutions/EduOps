@@ -1,9 +1,21 @@
+import { Dropdown } from "flowbite-react";
 import React from "react";
 import { Link } from "react-router-dom";
-import { Dropdown } from "flowbite-react";
 import logo from "../../assets/images/SprachinsLogo.png";
 
 function UserNavbar({ role }) {
+    if (role === "public") {
+        return (
+            <nav className="bg-german-red dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b-[5px] border-dark-red-2">
+                <div className="flex flex-wrap items-center justify-between mx-auto p-2 ml-4">
+                    <a href="/" className="flex">
+                        <img src={logo} className="h-14 w-auto" alt="Logo" />
+                    </a>
+                </div>
+            </nav>
+        );
+    }
+    
     return (
         <nav className="w-full h-20 flex flex-row justify-center items-center bg-german-red text-white px-8 py-2 border-b-[5px] border-dark-red-2 z-10 select-none">
             <Link to={`/${role}`} className="">
