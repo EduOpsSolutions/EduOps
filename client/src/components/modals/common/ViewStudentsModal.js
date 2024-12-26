@@ -45,26 +45,18 @@ function ViewStudentsModal(props) {
                         A1 | TTh 6:30AM - 7:30AM
                     </p>
                     <Modal.Body>
-                        {/*You can achange the height to be more dynamic pero if that is okay na then you can leave it like that*/}
                         <div class="h-[400px]"> 
                             <div className="h-[90%] border-y-dark-red-2 border-y-2 overflow-y-auto">
                                 <table class="text-base text-left rtl:text-right text-black mx-auto w-full">
                                     <thead class="text-base text-black text-center border-b-dark-red-2 border-b-2 p-0">
                                         <tr>
-                                            <th scope="col" class="px-2 py-1">
-                                            Student ID
-                                            </th>
-                                            <th scope="col" class="px-2 py-1">
-                                            Name
-                                            </th>
-                                            <th scope="col" class="px-2 py-1">
-                                            Email
-                                            </th>
+                                            <th scope="col" class="px-2 py-1">Student ID</th>
+                                            <th scope="col" class="px-2 py-1">Name</th>
+                                            <th scope="col" class="px-2 py-1">Email</th>
                                         </tr>
                                     </thead>
                                 {/* Note: Replace table body data with backend logic with classnames of first tr and add Onclick logic*/}
                                 {/* PS it should account na in case overflow probably hehe */}
-                                {/* Also make sure to replace ang status and hasDoc based sa naa sa database*/}
                                     <tbody className="text-center">
                                         <tr>
                                             <td class="px-2 py-1">2012923</td>

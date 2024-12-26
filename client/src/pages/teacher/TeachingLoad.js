@@ -64,6 +64,7 @@ function TeachingLoad() {
                             </tbody>
                         </table>
                     </div>
+                    {/* Try to add props wherein it will get the data from that specific course so that modal can view the dets of that course*/}
                     <ViewStudentsModal
                         view_students_modal={view_students_modal}
                         setViewStudentsModal={setViewStudentsModal}
