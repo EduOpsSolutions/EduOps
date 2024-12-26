@@ -202,13 +202,15 @@ function StudentsGradeModal(props) {
                                         <input id="inline-checkbox" type="checkbox" value="" class="w-4 h-4 ml-4 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-dark-red-2 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
                                     </div>
                                     <div className="ml-4">
-                                        <ThinRedButton onClick={""} color="bg-grey" hoverColor="bg-grey-2">
+                                        {/* Insert function to upload a csv file */}
+                                        <ThinRedButton onClick={() => {}} color="bg-grey" hoverColor="bg-grey-2">
                                             Upload CSV
                                         </ThinRedButton>
                                     </div>
                                 </div>
                                 <div className="">
-                                    <ThinRedButton onClick={""} color="bg-dark-red-2" hoverColor="bg-dark-red-5">
+                                    {/* Insert function to save grades */}
+                                    <ThinRedButton onClick={() => {}} color="bg-dark-red-2" hoverColor="bg-dark-red-5">
                                         Save Grades
                                     </ThinRedButton>
                                 </div>

@@ -1,18 +1,18 @@
-import React from 'react';
-import { useLocation } from "react-router-dom";
+import React, { useState } from "react";
 import Bg_image from '../../assets/images/Bg2.png';
 import ThinRedButton from '../../components/buttons/ThinRedButton';
+import ViewStudentsModal from '../../components/modals/common/ViewStudentsModal';
 
 function TeachingLoad() {
-    const location = useLocation();
-    const status = location.state?.status;
-    const showButton = status === 'fromAssessment' ? 1 : 0;
+    const [view_students_modal, setViewStudentsModal] = useState(false);
+
 
     return(
         <section className='flex justify-start bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh'}}>
             <div className='h-[calc(100vh-80px)] overflow-hidden box-border flex flex-col py-12 px-20'>
                 <div className='h-full flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-5 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]'>
                     <div className='flex flex-row gap-7 items-center pb-4 border-b-2 border-black'>
+                        {/* Replace with backend logic of name of student */}
                         <p className='text-xl uppercase grow'>Dolor, Polano I</p>
                     </div>
                     <table className='w-full table-fixed'>
@@ -40,8 +40,8 @@ function TeachingLoad() {
                                     <td className='py-3 text-center'> Room 01 </td>
                                     <td className='py-3 text-center'> 1 </td>
                                     <td className='py-3 text-center'> 10/15 </td>
-                                    <td class="px-6 py-2 text-center">
-                                        <ThinRedButton onClick={() => {}}>
+                                    <td className="px-6 py-2 text-center">
+                                        <ThinRedButton onClick={() => {setViewStudentsModal(true)}}>
                                             <p className="text-xs">View Students</p>
                                         </ThinRedButton>
                                     </td>
@@ -55,8 +55,8 @@ function TeachingLoad() {
                                     <td className='py-3 text-center'> VR 02 </td>
                                     <td className='py-3 text-center'> 1 </td>
                                     <td className='py-3 text-center'> 11/15 </td>
-                                    <td class="px-6 py-2 text-center">
-                                        <ThinRedButton onClick={() => {}}>
+                                    <td className="px-6 py-2 text-center">
+                                        <ThinRedButton onClick={() => {setViewStudentsModal(true)}}>
                                             <p className="text-xs">View Students</p>
                                         </ThinRedButton>
                                     </td>
@@ -64,6 +64,11 @@ function TeachingLoad() {
                             </tbody>
                         </table>
                     </div>
+                    <ViewStudentsModal
+                        view_students_modal={view_students_modal}
+                        setViewStudentsModal={setViewStudentsModal}
+                    />
+                    
                 </div>
             </div>
         </section>
