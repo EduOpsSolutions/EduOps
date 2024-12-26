@@ -18,12 +18,12 @@ function TeachingLoad() {
                     <table className='w-full table-fixed'>
                         <thead>
                             <tr className='border-b-2 border-[#828282]'>
-                                <th className='py-3 font-normal'> Course </th>
-                                <th className='py-3 font-normal'> Schedules </th>
-                                <th className='py-3 font-normal'> Room </th>
-                                <th className='py-3 font-normal'> # of Hours </th>
-                                <th className='py-3 font-normal'> Students </th>
-                                <th className='py-3 font-normal'> </th>
+                                <th className='py-3 font-bold'> Course </th>
+                                <th className='py-3 font-bold'> Schedules </th>
+                                <th className='py-3 font-bold'> Room </th>
+                                <th className='py-3 font-bold'> # of Hours </th>
+                                <th className='py-3 font-bold'> Students </th>
+                                <th className='py-3 font-bold'> </th>
                             </tr>
                         </thead>
                     </table>
