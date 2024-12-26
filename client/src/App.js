@@ -20,18 +20,19 @@ import Documents from './pages/student/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
-import StudentSchedule from './pages/student/StudentSchedule';
 import Profile from './pages/student/Profile';
+import StudentSchedule from './pages/student/StudentSchedule';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
 import TeacherGrades from './pages/teacher/Grades';
 import TeacherHome from './pages/teacher/Home';
+import TeachingLoad from './pages/teacher/TeachingLoad';
 
 /* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
-import AdminHome from './pages/admin/Home';
 import CourseManagement from './pages/admin/CourseManagement';
+import AdminHome from './pages/admin/Home';
 
 
 
@@ -64,7 +65,8 @@ function App() {
           {/* Teacher Page Routes */}
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />   
-            <Route path="grades"  element={<TeacherGrades />}/>          
+            <Route path="grades"  element={<TeacherGrades />}/>
+            <Route path="teachingLoad"  element={<TeachingLoad />}/>             
           </Route>
 
           {/* Admin Page Routes */}
