@@ -23,8 +23,13 @@ function StudyLoad() {
         <div className='bg-white-yellow-tone w-full box-border flex flex-col px-20 overflow-x-hidden'>   
             <div className="w-full h-auto mx-auto mt-8 mb-8">
                 <div className="bg-white border-dark-red-2 border-2 rounded-lg p-5 mb-8">
-                    <h2 className="text-lg font-bold mb-4">Select School Period</h2>
-                    <div className="flex flex-col space-y-4">
+                    <div className='flex'>
+                        <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m8 7.5 2.5 2.5M19 4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Zm-5 9.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z"/>
+                        </svg>
+                        <h2 className="text-lg font-bold mb-4 ml-1">SELECT SCHOOL PERIOD</h2>
+                    </div>
+                    <div className="flex flex-col">
                         <div className="flex space-x-4">
                             <div className="flex-grow">
                                 <SelectField className="w-full border rounded-md p-2" name="batch" id="batch" label="Batch" required={true} options={batchOptions}/>
@@ -33,9 +38,14 @@ function StudyLoad() {
                                 <SelectField className="w-full border rounded-md p-2" name="year" id="year" label="Year" required={true} options={yearOptions}/>
                             </div>
                         </div>
-                        <ThinRedButton onClick={() => {}}>
-                            <p className="text-xs">Search</p>
-                        </ThinRedButton>
+                        <div className='flex justify-end'>
+                            {/* Overrides the centring of the button */}
+                            <div className="!mx-0"> 
+                                <ThinRedButton onClick={() => {}}>
+                                    <p className="text-xs">Search</p>
+                                </ThinRedButton>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
