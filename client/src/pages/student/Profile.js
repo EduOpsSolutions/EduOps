@@ -41,21 +41,25 @@ function Profile({role}) {
 	return (
 		<section className='flex flex-col items-center justify-center bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, height: '100%' }}>
 			<div className="flex flex-row w-full justify-center items-stretch">
-				<div className="bg-white-yellow-tone rounded-2xl py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] flex flex-col justify-center items-center m-5">
+				
+				{/* Profile Picture Card */}
+				<div className="bg-white-yellow-tone rounded-lg py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] flex flex-col justify-center items-center m-5">
 					<img src={John_logo} alt="" className="size-80 border-[3px] rounded-full mb-4" />
-					<button className="py-2 px-4 rounded flex items-center text-lg hover:bg-gray-50">
-						<BsPencilFill color='#5A5A5A' className="mr-2 text-2xl" />
+					<button className="py-1 px-4 rounded flex items-center text-lg hover:text-dark-red-2">
+						<BsPencilFill className="mr-2 text-2xl" />
 						Edit Profile Picture
 					</button>          
-					<button className="py-2 px-4 rounded flex items-center text-lg hover:bg-gray-50 ">
-						<MdClose color='#5A5A5A' className="mr-1 text-4xl" />
+					<button className="py-1 px-2 rounded flex items-center text-lg hover:text-dark-red-2">
+						<MdClose className="mr-1 text-4xl" />
 						Remove Photo
 					</button>          
 					<div className="flex space-x-2 pt-6">
 						<SmallButton onClick={() => setEditPasswordModal(true)}>Change Password</SmallButton>
 					</div>
 				</div>
-				<div className="bg-white-yellow-tone rounded-2xl py-4 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] m-5">
+
+				{/* Profile Detaiks Card */}
+				<div className="bg-white-yellow-tone rounded-lg py-4 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] m-5">
 					<h1 className="text-5xl font-bold mb-5">Name{name}</h1>
 					<hr className="border-t-2 border-black mb-10" />
 					<h2 className="text-4xl mb-10">Personal Details</h2>
