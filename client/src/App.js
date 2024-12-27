@@ -20,8 +20,8 @@ import Documents from './pages/student/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
-import StudentSchedule from './pages/student/StudentSchedule';
 import Profile from './pages/student/Profile';
+import StudentSchedule from './pages/student/StudentSchedule';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -30,8 +30,8 @@ import TeacherHome from './pages/teacher/Home';
 
 /* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
-import AdminHome from './pages/admin/Home';
 import CourseManagement from './pages/admin/CourseManagement';
+import AdminHome from './pages/admin/Home';
 
 
 
@@ -58,19 +58,21 @@ function App() {
             <Route path="documents"  element={<Documents />}/> 
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
-            <Route path="profile" element={<Profile/>}/>
+            <Route path="profile" element={<Profile role="student"/>}/>
           </Route>
 
           {/* Teacher Page Routes */}
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />   
-            <Route path="grades"  element={<TeacherGrades />}/>          
+            <Route path="grades"  element={<TeacherGrades />}/> 
+            <Route path="profile" element={<Profile role="teacher"/>}/>         
           </Route>
 
           {/* Admin Page Routes */}
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<AdminHome />} />  
-            <Route path="coursemanagement"  element={<CourseManagement />}/>           
+            <Route path="coursemanagement"  element={<CourseManagement />}/>  
+            <Route path="profile" element={<Profile role="admin"/>}/>         
           </Route>
 
 

@@ -64,9 +64,9 @@ function AdminNavbar() {
           Accounts
         </Link>
       </div>
-      <div className="h-[48px] w-[48px] flex justify-center items-center font-bold text-xl border-2 rounded-full cursor-pointer">
+      <Link to='/admin/profile'  className="h-[48px] w-[48px] flex justify-center items-center font-bold text-xl border-2 rounded-full cursor-pointer">
         PD
-      </div>
+      </Link>
     </nav>
   );
 }
