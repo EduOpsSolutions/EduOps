@@ -55,9 +55,9 @@ function Profile({role}) {
 						<SmallButton onClick={() => setEditPasswordModal(true)}>Change Password</SmallButton>
 					</div>
 				</div>
-				<div className="bg-white-yellow-tone rounded-2xl py-8 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] m-5">
-					<h1 className="text-5xl font-bold mb-10">Name{name}</h1>
-					<hr className="border-t-2 border-gray-400 mb-10" />
+				<div className="bg-white-yellow-tone rounded-2xl py-4 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] m-5">
+					<h1 className="text-5xl font-bold mb-5">Name{name}</h1>
+					<hr className="border-t-2 border-black mb-10" />
 					<h2 className="text-4xl mb-10">Personal Details</h2>
 
 					{/* Students Layout */}
@@ -65,19 +65,19 @@ function Profile({role}) {
 					{ role === 'student' && (
                         <div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Student ID:
 								</p>
 									<p className='mb-7 text-lg'>
 										studentID{studentID}
 									</p>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Email:
 								</p>
 									<p className='mb-7 text-lg'>
 									Email{email}
 									</p>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Phone Number: 
 								</p>
 									<p className='text-lg mb-8'>
@@ -85,14 +85,14 @@ function Profile({role}) {
 								</p>
 								</div>
 								<div className='m-20 mt-0 mr-40'>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Course: {course}
 								</p>
 									<p className='mb-7 text-lg'>
 									Course
 									{course}
 									</p>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Birthday: {birthday}
 								</p>
 								<p className='mb-7 text-lg'>
@@ -107,22 +107,22 @@ function Profile({role}) {
 					{ ['teacher', 'admin'].includes(role) && (
                         <div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Email:
 								</p>
 									<p className='mb-7 text-lg'>
 									Email{email}
 									</p>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Phone Number: 
 								</p>
 									<p className='text-lg mb-8'>
 									Phone{phoneNumber}
 								</p>
 							</div>
-							
+
 							<div className='m-20 mt-0 mr-40'>
-								<p className="text-xl mb-4 font-bold">
+								<p className="text-2xl mb-4 font-bold">
 									Birthday: {birthday}
 								</p>
 								<p className='mb-7 text-lg'>
