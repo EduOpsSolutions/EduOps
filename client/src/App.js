@@ -11,6 +11,7 @@ import Terms from './pages/legal/Terms';
 import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import PaymentForm from './pages/public/PaymentForm';
+import Profile from './pages/public/Profile';
 import RedirectPage from './pages/public/RedirectPage';
 import SignUp from './pages/public/SignUp';
 
@@ -20,7 +21,6 @@ import Documents from './pages/student/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
-import Profile from './pages/student/Profile';
 import StudentSchedule from './pages/student/StudentSchedule';
 
 /* Teacher Pages */
