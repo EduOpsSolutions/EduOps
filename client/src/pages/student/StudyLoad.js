@@ -42,6 +42,7 @@ function StudyLoad() {
                 </div>
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 <div className="border border-dark-red rounded-md p-4 h-[60vh]">
                 <h2 className="text-lg font-bold mb-4">Course Offered</h2>
                 <div className='h-full flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-5 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]'>
@@ -93,6 +94,8 @@ function StudyLoad() {
                     
                 </div>
 =======
+=======
+>>>>>>> Stashed changes
                 <div className="border border-dark-red bg-white rounded-md p-4 h-[60vh]">
                     <h2 className="text-lg font-bold mb-4">Course Offered</h2>
                     <table className="min-w-full divide-y divide-gray-200">
@@ -116,6 +119,9 @@ function StudyLoad() {
                             </tr>
                         </tbody>
                     </table>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                 </div>
             </div>
