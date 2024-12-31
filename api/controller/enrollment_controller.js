@@ -56,9 +56,9 @@ const createEnrollmentRequest = async (req, res) => {
       guardianContact,
       coursesToEnroll,
     } = req.body;
-
-    const validIdPath = null;
-    const idPhotoPath = null;
+    
+    const validIdPath = req.files?.validId ? req.files.validId[0].path : null;
+    const idPhotoPath = req.files?.idPhoto ? req.files.idPhoto[0].path : null;
 
     const enrollmentId = await generateEnrollmentId();
 

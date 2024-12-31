@@ -19,6 +19,7 @@ const enrollmentSchema = Joi.object({
   guardianName: Joi.string().optional().allow(null, ""),
   guardianContact: Joi.string().optional().allow(null, ""),
   coursesToEnroll: Joi.string().required(),
+
 });
 
 export const validateEnrollment = (req, res, next) => {
@@ -26,6 +27,8 @@ export const validateEnrollment = (req, res, next) => {
     abortEarly: false,
     stripUnknown: true,
   });
+
+
 
   if (error) {
     return res
