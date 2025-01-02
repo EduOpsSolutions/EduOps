@@ -16,7 +16,7 @@ function Grades() {
             </div>
 
             <div className='flex items-center justify-center'>
-                <div className='h-[60vh] w-5/6 bg-white-yellow-tone rounded-xl px-4 border-black border-2'>
+                <div className='h-[70vh] w-5/6 bg-white-yellow-tone rounded-xl px-4 border-black border-2'>
                     <table class="text-sm text-left text-black w-full mt-4 table-fixed bg-transparent">
                         <thead>
                             <tr className='border-b-2 border-b-dark-red-2'>
