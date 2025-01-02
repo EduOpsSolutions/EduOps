@@ -14,6 +14,7 @@ import Terms from './pages/legal/Terms';
 import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import PaymentForm from './pages/public/PaymentForm';
+import Profile from './pages/public/Profile';
 import RedirectPage from './pages/public/RedirectPage';
 import SignUp from './pages/public/SignUp';
 
@@ -28,6 +29,7 @@ import StudentSchedule from './pages/student/StudentSchedule';
 import StudyLoad from './pages/student/StudyLoad';
 import Ledger from './pages/student/Ledger';
 import Assessment from './pages/student/Assessment';
+
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -63,6 +65,7 @@ function App() {
             <Route index element={<Home />} />                            {/* localhost/student */}
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
+            <Route path="profile" element={<Profile role="student"/>}/>
             <Route path="studyLoad" element={<StudyLoad/>}/>
             <Route path="grades"  element={<Grades />}/> 
             <Route path="assessment" element={<Assessment/>}/>
@@ -74,17 +77,20 @@ function App() {
           {/* Teacher Page Routes */}
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />   
+            <Route path="profile" element={<Profile role="teacher"/>}/>         
             <Route path="grades"  element={<TeacherGrades />}/>
             <Route path="teachingLoad"  element={<TeachingLoad />}/>                   
-            <Route path="documents"  element={<Documents />}/>   
+            <Route path="documents"  element={<Documents />}/>
           </Route>
 
           {/* Admin Page Routes */}
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<AdminHome />} />  
+            <Route path="coursemanagement"  element={<CourseManagement />}/>  
+            <Route path="profile" element={<Profile role="admin"/>}/>  
             <Route path="coursemanagement" element={<CourseManagement />}/>           
             <Route path="enrollmentrequests" element={<EnrollmentRequests />}/>           
-            <Route path="enrollmentperiod" element={<EnrollmentPeriod />}/>           
+            <Route path="enrollmentperiod" element={<EnrollmentPeriod />}/> 
           </Route>
 
 
