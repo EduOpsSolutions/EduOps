@@ -33,7 +33,7 @@ import AdminLayout from './components/layout/AdminLayout';
 import CourseManagement from './pages/admin/CourseManagement';
 import AdminHome from './pages/admin/Home';
 import StaffRegistration from './pages/admin/StaffRegistration';
-
+import UserAccounts from './pages/admin/UserAccounts';
 
 function App() {
   return (
@@ -72,6 +72,7 @@ function App() {
             <Route index element={<AdminHome />} />  
             <Route path="coursemanagement"  element={<CourseManagement />}/>           
             <Route path="staffregistration"  element={<StaffRegistration />}/>
+            <Route path="useraccounts"  element={<UserAccounts />}/>
           </Route>
 
 
