@@ -2,6 +2,9 @@ import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import './App.css';
 
+// Import axios instance
+import axios from './utils/axios';
+
 /*Utility Pages*/
 import Assets from "./pages/Assets";
 
@@ -23,6 +26,8 @@ import Home from './pages/student/Home';
 import Profile from './pages/student/Profile';
 import StudentSchedule from './pages/student/StudentSchedule';
 import StudyLoad from './pages/student/StudyLoad';
+import Ledger from './pages/student/Ledger';
+import Assessment from './pages/student/Assessment';
 
 /* Teacher Pages */
 import TeacherLayout from './components/layout/TeacherLayout';
@@ -33,8 +38,8 @@ import TeacherHome from './pages/teacher/Home';
 import AdminLayout from './components/layout/AdminLayout';
 import CourseManagement from './pages/admin/CourseManagement';
 import AdminHome from './pages/admin/Home';
-
-
+import EnrollmentRequests from './pages/admin/EnrollmentRequests';
+import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 
 function App() {
   return (
@@ -55,11 +60,13 @@ function App() {
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>
             <Route index element={<Home />} />                            {/* localhost/student */}
-            <Route path="grades"  element={<Grades />}/> 
-            <Route path="documents"  element={<Documents />}/> 
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
             <Route path="studyLoad" element={<StudyLoad/>}/>
+            <Route path="grades"  element={<Grades />}/> 
+            <Route path="assessment" element={<Assessment/>}/>
+            <Route path="ledger" element={<Ledger/>}/>
+            <Route path="documents"  element={<Documents />}/> 
             <Route path="profile" element={<Profile/>}/>
           </Route>
 
@@ -72,7 +79,9 @@ function App() {
           {/* Admin Page Routes */}
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<AdminHome />} />  
-            <Route path="coursemanagement"  element={<CourseManagement />}/>           
+            <Route path="coursemanagement" element={<CourseManagement />}/>           
+            <Route path="enrollmentrequests" element={<EnrollmentRequests />}/>           
+            <Route path="enrollmentperiod" element={<EnrollmentPeriod />}/>           
           </Route>
 
 

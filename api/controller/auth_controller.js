@@ -1,5 +1,5 @@
 import { signJWT, verifyJWT } from "../utils/jwt.js";
-import { getUserByEmail as getStudentByEmail } from "../model/user_model.js";
+import { getUserByEmail as getStudentByEmail, updateUserPassword } from "../model/user_model.js";
 import { getUserByToken } from "../model/user_model.js";
 import { sendEmail } from "../utils/mailer.js";
 import crypto from "crypto";
@@ -90,4 +90,44 @@ async function register(req, res) {
   }
 }
 
-export { login, register, forgotPassword };
+async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword, email } = req.body;
+    const user = await getStudentByEmail(email);
+
+    if (!user || user.error) {
+      return res.status(401).json({ 
+        error: true, 
+        message: "User not found" 
+      });
+    }
+
+    const isValidPassword = bcrypt.compareSync(currentPassword, user.data?.password);
+    if (!isValidPassword) {
+      return res.status(401).json({
+        error: true,
+        message: "Current password is incorrect",
+      });
+    }
+
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+    // Add a function in your user_model.js to update the password
+    const updated = await updateUserPassword(email, hashedPassword);
+
+    if (updated) {
+      res.status(200).json({ 
+        error: false, 
+        message: "Password updated successfully" 
+      });
+    } else {
+      res.status(500).json({ 
+        error: true, 
+        message: "Failed to update password" 
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: true, message: error.message });
+  }
+}
+
+export { login, register, forgotPassword, changePassword };
