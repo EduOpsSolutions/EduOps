@@ -25,6 +25,7 @@ import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
 import Profile from './pages/student/Profile';
 import StudentSchedule from './pages/student/StudentSchedule';
+import StudyLoad from './pages/student/StudyLoad';
 import Ledger from './pages/student/Ledger';
 import Assessment from './pages/student/Assessment';
 
@@ -62,6 +63,7 @@ function App() {
             <Route index element={<Home />} />                            {/* localhost/student */}
             <Route path="enrollment" element={<Enrollment/>}/>
             <Route path="schedule" element={<StudentSchedule/>}/>
+            <Route path="studyLoad" element={<StudyLoad/>}/>
             <Route path="grades"  element={<Grades />}/> 
             <Route path="assessment" element={<Assessment/>}/>
             <Route path="ledger" element={<Ledger/>}/>
