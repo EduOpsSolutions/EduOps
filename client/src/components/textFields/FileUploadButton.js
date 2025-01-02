@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
-const FileUploadButton = ({ label, id, ariaDescribedBy }) => {
+const FileUploadButton = ({ label, id, onChange, ariaDescribedBy }) => {
     const [fileName, setFileName] = useState('No file chosen');
 
     const handleFileChange = (event) => {
         const file = event.target.files[0];
         if (file) {
             setFileName(file.name);
+            onChange(event); // Call the parent component's onChange
         } else {
             setFileName('No file chosen');
         }
@@ -27,6 +28,7 @@ const FileUploadButton = ({ label, id, ariaDescribedBy }) => {
                     id={id}
                     type="file"
                     onChange={handleFileChange}
+                    accept=".jpg,.jpeg,.png,.pdf"
                 />
                 <div className="text-sm text-black bg-white py-2 px-4 rounded-md border border-gray-300 w-72 truncate" id={`${id}_filename`}>
                     {fileName}
