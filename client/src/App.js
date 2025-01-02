@@ -32,6 +32,7 @@ import Assessment from './pages/student/Assessment';
 import TeacherLayout from './components/layout/TeacherLayout';
 import TeacherGrades from './pages/teacher/Grades';
 import TeacherHome from './pages/teacher/Home';
+import TeachingLoad from './pages/teacher/TeachingLoad';
 
 /* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
@@ -71,7 +72,8 @@ function App() {
           {/* Teacher Page Routes */}
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />   
-            <Route path="grades"  element={<TeacherGrades />}/>        
+            <Route path="grades"  element={<TeacherGrades />}/>
+            <Route path="teachingLoad"  element={<TeachingLoad />}/>                   
             <Route path="documents"  element={<Documents />}/>   
           </Route>
 
