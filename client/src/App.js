@@ -73,7 +73,8 @@ function App() {
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />   
             <Route path="grades"  element={<TeacherGrades />}/>
-            <Route path="teachingLoad"  element={<TeachingLoad />}/>             
+            <Route path="teachingLoad"  element={<TeachingLoad />}/>                   
+            <Route path="documents"  element={<Documents />}/>   
           </Route>
 
           {/* Admin Page Routes */}

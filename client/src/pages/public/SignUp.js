@@ -81,10 +81,9 @@ function SignUp() {
             };
 
             // Upload files
-            enrollmentData.validIdPath = await uploadFile(validId, 'Valid ID');
-            enrollmentData.idPhotoPath = await uploadFile(idPhoto, '2x2 Photo');
+            enrollmentData.validIdPath = await uploadFile(validId, 'ValidId');
+            enrollmentData.idPhotoPath = await uploadFile(idPhoto, 'IdPhoto');
 
-            // Add remaining form fields
             for (let [key, value] of formData.entries()) {
                 if (key !== 'validIdPath' && key !== 'idPhotoPath') {
                     enrollmentData[key] = value;
