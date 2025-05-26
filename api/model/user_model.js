@@ -43,4 +43,23 @@ async function getUserByToken(token) {
   }
 }
 
+export async function updateUserPassword(email, hashedPassword) {
+  try {
+    const result = await prisma.users.update({
+      where: { 
+        email: email,
+        deletedAt: null 
+      },
+      data: { 
+        password: hashedPassword,
+        resetToken: null 
+      }
+    });
+    return true;
+  } catch (error) {
+    console.error('Error updating password:', error);
+    return false;
+  }
+}
+
 export { getUserByEmail, getUserByToken };

@@ -7,11 +7,11 @@ import { NavLink } from "react-router-dom";
 function AdminNavbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const handleMouseEnter = () => {
+  const handleMouseOver = () => {
     setIsDropdownOpen(true);
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseOut = () => {
     setIsDropdownOpen(false);
   };
 
@@ -26,29 +26,48 @@ function AdminNavbar() {
         </Link>
         <div
           className="relative me-6 hover:text-gray-500"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
+          onMouseOver={handleMouseOver}
+          onMouseOut={handleMouseOut}
         >
           <NavLink to="/admin">Enrollment</NavLink>
           {isDropdownOpen && (
-            <ul className="absolute bg-white shadow-md rounded-md py-1 mt-1">
-              <li>
-                <NavLink
-                  to="/admin/enrollment/schedule"
-                  className="block px-4 py-2 hover:bg-gray-100"
-                >
-                  Schedule
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/admin/CourseManagement"
-                  className="block px-4 py-2 hover:bg-gray-100"
-                >
-                  Course Management
-                </NavLink>
-              </li>
-            </ul>
+            <>
+              <div className="absolute h-2 w-full top-full" />
+              <ul className="absolute left-1/2 transform -translate-x-1/2 top-[calc(100%+2px)] bg-german-red shadow-md rounded-md py-1 w-40 text-sm">
+                <li>
+                  <NavLink
+                    to="/admin/schedule"
+                    className="block px-3 py-1 hover:bg-dark-red-2 text-white"
+                  >
+                    Schedule
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/admin/CourseManagement"
+                    className="block px-3 py-1 hover:bg-dark-red-2 text-white"
+                  >
+                    Course Assignment
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/admin/EnrollmentPeriod"
+                    className="block px-3 py-1 hover:bg-dark-red-2 text-white"
+                  >
+                    Enrollment Period
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/admin/EnrollmentRequests"
+                    className="block px-3 py-1 hover:bg-dark-red-2 text-white"
+                  >
+                    Enrollment Request
+                  </NavLink>
+                </li>
+              </ul>
+            </>
           )}
         </div>
         <Link to="/admin/grades" className="me-6 hover:text-gray-500">
@@ -64,9 +83,9 @@ function AdminNavbar() {
           Accounts
         </Link>
       </div>
-      <div className="h-[48px] w-[48px] flex justify-center items-center font-bold text-xl border-2 rounded-full cursor-pointer">
+      <Link to='/admin/profile'  className="h-[48px] w-[48px] flex justify-center items-center font-bold text-xl border-2 rounded-full cursor-pointer">
         PD
-      </div>
+      </Link>
     </nav>
   );
 }
