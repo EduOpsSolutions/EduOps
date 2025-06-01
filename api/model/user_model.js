@@ -29,7 +29,29 @@ async function getUserByEmail(email) {
 
 async function getUserByToken(token) {
   try {
-    let data = await prisma.users.findUnique({ where: { resetToken: token } });
+    let data = await prisma.users.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(), // Only get tokens that haven't expired
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        // Excluding sensitive fields like password, resetToken, resetTokenExpiry
+      },
+    });
+    if (!data) {
+      return {
+        error: true,
+        message: "Invalid or expired token",
+      };
+    }
     return {
       error: false,
       data,
@@ -46,18 +68,18 @@ async function getUserByToken(token) {
 export async function updateUserPassword(email, hashedPassword) {
   try {
     const result = await prisma.users.update({
-      where: { 
+      where: {
         email: email,
-        deletedAt: null 
+        deletedAt: null,
       },
-      data: { 
+      data: {
         password: hashedPassword,
-        resetToken: null 
-      }
+        resetToken: null,
+      },
     });
     return true;
   } catch (error) {
-    console.error('Error updating password:', error);
+    console.error("Error updating password:", error);
     return false;
   }
 }

@@ -42,6 +42,18 @@ const getAllUsers = async (req, res) => {
     console.log("Where Clause", whereClause);
 
     const students = await prisma.users.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
       where: whereClause,
       take: take ? parseInt(take) : undefined,
       skip: page ? (parseInt(page) - 1) * take : undefined,
@@ -189,4 +201,46 @@ const deleteUser = async (req, res) => {
   }
 };
 
-export { getAllUsers, getUserById, createUser, updateUser, deleteUser };
+const deactivateUser = async (req, res) => {
+  try {
+    const { id } = req.query;
+    console.log("deactivate user", id);
+    await prisma.users.update({
+      where: { id },
+      data: { status: "inactive" },
+    });
+
+    res.json({ error: false, message: "User deactivated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: true, message: "Error deactivating user" });
+  }
+};
+
+const activateUser = async (req, res) => {
+  try {
+    const { id } = req.query;
+    await prisma.users.update({
+      where: { id },
+      data: { status: "active", deletedAt: null },
+    });
+
+    res.json({ error: false, message: "User activated successfully" });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: "Error activating user",
+      error_details: error.message,
+      error_info: error,
+    });
+  }
+};
+
+export {
+  getAllUsers,
+  getUserById,
+  createUser,
+  updateUser,
+  deleteUser,
+  deactivateUser,
+  activateUser,
+};
