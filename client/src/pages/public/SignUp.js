@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Bg_image from '../../assets/images/Bg7.jpg';
 import BackButton from '../../components/buttons/BackButton';
 import SmallButton from '../../components/buttons/SmallButton';
-import SignUpNav from '../../components/navbars/SignUpNav';
+import UserNavbar from '../../components/navbars/UserNav';
 import FileUploadButton from '../../components/textFields/FileUploadButton';
 import LabelledInputField from '../../components/textFields/LabelledInputField';
 import NotLabelledInputField from '../../components/textFields/NotLabelledInputField';
@@ -109,8 +109,8 @@ function SignUp() {
     };
 
     return (
-        <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%', }}>
-            <SignUpNav />
+        <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
+            <UserNavbar role="public" />
             <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-32 mb-12 flex flex-col">
                 <BackButton onClick={navigateToLogin} className="top-0 left-0 mt-2 ml-2" />
                 <form className="px-8 py-4 flex flex-col" onSubmit={handleSubmit}>
