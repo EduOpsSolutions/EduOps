@@ -46,6 +46,7 @@ import CourseManagement from "./pages/admin/CourseManagement";
 import AdminHome from "./pages/admin/Home";
 import EnrollmentRequests from "./pages/admin/EnrollmentRequests";
 import EnrollmentPeriod from "./pages/admin/EnrollmentPeriod";
+import Transaction from "./pages/admin/Transaction";
 
 function App() {
   return (
@@ -92,6 +93,7 @@ function App() {
             <Route path="coursemanagement" element={<CourseManagement />} />
             <Route path="enrollmentrequests" element={<EnrollmentRequests />} />
             <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
+            <Route path="transaction" element={<Transaction />} />
           </Route>
 
           {/* Not Found Page */}
