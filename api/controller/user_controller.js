@@ -7,21 +7,59 @@ import { verifyJWT } from "../utils/jwt.js";
 
 // Get all users
 const getAllUsers = async (req, res) => {
-  const { showDeleted, role, take, page } = req.query;
-  console.log(req.query);
+  const {
+    showDeleted,
+    role,
+    take,
+    page,
+    search,
+    sortBy,
+    sortOrder,
+    userId,
+    status,
+  } = req.query;
   try {
     console.log(await verifyJWT(req.headers.authorization.split(" ")[1]));
+    let whereClause = {};
+    if (role) whereClause.role = role;
+    if (status) whereClause.status = status;
+    if (showDeleted === "true") {
+      // Show both deleted and non-deleted users
+      whereClause.deletedAt = undefined;
+    } else {
+      whereClause.deletedAt = null;
+    }
+    if (userId) whereClause.userId = userId;
+    if (search) {
+      whereClause.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { middleName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    console.log("Where Clause", whereClause);
+
     const students = await prisma.users.findMany({
-      where: {
-        deletedAt: showDeleted ? undefined : null,
-        role,
-      },
+      where: whereClause,
       take: take ? parseInt(take) : undefined,
       skip: page ? (parseInt(page) - 1) * take : undefined,
+      // ommit: {
+      //   password: true,
+      // },
+      ...(sortBy && {
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+      }),
     });
     res.json(students);
   } catch (error) {
-    res.status(500).json({ error: "Error fetching students" });
+    console.error("Error fetching users:", error);
+    res
+      .status(500)
+      .json({ error: "Error fetching users", details: error.message });
   }
 };
 

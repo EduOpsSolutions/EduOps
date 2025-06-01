@@ -6,7 +6,7 @@ import { router as auth } from "./auth_routes.js";
 import { router as enrollment } from "./enrollment_routes.js";
 import { router as file } from "./file_routes.js";
 
-router.get("/", function (req, res, next) {
+router.get("/", function (req, res) {
   res.json({
     error: false,
     message: "Active",

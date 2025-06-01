@@ -15,7 +15,7 @@ import {
 import { verifyToken } from "../../utils/verifyToken.js";
 
 /* GET users listing. */
-router.get("/:showDeleted?/:role?/:take?/:page?", verifyToken, getAllUsers);
+router.get("/", verifyToken, getAllUsers);
 router.get("/:id", verifyToken, getUserById);
 router.post("/create/", verifyToken, validateCreateUser, createUser);
 router.put("/:id", verifyToken, validateUpdateUser, updateUser);

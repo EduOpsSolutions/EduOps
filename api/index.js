@@ -2,8 +2,8 @@ import "dotenv/config";
 import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
 import indexRouter from "./routes/v1/index_routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,9 +21,23 @@ app.use(
   })
 );
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/api/v1", indexRouter);
+
+// Add root route handler
+app.get("/", (req, res) => {
+  res.json({
+    error: false,
+    message: "Welcome to EduOps API. Please use /api/v1 for API endpoints.",
+    endpoints: {
+      auth: "/api/v1/auth",
+      users: "/api/v1/users",
+      enrollment: "/api/v1/enrollment",
+      files: "/api/v1/files",
+    },
+  });
+});
 
 const PORT = process.env.PORT || 5555;
 app.listen(PORT, () => {
