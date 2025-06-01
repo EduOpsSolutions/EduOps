@@ -37,7 +37,6 @@ import Assessment from "./pages/student/Assessment";
 
 /* Teacher Pages */
 import TeacherLayout from "./components/layout/TeacherLayout";
-import TeacherGrades from "./pages/teacher/Grades";
 import TeacherHome from "./pages/teacher/Home";
 import TeachingLoad from "./pages/teacher/TeachingLoad";
 
@@ -89,7 +88,6 @@ function App() {
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />
             <Route path="profile" element={<Profile role="teacher" />} />
-            <Route path="grades" element={<TeacherGrades />} />
             <Route path="teachingLoad" element={<TeachingLoad />} />
             <Route path="documents" element={<Documents />} />
             <Route path="legal">
@@ -103,7 +101,6 @@ function App() {
             <Route index element={<AdminHome />} />
             <Route path="coursemanagement" element={<CourseManagement />} />
             <Route path="profile" element={<Profile role="admin" />} />
-            <Route path="coursemanagement" element={<CourseManagement />} />
             <Route path="enrollmentrequests" element={<EnrollmentRequests />} />
             <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
             <Route path="legal">
