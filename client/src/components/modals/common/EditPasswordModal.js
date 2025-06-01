@@ -1,8 +1,8 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React, { useState } from 'react';
+import GrayButton from "../../buttons/GrayButton";
 import SmallButton from "../../buttons/SmallButton";
 import LabelledInputField from "../../textFields/LabelledInputField";
-import GrayButton from "../../buttons/GrayButton";
 
 // To customize measurements of header
 const customModalTheme = {
@@ -19,7 +19,7 @@ const customModalTheme = {
             "inner": "relative flex max-h-[90dvh] flex-col rounded-lg bg-white shadow dark:bg-gray-700"
         },
         "body": {
-            "base": "flex-1 overflow-auto p-6",
+            "base": "flex-1 overflow-auto px-6 pt-6 pb-2",
             "popup": "pt-0"
         },
         "header": {
@@ -72,15 +72,15 @@ function EditPasswordModal(props) {
                         <LabelledInputField name="currentPassword" id="currentPassword" label="Old Password:" type="password" required={true} placeholder="" onChange={(e) => setCurrentPassword(e.target.value)} />
                         <LabelledInputField name="newPassword" id="newPassword" label="New Password:" type="password" required={true} placeholder="" onChange={(e) => setNewPassword(e.target.value)} />
                         <LabelledInputField name="confirmNewPassword" id="confirmNewPassword" label="Confirm Password:" type="password" required={true} placeholder="" onChange={(e) => setConfirmNewPassword(e.target.value)} />
+                        <div className="flex justify-between">
+                            <GrayButton onClick={handleCancel}>
+                                Cancel
+                            </GrayButton>
+                            <SmallButton onClick={handlePasswordChange}>
+                                Confirm
+                            </SmallButton>
+                        </div>
                     </Modal.Body>
-                    <Modal.Footer>
-                        <GrayButton onClick={handleCancel}>
-                            Cancel
-                        </GrayButton>
-                        <SmallButton onClick={handlePasswordChange}>
-                            Confirm
-                        </SmallButton>
-                    </Modal.Footer>
                 </div>
             </Modal>
         </Flowbite>
