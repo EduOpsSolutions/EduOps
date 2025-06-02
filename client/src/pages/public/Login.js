@@ -9,6 +9,9 @@ import SecondaryButton from "../../components/buttons/SecondaryButton";
 import DevLoginModal from "../../components/modals/common/DevLoginModal";
 import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
 import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
+import Swal from "sweetalert2";
+import axios from "axios";
+import { decodeToken, setTokenCookie } from "../../utils/jwt";
 
 Cookies.remove();
 
@@ -26,7 +29,7 @@ function Login() {
 
   const navigateToSignUp = () => {
     navigate("/sign-up");
-  }
+  };
 
   const navigateToStudent = () => {
     navigate("/student");
@@ -50,6 +53,42 @@ function Login() {
         sameSite: "Strict",
       });
     });
+  };
+
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/login`,
+        {
+          email,
+          password,
+        }
+      );
+      console.log("RESPO KO BEH", response);
+      if (!response || response?.error) {
+        Swal.fire({
+          icon: "error",
+          title: "Login Failed",
+          text: response.message,
+          confirmButtonColor: "#FF0000",
+        });
+      } else {
+        const token = response.data.token.token;
+        setTokenCookie("token", token, { expires: 1 / 24 });
+        const decodedToken = decodeToken(token);
+        console.log("DECODED TOKEN", decodedToken);
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Login Failed",
+        text: error.message || "A client-side error occurred.",
+        confirmButtonColor: "#DE0000",
+        customClass: {
+          confirmButton: "bg-german-red hover:bg-dark-red-2 text-white",
+        },
+      });
+    }
   };
 
   const submitForm = async () => {
@@ -189,6 +228,11 @@ function Login() {
                   className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
                   placeholder="Password"
                   onChange={handlePasswordChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleLogin();
+                    }
+                  }}
                 />
               </div>
 
@@ -204,7 +248,7 @@ function Login() {
 
               {/* Modals */}
               {/* Note: Need to add transition effect on modals */}
-          
+
               {/* Forget Password Modal */}
               <ForgetPasswordModal
                 forget_pass_modal={forget_pass_modal}
@@ -225,9 +269,8 @@ function Login() {
               */}
 
               {/* DELETE THIS AFTER IMPLEMENTING BACKEND LOGIC FOR LOGGING IN */}
-              <PrimaryButton onClick={() => setDevLoginModal(true)}>Login</PrimaryButton> 
+              <PrimaryButton onClick={handleLogin}>Login</PrimaryButton>
 
-              
               {/* ALSO DELETE THIS AFTER BACKEND LOGIC FOR LOGGING IN */}
               <DevLoginModal
                 dev_login_modal={dev_login_modal}
@@ -254,25 +297,22 @@ function Login() {
               </div>
             </div>
 
-              {/* Terms and Privacy Policy Section*/}
-            <div className='w-80'>
-              <p className="text-sm mt-2 text-white-yellow-tone text-center">By using this service, you understood and agree to our {' '}
-              <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
-                <a onClick={navigateToTerms}>Terms</a>
-              </span>
-              {' and '}
-              <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
-                <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
-              </span>
-
+            {/* Terms and Privacy Policy Section*/}
+            <div className="w-80">
+              <p className="text-sm mt-2 text-white-yellow-tone text-center">
+                By using this service, you understood and agree to our{" "}
+                <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
+                  <a onClick={navigateToTerms}>Terms</a>
+                </span>
+                {" and "}
+                <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
+                  <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
+                </span>
               </p>
             </div>
           </div>
         </div>
       </div>
-
-    
-      
     </div>
   );
 }

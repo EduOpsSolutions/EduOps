@@ -1,6 +1,9 @@
 /client/node_modules
 /api/node_modules
 /api/.env
+.env
+.DS_Store
+/client/.DS_Store
 /api/.DS_Store
 /client/build
 uploads/*

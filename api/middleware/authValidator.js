@@ -12,7 +12,9 @@ export const validateLogin = (req, res, next) => {
   });
 
   if (error) {
-    return res.status(400).json({ error: true, message: error.message });
+    return res
+      .status(400)
+      .json({ error: true, message: "Invalid email or password" });
   }
 
   next();

@@ -1,5 +1,8 @@
 import { signJWT, verifyJWT } from "../utils/jwt.js";
-import { getUserByEmail as getStudentByEmail, updateUserPassword } from "../model/user_model.js";
+import {
+  getUserByEmail as getStudentByEmail,
+  updateUserPassword,
+} from "../model/user_model.js";
 import { getUserByToken } from "../model/user_model.js";
 import { sendEmail } from "../utils/mailer.js";
 import crypto from "crypto";
@@ -40,7 +43,12 @@ async function login(req, res) {
     };
 
     const token = await signJWT(payload);
-    res.status(200).json(token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      // secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+    res.status(200).json({ token, error: false, message: "Login successful" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -96,13 +104,16 @@ async function changePassword(req, res) {
     const user = await getStudentByEmail(email);
 
     if (!user || user.error) {
-      return res.status(401).json({ 
-        error: true, 
-        message: "User not found" 
+      return res.status(401).json({
+        error: true,
+        message: "User not found",
       });
     }
 
-    const isValidPassword = bcrypt.compareSync(currentPassword, user.data?.password);
+    const isValidPassword = bcrypt.compareSync(
+      currentPassword,
+      user.data?.password
+    );
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
@@ -115,14 +126,14 @@ async function changePassword(req, res) {
     const updated = await updateUserPassword(email, hashedPassword);
 
     if (updated) {
-      res.status(200).json({ 
-        error: false, 
-        message: "Password updated successfully" 
+      res.status(200).json({
+        error: false,
+        message: "Password updated successfully",
       });
     } else {
-      res.status(500).json({ 
-        error: true, 
-        message: "Failed to update password" 
+      res.status(500).json({
+        error: true,
+        message: "Failed to update password",
       });
     }
   } catch (error) {
