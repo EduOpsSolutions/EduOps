@@ -19,7 +19,7 @@ function Grades() {
             </div>
 
             <div className='flex items-center justify-center'>
-                <div className='h-[60vh] w-5/6 bg-white-yellow-tone rounded-xl px-4 border-black border-2'>
+                <div className='h-[70vh] w-5/6 bg-white-yellow-tone rounded-xl px-4 border-black border-2'>
                     <form action="">
                         <div className="flex flex-row space-x-14 items-center my-2 pt-2">
                             <p>Select Course</p>

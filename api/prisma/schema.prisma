@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id        String   @id @default(cuid())
+  userId String   @unique
+  firstName String
+  middleName String?
+  lastName  String
+  birthmonth Int
+  birthdate Int
+  birthyear Int
+  profilePicLink String?
+  status         String?
+  email     String   @unique
+  password  String
+  role      String? @default("student")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  firstLogin Boolean @default(true)
+  resetToken String?
+  resetTokenExpiry DateTime?
+}
+
+model enrollment_request {
+  id        String   @id @default(cuid())
+  enrollmentId String @unique
+  enrollmentStatus String @default("pending")
+  studentId String? @map("student_id")
+  firstName         String
+  middleName        String?
+  lastName          String
+  birthDate         DateTime
+  civilStatus       String
+  address           String
+  referredBy        String
+  contactNumber     String
+  altContactNumber  String?
+  preferredEmail    String
+  altEmail          String?
+  motherName        String?
+  motherContact     String?
+  fatherName        String?
+  fatherContact     String?
+  guardianName      String?
+  guardianContact   String?
+  coursesToEnroll   String
+  validIdPath       String?  
+  idPhotoPath       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model course {
+  id        String   @id @default(cuid())
+  name      String
+  price     Decimal @db.Decimal(10, 2)
+  details   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model module{
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model logs {
+  id        String   @id @default(cuid())
+  moduleId Int
+  title    String
+  content  String?
+  initiatedByTeacher Boolean @default(false)
+  initiatedByStudent Boolean @default(false)
+  initiatedByAdmin Boolean @default(false)
+  initiatedBySystem Boolean @default(false)
+  sourceId Int?
+  createdAt DateTime @default(now())
+}
