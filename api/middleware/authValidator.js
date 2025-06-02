@@ -17,3 +17,36 @@ export const validateLogin = (req, res, next) => {
 
   next();
 };
+
+export const validateUserIsAdmin = async (req, res, next) => {
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = await verifyJWT(token);
+  if (decoded.role !== "admin") {
+    return res
+      .status(403)
+      .json({ error: true, message: "User is unauthorized" });
+  }
+  next();
+};
+
+export const validateUserIsTeacher = async (req, res, next) => {
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = await verifyJWT(token);
+  if (decoded.role !== "teacher") {
+    return res
+      .status(403)
+      .json({ error: true, message: "User is unauthorized" });
+  }
+  next();
+};
+
+export const validateUserIsStudent = async (req, res, next) => {
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = await verifyJWT(token);
+  if (decoded.role !== "student") {
+    return res
+      .status(403)
+      .json({ error: true, message: "User is unauthorized" });
+  }
+  next();
+};
