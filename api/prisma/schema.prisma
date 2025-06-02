@@ -138,7 +138,7 @@ model logs {
 
 enum  Visibility{
   hidden
-  visibile
+  visible
 }
 
 enum RequisiteType{
