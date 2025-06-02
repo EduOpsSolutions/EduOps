@@ -1,5 +1,18 @@
 import { SignJWT, jwtVerify } from "jose";
 import { createSecretKey } from "crypto";
+
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET environment variable is not set. Please set it in your .env file."
+  );
+}
+
+if (!process.env.JWT_EXPIRATION_TIME) {
+  throw new Error(
+    "JWT_EXPIRATION_TIME environment variable is not set. Please set it in your .env file."
+  );
+}
+
 const secret = createSecretKey(process.env.JWT_SECRET, "utf-8");
 
 export const signJWT = async (payload) => {

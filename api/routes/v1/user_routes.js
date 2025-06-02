@@ -6,19 +6,31 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  deactivateUser,
+  activateUser,
 } from "../../controller/user_controller.js";
 import {
   validateUpdateUser,
   validateCreateUser,
 } from "../../middleware/userValidator.js";
 
+import { validateUserIsAdmin } from "../../middleware/authValidator.js";
+
 import { verifyToken } from "../../utils/verifyToken.js";
 
 /* GET users listing. */
-router.get("/:showDeleted?/:role?/:take?/:page?", verifyToken, getAllUsers);
-router.get("/:id", verifyToken, getUserById);
-router.post("/create/", verifyToken, validateCreateUser, createUser);
+router.post("/deactivate", verifyToken, validateUserIsAdmin, deactivateUser);
+router.post("/activate", verifyToken, validateUserIsAdmin, activateUser);
 router.put("/:id", verifyToken, validateUpdateUser, updateUser);
-router.delete("/:id", verifyToken, deleteUser);
+router.get("/", verifyToken, validateUserIsAdmin, getAllUsers);
+router.get("/:id", verifyToken, validateUserIsAdmin, getUserById);
+router.post(
+  "/create/",
+  verifyToken,
+  validateUserIsAdmin,
+  validateCreateUser,
+  createUser
+);
+router.delete("/:id", verifyToken, validateUserIsAdmin, deleteUser);
 
 export { router };
