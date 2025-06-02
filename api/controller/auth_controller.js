@@ -40,6 +40,13 @@ async function login(req, res) {
     let { data } = user;
     delete data.password;
 
+    if (data.status !== "active") {
+      return res.status(401).json({
+        error: true,
+        message: `User is ${data.status}. Please contact the administrator.`,
+      });
+    }
+
     const payload = {
       data,
     };

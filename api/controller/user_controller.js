@@ -170,6 +170,8 @@ const updateUser = async (req, res) => {
     if (req.body.password)
       updateData.password = bcrypt.hashSync(req.body.password, SALT);
     if (req.body.status) updateData.status = req.body.status;
+    if (req.body.profilePicLink)
+      updateData.profilePicLink = req.body.profilePicLink;
 
     await prisma.users.update({
       where: { id },
@@ -207,7 +209,7 @@ const deactivateUser = async (req, res) => {
     console.log("deactivate user", id);
     await prisma.users.update({
       where: { id },
-      data: { status: "inactive" },
+      data: { status: "disabled" },
     });
 
     res.json({ error: false, message: "User deactivated successfully" });
@@ -230,6 +232,32 @@ const activateUser = async (req, res) => {
       error: true,
       message: "Error activating user",
       error_details: error.message,
+      error_info: error,
+    });
+  }
+};
+
+const changePassword = async (req, res) => {
+  const { password } = req.body;
+  const token = req.headers.authorization.split(" ")[1];
+  const decoded = await verifyJWT(token);
+  console.log("decoded", decoded);
+  const user = await getUserByEmail(decoded.email);
+  console.log("user", user);
+  if (user.error) {
+    return res.status(404).json({ error: true, message: "User not found" });
+  }
+  try {
+    await prisma.users.update({
+      where: { id: user.data.id },
+      data: { password: bcrypt.hashSync(password, SALT) },
+    });
+    res.json({ error: false, message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: "Error changing password",
+      error_message: error.message,
       error_info: error,
     });
   }
