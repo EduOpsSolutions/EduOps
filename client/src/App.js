@@ -14,6 +14,7 @@ import axios from "./utils/axios";
 import Assets from "./pages/Assets";
 
 /* General Pages */
+import PublicLayout from "./components/layout/PublicLayout";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import Terms from "./pages/legal/Terms";
 import Login from "./pages/public/Login";
@@ -36,7 +37,6 @@ import Assessment from "./pages/student/Assessment";
 
 /* Teacher Pages */
 import TeacherLayout from "./components/layout/TeacherLayout";
-import TeacherGrades from "./pages/teacher/Grades";
 import TeacherHome from "./pages/teacher/Home";
 import TeachingLoad from "./pages/teacher/TeachingLoad";
 
@@ -46,6 +46,7 @@ import CourseManagement from "./pages/admin/CourseManagement";
 import AdminHome from "./pages/admin/Home";
 import EnrollmentRequests from "./pages/admin/EnrollmentRequests";
 import EnrollmentPeriod from "./pages/admin/EnrollmentPeriod";
+import Transaction from "./pages/admin/Transaction";
 
 function App() {
   return (
@@ -59,8 +60,13 @@ function App() {
           <Route path="paymentForm" element={<PaymentForm />} />
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
-          <Route path="privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="terms" element={<Terms />} />
+
+          {/* Public legal Routes */}
+          <Route path="legal" element={<PublicLayout />}>
+            <Route index element={<Login />} />  
+            <Route path="privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="terms" element={<Terms />} />
+          </Route>
 
           {/* Student Page Routes */}
           <Route path="student" element={<StudentLayout />}>
@@ -73,15 +79,22 @@ function App() {
             <Route path="ledger" element={<Ledger />} />
             <Route path="documents" element={<Documents />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="legal">
+              <Route path="privacy-policy" element={<PrivacyPolicy />}/>
+              <Route path="terms" element={<Terms />}/>
+            </Route>
           </Route>
 
           {/* Teacher Page Routes */}
           <Route path="teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherHome />} />
             <Route path="profile" element={<Profile role="teacher" />} />
-            <Route path="grades" element={<TeacherGrades />} />
             <Route path="teachingLoad" element={<TeachingLoad />} />
             <Route path="documents" element={<Documents />} />
+            <Route path="legal">
+              <Route path="privacy-policy" element={<PrivacyPolicy />}/>
+              <Route path="terms" element={<Terms />}/>
+            </Route>
           </Route>
 
           {/* Admin Page Routes */}
@@ -89,9 +102,13 @@ function App() {
             <Route index element={<AdminHome />} />
             <Route path="coursemanagement" element={<CourseManagement />} />
             <Route path="profile" element={<Profile role="admin" />} />
-            <Route path="coursemanagement" element={<CourseManagement />} />
             <Route path="enrollmentrequests" element={<EnrollmentRequests />} />
             <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
+            <Route path="legal">
+              <Route path="privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="terms" element={<Terms />} />
+            </Route>
+            <Route path="transaction" element={<Transaction />} />
           </Route>
 
           {/* Not Found Page */}

@@ -1,9 +1,14 @@
 import { signJWT, verifyJWT } from "../utils/jwt.js";
-import { getUserByEmail as getStudentByEmail, updateUserPassword } from "../model/user_model.js";
+import dotenv from "dotenv";
+dotenv.config();
+import {
+  getUserByEmail as getStudentByEmail,
+  updateUserPassword,
+} from "../model/user_model.js";
 import { getUserByToken } from "../model/user_model.js";
 import { sendEmail } from "../utils/mailer.js";
 import crypto from "crypto";
-
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 // Inside your login route handler
 async function login(req, res) {
@@ -34,6 +39,13 @@ async function login(req, res) {
     }
     let { data } = user;
     delete data.password;
+
+    if (data.status !== "active") {
+      return res.status(401).json({
+        error: true,
+        message: `User is ${data.status}. Please contact the administrator.`,
+      });
+    }
 
     const payload = {
       data,
@@ -71,13 +83,44 @@ async function forgotPassword(req, res) {
 }
 
 async function resetPassword(req, res) {
-  const { token } = req.params;
-  const { password } = req.body;
-  if (!token) {
-    return res.status(400).json({ error: true, message: "Token is required" });
+  const { token, password } = req.body;
+  if (!token || !password) {
+    return res
+      .status(400)
+      .json({ error: true, message: "Token and password are required" });
   }
-  if (token) {
-    const user = await getUserByToken(token);
+  try {
+    if (token && password) {
+      const user = await getUserByToken(token);
+      if (!user || user.error) {
+        return res.status(401).json({ error: true, message: "User not found" });
+      }
+      if (
+        user.data.resetTokenExpiry &&
+        user.data.resetTokenExpiry < new Date()
+      ) {
+        return res.status(401).json({ error: true, message: "Token expired" });
+      }
+      if (user.data.resetToken !== token) {
+        return res.status(401).json({ error: true, message: "Invalid token" });
+      }
+
+      const saltRounds = parseInt(process.env.BCRYPT_SALT) || 11;
+      const hashedPassword = bcrypt.hashSync(password, saltRounds);
+      const updated = await updateUserPassword(user.data.email, hashedPassword);
+      if (updated) {
+        res
+          .status(200)
+          .json({ error: false, message: "Password updated successfully" });
+      }
+    }
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: "Error resetting password",
+      error_message: error.message,
+      error_info: error,
+    });
   }
 }
 
@@ -96,13 +139,16 @@ async function changePassword(req, res) {
     const user = await getStudentByEmail(email);
 
     if (!user || user.error) {
-      return res.status(401).json({ 
-        error: true, 
-        message: "User not found" 
+      return res.status(401).json({
+        error: true,
+        message: "User not found",
       });
     }
 
-    const isValidPassword = bcrypt.compareSync(currentPassword, user.data?.password);
+    const isValidPassword = bcrypt.compareSync(
+      currentPassword,
+      user.data?.password
+    );
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
@@ -115,14 +161,14 @@ async function changePassword(req, res) {
     const updated = await updateUserPassword(email, hashedPassword);
 
     if (updated) {
-      res.status(200).json({ 
-        error: false, 
-        message: "Password updated successfully" 
+      res.status(200).json({
+        error: false,
+        message: "Password updated successfully",
       });
     } else {
-      res.status(500).json({ 
-        error: true, 
-        message: "Failed to update password" 
+      res.status(500).json({
+        error: true,
+        message: "Failed to update password",
       });
     }
   } catch (error) {
@@ -130,4 +176,53 @@ async function changePassword(req, res) {
   }
 }
 
-export { login, register, forgotPassword, changePassword };
+const requestResetPassword = async (req, res) => {
+  const prisma = new PrismaClient();
+  const { email } = req.body;
+  console.log("requestResetPassword", email);
+  try {
+    const user = await getStudentByEmail(email);
+    if (!user || user.error) {
+      return res.status(401).json({ error: true, message: "User not found" });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    await prisma.users.update({
+      where: { email },
+      data: {
+        resetToken: token,
+        resetTokenExpiry: new Date(Date.now() + 1 * 60 * 60 * 1000),
+      },
+    });
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    const html = `
+        <h3>You requested a password reset</h3>
+        <p>Click this <a href="${resetUrl}">link</a> to reset your password</p>
+        <p>This link will expire in 1 hour</p>
+        <p>If you didn't request this, please ignore this email</p>
+      `;
+    const isSent = await sendEmail(email, "Reset Password", html);
+    if (isSent) {
+      res
+        .status(200)
+        .json({ error: false, message: "Reset link sent successfully" });
+    } else {
+      res.status(500).json({ error: true, message: "Error sending email" });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: "Error resetting password",
+      error_message: error.message,
+      error_info: error,
+    });
+  }
+};
+export {
+  login,
+  register,
+  forgotPassword,
+  changePassword,
+  resetPassword,
+  requestResetPassword,
+};

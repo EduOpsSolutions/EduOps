@@ -1,11 +1,14 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from "react-router-dom";
 import Bg_image from '../../assets/images/Bg2.png';
 import BackButton from '../../components/buttons/BackButton';
-import SignUpNav from '../../components/navbars/SignUpNav';
 
 function PrivacyPolicy() {
+    const location = useLocation();
     const navigate = useNavigate();
+
+    const pathSegments = location.pathname.split("/").filter(Boolean);
+    const role = pathSegments[0]; 
 
     // Function to navigate to login page
     const navigateToLogin = () => {
@@ -15,13 +18,12 @@ function PrivacyPolicy() {
     return (
         <section className='flex items-start justify-start flex-row bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh'}}>
             
-            {/* Insert backend logic to change navbar depending on user role signed in */}
-            <SignUpNav />
-
-            <div className="relative max-w-full mx-auto bg-transparent w-full px-8 py-4 mt-20 mb-12 flex flex-col">
-
-               <BackButton onClick={navigateToLogin} className="mr-4" />         
-        
+            <div className="relative max-w-full mx-auto bg-transparent w-full px-8 py-4 mt-4 mb-12 flex flex-col">
+            
+                {role === "legal" && (
+                    <BackButton onClick={navigateToLogin} className="mr-4" />
+                )}        
+                
                 <div className="relative max-w-full mx-auto bg-white w-11/12 px-8 py-4 flex flex-col text-justify shadow-gray-300 shadow-lg drop-shadow-lg rounded-lg">
                     <h1 className='text-center text-5xl font-semibold'>Privacy Policy</h1>
 
