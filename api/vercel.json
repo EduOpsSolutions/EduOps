@@ -1,14 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "index.js",
-      "use": "@vercel/node",
-      "config": {
-        "buildCommand": "npx prisma generate && npx prisma migrate deploy && npx prisma db seed"
-      }
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",
