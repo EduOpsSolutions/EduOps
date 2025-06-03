@@ -33,6 +33,8 @@ model users {
   firstLogin Boolean @default(true)
   resetToken String?
   resetTokenExpiry DateTime?
+
+  advisedCourses course[] @relation("UserAdvisesCourses")
 }
 
 model enrollment_request {
@@ -76,6 +78,9 @@ model course {
   logo      String?
   price     Decimal @db.Decimal(10, 2)
   schedule  Json?
+
+  adviserId String?
+  adviser   users? @relation("UserAdvisesCourses", fields: [adviserId], references: [id])
 
   courseRequisite course_requisite[]
   academicPeriods academic_period_courses[]
