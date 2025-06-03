@@ -2,8 +2,8 @@ import "dotenv/config";
 import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
 import indexRouter from "./routes/v1/index_routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +21,7 @@ app.use(
   })
 );
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.use("/api/v1", indexRouter);
 
