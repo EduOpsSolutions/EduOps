@@ -1,18 +1,33 @@
 import Cookies from 'js-cookie';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import SearchField from "../../components/textFields/SearchField";
 import ThinRedButton from "../../components/buttons/ThinRedButton";
 import CreateCourseModal from '../../components/modals/courses/CreateCourseModal';
 import EditCourseModal from '../../components/modals/courses/EditCourseModal';
+import axiosInstance from '../../utils/axios';
 
 
 function Home() {
   const [create_course_modal, setCreateCourseModal] = useState(false);
   const [edit_course_modal, setEditCourseModal] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [courses, setCourses] = useState([]);
 
-  const handleRowClick = (courseId) => {
-    setSelectedCourseId(courseId);
+  const fetchCourses = async () => {
+    try {
+        const response = await axiosInstance.get("/courses");
+        setCourses(response.data);
+    } catch (error) {
+        console.error("Failed to fetch courses: ", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const handleRowClick = (course) => {
+    setSelectedCourse(course);
     setEditCourseModal(true);
   };
 
@@ -28,7 +43,7 @@ return (
         </div>
 
 
-        <div className="flex flex-row space-x-40 items-center my-8 pt-5 mr-40 w-5/6">
+        <div className="flex flex-row space-x-80 my-8 pt-5 mr-40 w-1/8">
             <ThinRedButton onClick={() => {setCreateCourseModal(true)}}>
                 <p className="text-xs">Create Course</p>
             </ThinRedButton>
@@ -44,21 +59,23 @@ return (
                             <th>Course Name</th>
                             <th># of Students</th>
                             <th>Schedule</th>
-                            <th>Category</th>
                             <th>Adviser</th>
+                            <th>Price</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr onClick={() => {setEditCourseModal(true)}}>
-                            <td>1</td>
-                            <td>A1</td>
-                            <td>10/15</td>
-                            <td>TTh 6:30AM - 7:30AM</td>
-                            <td>German Basic Course</td>
-                            <td>Tricia Diaz</td>
-                            <td>Visible</td>
-                        </tr>
+                        {courses.map((course) => (
+                            <tr key={course.id} onClick={() => handleRowClick(course)} className="cursor-pointer hover:bg-gray-100">
+                            <td>{course.id}</td>
+                            <td>{course.name}</td>
+                            <td>{course.maxNumber || 'N/A'}</td>
+                            <td>{course.schedule || 'N/A'}</td>
+                            <td>{course.category || 'N/A'}</td>
+                            <td>{course.price || 'N/A'}</td>
+                            <td>{course.visibility === 'visible' ? 'Visible' : 'Hidden'}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
@@ -66,11 +83,13 @@ return (
             <CreateCourseModal
                 create_course_modal={create_course_modal}
                 setCreateCourseModal={setCreateCourseModal}
+                fetchCourses={fetchCourses}
             />
             <EditCourseModal 
                 edit_course_modal={edit_course_modal} 
                 setEditCourseModal={setEditCourseModal} 
-                //selectedCourseId={selectedCourseId}
+                selectedCourse={selectedCourse}
+                fetchCourses={fetchCourses}
             />
     </div>
     
