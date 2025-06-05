@@ -79,18 +79,20 @@ function AddCourseModal({setAddCourseModal, add_course_modal}){
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                    <td className="px-4 py-2 border-b">A1-2024-B1</td>
-                                    <td className="px-4 py-2 border-b">A1</td>
-                                    <td className="px-4 py-2 text-center border-b">0/10</td>
-                                    <td className="px-4 py-2 border-b">MW (9:00 AM - 12:00 PM)</td>
-                                    <td className="px-4 py-2 border-b">Sharlene Del Rosario</td>
-                                    <td className="px-2 py-2 text-center border-b">
-                                        <button className="p-1 rounded-full hover:bg-black">
-                                        <svg className="w-5 h-5" /* your plus icon here */ />
-                                        </button>
-                                    </td>
-                                    </tr>
+                                    {courses.map((course) => (
+                                        <tr key={course.id}>
+                                        <td className="px-4 py-2 border-b max-w-[150px] truncate">{course.id}</td>
+                                        <td className="px-4 py-2 border-b">{course.name}</td>
+                                        <td className="px-4 py-2 text-center border-b">{course.maxNumber}</td>
+                                        <td className="px-4 py-2 border-b">{course.schedule || 'N/A'}</td>
+                                        <td className="px-4 py-2 border-b">{course.adviserId || 'N/A'}</td>
+                                        <td className="px-2 py-2 text-center border-b">
+                                            <button className="p-1 rounded-full hover:bg-black">
+                                            <svg className="w-5 h-5" />
+                                            </button>
+                                        </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
