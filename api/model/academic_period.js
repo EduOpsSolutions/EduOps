@@ -35,7 +35,7 @@ export const deleteAcademicPeriod = (id) => {
 }
 
 export const getActiveAcademicPeriod = () => {
-    return prisma.academic_period.findFirst({
+    return prisma.academic_period.findMany({
         where: {
             deletedAt: null,
         }
