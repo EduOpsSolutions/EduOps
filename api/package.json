@@ -7,7 +7,10 @@
     "seed": "node prisma/seed.js"
   },
   "scripts": {
-    "start": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "build": "prisma generate && prisma migrate deploy && prisma generate",
+    "seed": "node prisma/seed.js",
+    "start": "node index.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

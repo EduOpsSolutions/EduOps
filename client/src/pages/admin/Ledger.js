@@ -1,144 +1,110 @@
 import React, { useState } from "react";
-import SearchField from "../../components/textFields/SearchField";
 import ThinRedButton from "../../components/buttons/ThinRedButton";
-import AddCourseModal from "../../components/modals/enrollment/AddCourseModal";
+import UpdateLedgerModal from "../../components/modals/transactions/UpdateLedger";
 import Pagination from "../../components/common/Pagination";
 import BackButton from "../../components/buttons/BackButton";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axios";
 
-function EnrollmentPeriod() {
+function Ledger() {
   const navigate = useNavigate();
-  const [periodName, setPeriodName] = useState("");
+  const [studentName, setStudentName] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
-  const [showPeriodResults, setShowPeriodResults] = useState(false);
-  const [showCourses, setShowCourses] = useState(false);
-  const [add_course_modal, setAddCourseModal] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [showStudentResults, setShowStudentResults] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [periodsPerPage, setPeriodsPerPage] = useState(5);
-  const [courses, setCourses] = useState([]);
+  const [studentsPerPage, setStudentsPerPage] = useState(5);
 
-  // Sample enrollment periods data
-  const samplePeriods = [
+  const sampleStudents = [
     {
       id: 1,
-      period: "Period 1",
+      name: "Polano Dolor",
+      course: "A1 German Basic Course",
       batch: "Batch 1",
       year: "2024",
     },
     {
       id: 2,
-      period: "Period 2",
+      name: "Juan Dela Cruz",
+      course: "A2 German Intermediate Course",
       batch: "Batch 2",
       year: "2023",
     },
     {
       id: 3,
-      period: "Period 3",
-      batch: "Batch 1",
+      name: "Maria Santos",
+      course: "B1 German Advanced Course",
+      batch: "Batch 3",
       year: "2022",
     },
+
     ...Array.from({ length: 15 }, (_, i) => ({
       id: i + 4,
-      period: `Period ${i + 4}`,
+      name: `Student ${i + 4}`,
+      course: `${["A1", "A2", "B1", "B2"][i % 4]} German ${
+        ["Basic", "Intermediate", "Advanced"][i % 3]
+      } Course`,
       batch: `Batch ${(i % 3) + 1}`,
       year: `${2024 - (i % 3)}`,
     })),
   ];
 
-  // Sample courses data
-  const sampleCourses = [
-    {
-      id: 1,
-      course: "A1",
-      schedule: "TTh 6:30AM - 7:30AM",
-      enrolledStudents: 20,
-    },
-    {
-      id: 2,
-      course: "B1",
-      schedule: "TTh 6:30AM - 7:30AM",
-      enrolledStudents: 20,
-    },
-    {
-      id: 3,
-      course: "A2",
-      schedule: "MWF 8:00AM - 9:00AM",
-      enrolledStudents: 15,
-    },
-    {
-      id: 4,
-      course: "B2",
-      schedule: "TTh 10:00AM - 11:00AM",
-      enrolledStudents: 18,
-    },
-  ];
-
-  const filteredPeriods = samplePeriods.filter((period) => {
+  const filteredStudents = sampleStudents.filter((student) => {
     return (
-      (periodName === "" ||
-        period.period.toLowerCase().includes(periodName.toLowerCase())) &&
-      (selectedBatch === "" || period.batch.includes(selectedBatch)) &&
-      (selectedYear === "" || period.year.includes(selectedYear))
+      (studentName === "" ||
+        student.name.toLowerCase().includes(studentName.toLowerCase())) &&
+      (selectedCourse === "" || student.course.includes(selectedCourse)) &&
+      (selectedBatch === "" || student.batch.includes(selectedBatch)) &&
+      (selectedYear === "" || student.year.includes(selectedYear))
     );
   });
 
-  const indexOfLastPeriod = currentPage * periodsPerPage;
-  const indexOfFirstPeriod = indexOfLastPeriod - periodsPerPage;
-  const currentPeriods = filteredPeriods.slice(
-    indexOfFirstPeriod,
-    indexOfLastPeriod
+  const indexOfLastStudent = currentPage * studentsPerPage;
+  const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
+  const currentStudents = filteredStudents.slice(
+    indexOfFirstStudent,
+    indexOfLastStudent
   );
-  const totalPages = Math.ceil(filteredPeriods.length / periodsPerPage);
+  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
-  const handlePeriodsPerPageChange = (newPerPage) => {
-    setPeriodsPerPage(newPerPage);
+  const handleStudentsPerPageChange = (newPerPage) => {
+    setStudentsPerPage(newPerPage);
     setCurrentPage(1);
   };
 
   const handleSearch = () => {
-    setShowPeriodResults(true);
-    setShowCourses(false);
+    setShowStudentResults(true);
+    setShowLedger(false);
     setCurrentPage(1);
   };
 
-  const handlePeriodClick = (period) => {
-    setSelectedPeriod(period);
-    setShowCourses(true);
+  const handleStudentClick = (student) => {
+    setSelectedStudent(student);
+    setShowLedger(true);
+  };
+
+  const handleModalSubmit = (data) => {
+    console.log("Transaction data:", data);
+    setIsModalOpen(false);
   };
 
   const handleBack = () => {
-    navigate(-1);
-  };
-
-  const fetchCourses = async () => {
-    try {
-      const response = await axiosInstance.get("/courses");
-      const visibleCourses = response.data.filter(
-        (course) => course.visibility === "visible"
-      );
-      setCourses(visibleCourses);
-    } catch (error) {
-      console.error("Failed to fetch courses: ", error);
-    }
-  };
-
-  const handleDeleteCourse = (courseId) => {
-    if (window.confirm("Are you sure you want to delete this course?")) {
-      console.log(`Deleting course with ID: ${courseId}`);
-      // Temporary, log nlng sah since sample data
-    }
+    navigate(-1); 
   };
 
   return (
     <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-6 px-20 relative">
-      <BackButton onClick={handleBack} className="left-6 top-6 z-10" />
+      <BackButton
+        onClick={handleBack}
+        className="left-6 top-6 z-10"
+      />
 
       <div className="bg-white border-dark-red-2 border-2 rounded-lg p-7 mb-6">
         <div className="flex items-center mb-4">
@@ -149,25 +115,39 @@ function EnrollmentPeriod() {
           >
             <path d="M 21 3 C 11.621094 3 4 10.621094 4 20 C 4 29.378906 11.621094 37 21 37 C 24.710938 37 28.140625 35.804688 30.9375 33.78125 L 44.09375 46.90625 L 46.90625 44.09375 L 33.90625 31.0625 C 36.460938 28.085938 38 24.222656 38 20 C 38 10.621094 30.378906 3 21 3 Z M 21 5 C 29.296875 5 36 11.703125 36 20 C 36 28.296875 29.296875 35 21 35 C 12.703125 35 6 28.296875 6 20 C 6 11.703125 12.703125 5 21 5 Z"></path>
           </svg>
-          <span className="text-lg font-bold">SEARCH ENROLLMENT PERIOD</span>
+          <span className="text-lg font-bold">SEARCH STUDENT LEDGER</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <div>
-            <p className="mb-1">Period</p>
+            <p className="mb-1">Name</p>
             <input
               type="text"
               className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2"
-              placeholder="Search Period..."
-              value={periodName}
-              onChange={(e) => setPeriodName(e.target.value)}
+              placeholder="Student Name"
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
             />
+          </div>
+          <div>
+            <p className="mb-1">Course</p>
+            <select
+              className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2"
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+            >
+              <option value="">All Courses</option>
+              <option value="A1 German Basic Course">A1 German Basic Course</option>
+              <option value="A2 German Intermediate Course">A2 German Intermediate Course</option>
+              <option value="B1 German Advanced Course">B1 German Advanced Course</option>
+            </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <div>
             <p className="mb-1">Batch</p>
+
             <select
               className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2"
               value={selectedBatch}
@@ -205,17 +185,9 @@ function EnrollmentPeriod() {
         </div>
       </div>
 
-      {/* Period Results Section */}
-      <div
-        className={`bg-white border-dark-red-2 border-2 rounded-lg p-7 mb-6 ${
-          showPeriodResults && !showCourses ? "opacity-100" : "hidden"
-        }`}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-lg font-bold">PERIOD RESULTS</span>
-          <div className="flex justify-end">
-            <ThinRedButton>Create Period</ThinRedButton>
-          </div>
+      <div className={`bg-white border-dark-red-2 border-2 rounded-lg p-7 mb-6 ${showStudentResults && !showLedger ? 'opacity-100' : 'hidden'}`}>
+        <div className="flex items-center mb-4">
+          <span className="text-lg font-bold">SEARCH RESULTS</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -223,7 +195,10 @@ function EnrollmentPeriod() {
             <thead>
               <tr className="border-b-2 border-dark-red-2">
                 <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
-                  Period
+                  Name
+                </th>
+                <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                  Course
                 </th>
                 <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
                   Batch
@@ -234,30 +209,33 @@ function EnrollmentPeriod() {
               </tr>
             </thead>
             <tbody>
-              {currentPeriods.map((period) => (
+              {currentStudents.map((student) => (
                 <tr
-                  key={period.id}
+                  key={student.id}
                   className="cursor-pointer transition-colors duration-200 hover:bg-dark-red-2 hover:text-white"
-                  onClick={() => handlePeriodClick(period)}
+                  onClick={() => handleStudentClick(student)}
                 >
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.period}
+                    {student.name}
                   </td>
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.batch}
+                    {student.course}
                   </td>
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.year}
+                    {student.batch}
+                  </td>
+                  <td className="py-3 px-4 border-t border-b border-dark-red-2">
+                    {student.year}
                   </td>
                 </tr>
               ))}
-              {currentPeriods.length === 0 && (
+              {currentStudents.length === 0 && (
                 <tr>
                   <td
-                    colSpan="3"
+                    colSpan="4"
                     className="text-center py-8 text-gray-500 border-t border-b border-dark-red-2"
                   >
-                    No periods found
+                    No students found
                   </td>
                 </tr>
               )}
@@ -269,24 +247,25 @@ function EnrollmentPeriod() {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
-          itemsPerPage={periodsPerPage}
-          onItemsPerPageChange={handlePeriodsPerPageChange}
-          totalItems={filteredPeriods.length}
-          itemName="periods"
+          itemsPerPage={studentsPerPage}
+          onItemsPerPageChange={handleStudentsPerPageChange}
+          totalItems={filteredStudents.length}
+          itemName="students"
           showItemsPerPageSelector={true}
         />
       </div>
 
-      {/* Courses Section */}
-      {showCourses && selectedPeriod && (
+      {/* Ledger Section */}
+      {showLedger && selectedStudent && (
         <div className="flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-5">
           <div className="flex flex-row justify-between items-center pb-4 border-b-2 border-dark-red-2">
-            <h2 className="text-lg font-bold text-left">Course Offered</h2>
+            <p className="text-xl uppercase">{selectedStudent.name}</p>
             <div className="flex space-x-2">
+              <ThinRedButton>Print Ledger</ThinRedButton>
               <button
                 className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-1.5 px-2 flex items-center justify-center"
-                onClick={() => setAddCourseModal(true)}
-                aria-label="Add course"
+                onClick={() => setIsModalOpen(true)}
+                aria-label="Add transaction"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -306,53 +285,37 @@ function EnrollmentPeriod() {
             </div>
           </div>
 
-          <div className="mt-4">
-            <p className="text-xl uppercase text-center mb-4">
-              {selectedPeriod.period} - {selectedPeriod.batch} (
-              {selectedPeriod.year})
-            </p>
-
-            <table className="w-full table-fixed">
-              <thead>
-                <tr className="border-b border-dark-red-2">
-                  <th className="py-3 font-semibold text-center">Course</th>
-                  <th className="py-3 font-semibold text-center">Schedule</th>
-                  <th className="py-3 font-semibold text-center">
-                    No. of Students Enrolled
-                  </th>
-                  <th className="py-3 font-semibold text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sampleCourses.map((course) => (
-                  <tr
-                    key={course.id}
-                    className="border-b border-[rgb(137,14,7,.49)] hover:bg-gray-50"
-                  >
-                    <td className="py-3 text-center">{course.course}</td>
-                    <td className="py-3 text-center">{course.schedule}</td>
-                    <td className="py-3 text-center">
-                      {course.enrolledStudents}
-                    </td>
-                    <td className="py-3 text-center">
-                      <button
-                        className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-sm px-3 py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
-                        onClick={() => handleDeleteCourse(course.id)}
-                        aria-label="Delete course"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <table className="w-full table-fixed">
+            <thead>
+              <tr className="border-b border-dark-red-2">
+                <th className="py-3 font-normal">Date</th>
+                <th className="py-3 font-normal">Time</th>
+                <th className="py-3 font-normal">O.R. Number</th>
+                <th className="py-3 font-normal">Debit Amount</th>
+                <th className="py-3 font-normal">Credit Amount</th>
+                <th className="py-3 font-normal">Balance</th>
+                <th className="py-3 font-normal">Type</th>
+                <th className="py-3 font-normal">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-[rgb(137,14,7,.49)]">
+                <td className="py-3 text-center">4/3/24</td>
+                <td className="py-3 text-center">6:29:23AM</td>
+                <td className="py-3 text-center">100000058</td>
+                <td className="py-3 text-center">28,650.00</td>
+                <td className="py-3 text-center">0</td>
+                <td className="py-3 text-center">28,650.00</td>
+                <td className="py-3 text-center">Assessment</td>
+                <td className="py-3 text-center">Assessment Computation</td>
+              </tr>
+            </tbody>
+          </table>
 
           <div className="mt-4">
             <button
               className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-4 py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
-              onClick={() => setShowCourses(false)}
+              onClick={() => setShowLedger(false)}
             >
               Back to Results
             </button>
@@ -360,13 +323,14 @@ function EnrollmentPeriod() {
         </div>
       )}
 
-      <AddCourseModal
-        add_course_modal={add_course_modal}
-        setAddCourseModal={setAddCourseModal}
-        fetchCourses={fetchCourses}
+      <UpdateLedgerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        student={selectedStudent}
       />
     </div>
   );
 }
 
-export default EnrollmentPeriod;
+export default Ledger;

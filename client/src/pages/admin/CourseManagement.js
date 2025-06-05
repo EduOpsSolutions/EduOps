@@ -8,7 +8,7 @@ import Pagination from "../../components/common/Pagination";
 import axiosInstance from '../../utils/axios';
 
 
-function Home() {
+function CourseManagement() {
   const [create_course_modal, setCreateCourseModal] = useState(false);
   const [edit_course_modal, setEditCourseModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -224,4 +224,4 @@ function Home() {
   );
 }
 
-export default Home;
+export defalt CourseManagement
