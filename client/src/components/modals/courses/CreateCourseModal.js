@@ -66,8 +66,7 @@ function CreateCourseModal({setCreateCourseModal, create_course_modal, fetchCour
                 size="2xl"
                 onClose={() => setCreateCourseModal(false)}
                 popup
-                className="transition duration-150 ease-out"
-            >
+                className="transition duration-150 ease-out">
                 <div className="py-4 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
                     <Modal.Header className="z-10 transition ease-in-out duration-300 " />
                     {/* Replace with backend logic for getting the course name and pass it into this thingy */}

@@ -7,7 +7,7 @@ import EditCourseModal from '../../components/modals/courses/EditCourseModal';
 import axiosInstance from '../../utils/axios';
 
 
-function Home() {
+function CourseManagement() {
   const [create_course_modal, setCreateCourseModal] = useState(false);
   const [edit_course_modal, setEditCourseModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -97,4 +97,4 @@ return (
 )
 }
 
-export default Home
+export default CourseManagement
