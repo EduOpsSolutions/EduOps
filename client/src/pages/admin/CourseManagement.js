@@ -224,4 +224,4 @@ function CourseManagement() {
   );
 }
 
-export defalt CourseManagement
+export default CourseManagement
