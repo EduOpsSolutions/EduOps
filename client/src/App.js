@@ -48,6 +48,7 @@ import EnrollmentRequests from "./pages/admin/EnrollmentRequests";
 import EnrollmentPeriod from "./pages/admin/EnrollmentPeriod";
 import Transaction from "./pages/admin/Transaction";
 import AdminLedger from "./pages/admin/Ledger";
+import AdminAssessment from "./pages/admin/Assessment";
 
 function App() {
   return (
@@ -111,6 +112,7 @@ function App() {
             </Route>
             <Route path="transaction" element={<Transaction />} />
             <Route path="ledger" element={<AdminLedger />} />
+            <Route path="assessment" element={<AdminAssessment />} />
           </Route>
 
           {/* Not Found Page */}
