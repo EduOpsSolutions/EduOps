@@ -6,47 +6,9 @@ import Pagination from "../../components/common/Pagination";
 import BackButton from "../../components/buttons/BackButton";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axios";
+import AcademicPeriodModal from "../../components/modals/enrollment/AddAcademicPeriodModal";
+import { useEffect } from "react";
 
-function EnrollmentPeriod() {
-  const navigate = useNavigate();
-  const [periodName, setPeriodName] = useState("");
-  const [selectedBatch, setSelectedBatch] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [showPeriodResults, setShowPeriodResults] = useState(false);
-  const [showCourses, setShowCourses] = useState(false);
-  const [add_course_modal, setAddCourseModal] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [periodsPerPage, setPeriodsPerPage] = useState(5);
-  const [courses, setCourses] = useState([]);
-
-  // Sample enrollment periods data
-  const samplePeriods = [
-    {
-      id: 1,
-      period: "Period 1",
-      batch: "Batch 1",
-      year: "2024",
-    },
-    {
-      id: 2,
-      period: "Period 2",
-      batch: "Batch 2",
-      year: "2023",
-    },
-    {
-      id: 3,
-      period: "Period 3",
-      batch: "Batch 1",
-      year: "2022",
-    },
-    ...Array.from({ length: 15 }, (_, i) => ({
-      id: i + 4,
-      period: `Period ${i + 4}`,
-      batch: `Batch ${(i % 3) + 1}`,
-      year: `${2024 - (i % 3)}`,
-    })),
-  ];
 
   // Sample courses data
   const sampleCourses = [
@@ -76,7 +38,22 @@ function EnrollmentPeriod() {
     },
   ];
 
-  const filteredPeriods = samplePeriods.filter((period) => {
+function EnrollmentPeriod() {
+  const navigate = useNavigate();
+  const [periodName, setPeriodName] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+  const [showPeriodResults, setShowPeriodResults] = useState(false);
+  const [showCourses, setShowCourses] = useState(false);
+  const [add_course_modal, setAddCourseModal] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [periodsPerPage, setPeriodsPerPage] = useState(5);
+  const [courses, setCourses] = useState([]);
+  const [addAcademicPeriodModal, setAddAcademicPeriodModal] = useState(false);
+  const [periods, setPeriods] = useState([]);
+
+  const filteredPeriods = periods.filter((period) => {
     return (
       (periodName === "" ||
         period.period.toLowerCase().includes(periodName.toLowerCase())) &&
@@ -128,6 +105,21 @@ function EnrollmentPeriod() {
       console.error("Failed to fetch courses: ", error);
     }
   };
+
+  const fetchPeriods = async () => {
+    try {
+      const response = await axiosInstance.get("/academic-periods");
+      const visiblePeriods = response.data.filter(
+        (academic_period) => academic_period.deletedAt === null
+      );
+      setPeriods(visiblePeriods);
+    } catch (error) {
+      console.error("Failed to fetch courses: ", error);
+    }
+  };
+  useEffect(() => {
+    fetchPeriods();
+  }, []);
 
   const handleDeleteCourse = (courseId) => {
     if (window.confirm("Are you sure you want to delete this course?")) {
@@ -214,7 +206,7 @@ function EnrollmentPeriod() {
         <div className="flex items-center justify-between mb-4">
           <span className="text-lg font-bold">PERIOD RESULTS</span>
           <div className="flex justify-end">
-            <ThinRedButton>Create Period</ThinRedButton>
+            <ThinRedButton onClick={() => {setAddAcademicPeriodModal(true)}}>Create Period</ThinRedButton>
           </div>
         </div>
 
@@ -241,13 +233,13 @@ function EnrollmentPeriod() {
                   onClick={() => handlePeriodClick(period)}
                 >
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.period}
+                    {period.periodName}
                   </td>
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.batch}
+                    {period.batchName}
                   </td>
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.year}
+                    {new Date(period.startAt).toLocaleDateString("en-US", { year: "numeric" })}
                   </td>
                 </tr>
               ))}
@@ -364,6 +356,10 @@ function EnrollmentPeriod() {
         add_course_modal={add_course_modal}
         setAddCourseModal={setAddCourseModal}
         fetchCourses={fetchCourses}
+      />
+      <AcademicPeriodModal
+        addAcademicPeriodModal={addAcademicPeriodModal}
+        setAddAcademicPeriodModal={setAddAcademicPeriodModal} 
       />
     </div>
   );
