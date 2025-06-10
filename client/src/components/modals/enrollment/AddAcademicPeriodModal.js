@@ -28,7 +28,7 @@ const customModalTheme = {
 // To do: Make this modal accept props wherein you can pass the status of this thingy if locked sha or not.
 // If ever locked, make lines 197-214 (basta sa footer area na naay visibility) hidden
 
-function AcademicPeriodModal({ setAddAcademicPeriodModal, addAcademicPeriodModal }) {
+function AcademicPeriodModal({ setAddAcademicPeriodModal, addAcademicPeriodModal, fetchPeriods }) {
 
     const [batchName, setBatchName] = useState('');
     const [periodName, setPeriodName] = useState('');
@@ -52,6 +52,7 @@ function AcademicPeriodModal({ setAddAcademicPeriodModal, addAcademicPeriodModal
             console.log('Payload for creating academic period:', payload);
             const response = await axiosInstance.post('/academic-periods/create', payload);
             console.log('Academic Period created:', response.data);
+            await fetchPeriods();
             setAddAcademicPeriodModal(false);
         } catch (error) {
             console.error('Failed to create academic period: ', error.response?.data || error.message);
