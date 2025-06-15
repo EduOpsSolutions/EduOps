@@ -37,11 +37,11 @@ function Login() {
   };
 
   const navigateToPrivacyPolicy = () => {
-    navigate('/privacy-policy');
+    navigate('../legal/privacy-policy');
   };
 
   const navigateToTerms = () => {
-    navigate('/terms');
+    navigate('../legal/terms');
   };
 
   const removeAllCookies = () => {

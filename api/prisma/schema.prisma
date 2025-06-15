@@ -67,11 +67,53 @@ model enrollment_request {
 model course {
   id        String   @id @default(cuid())
   name      String
-  price     Decimal @db.Decimal(10, 2)
-  details   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
+  maxNumber  Int @default(30)
+  visibility Visibility
+  description String?
+  logo      String?
+  price     Decimal @db.Decimal(10, 2)
+  schedule  Json?
+
+  courseRequisite course_requisite[]
+  academicPeriods academic_period_courses[]
+}
+
+model course_requisite {
+  id          String     @id @default(cuid())
+  ruleName   String
+  type        RequisiteType
+  courseId    String
+  course      course  @relation(fields: [courseId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model academic_period {
+  id            String    @id @default(cuid())
+  batchName     String
+  periodName    String
+  startAt       DateTime
+  endAt         DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  courses       academic_period_courses[]
+}
+
+model academic_period_courses{
+  id                String  @id @default(cuid())
+  courseId          String 
+  academicperiodId  String
+  course            course  @relation(fields: [courseId], references: [id])
+  academicPeriods   academic_period @relation(fields: [academicperiodId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 }
 
 model module{
@@ -92,4 +134,14 @@ model logs {
   initiatedBySystem Boolean @default(false)
   sourceId Int?
   createdAt DateTime @default(now())
+}
+
+enum  Visibility{
+  hidden
+  visible
+}
+
+enum RequisiteType{
+  prerequisite
+  corequisite
 }
