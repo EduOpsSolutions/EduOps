@@ -1,4 +1,4 @@
-import Cookies from "js-cookie";
+import Cookies from 'js-cookie';
 
 /**
  * Gets and decodes a JWT token from cookies
@@ -11,18 +11,18 @@ export const getTokenFromCookie = (cookieName) => {
     if (!token) return null;
 
     // JWT tokens are base64 encoded, so we need to decode them
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
       atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
     );
 
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error("Error decoding token:", error);
+    console.error('Error decoding token:', error);
     return null;
   }
 };
@@ -36,7 +36,7 @@ export const getTokenFromCookie = (cookieName) => {
 export const setTokenCookie = (cookieName, token, options = {}) => {
   Cookies.set(cookieName, token, {
     expires: 7, // 7 days by default
-    path: "/",
+    path: '/',
     ...options,
   });
 };
@@ -46,7 +46,7 @@ export const setTokenCookie = (cookieName, token, options = {}) => {
  * @param {string} cookieName - The name of the cookie to remove
  */
 export const removeTokenCookie = (cookieName) => {
-  Cookies.remove(cookieName, { path: "/" });
+  Cookies.remove(cookieName, { path: '/' });
 };
 
 /**
@@ -58,14 +58,16 @@ export const decodeToken = (cookieName) => {
   const token = Cookies.get(cookieName);
   if (!token) return null;
 
-  const base64Url = token.split(".")[1];
-  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+  const base64Url = token.split('.')[1];
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   const jsonPayload = decodeURIComponent(
     atob(base64)
-      .split("")
-      .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-      .join("")
+      .split('')
+      .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+      .join('')
   );
+
+  console.log('JSON PAYLOAD:', jsonPayload);
 
   return JSON.parse(jsonPayload);
 };

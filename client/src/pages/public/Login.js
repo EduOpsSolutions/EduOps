@@ -1,17 +1,18 @@
-import Cookies from "js-cookie";
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Bg_image from "../../assets/images/GermanyBg.png";
-import Left_section_image from "../../assets/images/PhpGermanFlag.jpg";
-import Logo from "../../assets/images/SprachinsLogo.png";
-import PrimaryButton from "../../components/buttons/PrimaryButton";
-import SecondaryButton from "../../components/buttons/SecondaryButton";
-import DevLoginModal from "../../components/modals/common/DevLoginModal";
-import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
-import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
-import Swal from "sweetalert2";
-import axios from "axios";
-import { decodeToken, setTokenCookie } from "../../utils/jwt";
+import Cookies from 'js-cookie';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Bg_image from '../../assets/images/GermanyBg.png';
+import Left_section_image from '../../assets/images/PhpGermanFlag.jpg';
+import Logo from '../../assets/images/SprachinsLogo.png';
+import PrimaryButton from '../../components/buttons/PrimaryButton';
+import SecondaryButton from '../../components/buttons/SecondaryButton';
+import DevLoginModal from '../../components/modals/common/DevLoginModal';
+import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
+import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
+import Swal from 'sweetalert2';
+import axios from 'axios';
+import { decodeToken, setTokenCookie } from '../../utils/jwt';
+import { BsEye, BsEyeSlash } from 'react-icons/bs';
 
 Cookies.remove();
 
@@ -24,23 +25,23 @@ function Login() {
 
   //hyperlink to another page
   const navigateToForgotPassword = () => {
-    navigate("/forgot-password");
+    navigate('/forgot-password');
   };
 
   const navigateToSignUp = () => {
-    navigate("/sign-up");
+    navigate('/sign-up');
   };
 
   const navigateToStudent = () => {
-    navigate("/student");
+    navigate('/student');
   };
 
   const navigateToPrivacyPolicy = () => {
-    navigate("/privacy-policy");
+    navigate('/privacy-policy');
   };
 
   const navigateToTerms = () => {
-    navigate("/terms");
+    navigate('/terms');
   };
 
   const removeAllCookies = () => {
@@ -50,7 +51,7 @@ function Login() {
       Cookies.remove(cookieName, {
         secure: true,
         httpOnly: false,
-        sameSite: "Strict",
+        sameSite: 'Strict',
       });
     });
   };
@@ -64,53 +65,45 @@ function Login() {
           password,
         }
       );
-      console.log("RESPO KO BEH", response);
-      if (!response || response?.error) {
+
+      if (response.status !== 200) {
         Swal.fire({
-          icon: "error",
-          title: "Login Failed",
-          text: response.message,
-          confirmButtonColor: "#FF0000",
+          icon: 'error',
+          title: 'Login Failed',
+          text: response.data.message,
+          confirmButtonColor: '#FF0000',
         });
       } else {
         const token = response.data.token.token;
-        setTokenCookie("token", token, { expires: 1 / 24 });
-        const decodedToken = decodeToken(token);
-        console.log("DECODED TOKEN", decodedToken);
+        console.log('Full API Response:', response.data);
+        setTokenCookie('token', token, { expires: 1 / 24 });
+        const decodedToken = decodeToken('token');
+        console.log('Decoded Token Data:', decodedToken.data);
+
+        // Check the role from the decoded token data
+        const userRole = decodedToken.data.role;
+
+        if (userRole === 'student') {
+          navigate('/student');
+        } else if (userRole === 'admin') {
+          navigate('/admin');
+        } else if (userRole === 'teacher') {
+          navigate('/teacher');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       Swal.fire({
-        icon: "error",
-        title: "Login Failed",
-        text: error.message || "A client-side error occurred.",
-        confirmButtonColor: "#DE0000",
+        icon: 'error',
+        title: 'Login Failed',
+        text: error.response?.data?.message || 'A client-side error occurred.',
+        confirmButtonColor: '#DE0000',
         customClass: {
-          confirmButton: "bg-german-red hover:bg-dark-red-2 text-white",
+          confirmButton: 'bg-german-red hover:bg-dark-red-2 text-white',
         },
       });
     }
-  };
-
-  const submitForm = async () => {
-    removeAllCookies(); //flushes the old cookies to ensure fresh login
-    const expiry = in30Minutes(); //expiry of token for 30 mins
-    Cookies.set(
-      "studentId",
-      "01202412312002", //set this when sucessfully logging in. This will store student data and json web tokens to ensure secure communication between server and client
-      {
-        secure: true,
-        httpOnly: false,
-        sameSite: "Strict",
-        expires: expiry,
-      }
-    );
-    Cookies.set("token", "BSQ1361Afadfae213DQ1", {
-      secure: true,
-      httpOnly: false,
-      sameSite: "Strict",
-      expires: expiry,
-    });
-    navigate("/student");
   };
 
   const handlePasswordChange = (e) => {
@@ -121,15 +114,8 @@ function Login() {
     setEmail(e.target.value);
   };
 
-  var in30Minutes = () => {
-    //token expiry for 30 mins
-    const date = new Date();
-    date.setTime(date.getTime() + 30 * 60 * 1000);
-    return date;
-  };
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(true);
 
   useEffect(() => {
@@ -146,9 +132,9 @@ function Login() {
       className="flex justify-center items-center bg-white-yellow-tone"
       style={{
         backgroundImage: `url(${Bg_image})`,
-        backgroundSize: "135%",
-        backgroundPosition: "20% 70%",
-        minHeight: "100vh",
+        backgroundSize: '135%',
+        backgroundPosition: '20% 70%',
+        minHeight: '100vh',
       }}
     >
       <div className="absolute inset-0 bg-white-yellow-tone opacity-75"></div>
@@ -162,9 +148,9 @@ function Login() {
               className="absolute inset-0 w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage: `url(${Left_section_image})`,
-                backgroundSize: "115%",
-                backgroundPosition: "100% 40%",
-                clipPath: "polygon(0 0, 100% 0, 80% 100%, 0% 100%)",
+                backgroundSize: '115%',
+                backgroundPosition: '100% 40%',
+                clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
               }}
             ></div>
 
@@ -222,18 +208,27 @@ function Login() {
                   />
                 </svg>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
-                  className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
+                  className="border border-black pl-10 pr-10 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
                   placeholder="Password"
                   onChange={handlePasswordChange}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === 'Enter') {
                       handleLogin();
                     }
                   }}
                 />
+                <button
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPassword(!showPassword);
+                  }}
+                >
+                  {showPassword ? <BsEye /> : <BsEyeSlash />}
+                </button>
               </div>
 
               {/* need to change hover color */}
@@ -300,11 +295,11 @@ function Login() {
             {/* Terms and Privacy Policy Section*/}
             <div className="w-80">
               <p className="text-sm mt-2 text-white-yellow-tone text-center">
-                By using this service, you understood and agree to our{" "}
+                By using this service, you understood and agree to our{' '}
                 <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
                   <a onClick={navigateToTerms}>Terms</a>
                 </span>
-                {" and "}
+                {' and '}
                 <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
                   <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
                 </span>

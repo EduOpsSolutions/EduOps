@@ -1,13 +1,13 @@
-import { signJWT, verifyJWT } from "../utils/jwt.js";
+import { signJWT, verifyJWT } from '../utils/jwt.js';
 import {
   getUserByEmail as getStudentByEmail,
   updateUserPassword,
-} from "../model/user_model.js";
-import { getUserByToken } from "../model/user_model.js";
-import { sendEmail } from "../utils/mailer.js";
-import crypto from "crypto";
+} from '../model/user_model.js';
+import { getUserByToken } from '../model/user_model.js';
+import { sendEmail } from '../utils/mailer.js';
+import crypto from 'crypto';
 
-import bcrypt from "bcrypt";
+import bcrypt from 'bcrypt';
 // Inside your login route handler
 async function login(req, res) {
   try {
@@ -16,7 +16,7 @@ async function login(req, res) {
     if (!user || user.error) {
       return res
         .status(401)
-        .json({ error: true, message: "Account does not exist" });
+        .json({ error: true, message: 'Incorrect email or password' });
     }
 
     try {
@@ -24,15 +24,15 @@ async function login(req, res) {
       if (!isValidPassword) {
         return res.status(401).json({
           error: true,
-          message: "Invalid password",
+          message: 'Incorrect email or password',
         });
       }
     } catch (bcryptError) {
       console.log(password, user.password);
-      console.error("Password comparison error:", bcryptError);
+      console.error('Password comparison error:', bcryptError);
       return res.status(500).json({
         error: true,
-        message: "Error validating password",
+        message: 'Something went wrong, please try again later.',
       });
     }
     let { data } = user;
@@ -43,12 +43,12 @@ async function login(req, res) {
     };
 
     const token = await signJWT(payload);
-    res.cookie("token", token, {
+    res.cookie('token', token, {
       httpOnly: true,
       // secure: process.env.NODE_ENV === "production",
       maxAge: 24 * 60 * 60 * 1000,
     });
-    res.status(200).json({ token, error: false, message: "Login successful" });
+    res.status(200).json({ token, error: false, message: 'Login successful' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -56,7 +56,7 @@ async function login(req, res) {
 
 async function forgotPassword(req, res) {
   const { email } = req.body;
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = crypto.randomBytes(32).toString('hex');
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
   const html = `
         <h3>You requested a password reset</h3>
@@ -65,16 +65,16 @@ async function forgotPassword(req, res) {
         <p>If you didn't request this, please ignore this email</p>
       `;
   try {
-    const isSent = await sendEmail(email, "Forgot Password", html);
+    const isSent = await sendEmail(email, 'Forgot Password', html);
     if (isSent) {
       res
         .status(200)
-        .json({ error: false, message: "Reset link sent successfully" });
+        .json({ error: false, message: 'Reset link sent successfully' });
     } else {
-      res.status(500).json({ error: true, message: "Error sending email" });
+      res.status(500).json({ error: true, message: 'Error sending email' });
     }
   } catch (error) {
-    res.status(500).json({ error: true, message: "Error sending email" });
+    res.status(500).json({ error: true, message: 'Error sending email' });
   }
 }
 
@@ -82,7 +82,7 @@ async function resetPassword(req, res) {
   const { token } = req.params;
   const { password } = req.body;
   if (!token) {
-    return res.status(400).json({ error: true, message: "Token is required" });
+    return res.status(400).json({ error: true, message: 'Token is required' });
   }
   if (token) {
     const user = await getUserByToken(token);
@@ -106,7 +106,7 @@ async function changePassword(req, res) {
     if (!user || user.error) {
       return res.status(401).json({
         error: true,
-        message: "User not found",
+        message: 'User not found',
       });
     }
 
@@ -117,7 +117,7 @@ async function changePassword(req, res) {
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
-        message: "Current password is incorrect",
+        message: 'Current password is incorrect',
       });
     }
 
@@ -128,12 +128,12 @@ async function changePassword(req, res) {
     if (updated) {
       res.status(200).json({
         error: false,
-        message: "Password updated successfully",
+        message: 'Password updated successfully',
       });
     } else {
       res.status(500).json({
         error: true,
-        message: "Failed to update password",
+        message: 'Failed to update password',
       });
     }
   } catch (error) {
