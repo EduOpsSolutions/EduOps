@@ -154,10 +154,6 @@ async function changePassword(req, res) {
       currentPassword,
       user.data?.password
     );
-    const isValidPassword = bcrypt.compareSync(
-      currentPassword,
-      user.data?.password
-    );
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
