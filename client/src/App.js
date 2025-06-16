@@ -1,52 +1,53 @@
-import React from "react";
+import React from 'react';
 import {
   Navigate,
   Route,
   BrowserRouter as Router,
   Routes,
-} from "react-router-dom";
-import "./App.css";
+} from 'react-router-dom';
+import './App.css';
 
 // Import axios instance
-import axios from "./utils/axios";
+import axios from './utils/axios';
 
 /*Utility Pages*/
-import Assets from "./pages/Assets";
+import Assets from './pages/Assets';
 
 /* General Pages */
-import PublicLayout from "./components/layout/PublicLayout";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import Terms from "./pages/legal/Terms";
-import Login from "./pages/public/Login";
-import NotFound from "./pages/public/NotFound";
-import PaymentForm from "./pages/public/PaymentForm";
-import Profile from "./pages/public/Profile";
-import RedirectPage from "./pages/public/RedirectPage";
-import SignUp from "./pages/public/SignUp";
+import PublicLayout from './components/layout/PublicLayout';
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import Terms from './pages/legal/Terms';
+import Login from './pages/public/Login';
+import NotFound from './pages/public/NotFound';
+import PaymentForm from './pages/public/PaymentForm';
+import Profile from './pages/public/Profile';
+import RedirectPage from './pages/public/RedirectPage';
+import SignUp from './pages/public/SignUp';
 
 /* Student Pages */
-import StudentLayout from "./components/layout/StudentLayout";
-import Documents from "./pages/student/Documents";
-import Enrollment from "./pages/student/Enrollment";
-import Grades from "./pages/student/Grades";
-import Home from "./pages/student/Home";
-import StudentSchedule from "./pages/student/StudentSchedule";
-import StudyLoad from "./pages/student/StudyLoad";
-import Ledger from "./pages/student/Ledger";
-import Assessment from "./pages/student/Assessment";
+import StudentLayout from './components/layout/StudentLayout';
+import Documents from './pages/student/Documents';
+import Enrollment from './pages/student/Enrollment';
+import Grades from './pages/student/Grades';
+import Home from './pages/student/Home';
+import StudentSchedule from './pages/student/StudentSchedule';
+import StudyLoad from './pages/student/StudyLoad';
+import Ledger from './pages/student/Ledger';
+import Assessment from './pages/student/Assessment';
 
 /* Teacher Pages */
-import TeacherLayout from "./components/layout/TeacherLayout";
-import TeacherHome from "./pages/teacher/Home";
-import TeachingLoad from "./pages/teacher/TeachingLoad";
+import TeacherLayout from './components/layout/TeacherLayout';
+import TeacherHome from './pages/teacher/Home';
+import TeachingLoad from './pages/teacher/TeachingLoad';
 
 /* Admin Pages */
-import AdminLayout from "./components/layout/AdminLayout";
-import CourseManagement from "./pages/admin/CourseManagement";
-import AdminHome from "./pages/admin/Home";
-import EnrollmentRequests from "./pages/admin/EnrollmentRequests";
-import EnrollmentPeriod from "./pages/admin/EnrollmentPeriod";
-import Transaction from "./pages/admin/Transaction";
+import AdminLayout from './components/layout/AdminLayout';
+import CourseManagement from './pages/admin/CourseManagement';
+import AdminHome from './pages/admin/Home';
+import EnrollmentRequests from './pages/admin/EnrollmentRequests';
+import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
+import Transaction from './pages/admin/Transaction';
+import AccountManagement from './pages/admin/AccountManagement';
 
 function App() {
   return (
@@ -63,7 +64,7 @@ function App() {
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>
-            <Route index element={<Login />} />  
+            <Route index element={<Login />} />
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
             <Route path="terms" element={<Terms />} />
           </Route>
@@ -80,8 +81,8 @@ function App() {
             <Route path="documents" element={<Documents />} />
             <Route path="profile" element={<Profile />} />
             <Route path="legal">
-              <Route path="privacy-policy" element={<PrivacyPolicy />}/>
-              <Route path="terms" element={<Terms />}/>
+              <Route path="privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="terms" element={<Terms />} />
             </Route>
           </Route>
 
@@ -92,8 +93,8 @@ function App() {
             <Route path="teachingLoad" element={<TeachingLoad />} />
             <Route path="documents" element={<Documents />} />
             <Route path="legal">
-              <Route path="privacy-policy" element={<PrivacyPolicy />}/>
-              <Route path="terms" element={<Terms />}/>
+              <Route path="privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="terms" element={<Terms />} />
             </Route>
           </Route>
 
@@ -109,6 +110,7 @@ function App() {
               <Route path="terms" element={<Terms />} />
             </Route>
             <Route path="transaction" element={<Transaction />} />
+            <Route path="account-management" element={<AccountManagement />} />
           </Route>
 
           {/* Not Found Page */}

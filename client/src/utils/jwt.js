@@ -35,10 +35,11 @@ export const getTokenFromCookie = (cookieName) => {
  */
 export const setTokenCookie = (cookieName, token, options = {}) => {
   Cookies.set(cookieName, token, {
-    expires: 7, // 7 days by default
+    expires: 1 / 24, // 1 hour
     path: '/',
     ...options,
   });
+  localStorage.setItem(cookieName, token);
 };
 
 /**
