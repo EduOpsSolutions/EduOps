@@ -4,8 +4,11 @@ import { Link } from 'react-router-dom';
 import logo from '../../assets/images/SprachinsLogo.png';
 // Delete this logo import after backend is implemented; used in notifications
 import John_logo from '../../assets/images/John.jpg';
+import useAuthStore from '../../stores/authStore';
 
 function UserNavbar({ role }) {
+  const { logout, getUser } = useAuthStore();
+  const userInitials = String(getUser().firstName).slice(0, 2).toUpperCase();
   // Only returns this navbar if user not logged in
   if (role === 'public') {
     return (
@@ -328,7 +331,7 @@ function UserNavbar({ role }) {
           trigger="hover"
           renderTrigger={() => (
             <span className="size-[48px] flex justify-center items-center font-bold text-xl border-2 rounded-full cursor-pointer">
-              PD
+              {userInitials}
             </span>
           )}
         >
@@ -353,6 +356,7 @@ function UserNavbar({ role }) {
           </Dropdown.Item>
           <Dropdown.Item
             as={Link}
+            onClick={logout}
             to="/login"
             className="text-base text-white hover:bg-dark-red-4 focus:bg-dark-red-4"
           >

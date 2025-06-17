@@ -55,7 +55,8 @@ async function login(req, res) {
     res.cookie('token', token, {
       httpOnly: true,
       // secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 10, //10 seconds
+      // maxAge: 24 * 60 * 60 * 1000,
     });
     res.status(200).json({ token, error: false, message: 'Login successful' });
   } catch (error) {

@@ -7,9 +7,6 @@ import {
 } from 'react-router-dom';
 import './App.css';
 
-// Import axios instance
-import axios from './utils/axios';
-
 /*Utility Pages*/
 import Assets from './pages/Assets';
 
@@ -48,8 +45,11 @@ import EnrollmentRequests from './pages/admin/EnrollmentRequests';
 import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 import Transaction from './pages/admin/Transaction';
 import AccountManagement from './pages/admin/AccountManagement';
+import useAuthStore from './stores/authStore';
 
 function App() {
+  const { isAuthenticated } = useAuthStore();
+
   return (
     <div className="App">
       <Router>
@@ -69,49 +69,61 @@ function App() {
             <Route path="terms" element={<Terms />} />
           </Route>
 
-          {/* Student Page Routes */}
-          <Route path="student" element={<StudentLayout />}>
-            <Route index element={<Home />} /> {/* localhost/student */}
-            <Route path="enrollment" element={<Enrollment />} />
-            <Route path="schedule" element={<StudentSchedule />} />
-            <Route path="studyLoad" element={<StudyLoad />} />
-            <Route path="grades" element={<Grades />} />
-            <Route path="assessment" element={<Assessment />} />
-            <Route path="ledger" element={<Ledger />} />
-            <Route path="documents" element={<Documents />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="legal">
-              <Route path="privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="terms" element={<Terms />} />
-            </Route>
-          </Route>
+          {isAuthenticated ? (
+            <>
+              {/* Student Page Routes */}
+              <Route path="student" element={<StudentLayout />}>
+                <Route index element={<Home />} /> {/* localhost/student */}
+                <Route path="enrollment" element={<Enrollment />} />
+                <Route path="schedule" element={<StudentSchedule />} />
+                <Route path="studyLoad" element={<StudyLoad />} />
+                <Route path="grades" element={<Grades />} />
+                <Route path="assessment" element={<Assessment />} />
+                <Route path="ledger" element={<Ledger />} />
+                <Route path="documents" element={<Documents />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="legal">
+                  <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="terms" element={<Terms />} />
+                </Route>
+              </Route>
 
-          {/* Teacher Page Routes */}
-          <Route path="teacher" element={<TeacherLayout />}>
-            <Route index element={<TeacherHome />} />
-            <Route path="profile" element={<Profile role="teacher" />} />
-            <Route path="teachingLoad" element={<TeachingLoad />} />
-            <Route path="documents" element={<Documents />} />
-            <Route path="legal">
-              <Route path="privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="terms" element={<Terms />} />
-            </Route>
-          </Route>
+              {/* Teacher Page Routes */}
+              <Route path="teacher" element={<TeacherLayout />}>
+                <Route index element={<TeacherHome />} />
+                <Route path="profile" element={<Profile role="teacher" />} />
+                <Route path="teachingLoad" element={<TeachingLoad />} />
+                <Route path="documents" element={<Documents />} />
+                <Route path="legal">
+                  <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="terms" element={<Terms />} />
+                </Route>
+              </Route>
 
-          {/* Admin Page Routes */}
-          <Route path="admin" element={<AdminLayout />}>
-            <Route index element={<AdminHome />} />
-            <Route path="coursemanagement" element={<CourseManagement />} />
-            <Route path="profile" element={<Profile role="admin" />} />
-            <Route path="enrollmentrequests" element={<EnrollmentRequests />} />
-            <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
-            <Route path="legal">
-              <Route path="privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="terms" element={<Terms />} />
-            </Route>
-            <Route path="transaction" element={<Transaction />} />
-            <Route path="account-management" element={<AccountManagement />} />
-          </Route>
+              {/* Admin Page Routes */}
+              <Route path="admin" element={<AdminLayout />}>
+                <Route index element={<AdminHome />} />
+                <Route path="coursemanagement" element={<CourseManagement />} />
+                <Route path="profile" element={<Profile role="admin" />} />
+                <Route
+                  path="enrollmentrequests"
+                  element={<EnrollmentRequests />}
+                />
+                <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
+                <Route path="legal">
+                  <Route path="privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="terms" element={<Terms />} />
+                </Route>
+                <Route path="transaction" element={<Transaction />} />
+                <Route
+                  path="account-management"
+                  element={<AccountManagement />}
+                />
+              </Route>
+            </>
+          ) : (
+            <Route path="*" element={<Navigate to="/login" />} />
+          )}
 
           {/* Not Found Page */}
           <Route path="*" element={<NotFound />} />

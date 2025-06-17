@@ -4,6 +4,7 @@ import Table from '../../components/tables/Table';
 import Swal from 'sweetalert2';
 import SearchField from '../../components/textFields/SearchField';
 import DropDown from '../../components/form/DropDown';
+import { getCookieItem } from '../../utils/jwt';
 
 export default function AccountManagement() {
   const [data, setData] = useState([]);
@@ -13,6 +14,7 @@ export default function AccountManagement() {
   const [role, setRole] = useState('');
 
   const fetchData = async () => {
+    const token = getCookieItem('token');
     setError(null);
     setLoading(true);
     try {
@@ -21,7 +23,7 @@ export default function AccountManagement() {
         {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
           params: {
             search: search,

@@ -1,26 +1,35 @@
 import Cookies from 'js-cookie';
+import { decodeJwt } from 'jose';
+import useAuthStore from '../stores/authStore';
 
 /**
  * Gets and decodes a JWT token from cookies
  * @param {string} cookieName - The name of the cookie containing the token
- * @returns {object|null} The decoded token payload or null if not found/invalid
+ * @returns {null | string} The token or null if not found/invalid
  */
-export const getTokenFromCookie = (cookieName) => {
+export const getCookieItem = (cookieName) => {
   try {
     const token = Cookies.get(cookieName);
     if (!token) return null;
+    return token;
+  } catch (error) {
+    console.error('Error obtaining token:', error);
+    return null;
+  }
+};
 
-    // JWT tokens are base64 encoded, so we need to decode them
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
+/**
+ * Decodes a JWT token payload
+ * @param {string} token - The JWT token to decode
+ * @returns {object|null} The decoded token payload or null if invalid
+ */
+export const decodeToken = (token) => {
+  if (!token) return null;
 
-    return JSON.parse(jsonPayload);
+  const decodedToken = decodeJwt(token);
+
+  try {
+    return decodedToken;
   } catch (error) {
     console.error('Error decoding token:', error);
     return null;
@@ -29,17 +38,25 @@ export const getTokenFromCookie = (cookieName) => {
 
 /**
  * Sets a JWT token in cookies
- * @param {string} cookieName - The name of the cookie
  * @param {string} token - The JWT token to store
- * @param {object} options - Cookie options (expires, path, etc.)
  */
-export const setTokenCookie = (cookieName, token, options = {}) => {
-  Cookies.set(cookieName, token, {
-    expires: 1 / 24, // 1 hour
+export const setTokenCookie = async (token) => {
+  const decodedToken = await decodeToken(token);
+  console.log('Decoded Token:', decodedToken);
+
+  // Calculate expiration in minutes (convert seconds to minutes)
+  const expirationInMinutes = Math.floor(
+    (decodedToken.exp - decodedToken.iat) / 60
+  );
+
+  Cookies.set('token', token, {
+    expires: expirationInMinutes / (24 * 60), // Convert minutes to days for js-cookie
     path: '/',
-    ...options,
   });
-  localStorage.setItem(cookieName, token);
+  Cookies.set('user', decodeURIComponent(JSON.stringify(decodedToken.data)), {
+    expires: expirationInMinutes / (24 * 60), // Convert minutes to days for js-cookie
+    path: '/',
+  });
 };
 
 /**
@@ -48,27 +65,4 @@ export const setTokenCookie = (cookieName, token, options = {}) => {
  */
 export const removeTokenCookie = (cookieName) => {
   Cookies.remove(cookieName, { path: '/' });
-};
-
-/**
- * Gets a token from cookies
- * @param {string} cookieName - The name of the cookie to get
- * @returns {string|null} The token or null if not found
- */
-export const decodeToken = (cookieName) => {
-  const token = Cookies.get(cookieName);
-  if (!token) return null;
-
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const jsonPayload = decodeURIComponent(
-    atob(base64)
-      .split('')
-      .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-      .join('')
-  );
-
-  console.log('JSON PAYLOAD:', jsonPayload);
-
-  return JSON.parse(jsonPayload);
 };

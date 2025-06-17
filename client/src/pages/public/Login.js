@@ -10,79 +10,27 @@ import DevLoginModal from '../../components/modals/common/DevLoginModal';
 import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
 import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
 import Swal from 'sweetalert2';
-import axios from 'axios';
-import { decodeToken, setTokenCookie } from '../../utils/jwt';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
+import useAuthStore from '../../stores/authStore';
 
 Cookies.remove();
 
 function Login() {
+  const { login, isLoading, getUser } = useAuthStore();
+
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
   const [password_reset_modal, setPasswordResetModal] = useState(false);
   const [dev_login_modal, setDevLoginModal] = useState(false);
 
   const navigate = useNavigate();
 
-  //hyperlink to another page
-  const navigateToForgotPassword = () => {
-    navigate('/forgot-password');
-  };
-
-  const navigateToSignUp = () => {
-    navigate('/sign-up');
-  };
-
-  const navigateToStudent = () => {
-    navigate('/student');
-  };
-
-  const navigateToPrivacyPolicy = () => {
-    navigate('../legal/privacy-policy');
-  };
-
-  const navigateToTerms = () => {
-    navigate('../legal/terms');
-  };
-
-  const removeAllCookies = () => {
-    const allCookies = Cookies.get();
-    Object.keys(allCookies).forEach((cookieName) => {
-      // Remove each cookie with the necessary attributes
-      Cookies.remove(cookieName, {
-        secure: true,
-        httpOnly: false,
-        sameSite: 'Strict',
-      });
-    });
-  };
-
   const handleLogin = async () => {
     try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/auth/login`,
-        {
-          email,
-          password,
-        }
-      );
+      const result = await login(email, password);
+      console.log('Login result:', result);
 
-      if (response.status !== 200) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Login Failed',
-          text: response.data.message,
-          confirmButtonColor: '#FF0000',
-        });
-      } else {
-        const token = response.data.token.token;
-        console.log('Full API Response:', response.data);
-        setTokenCookie('token', token, { expires: 1 / 24 });
-        const decodedToken = decodeToken('token');
-        console.log('Decoded Token Data:', decodedToken.data);
-
-        // Check the role from the decoded token data
-        const userRole = decodedToken.data.role;
-
+      if (result.success) {
+        const userRole = getUser().role;
         if (userRole === 'student') {
           navigate('/student');
         } else if (userRole === 'admin') {
@@ -97,7 +45,7 @@ function Login() {
       Swal.fire({
         icon: 'error',
         title: 'Login Failed',
-        text: error.response?.data?.message || 'A client-side error occurred.',
+        text: error.message || 'A client-side error occurred.',
         confirmButtonColor: '#DE0000',
         customClass: {
           confirmButton: 'bg-german-red hover:bg-dark-red-2 text-white',
@@ -117,14 +65,6 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(true);
-
-  useEffect(() => {
-    return () => {
-      Cookies.remove();
-    };
-  }, []);
-
-  // Editor's Note: Need to fix responsiveness of the page.
 
   return (
     // Backgroung image and overlay
@@ -163,7 +103,7 @@ function Login() {
             <p className="font-semibold text-[28px] text-white font-sans">
               WELCOME TO
             </p>
-            <img className="w-[60%] h-auto mt-2" src={Logo} />
+            <img className="w-[60%] h-auto mt-2" src={Logo} alt="Logo" />
 
             {/* Login form */}
             <form className="flex flex-col items-center w-2/3 mt-2">
@@ -264,7 +204,9 @@ function Login() {
               */}
 
               {/* DELETE THIS AFTER IMPLEMENTING BACKEND LOGIC FOR LOGGING IN */}
-              <PrimaryButton onClick={handleLogin}>Login</PrimaryButton>
+              <PrimaryButton disabled={isLoading} onClick={handleLogin}>
+                Login
+              </PrimaryButton>
 
               {/* ALSO DELETE THIS AFTER BACKEND LOGIC FOR LOGGING IN */}
               <DevLoginModal
@@ -279,7 +221,7 @@ function Login() {
                 <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
                   New Student?
                 </p>
-                <SecondaryButton onClick={navigateToSignUp}>
+                <SecondaryButton onClick={() => navigate('/sign-up')}>
                   Enroll Now
                 </SecondaryButton>
               </div>
@@ -297,11 +239,15 @@ function Login() {
               <p className="text-sm mt-2 text-white-yellow-tone text-center">
                 By using this service, you understood and agree to our{' '}
                 <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
-                  <a onClick={navigateToTerms}>Terms</a>
+                  <button onClick={() => navigate('../legal/terms')}>
+                    Terms
+                  </button>
                 </span>
                 {' and '}
                 <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
-                  <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
+                  <button onClick={() => navigate('../legal/privacy-policy')}>
+                    Privacy Policy
+                  </button>
                 </span>
               </p>
             </div>

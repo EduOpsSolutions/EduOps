@@ -15,6 +15,30 @@ if (!process.env.JWT_EXPIRATION_TIME) {
 
 const secret = createSecretKey(process.env.JWT_SECRET, 'utf-8');
 
+/**
+ * Signs a JWT token
+ * @param {object} payload  {data: {
+    id: string,
+    userId: string,
+    firstName: string,
+    middleName?: string,
+    lastName: string,
+    birthmonth: number,
+    birthdate: number,
+    birthyear: number,
+    profilePicLink?: string,
+    status: string,
+    email: string,
+    role: string : 'admin' | 'teacher' | 'student',
+    createdAt: Datetime,
+    updatedAt: Datetime,
+    deletedAt?: Datetime,
+    firstLogin: boolean,
+    resetToken?: string,
+    resetTokenExpiry?: Datetime,
+  } - The payload to sign
+ * @returns {object} {token, expiresIn, signedAt} - The signed token
+ */
 export const signJWT = async (payload) => {
   console.log('PAYLOADKOBEH', payload);
   try {
@@ -23,16 +47,22 @@ export const signJWT = async (payload) => {
       .setIssuedAt()
       .setExpirationTime(process.env.JWT_EXPIRATION_TIME)
       .sign(secret);
-    return {
+    const retval = {
       token,
       expiresIn: process.env.JWT_EXPIRATION_TIME,
       signedAt: new Date().toLocaleString(),
     };
+    return retval;
   } catch (error) {
     throw new Error('Error signing JWT: ' + error.message);
   }
 };
 
+/**
+ * Verifies a JWT token
+ * @param {string} token - The token to verify
+ * @returns {object} {payload, expired} - The payload and expired status
+ */
 export const verifyJWT = async (token) => {
   try {
     if (!token) {
@@ -46,11 +76,11 @@ export const verifyJWT = async (token) => {
     }
 
     const { payload } = await jwtVerify(token, secret);
-    return { payload };
+    return { payload, expired: false };
   } catch (error) {
     if (error.code === 'ERR_JWT_EXPIRED') {
       console.log('Token has expired');
-      return { expired: true };
+      return { payload: null, expired: true };
     }
 
     console.error('JWT Verification Error:', {
@@ -59,21 +89,22 @@ export const verifyJWT = async (token) => {
       token: token.substring(0, 20) + '...', // Log only first 20 chars for security
     });
 
-    return null;
+    return { payload: null, expired: false };
   }
 };
 
-// export const decryptJWT = async (token) => {
-//   return await jwtDecrypt(token, secret);
-// };
-
-// export const decryptJWT = async (token) => {
-//   //only for dev env
-//   try {
-//     const base64Payload = token.split(".")[1];
-//     const payload = Buffer.from(base64Payload, "base64");
-//     return JSON.parse(payload.toString());
-//   } catch (error) {
-//     throw new Error("Error decrypting JWT: " + error.message);
-//   }
-// };
+/**
+ * Decrypts a JWT token
+ * @param {string} token - The token to decrypt
+ * @returns {object} {payload} - The payload
+ */
+export const decryptJWT = async (token) => {
+  //only for dev env
+  try {
+    const base64Payload = token.split('.')[1];
+    const payload = Buffer.from(base64Payload, 'base64');
+    return JSON.parse(payload.toString());
+  } catch (error) {
+    throw new Error('Error decrypting JWT: ' + error.message);
+  }
+};
