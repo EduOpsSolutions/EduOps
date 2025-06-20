@@ -36,6 +36,7 @@ app.get("/", (req, res) => {
       enrollment: "/api/v1/enrollment",
       files: "/api/v1/files",
       courses: "/api/v1/courses",
+      academicPeriods: "/api/v1/academic-periods",
     },
   });
 });
