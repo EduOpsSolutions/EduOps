@@ -6,6 +6,8 @@ import Pagination from "../../components/common/Pagination";
 import BackButton from "../../components/buttons/BackButton";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axios";
+import AcademicPeriodModal from "../../components/modals/enrollment/AddAcademicPeriodModal";
+import { useEffect } from "react";
 
 function EnrollmentPeriod() {
   const navigate = useNavigate();
@@ -18,70 +20,97 @@ function EnrollmentPeriod() {
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [periodsPerPage, setPeriodsPerPage] = useState(5);
-  const [courses, setCourses] = useState([]);
+  const [periodCourses, setPeriodCourses] = useState([]);
+  const [addAcademicPeriodModal, setAddAcademicPeriodModal] = useState(false);
+  const [periods, setPeriods] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Sample enrollment periods data
-  const samplePeriods = [
-    {
-      id: 1,
-      period: "Period 1",
-      batch: "Batch 1",
-      year: "2024",
-    },
-    {
-      id: 2,
-      period: "Period 2",
-      batch: "Batch 2",
-      year: "2023",
-    },
-    {
-      id: 3,
-      period: "Period 3",
-      batch: "Batch 1",
-      year: "2022",
-    },
-    ...Array.from({ length: 15 }, (_, i) => ({
-      id: i + 4,
-      period: `Period ${i + 4}`,
-      batch: `Batch ${(i % 3) + 1}`,
-      year: `${2024 - (i % 3)}`,
-    })),
-  ];
+  const fetchPeriods = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await axiosInstance.get("/academic-periods");
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error('Invalid response format from server');
+      }
 
-  // Sample courses data
-  const sampleCourses = [
-    {
-      id: 1,
-      course: "A1",
-      schedule: "TTh 6:30AM - 7:30AM",
-      enrolledStudents: 20,
-    },
-    {
-      id: 2,
-      course: "B1",
-      schedule: "TTh 6:30AM - 7:30AM",
-      enrolledStudents: 20,
-    },
-    {
-      id: 3,
-      course: "A2",
-      schedule: "MWF 8:00AM - 9:00AM",
-      enrolledStudents: 15,
-    },
-    {
-      id: 4,
-      course: "B2",
-      schedule: "TTh 10:00AM - 11:00AM",
-      enrolledStudents: 18,
-    },
-  ];
+      const visiblePeriods = response.data
+        .filter(period => period && !period.deletedAt)
+        .map(period => ({
+          ...period,
+          id: period.id,
+          periodName: period.periodName,
+          batchName: period.batchName,
+          startAt: period.startAt
+        }));
 
-  const filteredPeriods = samplePeriods.filter((period) => {
+      setPeriods(visiblePeriods);
+    } catch (error) {
+      console.error("Failed to fetch periods:", error);
+      setError('Failed to load academic periods. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPeriodCourses = async () => {
+    if (!selectedPeriod) return;
+    try {      setLoading(true);
+      
+      const response = await axiosInstance.get(`/academic-period-courses/${selectedPeriod.id}/courses`);
+      console.log('Response:', response.data);
+      
+      const activeCourses = response.data.map(pc => ({
+        id: pc.id,
+        course: pc.course?.name || 'N/A',
+        schedule: typeof pc.course?.schedule === 'string' ? pc.course.schedule : JSON.stringify(pc.course?.schedule) || 'N/A',
+        enrolledStudents: pc.course?.maxNumber || 0,
+      }));
+      setPeriodCourses(activeCourses);
+      setError('');
+    } catch (error) {
+      console.error("Failed to fetch period courses:", error);
+      setError('Failed to load period courses. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    if (window.confirm("Are you sure you want to delete this course?")) {
+      try {
+        setLoading(true);
+        await axiosInstance.delete(`/academic-period-courses/${selectedPeriod.id}/courses/${courseId}`);
+        await fetchPeriodCourses();
+        setError('');
+      } catch (error) {
+        console.error("Failed to delete course:", error);
+        setError('Failed to delete course. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchPeriods();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPeriod) {
+      fetchPeriodCourses();
+    }
+  }, [selectedPeriod]);
+
+  const filteredPeriods = periods.filter((period) => {
     return (
       (periodName === "" ||
-        period.period.toLowerCase().includes(periodName.toLowerCase())) &&
-      (selectedBatch === "" || period.batch.includes(selectedBatch)) &&
-      (selectedYear === "" || period.year.includes(selectedYear))
+        period.periodName.toLowerCase().includes(periodName.toLowerCase())) &&
+      (selectedBatch === "" || period.batchName.includes(selectedBatch)) &&
+      (selectedYear === "" || 
+        new Date(period.startAt).getFullYear().toString().includes(selectedYear))
     );
   });
 
@@ -107,33 +136,19 @@ function EnrollmentPeriod() {
     setShowCourses(false);
     setCurrentPage(1);
   };
-
+  
   const handlePeriodClick = (period) => {
+    if (!period || !period.id) {
+      console.error('Invalid period selected');
+      setError('Invalid period selected');
+      return;
+    }
     setSelectedPeriod(period);
     setShowCourses(true);
   };
 
   const handleBack = () => {
     navigate(-1);
-  };
-
-  const fetchCourses = async () => {
-    try {
-      const response = await axiosInstance.get("/courses");
-      const visibleCourses = response.data.filter(
-        (course) => course.visibility === "visible"
-      );
-      setCourses(visibleCourses);
-    } catch (error) {
-      console.error("Failed to fetch courses: ", error);
-    }
-  };
-
-  const handleDeleteCourse = (courseId) => {
-    if (window.confirm("Are you sure you want to delete this course?")) {
-      console.log(`Deleting course with ID: ${courseId}`);
-      // Temporary, log nlng sah since sample data
-    }
   };
 
   return (
@@ -214,7 +229,7 @@ function EnrollmentPeriod() {
         <div className="flex items-center justify-between mb-4">
           <span className="text-lg font-bold">PERIOD RESULTS</span>
           <div className="flex justify-end">
-            <ThinRedButton>Create Period</ThinRedButton>
+            <ThinRedButton onClick={() => {setAddAcademicPeriodModal(true)}}>Create Period</ThinRedButton>
           </div>
         </div>
 
@@ -241,13 +256,13 @@ function EnrollmentPeriod() {
                   onClick={() => handlePeriodClick(period)}
                 >
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.period}
+                    {period.periodName}
                   </td>
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.batch}
+                    {period.batchName}
                   </td>
                   <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                    {period.year}
+                    {new Date(period.startAt).toLocaleDateString("en-US", { year: "numeric" })}
                   </td>
                 </tr>
               ))}
@@ -304,12 +319,10 @@ function EnrollmentPeriod() {
                 </svg>
               </button>
             </div>
-          </div>
-
-          <div className="mt-4">
+          </div>          <div className="mt-4">
             <p className="text-xl uppercase text-center mb-4">
-              {selectedPeriod.period} - {selectedPeriod.batch} (
-              {selectedPeriod.year})
+              {selectedPeriod.periodName} - {selectedPeriod.batchName} (
+              {new Date(selectedPeriod.startAt).getFullYear()})
             </p>
 
             <table className="w-full table-fixed">
@@ -324,7 +337,7 @@ function EnrollmentPeriod() {
                 </tr>
               </thead>
               <tbody>
-                {sampleCourses.map((course) => (
+                {periodCourses.map((course) => (
                   <tr
                     key={course.id}
                     className="border-b border-[rgb(137,14,7,.49)] hover:bg-gray-50"
@@ -358,12 +371,16 @@ function EnrollmentPeriod() {
             </button>
           </div>
         </div>
-      )}
-
-      <AddCourseModal
+      )}        <AddCourseModal
         add_course_modal={add_course_modal}
         setAddCourseModal={setAddCourseModal}
-        fetchCourses={fetchCourses}
+        selectedPeriod={selectedPeriod}
+        fetchPeriodCourses={fetchPeriodCourses}
+      />
+      <AcademicPeriodModal
+        addAcademicPeriodModal={addAcademicPeriodModal}
+        setAddAcademicPeriodModal={setAddAcademicPeriodModal}
+        fetchPeriods={fetchPeriods}
       />
     </div>
   );
