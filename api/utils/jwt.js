@@ -78,8 +78,7 @@ export const verifyJWT = async (token) => {
     const { payload } = await jwtVerify(token, secret);
     return { payload, expired: false };
   } catch (error) {
-    if (error.code === 'ERR_JWT_EXPIRED') {
-      console.log('Token has expired');
+    if (error.code === 'ERR_JWT_EXPIRED' || error.code === 'ERR_JWS_INVALID') {
       return { payload: null, expired: true };
     }
 

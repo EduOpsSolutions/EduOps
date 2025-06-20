@@ -10,14 +10,33 @@ export const verifyToken = async (req, res, next) => {
   try {
     const { payload, expired } = await verifyJWT(token);
     console.log('RESULT', payload, expired);
+    if (!payload && expired) {
+      return res.status(401).json({
+        error: true,
+        message: 'Token expired. Please login again.',
+        error_message: 'Token expired. Please login again.',
+      });
+    }
     if (!payload && !expired) {
-      return res.status(401).json({ error: true, message: 'Invalid token' });
+      return res.status(401).json({
+        error: true,
+        message: 'Invalid token. Please login again.',
+        error_message: 'Invalid token. Please login again.',
+      });
     }
     if (!payload && expired) {
-      return res.status(401).json({ error: true, message: 'Token expired' });
+      return res.status(401).json({
+        error: true,
+        message: 'Token expired. Please login again.',
+        error_message: 'Token expired. Please login again.',
+      });
     }
     if (expired) {
-      return res.status(401).json({ error: true, message: 'Token expired' });
+      return res.status(401).json({
+        error: true,
+        message: 'Token expired. Please login again.',
+        error_message: 'Token expired. Please login again.',
+      });
     }
 
     req.user = payload;

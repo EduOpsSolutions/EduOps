@@ -49,7 +49,6 @@ import useAuthStore from './stores/authStore';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
-
   return (
     <div className="App">
       <Router>

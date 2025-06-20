@@ -76,7 +76,7 @@ const verifyToken = async (req, res, next) => {
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: '[AuthValidator] Invalid or expired token',
+      message: 'Invalid or expired token',
     });
   }
 };

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import Table from '../../components/tables/Table';
 import Swal from 'sweetalert2';
 import SearchField from '../../components/textFields/SearchField';
 import DropDown from '../../components/form/DropDown';
 import { getCookieItem } from '../../utils/jwt';
+import axiosInstance from '../../utils/axios';
 
 export default function AccountManagement() {
   const [data, setData] = useState([]);
@@ -18,7 +18,7 @@ export default function AccountManagement() {
     setError(null);
     setLoading(true);
     try {
-      const response = await axios.get(
+      const response = await axiosInstance.get(
         `${process.env.REACT_APP_API_URL}/users`,
         {
           headers: {
@@ -37,7 +37,9 @@ export default function AccountManagement() {
       Swal.fire({
         icon: 'error',
         title: 'Oops...',
-        text: `Something went wrong! ${error.message}`,
+        text: error.response.data.message
+          ? error.response.data.message
+          : `Something went wrong! ${error.message}`,
       });
       console.log('error', error);
     } finally {
@@ -47,7 +49,7 @@ export default function AccountManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [window.location.pathname]);
 
   return (
     <div className="bg_custom bg-white-yellow-tone flex flex-col">

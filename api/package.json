@@ -7,7 +7,8 @@
     "seed": "node prisma/seed.js"
   },
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon -e js,mysql,env -w .env -w . index.js",
+    "seed_students": "node prisma/seed_students_sample.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
