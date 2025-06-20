@@ -47,6 +47,9 @@ import AdminHome from "./pages/admin/Home";
 import EnrollmentRequests from "./pages/admin/EnrollmentRequests";
 import EnrollmentPeriod from "./pages/admin/EnrollmentPeriod";
 import Transaction from "./pages/admin/Transaction";
+import AdminLedger from "./pages/admin/Ledger";
+import AdminAssessment from "./pages/admin/Assessment";
+import ManageFees from "./pages/admin/ManageFees";
 
 function App() {
   return (
@@ -109,6 +112,9 @@ function App() {
               <Route path="terms" element={<Terms />} />
             </Route>
             <Route path="transaction" element={<Transaction />} />
+            <Route path="ledger" element={<AdminLedger />} />
+            <Route path="assessment" element={<AdminAssessment />} />
+            <Route path="managefees" element={<ManageFees />} />
           </Route>
 
           {/* Not Found Page */}

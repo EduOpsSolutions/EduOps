@@ -98,10 +98,10 @@ function UserNavbar({ role }) {
                         </Dropdown.Item>
                         { role === 'admin' && (
                             <>
-                                <Dropdown.Item  as={Link} to={`/${role}/`} className="relative px-5 text-base justify-center text-white hover:bg-dark-red-4 focus:bg-dark-red-4">
+                                <Dropdown.Item  as={Link} to={`/${role}/managefees`} className="relative px-5 text-base justify-center text-white hover:bg-dark-red-4 focus:bg-dark-red-4">
                                     Manage Fees
                                 </Dropdown.Item>
-                                <Dropdown.Item  as={Link} to={`/${role}/`} className="relative px-5 text-base justify-center text-white hover:bg-dark-red-4 focus:bg-dark-red-4">
+                                <Dropdown.Item  as={Link} to={`/${role}/transaction`} className="relative px-5 text-base justify-center text-white hover:bg-dark-red-4 focus:bg-dark-red-4">
                                     Manage Transactions
                                 </Dropdown.Item>
                             </>
