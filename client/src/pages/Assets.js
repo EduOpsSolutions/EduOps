@@ -1,11 +1,10 @@
-import React from 'react'
-import { RxCrossCircled, RxCircle, RxCheckCircled, RxCountdownTimer } from "react-icons/rx";
+import React from 'react';
+import { RxCheckCircled, RxCircle, RxCountdownTimer, RxCrossCircled } from "react-icons/rx";
 
 function Assets() {
-  return (
-    <div className='flex w-[100vw] p-10 items-center justify-center flex-col'>
-        
-        
+    
+    return (
+        <div className='flex w-[100vw] p-10 items-center justify-center flex-col'>
             <h1 class="text-center mb-4 text-4xl font-extrabold leading-none tracking-tight text-gray-900 md:text-5xl lg:text-6xl dark:text-white">We invest in the world’s potential</h1>
             <p class="mb-6 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 xl:px-48 dark:text-gray-400">Here at Flowbite we focus on markets where technology, innovation, and capital can unlock long-term value and drive economic growth.</p>
             <a href="#" class="rounded-md inline-flex items-center justify-center px-5 py-3 text-base font-medium text-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Bg_image from '../../assets/images/Bg2.png';
 import BackButton from '../../components/buttons/BackButton';
 import SmallButton from '../../components/buttons/SmallButton';
-import SignUpNav from '../../components/navbars/SignUpNav';
+import UserNavbar from '../../components/navbars/UserNav';
 import LabelledInputField from '../../components/textFields/LabelledInputField';
 import SelectField from '../../components/textFields/SelectField';
 
@@ -27,9 +27,10 @@ function PaymentForm() {
 
     return (
         <section className='flex justify-start bg-white-yellow-tone bg-center bg-cover bg-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh'}}>
-            <SignUpNav/>
+            <UserNavbar role="public" />
+
             <div className='flex flex-col justify-center items-center w-full'>
-                <div className="relative bg-white-yellow-tone w-11/12 px-8 py-4 mt-24 mb-2 mb-auto rounded-xl border-2 border-dark-red shadow-2xl md:min-h-[580px] h-auto flex flex-col">
+                <div className="relative bg-white-yellow-tone w-11/12 px-8 py-4 mt-24 mb-auto rounded-xl border-2 border-dark-red shadow-2xl md:min-h-[580px] h-auto flex flex-col">
                     <BackButton onClick={navigateToLogin} />
                         <form className="px-8 py-4 flex flex-col">
                             <h1 className='text-center text-3xl font-bold -mb-2'>Maya Payment Form</h1>

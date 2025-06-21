@@ -1,11 +1,11 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import StudentNavbar from '../navbars/StudentNav';
+import UserNavbar from '../navbars/UserNav';
 
 function StudentLayout() {
   return (
     <div className="h-screen flex flex-col">
-      <StudentNavbar />
+      <UserNavbar role="student" />
       <div className="w-full h-full">
         <Outlet />
       </div>

@@ -1,0 +1,9 @@
+node_modules
+# Keep environment variables out of version control
+.env
+env
+# Ignore everything in uploads directory
+uploads/*
+# Except the .gitkeep file
+!uploads/.gitkeep
+.vercel

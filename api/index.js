@@ -1,40 +1,56 @@
-require('dotenv').config();
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { createPool } = require('mysql2');
+import "dotenv/config";
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+import indexRouter from "./routes/v1/index_routes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// const pool = createPool({
-//     host: process.env.DB_HOST,
-//     user: process.env.DB_USER,
-//     password: process.env.DB_PASSWORD,
-//     database: process.env.DB_DATABASE,
-//     waitForConnections: true,
-//     connectionLimit: 10,
-//     queueLimit: 0
-// });
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(cors({
-    // origin: process.env.CORS_ORIGIN,
-    origin: '*',
-    methods: ["GET", "POST"],
-    credentials: true
-}));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
-// const routes = require('./routes');
-// app.use('/', routes); // Use routes as middleware
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-const PORT = process.env.PORT || 5000;
+app.use("/api/v1", indexRouter);
+
+// Add root route handler
+app.get("/", (req, res) => {
+  res.json({
+    error: false,
+    message: "Welcome to EduOps API. Please use /api/v1 for API endpoints.",
+    endpoints: {
+      auth: "/api/v1/auth",
+      users: "/api/v1/users",
+      enrollment: "/api/v1/enrollment",
+      files: "/api/v1/files",
+      courses: "/api/v1/courses",
+      academicPeriods: "/api/v1/academic-periods",
+    },
+  });
+});
+
+const PORT = process.env.PORT || 5555;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
 
-app.get('/', (req, res) => {
-    res.json({ test: 123 });
+app.use((req, res) => {
+  res.status(404).json({
+    error: true,
+    message: "Error 404 not found",
+  });
 });
 
-// module.exports = pool;
+export default app;
