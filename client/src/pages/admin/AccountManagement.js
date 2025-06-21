@@ -71,7 +71,7 @@ export default function AccountManagement() {
           },
           params: {
             search: search,
-            role: role,
+            role,
             page,
             take: itemsPerPage,
           },
@@ -95,7 +95,7 @@ export default function AccountManagement() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     fetchData();
@@ -177,6 +177,11 @@ export default function AccountManagement() {
         handleSave={handleSave}
         loadingSave={loadingSave}
       />
+
+      <br />
+      <br />
+      <br />
+      <br />
     </div>
   );
 }

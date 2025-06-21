@@ -157,9 +157,17 @@ export default function UserAccountDetailsModal({
                 id="status"
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 value={formData?.status}
-                onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
-                }
+                onChange={(e) => {
+                  if (e.target.value === 'deleted') {
+                    setFormData({
+                      ...formData,
+                      status: e.target.value,
+                      deletedAt: new Date(),
+                    });
+                  } else {
+                    setFormData({ ...formData, status: e.target.value });
+                  }
+                }}
               >
                 <option value="active">Active</option>
                 <option value="disabled">Inactive</option>
