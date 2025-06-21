@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -7,11 +7,10 @@ async function getUserByEmail(email) {
     let data = await prisma.users.findUnique({
       where: { email, deletedAt: null },
     });
-    data.role = "student";
     if (!data) {
       return {
         error: true,
-        message: "Account does not exist",
+        message: 'Account does not exist',
       };
     }
     return {
@@ -49,7 +48,7 @@ async function getUserByToken(token) {
     if (!data) {
       return {
         error: true,
-        message: "Invalid or expired token",
+        message: 'Invalid or expired token',
       };
     }
     return {
@@ -79,7 +78,7 @@ export async function updateUserPassword(email, hashedPassword) {
     });
     return true;
   } catch (error) {
-    console.error("Error updating password:", error);
+    console.error('Error updating password:', error);
     return false;
   }
 }
