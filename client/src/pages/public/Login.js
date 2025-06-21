@@ -1,5 +1,5 @@
 import Cookies from 'js-cookie';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Bg_image from '../../assets/images/GermanyBg.png';
 import Left_section_image from '../../assets/images/PhpGermanFlag.jpg';
