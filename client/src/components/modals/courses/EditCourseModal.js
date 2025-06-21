@@ -1,10 +1,7 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React from 'react';
-import GradeDocumentModalButton from "../../buttons/GradeDocumentModalButton";
-import GradeStatusModalButton from "../../buttons/GradeStatusModalButton";
+import React, { useEffect, useState } from 'react';
 import ThinRedButton from "../../buttons/ThinRedButton";
-import SmallGreySelectField from "../../textFields/SmallGreySelectField";
-
+import axiosInstance from "../../../utils/axios";
 
 // To customize measurements of header 
 const customModalTheme = {
@@ -31,18 +28,55 @@ const customModalTheme = {
 // To do: Make this modal accept props wherein you can pass the status of this thingy if locked sha or not.
 // If ever locked, make lines 197-214 (basta sa footer area na naay visibility) hidden
 
-function EditCourseModal(props) {
-    const gradeStatusOptions = [
+function EditCourseModal({edit_course_modal, setEditCourseModal, selectedCourse, fetchCourses}) {
+    const [name, setName] = useState('');
+    const [maxNumber, setMaxNumber] = useState(30);
+    const [visibility, setVisibility] = useState('hidden');
+    const [description, setDescription] = useState('');
+    const [logo, setLogo] = useState('');
+    const [price, setPrice] = useState('');
+    const [schedule, setSchedule] = useState('');
 
-    ];
+    useEffect(() => {
+        if (selectedCourse) {
+            setName(selectedCourse.name || '');
+            setMaxNumber(selectedCourse.maxNumber || 30);
+            setVisibility(selectedCourse.visibility || 'hidden');
+            setDescription(selectedCourse.description || '');
+            setLogo(selectedCourse.logo || '');
+            setPrice(selectedCourse.price || '');
+            setSchedule(selectedCourse.schedule ? JSON.stringify(selectedCourse.schedule) : '');
+        }
+    }, [selectedCourse]);
+
+    const handleUpdate = async () => {
+        try {
+            const payload = {
+                name,
+                maxNumber: parseInt(maxNumber),
+                visibility,
+                description,
+                logo,
+                price: parseFloat(price),
+                schedule: schedule ? JSON.parse(schedule) : null,
+            };
+
+            const response = await axiosInstance.put(`/courses/${selectedCourse.id}`, payload);
+            console.log('Course updated:', response.data);
+            fetchCourses();
+            setEditCourseModal(false);
+        } catch (error) {
+            console.error('Failed to update course: ', error.response?.data || error.message);
+        }
+    };
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
             <Modal
                 dismissible
-                show={props.edit_course_modal}
+                show={edit_course_modal}
                 size="2xl"
-                onClose={() => props.setEditCourseModal(false)}
+                onClose={() => setEditCourseModal(false)}
                 popup
                 className="transition duration-150 ease-out"
             >
@@ -55,41 +89,46 @@ function EditCourseModal(props) {
                     <Modal.Body>
                         <div>
                             <div class="mt-5">
-                                <p>Course ID</p>
-                                <input type="text" class="w-full border-red-900"></input>
+                                <p>Course Name</p>
+                                <input type="text" class="w-full border-red-900" value={name} onChange={(e) => setName(e.target.value)}></input>
                             </div>
 
-                            <div class="mt-5">
-                                <p>Course Name</p>
-                                <input type="text" class="w-full border-red-900"></input>
-                            </div>
                             <div className="flex flex-row justify-center items-center pt-5">
                                 <div class="w-1/2 mr-5">
                                     <p># of Students</p>
-                                    <input type="text" class="w-full border-red-900"></input>
+                                    <input type="number" class="w-full border-red-900" value={maxNumber} onChange={(e) => setMaxNumber(e.target.value)}></input>
+                                </div>
+                                <div class="w-1/2 mr-5">
+                                    <p>Visibility</p>
+                                    <select class="w-full border-red-900" value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+                                        <option value="visible">Visible</option>
+                                        <option value="hidden">Hidden</option>
+                                    </select>
                                 </div>
                                 <div class="w-1/2">
-                                    <p>Category</p>
-                                    <select class="w-full border-red-900">
-                                        <option value="option1">Option 1</option>
-                                        <option value="option2">Option 2</option>
-                                    </select>
+                                    <p>Price</p>
+                                    <input type="number" class="w-full border-red-900" value={price} onChange={(e) => setPrice(e.target.value)}></input>
                                 </div>
                             </div>
 
                             <div class="mt-5">
-                                <p>Assigned Adviser</p>
-                                <input type="text" class="w-full border-red-900"></input>
+                                <p>Description</p>
+                                <input type="text" class="w-full border-red-900" value={description} onChange={(e) => setDescription(e.target.value)}></input>
+                            </div>
+
+                            <div class="mt-5">
+                                <p>Logo (URL)</p>
+                                <input type="text" class="w-full border-red-900" value={logo} onChange={(e) => setLogo(e.target.value)}></input>
                             </div>
 
                             <div class="mt-5">
                                 <p>Schedule</p>
-                                <input type="text" class="w-full border-red-900"></input>
+                                <input type="text" class="w-full border-red-900" value={schedule} onChange={(e) => setSchedule(e.target.value)}></input>
                             </div>
                             
                         </div>
                         <div className="flex justify-center mt-10">
-                            <ThinRedButton onClick={""} color="bg-dark-red-2" hoverColor="bg-dark-red-5">
+                            <ThinRedButton onClick={handleUpdate} color="bg-dark-red-2" hoverColor="bg-dark-red-5">
                                 Submit
                             </ThinRedButton>
                         </div>

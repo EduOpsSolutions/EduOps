@@ -46,6 +46,9 @@ import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 import Transaction from './pages/admin/Transaction';
 import AccountManagement from './pages/admin/AccountManagement';
 import useAuthStore from './stores/authStore';
+import AdminLedger from './pages/admin/Ledger';
+import AdminAssessment from './pages/admin/Assessment';
+import ManageFees from './pages/admin/ManageFees';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -118,6 +121,9 @@ function App() {
                   path="account-management"
                   element={<AccountManagement />}
                 />
+                <Route path="ledger" element={<AdminLedger />} />
+                <Route path="assessment" element={<AdminAssessment />} />
+                <Route path="managefees" element={<ManageFees />} />
               </Route>
             </>
           ) : (
