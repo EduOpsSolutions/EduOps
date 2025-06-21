@@ -26,7 +26,6 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "http-errors": "~1.6.3",
-    "jade": "~1.11.0",
     "joi": "^17.13.3",
     "jose": "^5.9.6",
     "method-override": "^3.0.0",
