@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-import bcrypt from "bcrypt";
-import crypto from "crypto";
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 const SALT = parseInt(process.env.BCRYPT_SALT);
-import { verifyJWT } from "../utils/jwt.js";
+import { verifyJWT } from '../utils/jwt.js';
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -19,11 +19,11 @@ const getAllUsers = async (req, res) => {
     status,
   } = req.query;
   try {
-    console.log(await verifyJWT(req.headers.authorization.split(" ")[1]));
+    console.log(await verifyJWT(req.headers.authorization.split(' ')[1]));
     let whereClause = {};
     if (role) whereClause.role = role;
     if (status) whereClause.status = status;
-    if (showDeleted === "true") {
+    if (showDeleted === 'true') {
       // Show both deleted and non-deleted users
       whereClause.deletedAt = undefined;
     } else {
@@ -32,16 +32,16 @@ const getAllUsers = async (req, res) => {
     if (userId) whereClause.userId = userId;
     if (search) {
       whereClause.OR = [
-        { firstName: { contains: search, mode: "insensitive" } },
-        { middleName: { contains: search, mode: "insensitive" } },
-        { lastName: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
+        { firstName: { contains: search } },
+        { middleName: { contains: search } },
+        { lastName: { contains: search } },
+        { email: { contains: search } },
       ];
     }
 
-    console.log("Where Clause", whereClause);
+    console.log('Where Clause', whereClause);
 
-    const students = await prisma.users.findMany({
+    const users = await prisma.users.findMany({
       select: {
         id: true,
         firstName: true,
@@ -55,7 +55,7 @@ const getAllUsers = async (req, res) => {
         deletedAt: true,
       },
       where: whereClause,
-      take: take ? parseInt(take) : undefined,
+      take: take ? parseInt(take) : 30,
       skip: page ? (parseInt(page) - 1) * take : undefined,
       // ommit: {
       //   password: true,
@@ -66,12 +66,24 @@ const getAllUsers = async (req, res) => {
         },
       }),
     });
-    res.json(students);
+
+    const count = users.length || 0;
+    const max_result = await prisma.users.count({
+      where: whereClause,
+    });
+    const response = {
+      data: users,
+      count: count,
+      max_result,
+      page: page ? parseInt(page) : 1,
+      max_page: Math.ceil(max_result / (take ? parseInt(take) : 30)),
+    };
+    res.json(response);
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error('Error fetching users:', error);
     res
       .status(500)
-      .json({ error: "Error fetching users", details: error.message });
+      .json({ error: 'Error fetching users', details: error.message });
   }
 };
 
@@ -84,12 +96,12 @@ const getUserById = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: "Student not found" });
+      return res.status(404).json({ error: 'Student not found' });
     }
 
     res.json(student);
   } catch (error) {
-    res.status(500).json({ error: true, message: "Error fetching student" });
+    res.status(500).json({ error: true, message: 'Error fetching student' });
   }
 };
 
@@ -115,7 +127,7 @@ const createUser = async (req, res) => {
     if (isUserIdTaken) {
       return res
         .status(400)
-        .json({ error: true, message: "User ID already taken" });
+        .json({ error: true, message: 'User ID already taken' });
     }
 
     const isEmailTaken = await prisma.users.findUnique({
@@ -125,7 +137,7 @@ const createUser = async (req, res) => {
     if (isEmailTaken) {
       return res
         .status(400)
-        .json({ error: true, message: "Email already taken" });
+        .json({ error: true, message: 'Email already taken' });
     }
 
     const user = await prisma.users.create({
@@ -139,12 +151,12 @@ const createUser = async (req, res) => {
         birthyear,
         email,
         password: bcrypt.hashSync(password, SALT),
-        status: "active",
+        status: 'active',
       },
     });
     res.status(201).json({
       error: false,
-      message: "User created successfully",
+      message: 'User created successfully',
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });
@@ -180,7 +192,7 @@ const updateUser = async (req, res) => {
 
     res.status(200).json({
       error: false,
-      message: "User updated successfully",
+      message: 'User updated successfully',
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });
@@ -197,24 +209,24 @@ const deleteUser = async (req, res) => {
       data: { deletedAt: new Date() },
     });
 
-    res.json({ error: false, message: "User deleted successfully" });
+    res.json({ error: false, message: 'User deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: true, message: "Error deleting user" });
+    res.status(500).json({ error: true, message: 'Error deleting user' });
   }
 };
 
 const deactivateUser = async (req, res) => {
   try {
     const { id } = req.query;
-    console.log("deactivate user", id);
+    console.log('deactivate user', id);
     await prisma.users.update({
       where: { id },
-      data: { status: "disabled" },
+      data: { status: 'disabled' },
     });
 
-    res.json({ error: false, message: "User deactivated successfully" });
+    res.json({ error: false, message: 'User deactivated successfully' });
   } catch (error) {
-    res.status(500).json({ error: true, message: "Error deactivating user" });
+    res.status(500).json({ error: true, message: 'Error deactivating user' });
   }
 };
 
@@ -223,14 +235,14 @@ const activateUser = async (req, res) => {
     const { id } = req.query;
     await prisma.users.update({
       where: { id },
-      data: { status: "active", deletedAt: null },
+      data: { status: 'active', deletedAt: null },
     });
 
-    res.json({ error: false, message: "User activated successfully" });
+    res.json({ error: false, message: 'User activated successfully' });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: "Error activating user",
+      message: 'Error activating user',
       error_details: error.message,
       error_info: error,
     });
@@ -239,24 +251,24 @@ const activateUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   const { password } = req.body;
-  const token = req.headers.authorization.split(" ")[1];
+  const token = req.headers.authorization.split(' ')[1];
   const decoded = await verifyJWT(token);
-  console.log("decoded", decoded);
+  console.log('decoded', decoded);
   const user = await getUserByEmail(decoded.email);
-  console.log("user", user);
+  console.log('user', user);
   if (user.error) {
-    return res.status(404).json({ error: true, message: "User not found" });
+    return res.status(404).json({ error: true, message: 'User not found' });
   }
   try {
     await prisma.users.update({
       where: { id: user.data.id },
       data: { password: bcrypt.hashSync(password, SALT) },
     });
-    res.json({ error: false, message: "Password changed successfully" });
+    res.json({ error: false, message: 'Password changed successfully' });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: "Error changing password",
+      message: 'Error changing password',
       error_message: error.message,
       error_info: error,
     });
