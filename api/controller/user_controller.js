@@ -41,7 +41,7 @@ const getAllUsers = async (req, res) => {
 
     console.log('Where Clause', whereClause);
 
-    const students = await prisma.users.findMany({
+    const users = await prisma.users.findMany({
       select: {
         id: true,
         firstName: true,
@@ -67,14 +67,16 @@ const getAllUsers = async (req, res) => {
       }),
     });
 
-    const count = await prisma.users.count({
+    const count = users.length || 0;
+    const max_result = await prisma.users.count({
       where: whereClause,
     });
     const response = {
-      data: students,
-      count: students.length,
+      data: users,
+      count: count,
+      max_result,
       page: page ? parseInt(page) : 1,
-      max_page: Math.ceil(count / (take ? parseInt(take) : 30)),
+      max_page: Math.ceil(max_result / (take ? parseInt(take) : 30)),
     };
     res.json(response);
   } catch (error) {

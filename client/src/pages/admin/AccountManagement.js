@@ -5,6 +5,7 @@ import SearchField from '../../components/textFields/SearchField';
 import DropDown from '../../components/form/DropDown';
 import { getCookieItem } from '../../utils/jwt';
 import axiosInstance from '../../utils/axios';
+import Pagination from '../../components/common/Pagination';
 
 export default function AccountManagement() {
   const [data, setData] = useState([]);
@@ -12,6 +13,8 @@ export default function AccountManagement() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState(null);
   const [role, setRole] = useState('');
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   const fetchData = async () => {
     const token = getCookieItem('token');
@@ -28,10 +31,12 @@ export default function AccountManagement() {
           params: {
             search: search,
             role: role,
+            page,
+            take: itemsPerPage,
           },
         }
       );
-      setData(response.data.data);
+      setData(response.data);
     } catch (error) {
       setError(true);
       Swal.fire({
@@ -49,7 +54,11 @@ export default function AccountManagement() {
 
   useEffect(() => {
     fetchData();
-  }, [window.location.pathname]);
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [page, itemsPerPage]);
 
   return (
     <div className="bg_custom bg-white-yellow-tone flex flex-col">
@@ -99,10 +108,21 @@ export default function AccountManagement() {
           'Updated At',
           'Deleted At',
         ]}
-        className="w-[90%] mx-auto mt-4"
-        data={data}
+        className="w-[90%] mx-auto mt-4 h-max-[40rem] overflow-y-auto"
+        data={data.data}
         isLoading={loading}
         isError={error}
+      />
+
+      <Pagination
+        currentPage={data.page}
+        onPageChange={setPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={data.max_result}
+        totalPages={data.max_page}
+        itemName="users"
+        className="lg:mx-[20rem] md:mx-[10rem] mx-2"
       />
     </div>
   );
