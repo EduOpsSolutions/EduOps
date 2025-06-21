@@ -22,9 +22,27 @@ const validateLogin = (req, res, next) => {
   next();
 };
 
+const validateIsActiveUser = async (req, res, next) => {
+  const token = req.headers.authorization.split(' ')[1];
+  const decoded = await verifyJWT(token);
+  if (decoded.payload.data.status !== 'active') {
+    return res.status(403).json({
+      error: true,
+      message: `Account is ${decoded.payload.data.status}`,
+    });
+  }
+  next();
+};
+
 const validateUserIsAdmin = async (req, res, next) => {
   const token = req.headers.authorization.split(' ')[1];
   const decoded = await verifyJWT(token);
+  if (decoded.payload.data.status !== 'active') {
+    return res.status(403).json({
+      error: true,
+      message: `Account is ${decoded.payload.data.status}`,
+    });
+  }
   if (decoded.payload.data.role !== 'admin') {
     console.log('decoded', decoded);
     return res
@@ -37,6 +55,12 @@ const validateUserIsAdmin = async (req, res, next) => {
 const validateUserIsTeacher = async (req, res, next) => {
   const token = req.headers.authorization.split(' ')[1];
   const decoded = await verifyJWT(token);
+  if (decoded.payload.data.status !== 'active') {
+    return res.status(403).json({
+      error: true,
+      message: `Account is ${decoded.payload.data.status}`,
+    });
+  }
   if (decoded.payload.data.role !== 'teacher') {
     return res
       .status(403)
@@ -48,6 +72,12 @@ const validateUserIsTeacher = async (req, res, next) => {
 const validateUserIsStudent = async (req, res, next) => {
   const token = req.headers.authorization.split(' ')[1];
   const decoded = await verifyJWT(token);
+  if (decoded.payload.data.status !== 'active') {
+    return res.status(403).json({
+      error: true,
+      message: `Account is ${decoded.payload.data.status}`,
+    });
+  }
   if (decoded.payload.data.role !== 'student') {
     return res
       .status(403)
@@ -87,4 +117,5 @@ export {
   validateUserIsTeacher,
   validateUserIsStudent,
   verifyToken,
+  validateIsActiveUser,
 };
