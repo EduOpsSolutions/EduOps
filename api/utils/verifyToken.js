@@ -13,8 +13,8 @@ export const verifyToken = async (req, res, next) => {
     if (!payload && expired) {
       return res.status(401).json({
         error: true,
-        message: 'Token expired. Please login again.',
-        error_message: 'Token expired. Please login again.',
+        message: 'Session expired. Please login again.',
+        error_message: 'Session expired. Please login again.',
       });
     }
     if (!payload && !expired) {
@@ -27,15 +27,15 @@ export const verifyToken = async (req, res, next) => {
     if (!payload && expired) {
       return res.status(401).json({
         error: true,
-        message: 'Token expired. Please login again.',
-        error_message: 'Token expired. Please login again.',
+        message: 'Session expired. Please login again.',
+        error_message: 'Session expired. Please login again.',
       });
     }
     if (expired) {
       return res.status(401).json({
         error: true,
-        message: 'Token expired. Please login again.',
-        error_message: 'Token expired. Please login again.',
+        message: 'Session expired. Please login again.',
+        error_message: 'Session expired. Please login again.',
       });
     }
 

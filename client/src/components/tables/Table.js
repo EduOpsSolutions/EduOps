@@ -31,6 +31,7 @@ export default function Table({
   },
   isLoading = false,
   isError = false,
+  onClickItem,
 }) {
   if (isLoading) {
     return (
@@ -84,7 +85,9 @@ export default function Table({
           {data.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              onClick={() => onClick(row, rowIndex)}
+              onClick={() => {
+                onClickItem(row);
+              }}
               className="hover:cursor-pointer duration-200 hover:bg-german-red/20 bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200"
             >
               {Object.entries(row).map(([key, cell], cellIndex) =>

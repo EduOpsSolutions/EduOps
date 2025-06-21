@@ -6,15 +6,56 @@ import DropDown from '../../components/form/DropDown';
 import { getCookieItem } from '../../utils/jwt';
 import axiosInstance from '../../utils/axios';
 import Pagination from '../../components/common/Pagination';
+import UserAccountDetailsModal from '../../components/modals/manage-accounts/UserAccountDetailsModal';
 
 export default function AccountManagement() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSave, setLoadingSave] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState(null);
   const [role, setRole] = useState('');
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showUserAccountDetailsModal, setShowUserAccountDetailsModal] =
+    useState(false);
+
+  const handleSave = async (selectedUser) => {
+    const token = getCookieItem('token');
+    setError(null);
+    setLoadingSave(true);
+    try {
+      const response = await axiosInstance.put(
+        `${process.env.REACT_APP_API_URL}/users/${selectedUser.id}`,
+        selectedUser,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: response.data.message,
+      });
+      fetchData();
+    } catch (error) {
+      setError(true);
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: error.response.data.message
+          ? error.response.data.message
+          : `Something went wrong! ${error.message}`,
+      });
+      console.log('error', error);
+    } finally {
+      setLoadingSave(false);
+    }
+  };
 
   const fetchData = async () => {
     const token = getCookieItem('token');
@@ -112,6 +153,10 @@ export default function AccountManagement() {
         data={data.data}
         isLoading={loading}
         isError={error}
+        onClickItem={(item) => {
+          setSelectedUser(item);
+          setShowUserAccountDetailsModal(true);
+        }}
       />
 
       <Pagination
@@ -123,6 +168,14 @@ export default function AccountManagement() {
         totalPages={data.max_page}
         itemName="users"
         className="lg:mx-[20rem] md:mx-[10rem] mx-2"
+      />
+      <UserAccountDetailsModal
+        data={selectedUser}
+        setData={setSelectedUser}
+        show={showUserAccountDetailsModal}
+        handleClose={() => setShowUserAccountDetailsModal(false)}
+        handleSave={handleSave}
+        loadingSave={loadingSave}
       />
     </div>
   );
