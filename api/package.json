@@ -7,10 +7,11 @@
     "seed": "node prisma/seed.js"
   },
   "scripts": {
-    "dev": "nodemon index.js",
+    "start": "nodemon -e js,mysql,env -w .env -w . index.js",
+    "seed_students": "node prisma/seed_students_sample.js",
+    "dev": "nodemon index.js js,mysql,env -w .env -w . index.js",
     "build": "prisma generate && prisma migrate deploy && prisma generate",
-    "seed": "node prisma/seed.js",
-    "start": "node index.js"
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -25,7 +26,6 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "http-errors": "~1.6.3",
-    "jade": "~1.11.0",
     "joi": "^17.13.3",
     "jose": "^5.9.6",
     "method-override": "^3.0.0",
