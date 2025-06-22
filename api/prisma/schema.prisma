@@ -22,6 +22,7 @@ model users {
   birthmonth Int
   birthdate Int
   birthyear Int
+  phoneNumber String?
   profilePicLink String?
   status         String?
   email     String   @unique

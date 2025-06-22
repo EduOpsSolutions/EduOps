@@ -1,5 +1,4 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { BsPencilFill } from 'react-icons/bs';
 import { MdClose } from 'react-icons/md';
 import Bg_image from '../../assets/images/Bg2.png';
@@ -7,11 +6,20 @@ import John_logo from '../../assets/images/John.jpg';
 import SmallButton from '../../components/buttons/SmallButton';
 import EditPasswordModal from '../../components/modals/common/EditPasswordModal';
 import useAuthStore from '../../stores/authStore';
-import Swal from 'sweetalert2';
+import LabelledInputField from '../../components/textFields/LabelledInputField';
 
 function Profile({ role }) {
   const [editPasswordModal, setEditPasswordModal] = useState(false);
   const { user, getUserFullName, getBirthday } = useAuthStore();
+  const [data, setData] = useState({
+    userId: user.userId,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phoneNumber: user.phoneNumber,
+    email: user.email,
+    course: user.course,
+    birthday: getBirthday(),
+  });
   const userRole = role || user.role;
 
   return (
@@ -54,17 +62,42 @@ function Profile({ role }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-2xl mb-4 font-bold">Student ID:</p>
-                <p className="mb-7">{user.userId}</p>
+                <LabelledInputField
+                  name="userId"
+                  id="userId"
+                  label="Student ID:"
+                  type="text"
+                  value={data.userId}
+                  disabled={true}
+                />
                 <p className="text-2xl mb-4 font-bold">Email:</p>
-                <p className="mb-7">{user.email}</p>
+                <LabelledInputField
+                  name="email"
+                  id="email"
+                  label="Email:"
+                  type="email"
+                  value={data.email}
+                  disabled={true}
+                />
                 <p className="text-2xl mb-4 font-bold">Phone Number:</p>
-                <p className="mb-8">{user.phoneNumber || 'N/A'}</p>
+                <LabelledInputField
+                  name="phoneNumber"
+                  id="phoneNumber"
+                  label="Phone Number:"
+                  type="text"
+                  value={data.phoneNumber}
+                  placeholder="N/A"
+                  onChange={(e) =>
+                    setData({ ...data, phoneNumber: e.target.value })
+                  }
+                  disabled={false}
+                />
               </div>
               <div className="m-20 mt-0 mr-40">
                 <p className="text-2xl mb-4 font-bold">Course:</p>
-                <p className="mb-7">{user.course || 'N/A'}</p>
+                <p className="mb-7">{data.course || 'N/A'}</p>
                 <p className="text-2xl mb-4 font-bold">Birthday:</p>
-                <p className="mb-7">{getBirthday()}</p>
+                <p className="mb-7">{data.birthday}</p>
               </div>
             </div>
           )}
@@ -74,14 +107,14 @@ function Profile({ role }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-2xl mb-4 font-bold">Email:</p>
-                <p className="mb-7">{user.email}</p>
+                <p className="mb-7">{data.email}</p>
                 <p className="text-2xl mb-4 font-bold">Phone Number:</p>
-                <p className="mb-8">{user.phoneNumber || 'N/A'}</p>
+                <p className="mb-8">{data.phoneNumber || 'N/A'}</p>
               </div>
 
               <div className="m-20 mt-0">
                 <p className="text-2xl mb-4 font-bold">Birthday:</p>
-                <p className="mb-7 w-full">{getBirthday()}</p>
+                <p className="mb-7 w-full">{data.birthday}</p>
               </div>
             </div>
           )}
