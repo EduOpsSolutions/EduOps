@@ -98,7 +98,8 @@ async function resetPassword(req, res) {
   try {
     if (token && password) {
       const user = await getUserByToken(token);
-      if (!user || user.error) {
+      if (!user) {
+        console.log('user');
         return res.status(401).json({ error: true, message: 'User not found' });
       }
       if (
@@ -189,25 +190,26 @@ const requestResetPassword = async (req, res) => {
   try {
     const user = await getStudentByEmail(email);
     if (!user || user.error) {
-      return res.status(401).json({ error: true, message: 'User not found' });
+      return res.status(200).json({ error: true, message: 'User not found' });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = await signJWT({ email });
+    console.log('token', token);
     await prisma.users.update({
       where: { email },
       data: {
-        resetToken: token,
-        resetTokenExpiry: new Date(Date.now() + 1 * 60 * 60 * 1000),
+        resetToken: token.token,
+        resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000),
       },
     });
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token.token}`;
     const html = `
         <h3>You requested a password reset</h3>
         <p>Click this <a href="${resetUrl}">link</a> to reset your password</p>
-        <p>This link will expire in 1 hour</p>
+        <p>This link will expire in 30 minutes</p>
         <p>If you didn't request this, please ignore this email</p>
       `;
-    const isSent = await sendEmail(email, 'Reset Password', html);
+    const isSent = await sendEmail(email, 'Reset Password', '', html);
     if (isSent) {
       res
         .status(200)

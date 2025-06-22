@@ -13,8 +13,6 @@ import Swal from 'sweetalert2';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import useAuthStore from '../../stores/authStore';
 
-Cookies.remove();
-
 function Login() {
   const { login, isLoading, getUser } = useAuthStore();
 

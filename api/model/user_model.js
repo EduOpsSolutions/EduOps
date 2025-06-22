@@ -27,24 +27,27 @@ async function getUserByEmail(email) {
 }
 
 async function getUserByToken(token) {
+  console.log('token', token);
   try {
     let data = await prisma.users.findFirst({
       where: {
         resetToken: token,
-        resetTokenExpiry: {
-          gt: new Date(), // Only get tokens that haven't expired
-        },
       },
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
         role: true,
         createdAt: true,
         updatedAt: true,
+        resetToken: true,
+        resetTokenExpiry: true,
         // Excluding sensitive fields like password, resetToken, resetTokenExpiry
       },
     });
+    console.log('data', data);
     if (!data) {
       return {
         error: true,
