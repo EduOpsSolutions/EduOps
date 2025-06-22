@@ -10,6 +10,8 @@ import { sendEmail } from '../utils/mailer.js';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+
+const bcryptSalt = parseInt(process.env.BCRYPT_SALT) || 11;
 // Inside your login route handler
 async function login(req, res) {
   try {
@@ -98,8 +100,16 @@ async function resetPassword(req, res) {
   try {
     if (token && password) {
       const user = await getUserByToken(token);
-      if (!user || user.error) {
+      if (user.error) {
+        return res.status(401).json({ error: true, message: user.message });
+      }
+      if (!user) {
         return res.status(401).json({ error: true, message: 'User not found' });
+      }
+      if (!user.data.resetToken) {
+        return res
+          .status(401)
+          .json({ error: true, message: 'Invalid or expired token' });
       }
       if (
         user.data.resetTokenExpiry &&
@@ -141,20 +151,51 @@ async function register(req, res) {
 
 async function changePassword(req, res) {
   try {
-    const { currentPassword, newPassword, email } = req.body;
+    const { oldPassword, newPassword, email } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = await verifyJWT(token);
+    if (decoded.payload.data.email !== email)
+      return res.status(401).json({ error: true, message: 'Unauthorized' });
+
+    // Validate input
+    if (!oldPassword || !newPassword || !email) {
+      return res.status(400).json({
+        error: true,
+        message: 'Old password, new password, and email are required',
+      });
+    }
+
     const user = await getStudentByEmail(email);
 
     if (!user || user.error) {
-      return res.status(401).json({
+      return res.status(404).json({
         error: true,
         message: 'User not found',
       });
     }
+    if (user.data.email !== decoded.payload.data.email) {
+      return res.status(401).json({
+        error: true,
+        message: 'Unauthorized',
+      });
+    }
 
-    const isValidPassword = bcrypt.compareSync(
-      currentPassword,
+    const isValidPassword = await bcrypt.compare(
+      oldPassword,
       user.data?.password
     );
+
+    const isTheSamePassword = await bcrypt.compare(
+      newPassword,
+      user.data?.password
+    );
+    if (isTheSamePassword) {
+      return res.status(401).json({
+        error: true,
+        message: 'New password cannot be the same as the old password',
+      });
+    }
+
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
@@ -162,7 +203,9 @@ async function changePassword(req, res) {
       });
     }
 
-    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, bcryptSalt);
+
+    console.log('hashedPassword', hashedPassword);
     // Add a function in your user_model.js to update the password
     const updated = await updateUserPassword(email, hashedPassword);
 
@@ -189,25 +232,26 @@ const requestResetPassword = async (req, res) => {
   try {
     const user = await getStudentByEmail(email);
     if (!user || user.error) {
-      return res.status(401).json({ error: true, message: 'User not found' });
+      return res.status(200).json({ error: true, message: 'User not found' });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = await signJWT({ email });
+    console.log('token', token);
     await prisma.users.update({
       where: { email },
       data: {
-        resetToken: token,
-        resetTokenExpiry: new Date(Date.now() + 1 * 60 * 60 * 1000),
+        resetToken: token.token,
+        resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000),
       },
     });
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token.token}`;
     const html = `
         <h3>You requested a password reset</h3>
         <p>Click this <a href="${resetUrl}">link</a> to reset your password</p>
-        <p>This link will expire in 1 hour</p>
+        <p>This link will expire in 30 minutes</p>
         <p>If you didn't request this, please ignore this email</p>
       `;
-    const isSent = await sendEmail(email, 'Reset Password', html);
+    const isSent = await sendEmail(email, 'Reset Password', '', html);
     if (isSent) {
       res
         .status(200)

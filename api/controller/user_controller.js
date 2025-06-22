@@ -283,4 +283,5 @@ export {
   deleteUser,
   deactivateUser,
   activateUser,
+  changePassword,
 };

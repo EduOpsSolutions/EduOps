@@ -416,6 +416,20 @@ const useAuthStore = create(
       isStudent: () => {
         return get().hasRole('student');
       },
+
+      getBirthday: () => {
+        const { user } = get();
+
+        return new Date(
+          user.birthyear,
+          user.birthmonth - 1,
+          user.birthdate
+        ).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      },
     }),
     {
       name: 'eduops-auth-storage', // unique name for localStorage key
