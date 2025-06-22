@@ -20,6 +20,7 @@ import PaymentForm from './pages/public/PaymentForm';
 import Profile from './pages/public/Profile';
 import RedirectPage from './pages/public/RedirectPage';
 import SignUp from './pages/public/SignUp';
+import ResetPassword from './pages/public/ResetPassword';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
@@ -63,6 +64,7 @@ function App() {
           <Route path="paymentForm" element={<PaymentForm />} />
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
+          <Route path="reset-password/:token" element={<ResetPassword />} />
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>

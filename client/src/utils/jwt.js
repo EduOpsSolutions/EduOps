@@ -1,6 +1,5 @@
 import Cookies from 'js-cookie';
 import { decodeJwt } from 'jose';
-import useAuthStore from '../stores/authStore';
 
 /**
  * Gets and decodes a JWT token from cookies
