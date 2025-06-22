@@ -10,6 +10,8 @@ import { sendEmail } from '../utils/mailer.js';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+
+const bcryptSalt = parseInt(process.env.BCRYPT_SALT) || 11;
 // Inside your login route handler
 async function login(req, res) {
   try {
@@ -98,9 +100,16 @@ async function resetPassword(req, res) {
   try {
     if (token && password) {
       const user = await getUserByToken(token);
+      if (user.error) {
+        return res.status(401).json({ error: true, message: user.message });
+      }
       if (!user) {
-        console.log('user');
         return res.status(401).json({ error: true, message: 'User not found' });
+      }
+      if (!user.data.resetToken) {
+        return res
+          .status(401)
+          .json({ error: true, message: 'Invalid or expired token' });
       }
       if (
         user.data.resetTokenExpiry &&
@@ -142,20 +151,51 @@ async function register(req, res) {
 
 async function changePassword(req, res) {
   try {
-    const { currentPassword, newPassword, email } = req.body;
+    const { oldPassword, newPassword, email } = req.body;
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = await verifyJWT(token);
+    if (decoded.payload.data.email !== email)
+      return res.status(401).json({ error: true, message: 'Unauthorized' });
+
+    // Validate input
+    if (!oldPassword || !newPassword || !email) {
+      return res.status(400).json({
+        error: true,
+        message: 'Old password, new password, and email are required',
+      });
+    }
+
     const user = await getStudentByEmail(email);
 
     if (!user || user.error) {
-      return res.status(401).json({
+      return res.status(404).json({
         error: true,
         message: 'User not found',
       });
     }
+    if (user.data.email !== decoded.payload.data.email) {
+      return res.status(401).json({
+        error: true,
+        message: 'Unauthorized',
+      });
+    }
 
-    const isValidPassword = bcrypt.compareSync(
-      currentPassword,
+    const isValidPassword = await bcrypt.compare(
+      oldPassword,
       user.data?.password
     );
+
+    const isTheSamePassword = await bcrypt.compare(
+      newPassword,
+      user.data?.password
+    );
+    if (isTheSamePassword) {
+      return res.status(401).json({
+        error: true,
+        message: 'New password cannot be the same as the old password',
+      });
+    }
+
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
@@ -163,7 +203,9 @@ async function changePassword(req, res) {
       });
     }
 
-    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, bcryptSalt);
+
+    console.log('hashedPassword', hashedPassword);
     // Add a function in your user_model.js to update the password
     const updated = await updateUserPassword(email, hashedPassword);
 

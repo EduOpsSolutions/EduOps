@@ -17,7 +17,12 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     // Handle 401 unauthorized errors
-    if (error.response && error.response.status === 401) {
+    if (
+      error.response &&
+      error.response.status >= 400 &&
+      error.response.status < 500 &&
+      error.response.data.code === 'TOKEN_ERR'
+    ) {
       const { logout } = useAuthStore.getState();
       logout();
     }

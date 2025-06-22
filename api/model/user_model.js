@@ -48,6 +48,13 @@ async function getUserByToken(token) {
       },
     });
     console.log('data', data);
+
+    if (!data) {
+      return {
+        error: true,
+        message: 'Invalid or expired token',
+      };
+    }
     if (!data) {
       return {
         error: true,
@@ -77,9 +84,13 @@ export async function updateUserPassword(email, hashedPassword) {
       data: {
         password: hashedPassword,
         resetToken: null,
+        resetTokenExpiry: null,
       },
     });
-    return true;
+    if (result) {
+      return true;
+    }
+    return false;
   } catch (error) {
     console.error('Error updating password:', error);
     return false;

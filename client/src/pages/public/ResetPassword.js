@@ -16,6 +16,10 @@ function ResetPassword() {
     }));
   };
 
+  const redirectToLogin = () => {
+    window.location.href = '/login';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('Form submitted with data:', formData);
@@ -44,21 +48,36 @@ function ResetPassword() {
           title: 'Success',
           text: 'Password reset successful!',
           icon: 'success',
-        });
+          confirmButtonColor: '#ff0000',
+          confirmButtonTextColor: '#ffffff',
+        }).then((res) => res.isConfirmed && redirectToLogin());
       } else {
         Swal.fire({
           title: 'Error',
           text: 'Password reset failed!',
           icon: 'error',
+          confirmButtonColor: '#ff0000',
+          confirmButtonTextColor: '#ffffff',
         });
       }
     } catch (error) {
-      console.log(error);
-      Swal.fire({
-        title: 'Error',
-        text: error.message,
-        icon: 'error',
-      });
+      if (error.response.status === 401) {
+        Swal.fire({
+          title: 'Error',
+          text: error.response.data.message,
+          icon: 'error',
+          confirmButtonColor: '#ff0000',
+          confirmButtonTextColor: '#ffffff',
+        });
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: error.message,
+          icon: 'error',
+          confirmButtonColor: '#ff0000',
+          confirmButtonTextColor: '#ffffff',
+        });
+      }
     }
   };
 

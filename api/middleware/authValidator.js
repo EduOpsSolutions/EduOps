@@ -7,6 +7,12 @@ const loginSchema = Joi.object({
   password: Joi.string().min(8).max(100),
 });
 
+const changePasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+  oldPassword: Joi.string().min(8).max(100).required(),
+  newPassword: Joi.string().min(8).max(100).required(),
+});
+
 const validateLogin = (req, res, next) => {
   const { error } = loginSchema.validate(req.body, {
     abortEarly: false,
@@ -95,6 +101,7 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'No token provided',
+        code: 'TOKEN_ERR',
       });
     }
 
@@ -107,8 +114,20 @@ const verifyToken = async (req, res, next) => {
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token',
+      code: 'TOKEN_ERR',
     });
   }
+};
+
+const validatePassword = (req, res, next) => {
+  const { error } = changePasswordSchema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+  if (error) {
+    return res.status(400).json({ error: true, message: 'Invalid password' });
+  }
+  next();
 };
 
 export {
@@ -118,4 +137,5 @@ export {
   validateUserIsStudent,
   verifyToken,
   validateIsActiveUser,
+  validatePassword,
 };
