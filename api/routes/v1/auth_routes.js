@@ -7,10 +7,13 @@ import {
   changePassword,
   resetPassword,
   requestResetPassword,
+  adminResetPassword,
 } from '../../controller/auth_controller.js';
 import {
   validateLogin,
   validatePassword,
+  validateUserIsAdmin,
+  validateIsActiveUser,
 } from '../../middleware/authValidator.js';
 import { verifyToken } from '../../middleware/authValidator.js';
 
@@ -18,7 +21,16 @@ router.post('/login', validateLogin, login);
 router.post('/forgot-password', forgotPassword);
 router.post('/register', register);
 router.post('/change-password', validatePassword, verifyToken, changePassword);
-router.post('/reset-password', resetPassword);
+router.post('/reset-password', verifyToken, resetPassword);
+
+router.post(
+  '/admin-reset-password',
+  verifyToken,
+  validateUserIsAdmin,
+  validateIsActiveUser,
+  adminResetPassword
+);
+
 router.post('/request-reset-password', requestResetPassword);
 
 //for token verification

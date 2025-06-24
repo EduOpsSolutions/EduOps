@@ -12,15 +12,18 @@ const LabelledInputField = ({
   onChange,
   disabled,
   className,
+  showLabel = true,
 }) => {
   return (
     <div className="relative z-0 w-full mb-5 group">
-      <label
-        htmlFor={id}
-        class="block mb-2 text-sm font-medium dark:text-white"
-      >
-        {label}
-      </label>
+      {showLabel && (
+        <label
+          htmlFor={id}
+          class="block mb-2 text-sm font-medium dark:text-white"
+        >
+          {label}
+        </label>
+      )}
       <input
         type={type}
         name={name}
