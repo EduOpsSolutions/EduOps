@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DatePicker } from '../../ui/DatePicker';
+import axiosInstance from '../../../utils/axios';
+import Swal from 'sweetalert2';
+import { getCookieItem } from '../../../utils/jwt';
 
 export default function UserAccountDetailsModal({
   data,
@@ -10,6 +12,7 @@ export default function UserAccountDetailsModal({
 }) {
   const [formData, setFormData] = useState(data);
   const [date, setDate] = useState(null);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
 
   useEffect(() => {
     setFormData(data);
@@ -20,6 +23,52 @@ export default function UserAccountDetailsModal({
     }
     console.log(date);
   }, [data]);
+
+  const handleResetPassword = () => {
+    Swal.fire({
+      title: 'Reset Account Password',
+      text: 'Are you sure you want to reset the account password?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Reset Password',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#ff0000',
+      cancelButtonColor: '#000000',
+      customClass: {
+        cancelButton: 'swal-cancel-outline',
+        confirmButton: 'swal-confirm-outline',
+      },
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const response = await axiosInstance.post(
+            `/auth/admin-reset-password`,
+            {
+              id: formData.id,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${getCookieItem('token')}`,
+              },
+            }
+          );
+          Swal.fire({
+            title: 'Password Reset',
+            text: response.message,
+            icon: 'success',
+          });
+        } catch (error) {
+          console.error(error);
+          Swal.fire({
+            title: 'Error',
+            text: error.response.data.message || 'An error occurred',
+            icon: 'error',
+          });
+        }
+      }
+    });
+  };
 
   if (!show) return null;
 
@@ -65,7 +114,7 @@ export default function UserAccountDetailsModal({
             </button>
           </div>
           {/* <!-- Modal body --> */}
-          <div className="p-4 md:p-5 grid grid-cols-2 gap-4">
+          <div className="p-4 md:p-5 grid grid-cols-2 gap-4 items-center">
             <div className="">
               <label
                 for="firstName"
@@ -174,6 +223,15 @@ export default function UserAccountDetailsModal({
                 <option value="deleted">Deleted</option>
                 <option value="suspended">Suspended</option>
               </select>
+            </div>
+            <div className="">
+              <button
+                type="button"
+                className="bg-german-red text-white px-4 py-2 rounded-lg"
+                onClick={handleResetPassword}
+              >
+                Reset Password
+              </button>
             </div>
 
             {/* <div className="">

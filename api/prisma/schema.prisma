@@ -34,6 +34,7 @@ model users {
   firstLogin Boolean @default(true)
   resetToken String?
   resetTokenExpiry DateTime?
+  changePassword Boolean @default(true)
 
   advisedCourses course[] @relation("UserAdvisesCourses")
 }

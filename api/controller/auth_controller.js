@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const bcryptSalt = parseInt(process.env.BCRYPT_SALT) || 11;
+const prisma = new PrismaClient();
 // Inside your login route handler
 async function login(req, res) {
   try {
@@ -87,6 +88,51 @@ async function forgotPassword(req, res) {
     }
   } catch (error) {
     res.status(500).json({ error: true, message: 'Error sending email' });
+  }
+}
+
+async function adminResetPassword(req, res) {
+  const { id } = req.body;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ error: true, message: 'User ID is required' });
+  }
+  const user = await prisma.users.findUnique({
+    where: {
+      id,
+    },
+  });
+  if (!user) {
+    return res.status(401).json({ error: true, message: 'User not found' });
+  }
+
+  const password = `${user.firstName.slice(0, 3).toLowerCase()}${user.lastName
+    .slice(0, 2)
+    .toLowerCase()}${user.birthmonth}${user.birthdate}${user.birthyear}`;
+  const hashedPassword = bcrypt.hashSync(password, bcryptSalt);
+  const updated = await prisma.users.update({
+    where: {
+      id,
+    },
+    data: {
+      password: hashedPassword,
+      changePassword: true,
+    },
+  });
+  await sendEmail(
+    user.email,
+    'Password Reset',
+    '',
+    `
+    <h3>Your account password has been reset</h3>
+    <p>Please use the following instructions to login. Your account password is "&lt;First Name (first 3 letters)&gt;&lt;Last Name (first 2 letters)&gt;&lt;Birthmonth&gt;&lt;Birthdate&gt;&lt;Birthyear&gt;" All in lowercase. You might be prompted to change your password on your next login.</p>
+    <p>If you didn't request this, please ignore this email</p>`
+  );
+  if (updated) {
+    res
+      .status(200)
+      .json({ error: false, message: 'Password updated successfully' });
   }
 }
 
@@ -275,4 +321,5 @@ export {
   changePassword,
   resetPassword,
   requestResetPassword,
+  adminResetPassword,
 };
