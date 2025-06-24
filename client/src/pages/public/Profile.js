@@ -30,11 +30,20 @@ function Profile({ role }) {
       <div className="flex md:flex-row flex-col w-full justify-center items-stretch">
         {/* Profile Picture Card */}
         <div className="bg-white-yellow-tone rounded-lg py-10 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)] flex flex-col justify-center items-center m-5">
-          <img
-            src={John_logo}
-            alt=""
-            className="aspect-square size-[18rem] border-[3px] rounded-full mb-4 object-cover"
-          />
+          {user.profilePicLink ? (
+            <img
+              src={user.profilePicLink}
+              alt=""
+              className="aspect-square w-[15rem] border-[3px] rounded-full mb-4 object-cover"
+            />
+          ) : (
+            <div className="aspect-square w-[15rem] border-[3px] rounded-full mb-4 object-cover bg-gray-200 flex items-center justify-center">
+              <p className="text-3xl text-black font-bold ">
+                {user.firstName.charAt(0)}
+                {user.firstName.charAt(1).toUpperCase()}
+              </p>
+            </div>
+          )}
           <button className="py-1 px-4 rounded flex items-center text-lg hover:text-dark-red-2">
             <BsPencilFill className="mr-2 text-2xl" />
             Edit Profile Picture
@@ -54,14 +63,13 @@ function Profile({ role }) {
         <div className="bg-white-yellow-tone rounded-lg py-4 px-12 shadow-[0_15px_20px_rgba(0,0,0,0.369)]">
           <h1 className="text-2xl font-bold mb-5">{getUserFullName()}</h1>
           <hr className="border-t-2 border-black mb-4" />
-          <h2 className="text-3xl mb-4">Personal Details</h2>
+          <h2 className="text-2xl mb-4 font-bold">Personal Details</h2>
 
           {/* Students Layout */}
 
           {userRole === 'student' && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-2xl mb-4 font-bold">Student ID:</p>
                 <LabelledInputField
                   name="userId"
                   id="userId"
@@ -70,7 +78,6 @@ function Profile({ role }) {
                   value={data.userId}
                   disabled={true}
                 />
-                <p className="text-2xl mb-4 font-bold">Email:</p>
                 <LabelledInputField
                   name="email"
                   id="email"
@@ -79,7 +86,6 @@ function Profile({ role }) {
                   value={data.email}
                   disabled={true}
                 />
-                <p className="text-2xl mb-4 font-bold">Phone Number:</p>
                 <LabelledInputField
                   name="phoneNumber"
                   id="phoneNumber"
@@ -90,13 +96,13 @@ function Profile({ role }) {
                   onChange={(e) =>
                     setData({ ...data, phoneNumber: e.target.value })
                   }
-                  disabled={false}
+                  disabled={true}
                 />
               </div>
               <div className="m-20 mt-0 mr-40">
-                <p className="text-2xl mb-4 font-bold">Course:</p>
+                <p className="text-sm mb-4">Course:</p>
                 <p className="mb-7">{data.course || 'N/A'}</p>
-                <p className="text-2xl mb-4 font-bold">Birthday:</p>
+                <p className="text-sm mb-4">Birthday:</p>
                 <p className="mb-7">{data.birthday}</p>
               </div>
             </div>
@@ -106,14 +112,14 @@ function Profile({ role }) {
           {['teacher', 'admin'].includes(userRole) && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-2xl mb-4 font-bold">Email:</p>
+                <p className="text-sm mb-4">Email:</p>
                 <p className="mb-7">{data.email}</p>
-                <p className="text-2xl mb-4 font-bold">Phone Number:</p>
+                <p className="text-sm mb-4">Phone Number:</p>
                 <p className="mb-8">{data.phoneNumber || 'N/A'}</p>
               </div>
 
               <div className="m-20 mt-0">
-                <p className="text-2xl mb-4 font-bold">Birthday:</p>
+                <p className="text-sm mb-4">Birthday:</p>
                 <p className="mb-7 w-full">{data.birthday}</p>
               </div>
             </div>
