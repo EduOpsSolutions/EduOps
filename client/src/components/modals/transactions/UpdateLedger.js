@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DiscardChangesModal from "../common/DiscardChangesModal";
+import ModalTextField from "../../form/ModalTextField";
+import ModalSelectField from "../../form/ModalSelectField";
 
 const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
   const [formData, setFormData] = useState({
@@ -12,6 +14,8 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
   });
 
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); 
 
   useEffect(() => {
     if (!isOpen) {
@@ -24,17 +28,28 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
         balance: "",
         remarks: "",
       });
+      setError("");
     }
   }, [isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (error) setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    try {
+      setLoading(true); 
+      await onSubmit(formData);
+      onClose(); 
+    } catch (error) {
+      setError(error.message || "Failed to update ledger. Please try again.");
+    } finally {
+      setLoading(false); 
+    }
   };
 
   const hasChanges = () => {
@@ -60,10 +75,19 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
 
   if (!isOpen) return null;
 
+  const feeTypeOptions = [
+    { value: "", label: "Select type" },
+    { value: "Assessment", label: "Assessment" },
+    { value: "Payment", label: "Payment" },
+    { value: "Books", label: "Books" },
+    { value: "Adjustment", label: "Adjustment" },
+    { value: "Other", label: "Other" },
+  ];
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative">
+        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-2xl font-bold">Update Ledger</h2>
             <button
@@ -86,6 +110,14 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
             </button>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          {/* Student Info */}
           {student && (
             <div className="bg-gray-50 border border-gray-200 rounded p-3 mb-4">
               <p className="text-sm text-gray-600">
@@ -99,117 +131,86 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Type of Fee
-              </label>
-              <select
-                name="typeOfFee"
-                value={formData.typeOfFee}
-                onChange={handleChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                required
-              >
-                <option value="">Select type</option>
-                <option value="Assessment">Assessment</option>
-                <option value="Payment">Book</option>
-                <option value="Adjustment">Adjustment</option>
-              </select>
-            </div>
+            {/* Type of Fee */}
+            <ModalSelectField
+              label="Type of Fee"
+              name="typeOfFee"
+              value={formData.typeOfFee}
+              onChange={handleChange}
+              options={feeTypeOptions}
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                O.R. Number
-              </label>
-              <input
-                type="text"
-                name="orNumber"
-                value={formData.orNumber}
-                onChange={handleChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Enter O.R. number"
-                required
-              />
-            </div>
+            {/* O.R. Number */}
+            <ModalTextField
+              label="O.R. Number"
+              name="orNumber"
+              value={formData.orNumber}
+              onChange={handleChange}
+              placeholder="Enter O.R. Number"
+            />
 
+            {/* Debit and Credit Row */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Debit Amount
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                    ₱
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="debitAmount"
-                    value={formData.debitAmount}
-                    onChange={handleChange}
-                    className="w-full border-2 border-red-900 rounded pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Credit Amount
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                    ₱
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="creditAmount"
-                    value={formData.creditAmount}
-                    onChange={handleChange}
-                    className="w-full border-2 border-red-900 rounded pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Balance</label>
-              <div className="relative">
+              {/* Debit Amount */}
+              <ModalTextField
+                label="Debit Amount"
+                name="debitAmount"
+                type="number"
+                step="0.01"
+                value={formData.debitAmount}
+                onChange={handleChange}
+                placeholder="0.00"
+              >
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
                   ₱
                 </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="balance"
-                  value={formData.balance}
-                  onChange={handleChange}
-                  className="w-full border-2 border-red-900 rounded pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
+              </ModalTextField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Remarks</label>
-              <textarea
-                name="remarks"
-                value={formData.remarks}
+              {/* Credit Amount */}
+              <ModalTextField
+                label="Credit Amount"
+                name="creditAmount"
+                type="number"
+                step="0.01"
+                value={formData.creditAmount}
                 onChange={handleChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                rows="4"
-                placeholder="Enter remarks (optional)"
-              ></textarea>
+                placeholder="0.00"
+              >
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                  ₱
+                </span>
+              </ModalTextField>
             </div>
 
+            {/* Remarks */}
+            <ModalTextField
+              label="Remarks"
+              name="remarks"
+              value={formData.remarks}
+              onChange={handleChange}
+              placeholder="Enter remarks (optional)"
+              isTextArea={true}
+              rows={4}
+            />
+
+            {/* Submit Button */}
             <div className="flex justify-center mt-6">
               <button
                 type="submit"
-                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150"
+                disabled={loading}
+                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Submit
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Updating...</span>
+                  </div>
+                ) : (
+                  "Submit"
+                )}
               </button>
             </div>
           </form>
