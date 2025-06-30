@@ -1,208 +1,201 @@
-import Cookies from 'js-cookie';
-import React, { useEffect, useState } from 'react';
-import SearchField from "../../components/textFields/SearchField";
-import ThinRedButton from "../../components/buttons/ThinRedButton";
+import React, { useEffect } from 'react';
 import CreateCourseModal from '../../components/modals/courses/CreateCourseModal';
 import EditCourseModal from '../../components/modals/courses/EditCourseModal';
 import Pagination from "../../components/common/Pagination";
-import axiosInstance from '../../utils/axios';
-
+import SearchField from "../../components/textFields/SearchField";
+import ThinRedButton from '../../components/buttons/ThinRedButton';
+import { useCourseSearchStore, useCourseStore } from '../../stores/courseStore';
 
 function CourseManagement() {
-  const [create_course_modal, setCreateCourseModal] = useState(false);
-  const [edit_course_modal, setEditCourseModal] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [coursesPerPage, setCoursesPerPage] = useState(5);
-
-  const fetchCourses = async () => {
-    try {
-        setLoading(true);
-        const response = await axiosInstance.get("/courses");
-        setCourses(response.data);
-    } catch (error) {
-        console.error("Failed to fetch courses: ", error);
-    } finally {
-        setLoading(false);
-    }
-  };
+  const searchStore = useCourseSearchStore();
+  
+  const {
+    // State
+    selectedCourse,
+    loading,
+    error,
+    createCourseModal,
+    editCourseModal,
+    
+    // Actions
+    fetchCourses,
+    handleRowClick,
+    openCreateCourseModal,
+    closeCreateCourseModal,
+    closeEditCourseModal,
+    clearError,
+    resetStore
+  } = useCourseStore();
 
   useEffect(() => {
     fetchCourses();
   }, []);
 
-  const handleRowClick = (course) => {
-    setSelectedCourse(course);
-    setEditCourseModal(true);
-  };
-
-  const filteredCourses = courses.filter(
-    (course) =>
-      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.id.toString().includes(searchTerm)
-  );
-
-  const indexOfLastCourse = currentPage * coursesPerPage;
-  const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
-  const currentCourses = filteredCourses.slice(
-    indexOfFirstCourse,
-    indexOfLastCourse
-  );
-  const totalPages = Math.ceil(filteredCourses.length / coursesPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const handleCoursesPerPageChange = (newPerPage) => {
-    setCoursesPerPage(newPerPage);
-    setCurrentPage(1);
-  };
+  useEffect(() => {
+    return () => {
+      resetStore();
+      searchStore.resetSearch();
+    };
+  }, []);
 
   const handleSearch = () => {
-    setCurrentPage(1);
-    console.log("Searching for:", searchTerm);
+    searchStore.handleSearch();
   };
 
   return (
     <div className="bg_custom bg-white-yellow-tone">
-      <div className="flex flex-col justify-center items-center px-20 py-8">
-        <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-semibold">Courses</h1>
+      <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+        <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold">Courses</h1>
           </div>
 
-          <div className="mb-8">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-6 h-6"
-                  viewBox="0 0 50 50"
-                >
-                  <path d="M 21 3 C 11.621094 3 4 10.621094 4 20 C 4 29.378906 11.621094 37 21 37 C 24.710938 37 28.140625 35.804688 30.9375 33.78125 L 44.09375 46.90625 L 46.90625 44.09375 L 33.90625 31.0625 C 36.460938 28.085938 38 24.222656 38 20 C 38 10.621094 30.378906 3 21 3 Z M 21 5 C 29.296875 5 36 11.703125 36 20 C 36 28.296875 29.296875 35 21 35 C 12.703125 35 6 28.296875 6 20 C 6 11.703125 12.703125 5 21 5 Z"></path>
-                </svg>
-                <h2 className="text-lg font-bold">SEARCH COURSE</h2>
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex gap-4 justify-between items-center">
-                <div className="flex gap-4 items-center">
-                  <input
-                    type="text"
-                    className="w-80 border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    placeholder="Enter course name or ID"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <button
-                    onClick={handleSearch}
-                    className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-2.5 text-center shadow-sm shadow-black ease-in duration-150"
-                  >
-                    Search
-                  </button>
-                </div>
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              <div className="flex justify-between items-center">
+                <span>{error}</span>
                 <button
-                  onClick={() => {setCreateCourseModal(true)}}
-                  className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-2.5 text-center shadow-sm shadow-black ease-in duration-150"
+                  onClick={clearError}
+                  className="text-red-700 hover:text-red-900"
                 >
-                  Create Course
+                  ✕
                 </button>
               </div>
             </div>
+          )}
+
+          <div className="mb-6 md:mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+              <div className="order-1 sm:order-1">
+                <SearchField
+                  name="searchTerm"
+                  placeholder="Search Course"
+                  value={searchStore.searchParams.searchTerm}
+                  onChange={searchStore.handleInputChange}
+                  onClick={handleSearch}
+                  className="w-full sm:w-80"
+                />
+              </div>
+              
+              <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
+                <ThinRedButton onClick={openCreateCourseModal}>
+                  Create Course
+                </ThinRedButton>
+              </div>
+            </div>
           </div>
 
+          {/* Table Section */}
           <div className="pt-2">
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <p className="text-lg">Loading Courses...</p>
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+                  <p className="text-lg">Loading Courses...</p>
+                </div>
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-300">
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          Course ID
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          Course Name
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          # of Students
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          Schedule
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          Adviser
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          Price
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-red-900">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentCourses.map((course, index) => (
-                        <tr
-                          key={course.id || index}
-                          className="cursor-pointer transition-colors duration-200 hover:bg-dark-red hover:text-white"
-                          onClick={() => handleRowClick(course)}
-                        >
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.id}
-                          </td>
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.name}
-                          </td>
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.maxNumber || 'N/A'}
-                          </td>
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.schedule || 'N/A'}
-                          </td>
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.category || 'N/A'}
-                          </td>
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.price || 'N/A'}
-                          </td>
-                          <td className="py-3 px-4 border-t border-b border-red-900">
-                            {course.visibility === 'visible' ? 'Visible' : 'Hidden'}
-                          </td>
+                <div className="overflow-x-auto -mx-2 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b-2 border-gray-300">
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Course ID
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Course Name
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            # of Students
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Schedule
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Adviser
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Price
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Status
+                          </th>
                         </tr>
-                      ))}
-                      {currentCourses.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan="7"
-                            className="text-center py-8 text-gray-500 border-t border-b border-red-900"
+                      </thead>
+                      <tbody>
+                        {searchStore.currentItems.map((course, index) => (
+                          <tr
+                            key={course.id || index}
+                            className="cursor-pointer transition-colors duration-200 hover:bg-dark-red hover:text-white"
+                            onClick={() => handleRowClick(course)}
                           >
-                            No courses found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.id}>
+                                {course.id}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-24 sm:max-w-32 md:max-w-none" title={course.name}>
+                                {course.name}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.maxNumber || 'N/A'}>
+                                {course.maxNumber || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-28 md:max-w-none" title={course.schedule || 'N/A'}>
+                                {course.schedule || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.category || 'N/A'}>
+                                {course.category || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.price || 'N/A'}>
+                                {course.price || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.visibility === 'visible' ? 'Visible' : 'Hidden'}>
+                                {course.visibility === 'visible' ? 'Visible' : 'Hidden'}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {searchStore.currentItems.length === 0 && !loading && (
+                          <tr>
+                            <td
+                              colSpan="7"
+                              className="text-center py-6 md:py-8 text-gray-500 border-t border-b border-red-900 text-sm md:text-base"
+                            >
+                              No courses found
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  itemsPerPage={coursesPerPage}
-                  onItemsPerPageChange={handleCoursesPerPageChange}
-                  totalItems={filteredCourses.length}
-                  itemName="courses"
-                  showItemsPerPageSelector={true}
-                />
+                <div className="mt-4">
+                  <Pagination
+                    currentPage={searchStore.currentPage}
+                    totalPages={searchStore.totalPages}
+                    onPageChange={searchStore.handlePageChange}
+                    itemsPerPage={searchStore.itemsPerPage}
+                    onItemsPerPageChange={searchStore.handleItemsPerPageChange}
+                    totalItems={searchStore.totalItems}
+                    itemName="courses"
+                    showItemsPerPageSelector={true}
+                  />
+                </div>
               </>
             )}
           </div>
@@ -210,13 +203,14 @@ function CourseManagement() {
       </div>
 
       <CreateCourseModal
-        create_course_modal={create_course_modal}
-        setCreateCourseModal={setCreateCourseModal}
+        create_course_modal={createCourseModal}
+        setCreateCourseModal={closeCreateCourseModal}
         fetchCourses={fetchCourses}
       />
+      
       <EditCourseModal 
-        edit_course_modal={edit_course_modal} 
-        setEditCourseModal={setEditCourseModal} 
+        edit_course_modal={editCourseModal} 
+        setEditCourseModal={closeEditCourseModal} 
         selectedCourse={selectedCourse}
         fetchCourses={fetchCourses}
       />
@@ -224,4 +218,4 @@ function CourseManagement() {
   );
 }
 
-export default CourseManagement
+export default CourseManagement;

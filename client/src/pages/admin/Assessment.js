@@ -1,171 +1,271 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
 import ThinRedButton from "../../components/buttons/ThinRedButton";
 import TransactionHistoryModal from "../../components/modals/common/TransactionHistoryModal";
 import AddFeesModal from "../../components/modals/transactions/AddFeesModal";
+import Pagination from "../../components/common/Pagination";
+import SearchFormVertical from "../../components/common/SearchFormVertical";
+import { useNavigate } from "react-router-dom";
+import { useAssessmentSearchStore, useAssessmentStore } from "../../stores/assessmentStore";
 
 function Assessment() {
-  const [transaction_history_modal, setTransactionHistoryModal] =
-    useState(false);
-  const [addFeesModal, setAddFeesModal] = useState(false);
   const navigate = useNavigate();
 
+  // Search store
+  const searchStore = useAssessmentSearchStore();
+  
+  // Assessment store
+  const {
+    // State
+    selectedStudent,
+    transactionHistoryModal,
+    addFeesModal,
+    
+    // Actions
+    handleStudentSelect,
+    handleBackToResults,
+    openTransactionHistoryModal,
+    closeTransactionHistoryModal,
+    openAddFeesModal,
+    closeAddFeesModal,
+    handleAddFee,
+    calculateNetAssessment,
+    resetStore
+  } = useAssessmentStore();
+
+  useEffect(() => {
+    searchStore.initializeSearch();
+    searchStore.handleSearch();
+    
+    return () => {
+      resetStore();
+      searchStore.resetSearch();
+    };
+  }, []);
+
+  // Search form config
+  const searchFormConfig = {
+    title: "SEARCH",
+    formFields: [
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        placeholder: "Student Name"
+      },
+      {
+        name: "course",
+        label: "Course",
+        type: "select",
+        options: [
+          { value: "", label: "All Courses" },
+          { value: "A1", label: "A1 German Basic Course" },
+          { value: "A2", label: "A2 German Basic Course" },
+          { value: "A3", label: "A3 German Basic Course" }
+        ]
+      },
+      {
+        name: "batch",
+        label: "Batch",
+        type: "select",
+        options: [
+          { value: "", label: "All Batches" },
+          { value: "Batch 1", label: "Batch 1" },
+          { value: "Batch 2", label: "Batch 2" },
+          { value: "Batch 3", label: "Batch 3" }
+        ]
+      },
+      {
+        name: "year",
+        label: "Year",
+        type: "select",
+        options: [
+          { value: "", label: "All Years" },
+          { value: "2024", label: "2024" },
+          { value: "2023", label: "2023" },
+          { value: "2022", label: "2022" }
+        ]
+      }
+    ]
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    searchStore.handleSearch();
+    handleBackToResults();
+  };
+
   return (
-    <div className="bg-white-yellow-tone h-full flex flex-col py-16 px-20">
-      <div className="flex flex-row gap-16">
-        <div className="h-fit grow-0 basis-3/12 bg-white border-dark-red-2 border-2 rounded-lg p-7 shadow-[0_4px_3px_0_rgba(0,0,0,0.5)]">
-          <form className="flex flex-col gap-7">
-            <div className="flex flex-row gap-2 items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="size-6"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <p className="font-semibold">SEARCH</p>
-            </div>
-            <div>
-              <p className="mb-1">Name</p>
-              <input
-                type="text"
-                placeholder="Student Name"
-                className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black p-2"
-              />
-            </div>
-            <div>
-              <p className="mb-1">Course</p>
-              <select
-                name="course"
-                id="course"
-                className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black"
-              >
-                <option value="A1">A1 German Basic Course</option>
-                <option value="A2">A2 German Basic Course</option>
-                <option value="A3">A3 German Basic Course</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1">Batch</p>
-              <select
-                name="batch"
-                id="batch"
-                className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black"
-              >
-                <option value="B1">Batch 1</option>
-                <option value="B2">Batch 2</option>
-                <option value="B3">Batch 3</option>
-              </select>
-            </div>
-            <div>
-              <p className="mb-1">Year</p>
-              <select
-                name="year"
-                id="year"
-                className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black"
-              >
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
-              </select>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
-              >
-                Search
-              </button>
-            </div>
-          </form>
+    <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-8 lg:gap-16 lg:items-start">
+        <div className="w-full lg:w-80 lg:flex-shrink-0 lg:self-start">
+          <SearchFormVertical
+            searchLogic={searchStore}
+            fields={searchFormConfig}
+            onSearch={handleSearch}
+          />
         </div>
-        <div className="basis-9/12 bg-white border-dark-red-2 border-2 rounded-lg p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
-          <p className="font-bold text-lg text-center mb-5">
+
+        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
+          <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-3 sm:mb-5">
             Tuition Fee Assessment
           </p>
-          <p className="font-bold text-lg text-center mb-5">
-            A1: Batch 1 | 2024
-          </p>
-          <div className="flex flex-row items-end pb-3 border-b-2 border-dark-red-2">
-            <p className="uppercase grow">DOLOR, POLANO I.</p>
-            <div className="m-0">
-              <ThinRedButton
-                onClick={() => {
-                  setTransactionHistoryModal(true);
-                }}
-              >
-                Transaction History
-              </ThinRedButton>
-              <span className="mx-2"></span>
-              <ThinRedButton onClick={() => navigate("/admin/ledger")}>
-                Ledger
-              </ThinRedButton>
-            </div>
-          </div>
-          <p className="font-bold text-lg text-center mt-9 mb-1">FEES</p>
-          <table className="w-full mb-5">
-            <thead>
-              <tr className="border-b-2 border-dark-red-2">
-                <th className="py-2 font-bold w-[70%] text-start">
-                  Description
-                </th>
-                <th className="py-2 font-bold w-[15%]">Amount</th>
-                <th className="py-2 font-bold w-[15%]">Due date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b-2 border-[rgb(137,14,7,.49)]">
-                <td className="uppercase py-2">COURSE FEE</td>
-                <td className="py-2 text-center">25,850.00</td>
-                <td className="py-2 text-center">May 30, 2024</td>
-              </tr>
-              <tr className="border-b-2 border-[rgb(137,14,7,.49)]">
-                <td className="uppercase py-2">BOOKS</td>
-                <td className="py-2 text-center">2,800.00</td>
-                <td className="py-2 text-center">May 30, 2024</td>
-              </tr>
-            </tbody>
-          </table>
 
-          <div className="flex justify-end mb-5">
-            <button
-              onClick={() => setAddFeesModal(true)}
-              type="button"
-              className="text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-md px-8 py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
-            >
-              Add Fees
-            </button>
-          </div>
-
-          <div className="w-full pt-3 border-t-2 border-dark-red-2 grid grid-rows-4 grid-flow-col gap-3">
-            <div className="grid grid-rows-subgrid row-span-2">
-              <p className="row-start-2 font-bold">Net Assessment</p>
+          {/* Search Results */}
+          {searchStore.currentItems.length > 0 && !selectedStudent && (
+            <div>
+              <p className="font-semibold mb-3 text-sm sm:text-base">
+                {searchStore.hasSearched ? `Search Results (${searchStore.totalItems})` : `All Students (${searchStore.totalItems})`}
+              </p>
+              <div className="space-y-2 mb-5">
+                {searchStore.currentItems.map((student) => (
+                  <div
+                    key={student.id}
+                    onClick={() => handleStudentSelect(student)}
+                    className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                      <div>
+                        <p className="font-semibold text-sm sm:text-base">{student.name}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">
+                          {student.course}: {student.batch} | {student.year}
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs sm:text-sm text-gray-600">Balance:</p>
+                        <p className="font-semibold text-sm sm:text-base">{student.remainingBalance}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Pagination Component */}
+              {searchStore.totalItems > 0 && (
+                <Pagination
+                  currentPage={searchStore.currentPage}
+                  totalPages={searchStore.totalPages}
+                  onPageChange={searchStore.handlePageChange}
+                  itemsPerPage={searchStore.itemsPerPage}
+                  onItemsPerPageChange={searchStore.handleItemsPerPageChange}
+                  totalItems={searchStore.totalItems}
+                  itemName="students"
+                  itemsPerPageOptions={[5, 10, 15, 20]}
+                  showItemsPerPageSelector={true}
+                />
+              )}
             </div>
-            <p className="font-bold">Total Payments</p>
-            <p className="font-bold">Remaining Balance</p>
-            <p className="font-bold text-center">Amount</p>
-            <p className="text-center">28,650.00</p>
-            <p className="text-center">0</p>
-            <p className="text-center">28,650.00</p>
-          </div>
+          )}
+
+          {/* Selected Student Details */}
+          {selectedStudent && (
+            <div>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-5 gap-2 sm:gap-0">
+                <p className="font-bold text-base sm:text-lg text-center sm:text-left">
+                  {selectedStudent.course}: {selectedStudent.batch} | {selectedStudent.year}
+                </p>
+                <button
+                  onClick={handleBackToResults}
+                  className="text-dark-red-2 hover:text-dark-red-5 font-semibold text-sm sm:text-base w-full sm:w-auto text-left sm:text-right"
+                >
+                  Back to Results
+                </button>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-end pb-3 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
+                <p className="uppercase grow text-base sm:text-lg font-semibold text-left">{selectedStudent.name}</p>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+                  <ThinRedButton onClick={openTransactionHistoryModal}>
+                    Transaction History
+                  </ThinRedButton>
+                  <span className="hidden sm:inline mx-2"></span>
+                  <ThinRedButton onClick={() => navigate("/admin/ledger")}>
+                    Ledger
+                  </ThinRedButton>
+                </div>
+              </div>
+
+              <p className="font-bold text-base sm:text-lg text-center mt-6 sm:mt-9 mb-1">FEES</p>
+              
+              {/* Table */}
+              <div className="overflow-x-auto mb-5">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b-2 border-dark-red-2">
+                      <th className="py-2 font-bold text-start text-xs sm:text-sm lg:text-base">
+                        Description
+                      </th>
+                      <th className="py-2 font-bold text-center text-xs sm:text-sm lg:text-base">Amount</th>
+                      <th className="py-2 font-bold text-center text-xs sm:text-sm lg:text-base">Due date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedStudent.fees.map((fee, index) => (
+                      <tr key={index} className="border-b-2 border-[rgb(137,14,7,.49)]">
+                        <td className="uppercase py-2 text-xs sm:text-sm lg:text-base">
+                          {fee.description}
+                        </td>
+                        <td className="py-2 text-center text-xs sm:text-sm lg:text-base">
+                          {fee.amount}
+                        </td>
+                        <td className="py-2 text-center text-xs sm:text-sm lg:text-base">
+                          {fee.dueDate}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-center sm:justify-end mb-3 sm:mb-5">
+                <button
+                  onClick={openAddFeesModal}
+                  type="button"
+                  className="text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm sm:text-md px-6 sm:px-8 py-1.5 text-center shadow-sm shadow-black ease-in duration-150 w-full sm:w-auto"
+                >
+                  Add Fees
+                </button>
+              </div>
+
+              {/* Summary Section */}
+              <div className="w-full pt-3 border-t-2 border-dark-red-2">
+                <div className="flex flex-col gap-2 text-xs sm:text-sm lg:text-base">
+                  <div className="flex justify-between">
+                    <p className="font-bold">Net Assessment</p>
+                    <p>{calculateNetAssessment(selectedStudent.fees)}</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="font-bold">Total Payments</p>
+                    <p>{selectedStudent.totalPayments}</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="font-bold">Remaining Balance</p>
+                    <p>{selectedStudent.remainingBalance}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {!searchStore.hasSearched && searchStore.totalItems === 0 && (
+            <div className="text-center py-6 sm:py-10">
+              <p className="text-gray-500 text-sm sm:text-base">Loading students...</p>
+            </div>
+          )}
         </div>
       </div>
-
+      
       <TransactionHistoryModal
-        transaction_history_modal={transaction_history_modal}
-        setTransactionHistoryModal={setTransactionHistoryModal}
+        transaction_history_modal={transactionHistoryModal}
+        setTransactionHistoryModal={closeTransactionHistoryModal}
       />
 
       <AddFeesModal
         isOpen={addFeesModal}
-        onClose={() => setAddFeesModal(false)}
-        studentName="DOLOR, POLANO I."
-        course="A1"
+        onClose={closeAddFeesModal}
+        onSubmit={handleAddFee}
+        studentName={selectedStudent?.name || ""}
+        course={selectedStudent?.course || ""}
       />
     </div>
   );
