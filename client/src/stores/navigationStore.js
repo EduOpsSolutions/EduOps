@@ -59,7 +59,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/`, label: 'Manage Documents' },
           { path: `/${role}/`, label: 'Document Requests' },
           { path: `/${role}/`, label: 'Reports' },
-          { path: `/${role}/`, label: 'Document Validation' },
+          { path: `/${role}/document-validation`, label: 'Document Validation' },
         ]
       },
       accounts: {

@@ -50,6 +50,7 @@ import useAuthStore from './stores/authStore';
 import AdminLedger from './pages/admin/Ledger';
 import AdminAssessment from './pages/admin/Assessment';
 import ManageFees from './pages/admin/ManageFees';
+import DocumentValidation from './pages/admin/DocumentValidation';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -126,6 +127,7 @@ function App() {
                 <Route path="ledger" element={<AdminLedger />} />
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
+                <Route path="document-validation" element={<DocumentValidation />} />
               </Route>
             </>
           ) : (
