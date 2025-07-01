@@ -1,5 +1,4 @@
-import React from "react";
-import { Dropdown } from "flowbite-react";
+import React, { useState } from "react";
 import John_logo from "../../assets/images/John.jpg";
 
 const ICONS = {
@@ -16,14 +15,14 @@ const ICONS = {
 
 const RESPONSIVE_STYLES = {
   compact: {
-    dropdown: "w-fit sm:w-[300px] md:w-[350px] lg:w-[400px]",
+    dropdown: "w-[250px] sm:w-[300px] md:w-[350px] lg:w-[400px]",
     trigger: "h-[40px]",
     bellIcon: "20",
-    header: "py-2 sm:py-3 px-3 sm:px-4 text-base sm:text-lg",
-    item: "p-2 sm:p-3 text-sm sm:text-base gap-2 sm:gap-3",
-    avatar: "w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11",
+    header: "py-2 px-2 sm:py-3 sm:px-4 text-sm sm:text-lg",
+    item: "p-2 sm:p-3 text-xs sm:text-base gap-2 sm:gap-3",
+    avatar: "w-7 h-7 sm:w-10 sm:h-10 md:w-11 md:h-11",
     smallText: "text-xs sm:text-sm",
-    viewAll: "py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm",
+    viewAll: "py-2 px-2 sm:py-3 sm:px-4 text-xs sm:text-sm",
     eyeIcon: "w-3 h-3 sm:w-4 sm:h-4"
   },
   normal: {
@@ -64,99 +63,101 @@ const SAMPLE_NOTIFICATIONS = [
 
 const getStyles = (isCompact) => RESPONSIVE_STYLES[isCompact ? 'compact' : 'normal'];
 
-// Components
-const NotificationTrigger = ({ styles }) => (
-  <span className={`${styles.trigger} flex items-center cursor-pointer`}>
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 448 512"
-      width={styles.bellIcon}
-      height={styles.bellIcon}
-    >
-      {ICONS.BELL}
-    </svg>
-  </span>
-);
-
-const NotificationHeader = ({ styles }) => (
-  <div className={`${styles.header} mb-1 font-semibold text-black flex justify-center border-b border-gray-200`}>
-    Notifications
-  </div>
-);
-
-const NotificationItem = ({ notification, styles }) => {
-  const notificationType = NOTIFICATION_TYPES[notification.type];
-  
-  return (
-    <Dropdown.Item className={`${styles.item} text-black hover:bg-gray-100 focus:bg-gray-100`}>
-      <div className={`flex items-start ${styles.item}`}>
-        <div className="shrink-0">
-          <img
-            className={`rounded-full ${styles.avatar} border-2 border-german-red`}
-            src={John_logo}
-            alt={`${notification.sender} avatar`}
-          />
-        </div>
-        
-        <div className="w-full min-w-0">
-          <div className={`text-left text-gray-700 ${styles.smallText} mb-1`}>
-            {notificationType.prefix}{" "}
-            <span className="font-semibold text-black">{notification.sender}</span>
-          </div>
-          
-          <div className={`text-left text-gray-600 ${styles.smallText} mb-1.5 line-clamp-2`}>
-            "{notification.message}"
-          </div>
-          
-          <div className="text-left text-xs text-dark-red-2 font-medium">
-            {notification.time}
-          </div>
-        </div>
-      </div>
-    </Dropdown.Item>
-  );
-};
-
-const ViewAllButton = ({ styles }) => (
-  <div className={`${styles.viewAll} flex justify-center items-center text-dark-red-2 font-semibold hover:bg-gray-100 cursor-pointer transition-colors`}>
-    <svg
-      className={`${styles.eyeIcon} me-2 text-dark-red-2`}
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="currentColor"
-      viewBox="0 0 20 14"
-    >
-      {ICONS.EYE}
-    </svg>
-    View all
-  </div>
-);
-
 const NotificationDropdown = ({ isCompact = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
   const styles = getStyles(isCompact);
 
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
+
   return (
-    <Dropdown
-      label=""
-      className={`${styles.dropdown} rounded-none border-none bg-neutral-50`}
-      dismissOnClick={true}
-      renderTrigger={() => <NotificationTrigger styles={styles} />}
-    >
-      <NotificationHeader styles={styles} />
-      <Dropdown.Divider className="bg-gray-200 m-0" />
+    <div className="relative inline-block">
+      <button 
+        onClick={toggleDropdown}
+        className={`${styles.trigger} flex items-center cursor-pointer hover:opacity-80 transition-opacity`}
+        title="Notifications"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 448 512"
+          width={styles.bellIcon}
+          height={styles.bellIcon}
+        >
+          {ICONS.BELL}
+        </svg>
+      </button>
 
-      {SAMPLE_NOTIFICATIONS.map((notification, index) => (
-        <React.Fragment key={notification.id}>
-          <NotificationItem notification={notification} styles={styles} />
-          {index < SAMPLE_NOTIFICATIONS.length - 1 && (
-            <Dropdown.Divider className="bg-gray-200 m-0" />
-          )}
-        </React.Fragment>
-      ))}
+      {isOpen && (
+        <div 
+          className={`absolute ${isCompact ? 'right-1 sm:right-0' : 'right-0'} mt-2 ${styles.dropdown} bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto`}
+          style={{ minWidth: isCompact ? '250px' : '300px' }}
+        >
+          <div className={`${styles.header} mb-1 font-semibold text-black flex justify-center border-b border-gray-200`}>
+            Notifications
+          </div>
 
-      <Dropdown.Divider className="bg-gray-200 m-0" />
-      <ViewAllButton styles={styles} />
-    </Dropdown>
+          {SAMPLE_NOTIFICATIONS.map((notification, index) => {
+            const notificationType = NOTIFICATION_TYPES[notification.type];
+            
+            return (
+              <div key={notification.id}>
+                <div className={`${styles.item} text-black hover:bg-gray-100 cursor-pointer transition-colors`}>
+                  <div className={`flex items-start ${styles.item}`}>
+                    <div className="shrink-0">
+                      <img
+                        className={`rounded-full ${styles.avatar} border-2 border-german-red`}
+                        src={John_logo}
+                        alt={`${notification.sender} avatar`}
+                      />
+                    </div>
+                    
+                    <div className={`w-full min-w-0 ${isCompact ? 'ml-2 sm:ml-3' : 'ml-3'}`}>
+                      <div className={`text-left text-gray-700 ${styles.smallText} mb-1`}>
+                        {notificationType.prefix}{" "}
+                        <span className="font-semibold text-black">{notification.sender}</span>
+                      </div>
+                      
+                      <div className={`text-left text-gray-600 ${styles.smallText} mb-1.5 ${isCompact ? 'line-clamp-3' : 'line-clamp-2'}`}>
+                        "{notification.message}"
+                      </div>
+                      
+                      <div className="text-left text-xs text-dark-red-2 font-medium">
+                        {notification.time}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {index < SAMPLE_NOTIFICATIONS.length - 1 && (
+                  <hr className="border-gray-200 m-0" />
+                )}
+              </div>
+            );
+          })}
+
+          <hr className="border-gray-200 m-0" />
+          <div className={`${styles.viewAll} flex justify-center items-center text-dark-red-2 font-semibold hover:bg-gray-100 cursor-pointer transition-colors`}>
+            <svg
+              className={`${styles.eyeIcon} me-2 text-dark-red-2`}
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 20 14"
+            >
+              {ICONS.EYE}
+            </svg>
+            View all
+          </div>
+        </div>
+      )}     
+      
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
   );
 };
 
