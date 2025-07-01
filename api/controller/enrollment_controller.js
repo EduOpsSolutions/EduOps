@@ -100,7 +100,24 @@ const createEnrollmentRequest = async (req, res) => {
       <table>
         <tr><td>First Name</td><${firstName}></tr>
       <tr><td>Middle Name</td><${middleName}></tr>
-      
+      <tr><td>Last Name</td><${lastName}></tr>
+      <tr><td>Birth Date</td><${birthDate}></tr>
+      <tr><td>Civil Status</td><${civilStatus}></tr>
+      <tr><td>Address</td><${address}></tr>
+      <tr><td>Referred By</td><${referredBy}></tr>
+      <tr><td>Contact Number</td><${contactNumber}></tr>
+      <tr><td>Alt Contact Number</td><${altContactNumber}></tr>
+      <tr><td>Preferred Email</td><${preferredEmail}></tr>
+      <tr><td>Alt Email</td><${altEmail}></tr>
+      <tr><td>Mother Name</td><${motherName}></tr>
+      <tr><td>Mother Contact</td><${motherContact}></tr>
+      <tr><td>Father Name</td><${fatherName}></tr>
+      <tr><td>Father Contact</td><${fatherContact}></tr>
+      <tr><td>Guardian Name</td><${guardianName}></tr>
+      <tr><td>Guardian Contact</td><${guardianContact}></tr>
+      <tr><td>Courses to Enroll</td><${coursesToEnroll}></tr>
+      <tr><td>Valid ID</td><${validIdPath}></tr>
+      <tr><td>ID Photo</td><${idPhotoPath}></tr>
       <table>
       `
     );
