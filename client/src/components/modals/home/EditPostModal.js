@@ -1,5 +1,5 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import PostTagButton from '../../buttons/PostTagButton';
 import EmojiPicker from 'emoji-picker-react';
 import usePostsStore from '../../../stores/postsStore';
@@ -21,7 +21,7 @@ const MODAL_THEME = {
                 "icon": "h-5 w-5"
             },
         },
-    }  
+    }
 };
 
 const FORM_CONFIG = {
@@ -44,7 +44,7 @@ const SEND_OPTIONS = [
     { value: "both", label: "Both" }
 ];
 
-const getTextareaHeight = (hasAttachments) => 
+const getTextareaHeight = (hasAttachments) =>
     hasAttachments ? FORM_CONFIG.heights.textareaWithAttachments : FORM_CONFIG.heights.textareaWithoutAttachments;
 
 const CloseButton = ({ onClick }) => (
@@ -60,7 +60,7 @@ const CloseButton = ({ onClick }) => (
 
 const ImagePreview = ({ src, onRemove }) => (
     <div className="flex-none relative w-16 h-16 sm:w-[70px] sm:h-[70px] lg:w-[75px] lg:h-[75px]">
-        <button 
+        <button
             type="button"
             className="absolute -right-1 sm:-right-2 -top-1 sm:-top-[6px] bg-[#777777] rounded-full p-0.5 sm:p-1"
             onClick={onRemove}
@@ -69,13 +69,13 @@ const ImagePreview = ({ src, onRemove }) => (
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
         </button>
-        <img src={src} alt="" className="h-full w-full rounded-xl sm:rounded-2xl object-cover border-2 sm:border-[3px] border-[#777777]"/>
+        <img src={src} alt="" className="h-full w-full rounded-xl sm:rounded-2xl object-cover border-2 sm:border-[3px] border-[#777777]" />
     </div>
 );
 
 const FilePreview = ({ fileName, onRemove }) => (
     <div className="flex-none relative h-12 sm:h-14 lg:h-16 w-32 sm:w-36 lg:w-40 bg-[#777777] rounded-xl sm:rounded-2xl">
-        <button 
+        <button
             type="button"
             className="absolute -right-1 sm:-right-2 -top-1 sm:-top-[6px] bg-[#777777] rounded-full p-0.5 sm:p-1 drop-shadow-[0px_2px_1px_rgba(0,0,0,.5)]"
             onClick={onRemove}
@@ -112,57 +112,57 @@ const ActionButtons = ({ emojiPickerRef, textAreaRef }) => {
 
     return (
         <div className="flex flex-row items-center gap-2 sm:gap-0">
-            <PostTagButton 
-                tag={formData.tag} 
-                status="unlocked" 
-                onClick={toggleTag} 
+            <PostTagButton
+                tag={formData.tag}
+                status="unlocked"
+                onClick={toggleTag}
             />
 
-            <label htmlFor="new-post-photo" className="hover:cursor-pointer mx-2 sm:mx-3 lg:mx-4">
+            <label htmlFor="edit-post-photo" className="hover:cursor-pointer mx-2 sm:mx-3 lg:mx-4">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#666666" className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9">
                     <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 0 1 2.25-2.25h16.5A2.25 2.25 0 0 1 22.5 6v12a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 18V6ZM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0 0 21 18v-1.94l-2.69-2.689a1.5 1.5 0 0 0-2.12 0l-.88.879.97.97a.75.75 0 1 1-1.06 1.06l-5.16-5.159a1.5 1.5 0 0 0-2.12 0L3 16.061Zm10.125-7.81a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Z" clipRule="evenodd" />
                 </svg>
             </label>
-            <input 
-                type="file" 
-                name="new-post-photo" 
-                id="new-post-photo" 
-                accept="image/png, image/jpeg" 
-                className="hidden" 
+            <input
+                type="file"
+                name="edit-post-photo"
+                id="edit-post-photo"
+                accept="image/png, image/jpeg"
+                className="hidden"
                 multiple
                 onChange={(e) => handleFileUpload(e, "photo")}
             />
 
-            <label htmlFor="new-post-docs" className="hover:cursor-pointer">
+            <label htmlFor="edit-post-docs" className="hover:cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="#666666" className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
                 </svg>
             </label>
-            <input 
-                type="file" 
-                name="new-post-docs" 
-                id="new-post-docs" 
-                accept=".doc,.docx,.pdf" 
+            <input
+                type="file"
+                name="edit-post-docs"
+                id="edit-post-docs"
+                accept=".doc,.docx,.pdf"
                 className="hidden"
                 multiple
                 onChange={(e) => handleFileUpload(e, "file")}
             />
 
-            <button 
-                type="button" 
+            <button
+                type="button"
                 className="relative ml-auto"
                 onClick={toggleEmojiPicker}
             >
                 {formData.showEmojiPicker && (
                     <div ref={emojiPickerRef} className="absolute -right-2 sm:-right-3 bottom-8 sm:bottom-10 z-50" onClick={(e) => e.stopPropagation()}>
                         <div className="scale-75 sm:scale-90 lg:scale-100 origin-bottom-right">
-                            <EmojiPicker 
-                                pickerStyle={{ 
+                            <EmojiPicker
+                                pickerStyle={{
                                     width: '280px',
                                     '--epr-emoji-size': '24px',
                                     '--epr-category-label-height': '28px'
-                                }} 
-                                onEmojiClick={(emoji) => insertEmoji(emoji, textAreaRef)} 
+                                }}
+                                onEmojiClick={(emoji) => insertEmoji(emoji, textAreaRef)}
                             />
                         </div>
                     </div>
@@ -175,7 +175,7 @@ const ActionButtons = ({ emojiPickerRef, textAreaRef }) => {
     );
 };
 
-function CreatePostModal(props) {
+function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
     const textAreaRef = useRef(null);
     const emojiPickerRef = useRef(null);
     const {
@@ -186,12 +186,19 @@ function CreatePostModal(props) {
         removeImage,
         removeFile,
         closeEmojiPicker,
-        submitPost,
+        updatePost,
         resetForm,
-        hasAttachments
+        hasAttachments,
+        initializeEditForm
     } = usePostsStore();
 
-    const { sendOption, isSubmitting } = formData;
+    const { title, content, sendOption, selectedImages, selectedFiles, isSubmitting } = formData;
+
+    useEffect(() => {
+        if (edit_post_modal && postData) {
+            initializeEditForm(postData);
+        }
+    }, [edit_post_modal, postData, initializeEditForm]);
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -206,18 +213,18 @@ function CreatePostModal(props) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        const success = await submitPost(() => {
-            props.setCreatePostModal(false);
+
+        const success = await updatePost(postData.id, () => {
+            setEditPostModal(false);
         });
-        
+
         if (!success) {
         }
     };
 
     const handleClose = () => {
         resetForm();
-        props.setCreatePostModal(false);
+        setEditPostModal(false);
     };
 
     const attachmentsExist = hasAttachments();
@@ -226,7 +233,7 @@ function CreatePostModal(props) {
         <Flowbite theme={{ theme: MODAL_THEME }}>
             <Modal
                 dismissible
-                show={props.create_post_modal}
+                show={edit_post_modal}
                 size="3xl"
                 onClose={handleClose}
                 popup
@@ -236,70 +243,70 @@ function CreatePostModal(props) {
                     <Modal.Header className="z-10 transition ease-in-out duration-300">
                         <CloseButton onClick={handleClose} />
                     </Modal.Header>
-                    
+
                     <p className="font-bold -mt-9 sm:-mt-10 ml-4 sm:ml-6 mb-3 sm:mb-4 text-center text-xl sm:text-2xl lg:text-3xl transition ease-in-out duration-300">
-                        Create Post
+                        Edit Post
                     </p>
-                    
+
                     <Modal.Body className="overflow-visible px-3 sm:px-5 pt-0">
                         <form onSubmit={handleSubmit}>
-                            <div className={`${FORM_CONFIG.heights.container} flex flex-col`}> 
-                                <input 
-                                    type="text" 
-                                    name="new-post-title" 
-                                    id="new-post-title" 
-                                    placeholder="Post Title" 
+                            <div className={`${FORM_CONFIG.heights.container} flex flex-col`}>
+                                <input
+                                    type="text"
+                                    name="edit-post-title"
+                                    id="edit-post-title"
+                                    placeholder="Post Title"
                                     className={FORM_CONFIG.styles.input}
-                                    value={formData.title}
+                                    value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     required
                                 />
-                                
+
                                 <div className={FORM_CONFIG.styles.contentContainer}>
                                     <div className={`${getTextareaHeight(attachmentsExist)} flex flex-col`}>
-                                        <textarea 
-                                            name="new-post-content" 
-                                            id="new-post-content" 
-                                            placeholder="Write Here..." 
+                                        <textarea
+                                            name="edit-post-content"
+                                            id="edit-post-content"
+                                            placeholder="Write Here..."
                                             className={FORM_CONFIG.styles.textarea}
                                             required
                                             ref={textAreaRef}
-                                            value={formData.content}
+                                            value={content}
                                             onChange={(e) => setContent(e.target.value)}
                                         />
-                                        
+
                                         {attachmentsExist && (
                                             <div className={`${FORM_CONFIG.heights.attachmentsContainer} flex flex-row items-center gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pt-2`}>
-                                                {formData.selectedImages.map((image, index) => (
-                                                    <ImagePreview 
-                                                        key={image} 
-                                                        src={image} 
-                                                        onRemove={() => removeImage(image)} 
+                                                {selectedImages.map((image, index) => (
+                                                    <ImagePreview
+                                                        key={image}
+                                                        src={image}
+                                                        onRemove={() => removeImage(image)}
                                                     />
                                                 ))}
-                                                {formData.selectedFiles.map((fileName, index) => (
-                                                    <FilePreview 
-                                                        key={`${fileName}-${index}`} 
-                                                        fileName={fileName} 
-                                                        onRemove={() => removeFile(fileName)} 
+                                                {selectedFiles.map((fileName, index) => (
+                                                    <FilePreview
+                                                        key={`${fileName}-${index}`}
+                                                        fileName={fileName}
+                                                        onRemove={() => removeFile(fileName)}
                                                     />
                                                 ))}
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     <ActionButtons
                                         emojiPickerRef={emojiPickerRef}
                                         textAreaRef={textAreaRef}
                                     />
                                 </div>
-                                
+
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-1">
                                     <div className="flex items-center justify-start">
-                                        <label htmlFor="new-post-choice" className="me-2 text-sm sm:text-base font-medium whitespace-nowrap">Send a copy</label>
-                                        <select 
-                                            name="new-post-choice" 
-                                            id="new-post-choice" 
+                                        <label htmlFor="edit-post-choice" className="me-2 text-sm sm:text-base font-medium whitespace-nowrap">Send a copy</label>
+                                        <select
+                                            name="edit-post-choice"
+                                            id="edit-post-choice"
                                             className="rounded-md border-black text-sm sm:text-base focus:outline-none focus:ring-0 focus:border-black cursor-pointer px-2 py-1 bg-white"
                                             value={sendOption}
                                             onChange={(e) => setSendOption(e.target.value)}
@@ -309,7 +316,7 @@ function CreatePostModal(props) {
                                             ))}
                                         </select>
                                     </div>
-                                    
+
                                     <div className="flex gap-2 sm:gap-3 flex-shrink-0">
                                         <button
                                             type="button"
@@ -319,12 +326,12 @@ function CreatePostModal(props) {
                                         >
                                             Cancel
                                         </button>
-                                        <button 
-                                            type="submit" 
+                                        <button
+                                            type="submit"
                                             disabled={isSubmitting}
                                             className="flex-1 sm:flex-none text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50"
                                         >
-                                            {isSubmitting ? 'Creating...' : 'Create'}
+                                            {isSubmitting ? 'Saving...' : 'Save'}
                                         </button>
                                     </div>
                                 </div>
@@ -337,4 +344,4 @@ function CreatePostModal(props) {
     );
 }
 
-export default CreatePostModal;
+export default EditPostModal;
