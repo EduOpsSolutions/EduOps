@@ -1,11 +1,13 @@
 import axios from 'axios';
 import useAuthStore from '../stores/authStore';
+import { getCookieItem } from './jwt';
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
   baseURL: 'http://localhost:5555/api/v1',
   headers: {
     'Content-Type': 'application/json',
+    Authorization: `Bearer ${getCookieItem('token')}`,
   },
 });
 

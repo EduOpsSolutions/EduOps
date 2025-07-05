@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-import { sendEmail } from '../utils/mailer';
+import { sendEmail } from '../utils/mailer.js';
 
 function generateRandomId() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -132,4 +132,41 @@ const createEnrollmentRequest = async (req, res) => {
   }
 };
 
-export { createEnrollmentRequest };
+const getEnrollmentRequests = async (req, res) => {
+  const { id, status, page = 1, limit = 10, search } = req.query;
+  const enrollmentRequests = await prisma.enrollment_request.findMany({
+    where: {
+      id: id,
+      status: status,
+      ...(search && {
+        OR: [
+          { id: { contains: search } },
+          { firstName: { contains: search } },
+          { lastName: { contains: search } },
+          { preferredEmail: { contains: search } },
+          { altEmail: { contains: search } },
+        ],
+      }),
+    },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
+
+  const total = await prisma.enrollment_request.count({
+    where: {
+      id: id,
+      status: status,
+    },
+  });
+
+  const retval = {
+    data: enrollmentRequests,
+    total: total,
+    page: page,
+    limit: limit,
+  };
+
+  res.status(200).json({ ...retval, error: false });
+};
+
+export { createEnrollmentRequest, getEnrollmentRequests };

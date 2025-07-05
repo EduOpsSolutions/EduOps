@@ -71,21 +71,13 @@ function EditPasswordModal(props) {
 
     try {
       setIsLoading(true);
-      const token = getCookieItem('token');
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      };
       const response = await axiosInstance.post(
         `${process.env.REACT_APP_API_URL}/auth/change-password`,
         {
           email: user.email,
           oldPassword: currentPassword,
           newPassword: newPassword,
-        },
-        config
+        }
       );
       if (response.status === 200) {
         Swal.fire({
