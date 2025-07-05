@@ -51,6 +51,7 @@ import AdminLedger from './pages/admin/Ledger';
 import AdminAssessment from './pages/admin/Assessment';
 import ManageFees from './pages/admin/ManageFees';
 import DocumentValidation from './pages/admin/DocumentValidation';
+import Archives from './pages/admin/Archives';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -115,6 +116,7 @@ function App() {
                   element={<EnrollmentRequests />}
                 />
                 <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
+                <Route path="archives" element={<Archives />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="terms" element={<Terms />} />
