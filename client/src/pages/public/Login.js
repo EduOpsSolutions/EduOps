@@ -202,7 +202,11 @@ function Login() {
               */}
 
               {/* DELETE THIS AFTER IMPLEMENTING BACKEND LOGIC FOR LOGGING IN */}
-              <PrimaryButton disabled={isLoading} onClick={handleLogin}>
+              <PrimaryButton
+                className="w-fit py-5 px-10 flex items-center justify-center"
+                disabled={isLoading}
+                onClick={handleLogin}
+              >
                 Login
               </PrimaryButton>
 

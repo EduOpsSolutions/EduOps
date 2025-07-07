@@ -140,7 +140,7 @@ const getEnrollmentRequests = async (req, res) => {
       status: status,
       ...(search && {
         OR: [
-          { id: { contains: search } },
+          { enrollmentId: { contains: search } },
           { firstName: { contains: search } },
           { lastName: { contains: search } },
           { preferredEmail: { contains: search } },
@@ -152,6 +152,21 @@ const getEnrollmentRequests = async (req, res) => {
     take: limit,
   });
 
+  const new_data = await Promise.all(
+    enrollmentRequests.map(async (item) => {
+      return {
+        ...item,
+        isUserCreated: (await prisma.users.findFirst({
+          where: {
+            OR: [{ email: item.preferredEmail }, { email: item.altEmail }],
+          },
+        }))
+          ? true
+          : false,
+      };
+    })
+  );
+
   const total = await prisma.enrollment_request.count({
     where: {
       id: id,
@@ -160,7 +175,7 @@ const getEnrollmentRequests = async (req, res) => {
   });
 
   const retval = {
-    data: enrollmentRequests,
+    data: new_data,
     total: total,
     page: page,
     limit: limit,

@@ -57,7 +57,10 @@ function EnrollmentRequests() {
       <EnrollmentDetailsModal
         data={selectedEnrollmentRequest}
         show={showEnrollmentDetailsModal}
-        handleClose={() => setShowEnrollmentDetailsModal(false)}
+        handleClose={() => {
+          setShowEnrollmentDetailsModal(false);
+          setSelectedEnrollmentRequest(null);
+        }}
         handleSave={() => {}}
       />
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
@@ -174,7 +177,7 @@ function EnrollmentRequests() {
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
                                 title={request.id}
                               >
-                                {request.id}
+                                {request.enrollmentId}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
@@ -228,9 +231,9 @@ function EnrollmentRequests() {
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.email || 'N/A'}
+                                title={request.preferredEmail || 'N/A'}
                               >
-                                {request.email || 'N/A'}
+                                {request.preferredEmail || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
@@ -238,7 +241,17 @@ function EnrollmentRequests() {
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
                                 title={request.date || 'N/A'}
                               >
-                                {request.date || 'N/A'}
+                                {new Date(request.createdAt).toLocaleDateString(
+                                  'en-US',
+                                  {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                  }
+                                ) || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">

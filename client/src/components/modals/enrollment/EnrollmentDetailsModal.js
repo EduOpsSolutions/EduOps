@@ -4,6 +4,10 @@ import Swal from 'sweetalert2';
 import { getCookieItem } from '../../../utils/jwt';
 import ModalTextField from '../../form/ModalTextField';
 import ModalSelectField from '../../form/ModalSelectField';
+import PrimaryButton from '../../buttons/PrimaryButton';
+import { FaEye } from 'react-icons/fa';
+import CommonModal from '../common/CommonModal';
+import FallbackImage from '../../../assets/images/fallback.jpg';
 
 export default function EnrollmentDetailsModal({
   data,
@@ -13,10 +17,25 @@ export default function EnrollmentDetailsModal({
 }) {
   const [formData, setFormData] = useState(data);
   const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     setFormData(data);
   }, [data]);
+
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (show) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup function to restore scrolling when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [show]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -123,10 +142,26 @@ export default function EnrollmentDetailsModal({
 
   if (!show) return null;
 
+  const handleCloseModal = () => {
+    setShowPreview(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white-yellow-tone rounded-lg p-4 sm:p-6 w-full max-w-4xl relative max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between mb-4 sm:mb-6">
+      <CommonModal
+        title="Preview"
+        handleClose={handleCloseModal}
+        show={showPreview}
+        className="w-full h-[90%]"
+      >
+        <img
+          src={formData?.validIdPath || FallbackImage}
+          alt="Preview"
+          className="w-full h-full object-contain"
+        />
+      </CommonModal>
+      <div className="bg-white-yellow-tone rounded-lg w-full max-w-4xl relative max-h-[90vh] overflow-y-auto flex flex-col">
+        <div className="flex items-start justify-between mb-4 sm:mb-6 p-6 sticky top-0 bg-white-yellow-tone z-10 border-b ">
           <h2 className="text-xl sm:text-2xl font-bold pr-4">
             User Account Details
           </h2>
@@ -151,24 +186,25 @@ export default function EnrollmentDetailsModal({
         </div>
 
         {/* User Profile Summary */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-dark-red-2 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm sm:text-lg font-bold text-white">
-                {getUserInitials(formData?.firstName, formData?.lastName)}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
-                {formData?.firstName}
-                {formData?.middleName ? ` ${formData.middleName}` : ''}{' '}
-                {formData?.lastName}
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 truncate">
-                {formData?.email}
-              </p>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                {/* <span
+        <div className="flex flex-col p-4">
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-dark-red-2 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm sm:text-lg font-bold text-white">
+                  {getUserInitials(formData?.firstName, formData?.lastName)}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
+                  {formData?.firstName}
+                  {formData?.middleName ? ` ${formData.middleName}` : ''}{' '}
+                  {formData?.lastName}
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600 truncate">
+                  {formData?.email}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  {/* <span
                   className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(
                     formData?.role
                   )}`}
@@ -176,187 +212,266 @@ export default function EnrollmentDetailsModal({
                   {formData?.role?.charAt(0).toUpperCase() +
                     formData?.role?.slice(1)}
                 </span> */}
-                <span
-                  className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(
-                    formData?.enrollmentStatus
-                  )}`}
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(
+                      formData?.enrollmentStatus
+                    )}`}
+                  >
+                    {formData?.enrollmentStatus?.charAt(0).toUpperCase() +
+                      formData?.enrollmentStatus?.slice(1)}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleCreateAccount}
+                  className="w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded border border-dark-red-2 ease-in duration-150 text-sm sm:text-base"
                 >
-                  {formData?.enrollmentStatus?.charAt(0).toUpperCase() +
-                    formData?.enrollmentStatus?.slice(1)}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="button"
-                onClick={handleCreateAccount}
-                className="w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded border border-dark-red-2 ease-in duration-150 text-sm sm:text-base"
-              >
-                Create Account
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Edit Information Form */}
-          <div className="xl:col-span-2">
-            <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ModalTextField
-                  label="First Name"
-                  name="firstName"
-                  value={formData?.firstName || ''}
-                  onChange={handleInputChange}
-                  required
-                />
-                <ModalTextField
-                  label="Last Name"
-                  name="lastName"
-                  value={formData?.lastName || ''}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ModalTextField
-                  label="Middle Name"
-                  name="middleName"
-                  value={formData?.middleName || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ModalTextField
-                  label="Preferred Email Address"
-                  name="email"
-                  type="email"
-                  value={formData?.preferredEmail || ''}
-                  onChange={handleInputChange}
-                  required
-                />
-                <ModalTextField
-                  label="Alternative Email Address"
-                  name="altEmail"
-                  type="email"
-                  value={formData?.altEmail || ''}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ModalTextField
-                  label="Preferred Contact Number"
-                  name="contactNumber"
-                  type="string"
-                  value={formData?.contactNumber || ''}
-                  onChange={handleInputChange}
-                  required
-                />
-                <ModalTextField
-                  label="Preferred Contact Number"
-                  name="contactNumber"
-                  type="string"
-                  value={formData?.contactNumber || ''}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <ModalTextField
-                  label="Address"
-                  name="address"
-                  type="text"
-                  value={formData?.address || ''}
-                  onChange={handleInputChange}
-                />
-                <ModalTextField
-                  label="Birthday"
-                  name="birthday"
-                  type="date"
-                  value={formData?.birthDate || ''}
-                  onChange={handleInputChange}
-                />
-                <ModalTextField
-                  label="Gender"
-                  name="gender"
-                  type="string"
-                  value={formData?.gender || ''}
-                  onChange={handleInputChange}
-                  required
-                />
-                <ModalSelectField
-                  label="Enrollment Status"
-                  name="status"
-                  value={formData?.enrollmentStatus || 'Pending'}
-                  onChange={handleInputChange}
-                  options={[
-                    { value: 'approved', label: 'Approved' },
-                    { value: 'rejected', label: 'Rejected' },
-                    { value: 'pending', label: 'Pending' },
-                    { value: 'cancelled', label: 'Cancelled' },
-                    { value: 'archived', label: 'Archived' },
-                  ]}
-                />
+                  Create Account
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Account Information */}
-          <div className="xl:col-span-1">
-            <h3 className="text-lg font-semibold mb-4">Account Information</h3>
-            <div className="space-y-3">
-              <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                <label className="text-sm font-medium text-gray-600">
-                  User ID
-                </label>
-                <p className="text-xs sm:text-sm font-mono break-all">
-                  {formData?.id}
-                </p>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Edit Information Form */}
+            <div className="xl:col-span-2">
+              <h3 className="text-lg font-semibold mb-4">
+                Personal Information
+              </h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="First Name"
+                    name="firstName"
+                    value={formData?.firstName || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <ModalTextField
+                    label="Middle Name"
+                    name="middleName"
+                    value={formData?.middleName || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="Last Name"
+                    name="lastName"
+                    value={formData?.lastName || ''}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="Preferred Email Address"
+                    name="email"
+                    type="email"
+                    value={formData?.preferredEmail || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <ModalTextField
+                    label="Alternative Email Address"
+                    name="altEmail"
+                    type="email"
+                    value={formData?.altEmail || ''}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="Preferred Contact Number"
+                    name="contactNumber"
+                    type="string"
+                    value={formData?.contactNumber || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <ModalTextField
+                    label="Alternative Contact Number"
+                    name="altContactNumber"
+                    type="string"
+                    value={formData?.altContactNumber || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="Address"
+                    name="address"
+                    type="text"
+                    value={formData?.address || ''}
+                    onChange={handleInputChange}
+                  />
+                  <ModalTextField
+                    label="Birthday"
+                    name="birthday"
+                    type="date"
+                    value={
+                      formData?.birthDate &&
+                      !isNaN(new Date(formData.birthDate).getTime())
+                        ? new Date(formData.birthDate)
+                            .toISOString()
+                            .split('T')[0]
+                        : ''
+                    }
+                    onChange={handleInputChange}
+                  />
+                  <ModalTextField
+                    label="Gender"
+                    name="gender"
+                    type="option"
+                    value={formData?.gender || ''}
+                    onChange={handleInputChange}
+                    required
+                    options={[
+                      { value: 'male', label: 'Male' },
+                      { value: 'female', label: 'Female' },
+                    ]}
+                  />
+                  <ModalSelectField
+                    label="Enrollment Status"
+                    name="status"
+                    value={formData?.enrollmentStatus || 'Pending'}
+                    onChange={handleInputChange}
+                    options={[
+                      { value: 'approved', label: 'Approved' },
+                      { value: 'rejected', label: 'Rejected' },
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'cancelled', label: 'Cancelled' },
+                      { value: 'archived', label: 'Archived' },
+                    ]}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="Father's Name"
+                    name="fatherName"
+                    type="string"
+                    value={formData?.fatherName || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <ModalTextField
+                    label="Father's Contact Number"
+                    name="fatherContact"
+                    type="string"
+                    value={formData?.fatherContact || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="Mother's Maiden Name"
+                    name="motherName"
+                    type="string"
+                    value={formData?.motherName || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <ModalTextField
+                    label="Mother's Contact Number"
+                    name="motherContact"
+                    type="string"
+                    value={formData?.motherContact || ''}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
               </div>
-              <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                <label className="text-sm font-medium text-gray-600">
-                  Created
-                </label>
-                <p className="text-xs sm:text-sm break-words">
-                  {formatDate(formData?.createdAt)}
-                </p>
-              </div>
-              <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                <label className="text-sm font-medium text-gray-600">
-                  Updated
-                </label>
-                <p className="text-xs sm:text-sm break-words">
-                  {formatDate(formData?.updatedAt)}
-                </p>
-              </div>
-              {formData?.deletedAt && (
-                <div className="bg-red-50 rounded p-3 border border-red-200">
-                  <label className="text-sm font-medium text-red-600">
-                    Deleted
+            </div>
+
+            {/* Account Information */}
+            <div className="xl:col-span-1">
+              <h3 className="text-lg font-semibold mb-4">
+                Enrollment Information
+              </h3>
+              <div className="space-y-3">
+                <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                  <label className="text-sm font-medium text-gray-600">
+                    Enrollment ID
                   </label>
-                  <p className="text-xs sm:text-sm text-red-700 break-words">
-                    {formatDate(formData?.deletedAt)}
+                  <p className="text-xs sm:text-sm font-mono break-all">
+                    {formData?.enrollmentId}
                   </p>
                 </div>
-              )}
+                <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                  <label className="text-sm font-medium text-gray-600">
+                    Created
+                  </label>
+                  <p className="text-xs sm:text-sm break-words">
+                    {formatDate(formData?.createdAt)}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                  <label className="text-sm font-medium text-gray-600">
+                    Updated
+                  </label>
+                  <p className="text-xs sm:text-sm break-words">
+                    {formatDate(formData?.updatedAt)}
+                  </p>
+                </div>
+                {formData?.deletedAt && (
+                  <div className="bg-red-50 rounded p-3 border border-red-200">
+                    <label className="text-sm font-medium text-red-600">
+                      Deleted
+                    </label>
+                    <p className="text-xs sm:text-sm text-red-700 break-words">
+                      {formatDate(formData?.deletedAt)}
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                  <label className="text-sm font-medium text-gray-600">
+                    Documents
+                  </label>
+                  <div className="flex flex-row space-x-4 items-center my-2">
+                    <PrimaryButton
+                      className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
+                      onClick={() => setShowPreview(true)}
+                    >
+                      <FaEye />
+                    </PrimaryButton>
+                    <p>Valid ID</p>
+                  </div>
+
+                  <div className="flex flex-row space-x-4 items-center my-2">
+                    <PrimaryButton
+                      className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
+                      onClick={() => setShowPreview(true)}
+                    >
+                      <FaEye />
+                    </PrimaryButton>
+                    <p>ID Photo</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center mt-6 sticky bottom-0 bg-white-yellow-tone p-4 border-t">
           <button
             onClick={() => handleSave(formData)}
             disabled={loading}
             className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 <span>Saving...</span>
               </div>
