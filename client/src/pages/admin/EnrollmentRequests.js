@@ -3,6 +3,7 @@ import SearchField from '../../components/textFields/SearchField';
 import ThinRedButton from '../../components/buttons/ThinRedButton';
 import axiosInstance from '../../utils/axios.js';
 import EnrollmentDetailsModal from '../../components/modals/enrollment/EnrollmentDetailsModal';
+import { getCookieItem } from '../../utils/jwt';
 function EnrollmentRequests() {
   const [enrollmentRequests, setEnrollmentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +24,9 @@ function EnrollmentRequests() {
       const response = await axiosInstance.get('/enrollment/requests', {
         params: {
           search: searchTerm,
+        },
+        headers: {
+          Authorization: `Bearer ${getCookieItem('token')}`,
         },
       });
       if (!response.data.error) {

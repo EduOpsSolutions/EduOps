@@ -18,10 +18,34 @@ export default function EnrollmentDetailsModal({
   const [formData, setFormData] = useState(data);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [emailCheckLoading, setEmailCheckLoading] = useState(true);
+  const [emailExists, setEmailExists] = useState(false);
 
   useEffect(() => {
+    setEmailCheckLoading(true);
     setFormData(data);
-  }, [data]);
+    if (formData?.preferredEmail || formData?.altEmail) {
+      checkEmailExists(formData?.preferredEmail, formData?.altEmail);
+    }
+  }, [data, formData?.preferredEmail, formData?.altEmail]);
+
+  const checkEmailExists = async (email, altEmail) => {
+    try {
+      setEmailCheckLoading(true);
+      const response = await axiosInstance.get(
+        `/users/inspect-email-exists?email=${email}&altEmail=${altEmail}`,
+        {
+          headers: {
+            Authorization: `Bearer ${getCookieItem('token')}`,
+          },
+        }
+      );
+      setEmailCheckLoading(false);
+      setEmailExists(response.data.data);
+    } catch (error) {
+      console.error('Error checking email exists:', error);
+    }
+  };
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -64,9 +88,14 @@ export default function EnrollmentDetailsModal({
       if (result.isConfirmed) {
         try {
           const response = await axiosInstance.post(
-            `/auth/create-account`,
+            `/user/create-account`,
             {
-              id: formData.id,
+              userId: formData.userId,
+              firstName: formData.firstName,
+              middleName: formData.middleName,
+              lastName: formData.lastName,
+              email: formData.email,
+              password: formData.password,
             },
             {
               headers: {
@@ -227,9 +256,14 @@ export default function EnrollmentDetailsModal({
                 <button
                   type="button"
                   onClick={handleCreateAccount}
-                  className="w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded border border-dark-red-2 ease-in duration-150 text-sm sm:text-base"
+                  disabled={emailExists || emailCheckLoading}
+                  className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded border border-dark-red-2 ease-in duration-150 text-sm sm:text-base ${
+                    emailExists
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'opacity-100 cursor-pointer'
+                  }`}
                 >
-                  Create Account
+                  {emailExists ? 'Account Exists' : 'Create Account'}
                 </button>
               </div>
             </div>
