@@ -52,6 +52,7 @@ import AdminAssessment from './pages/admin/Assessment';
 import ManageFees from './pages/admin/ManageFees';
 import DocumentValidation from './pages/admin/DocumentValidation';
 import Archives from './pages/admin/Archives';
+import AdminGrades from './pages/admin/Grades';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -130,6 +131,7 @@ function App() {
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
                 <Route path="document-validation" element={<DocumentValidation />} />
+                <Route path="grades" element={<AdminGrades />} />
               </Route>
             </>
           ) : (
