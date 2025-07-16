@@ -54,6 +54,7 @@ import DocumentValidation from './pages/admin/DocumentValidation';
 import Archives from './pages/admin/Archives';
 import AdminGrades from './pages/admin/Grades';
 import DocumentRequests from './pages/admin/DocumentRequests';
+import ManageDocuments from './pages/admin/ManageDocuments';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -134,6 +135,7 @@ function App() {
                 <Route path="document-validation" element={<DocumentValidation />} />
                 <Route path="grades" element={<AdminGrades />} />
                 <Route path="document-requests" element={<DocumentRequests />} />
+                <Route path="manage-documents" element={<ManageDocuments />} />
               </Route>
             </>
           ) : (
