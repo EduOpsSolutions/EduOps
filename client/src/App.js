@@ -50,6 +50,11 @@ import useAuthStore from './stores/authStore';
 import AdminLedger from './pages/admin/Ledger';
 import AdminAssessment from './pages/admin/Assessment';
 import ManageFees from './pages/admin/ManageFees';
+import DocumentValidation from './pages/admin/DocumentValidation';
+import Archives from './pages/admin/Archives';
+import AdminGrades from './pages/admin/Grades';
+import DocumentRequests from './pages/admin/DocumentRequests';
+import ManageDocuments from './pages/admin/ManageDocuments';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -114,6 +119,7 @@ function App() {
                   element={<EnrollmentRequests />}
                 />
                 <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
+                <Route path="archives" element={<Archives />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="terms" element={<Terms />} />
@@ -126,6 +132,10 @@ function App() {
                 <Route path="ledger" element={<AdminLedger />} />
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
+                <Route path="document-validation" element={<DocumentValidation />} />
+                <Route path="grades" element={<AdminGrades />} />
+                <Route path="document-requests" element={<DocumentRequests />} />
+                <Route path="manage-documents" element={<ManageDocuments />} />
               </Route>
             </>
           ) : (

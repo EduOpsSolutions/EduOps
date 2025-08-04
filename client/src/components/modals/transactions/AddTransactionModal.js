@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import DiscardChangesModal from "../common/DiscardChangesModal";
+import ModalTextField from "../../form/ModalTextField";
+import ModalSelectField from "../../form/ModalSelectField";
 
 function AddTransactionModal({
   addTransactionModal,
   setAddTransactionModal,
   selectedStudent,
+  onSubmit, 
 }) {
   const [formData, setFormData] = useState({
     purpose: "",
@@ -15,6 +18,8 @@ function AddTransactionModal({
   });
 
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!addTransactionModal) {
@@ -26,22 +31,31 @@ function AddTransactionModal({
         referenceNumber: "",
         remarks: "",
       });
+      setError("");
     }
   }, [addTransactionModal]);
 
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+
+    if (error) setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("New transaction data:", formData);
-    console.log("For student:", selectedStudent);
-    setAddTransactionModal(false);
+    try {
+      setLoading(true); 
+      await onSubmit(formData); 
+      setAddTransactionModal(false); 
+    } catch (error) {
+      setError(error.message || "Failed to add transaction. Please try again.");
+    } finally {
+      setLoading(false); 
+    }
   };
 
   const hasChanges = () => {
@@ -67,10 +81,19 @@ function AddTransactionModal({
 
   if (!addTransactionModal) return null;
 
+  const paymentMethodOptions = [
+    { value: "", label: "Select payment method" },
+    { value: "Cash", label: "Cash" },
+    { value: "Bank Transfer", label: "Bank Transfer" },
+    { value: "Credit Card", label: "Credit Card" },
+    { value: "Check", label: "Check" },
+    { value: "Online Payment", label: "Online Payment" },
+  ];
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative">
+        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-2xl font-bold">Add Transaction</h2>
             <button
@@ -93,7 +116,14 @@ function AddTransactionModal({
             </button>
           </div>
 
-          {/* Shows selected student info */}
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          {/* Student Info */}
           {selectedStudent && (
             <div className="bg-gray-50 border border-gray-200 rounded p-3 mb-4">
               <p className="text-sm text-gray-600">
@@ -107,95 +137,82 @@ function AddTransactionModal({
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Purpose</label>
-              <input
-                type="text"
-                name="purpose"
-                value={formData.purpose}
-                onChange={handleInputChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Enter transaction purpose"
-                required
-              />
-            </div>
+            {/* Purpose */}
+            <ModalTextField
+              label="Purpose"
+              name="purpose"
+              value={formData.purpose}
+              onChange={handleChange}
+              placeholder="Enter transaction purpose"
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Payment Method
-              </label>
-              <select
-                name="paymentMethod"
-                value={formData.paymentMethod}
-                onChange={handleInputChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                required
-              >
-                <option value="">Select payment method</option>
-                <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Credit Card">Credit Card</option>
-                <option value="Check">Check</option>
-                <option value="Online Payment">Online Payment</option>
-              </select>
-            </div>
+            {/* Payment Method */}
+            <ModalSelectField
+              label="Payment Method"
+              name="paymentMethod"
+              value={formData.paymentMethod}
+              onChange={handleChange}
+              options={paymentMethodOptions}
+              required
+            />
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Amount Paid
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                    ₱
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="amountPaid"
-                    value={formData.amountPaid}
-                    onChange={handleInputChange}
-                    className="w-full border-2 border-red-900 rounded pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  OR / Reference Number
-                </label>
-                <input
-                  type="text"
-                  name="referenceNumber"
-                  value={formData.referenceNumber}
-                  onChange={handleInputChange}
-                  className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Enter reference num"
-                  required
-                />
-              </div>
-            </div>
+              {/* Amount Paid */}
+              <ModalTextField
+                label="Amount Paid"
+                name="amountPaid"
+                type="number"
+                step="0.01"
+                value={formData.amountPaid}
+                onChange={handleChange}
+                placeholder="0.00"
+                required
+              >
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                  ₱
+                </span>
+              </ModalTextField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Remarks</label>
-              <textarea
-                name="remarks"
-                value={formData.remarks}
-                onChange={handleInputChange}
-                rows="4"
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                placeholder="Enter remarks (optional)"
+              {/* Reference Number */}
+              <ModalTextField
+                label="OR / Reference Number"
+                name="referenceNumber"
+                value={formData.referenceNumber}
+                onChange={handleChange}
+                placeholder="Enter reference num"
+                required
               />
             </div>
 
+            {/* Remarks */}
+            <ModalTextField
+              label="Remarks"
+              name="remarks"
+              value={formData.remarks}
+              onChange={handleChange}
+              placeholder="Enter remarks (optional)"
+              isTextArea={true}
+              rows={4}
+            />
+
+            {/* Submit Button */}
             <div className="flex justify-center mt-6">
               <button
                 type="submit"
-                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150"
+                disabled={loading} 
+                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Transaction
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  'Submit'
+                )}
               </button>
             </div>
           </form>
