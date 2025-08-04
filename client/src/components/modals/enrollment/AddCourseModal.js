@@ -1,35 +1,14 @@
-import ThinRedButton from "../../buttons/ThinRedButton";
+import React, { useEffect, useState } from 'react';
 import axiosInstance from '../../../utils/axios';
-import { useEffect, useState } from 'react';
-import { Flowbite, Modal, ModalBody } from "flowbite-react";
-import SearchField from "../../textFields/SearchField";
+import DiscardChangesModal from '../common/DiscardChangesModal';
+import SearchField from '../../textFields/SearchField';
 
-const customModalTheme = {
-    modal: {
-        "root": {
-            "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
-            "show": {
-            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-            "off": "hidden ease-out"
-            },
-        },
-        "header": {
-            "base": "flex items-start justify-between rounded-t border-b p-5 dark:border-gray-600",
-            "popup": "border-b-0 p-2",
-            "title": "text-xl font-medium text-gray-900 dark:text-white text-center",
-            "close": {
-                "base": "ml-auto mr-2 inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white",
-                "icon": "h-5 w-5"
-            }
-        },
-    }  
-};
-
-function AddCourseModal({setAddCourseModal, add_course_modal, selectedPeriod, fetchPeriodCourses}){
+function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, fetchPeriodCourses }) {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState('');
+    const [showDiscardModal, setShowDiscardModal] = useState(false);
 
     const fetchCourses = async () => {
         try {
@@ -73,7 +52,10 @@ function AddCourseModal({setAddCourseModal, add_course_modal, selectedPeriod, fe
                 throw new Error('No response data received');
             }
             
+            // Refresh the period courses to show the newly added course
             await fetchPeriodCourses();
+            
+            // Close the modal after successful addition
             setAddCourseModal(false);
         } catch (error) {
             console.error("Failed to add course to period: ", error);
@@ -95,106 +77,189 @@ function AddCourseModal({setAddCourseModal, add_course_modal, selectedPeriod, fe
         setSearchTerm(e.target.value);
     };
 
+    const handleSearchClick = () => {
+        // Optional: Add any search click logic here
+        console.log('Search clicked with term:', searchTerm);
+    };
+
     const filteredCourses = courses.filter(course => 
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const hasChanges = () => {
+        return searchTerm.trim() !== "";
+    };
+
+    const handleClose = () => {
+        if (hasChanges()) {
+            setShowDiscardModal(true);
+        } else {
+            setAddCourseModal(false);
+        }
+    };
+
+    const handleDiscardChanges = () => {
+        setShowDiscardModal(false);
+        setAddCourseModal(false);
+        setSearchTerm('');
+    };
+
+    const handleCancelDiscard = () => {
+        setShowDiscardModal(false);
+    };
     
     useEffect(() => {
         if (add_course_modal) {
             fetchCourses();
+        } else {
+            setSearchTerm('');
+            setError('');
         }
     }, [add_course_modal]);
+
+    if (!add_course_modal) return null;
     
     return (
-        <Flowbite theme={{ modal: customModalTheme }}>
-            <Modal 
-                dismissible
-                show={add_course_modal}
-                size="3xl"
-                onClose={() => setAddCourseModal(false)}
-                popup
-                className="transition duration-150 ease-out"
-            >
-                <Modal.Header className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <p className="font-bold m-2 text-2xl">Add Course</p>
-                    </div>
-                </Modal.Header>
-                <hr className="border-t-2 border-black mx-4 pb-2" />
-                <Modal.Body>
-                    <div className="mb-3 mt-1">
-                        <SearchField 
-                            name="courses" 
-                            id="courses" 
-                            placeholder="Search Course" 
-                            value={searchTerm}
-                            onChange={handleSearch}
-                        />
+        <>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-4xl mx-4 relative max-h-[90vh] overflow-y-auto">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-6">
+                        <h2 className="text-2xl font-bold">Add Course</h2>
+                        <button
+                            className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
+                            onClick={handleClose}
+                        >
+                            <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
                     </div>
 
+                    {/* Error Display */}
                     {error && (
-                        <div className="mb-3 text-red-600">
+                        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
                             {error}
                         </div>
                     )}
 
-                    <div className="border border-dark-red rounded-md p-4 mb-8 bg-white">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full table-auto border-collapse">
-                                <thead>
-                                    <tr>
-                                        <th className="px-4 py-2 text-left border-b">Course ID</th>
-                                        <th className="px-4 py-2 text-left border-b">Course Name</th>
-                                        <th className="px-4 py-2 text-center border-b">Population</th>
-                                        <th className="px-4 py-2 text-left border-b">Schedule</th>
-                                        <th className="px-4 py-2 text-left border-b">Adviser</th>
-                                        <th className="px-4 py-2 text-center border-b"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-4 py-4 text-center">
-                                                Loading courses...
-                                            </td>
-                                        </tr>
-                                    ) : filteredCourses.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-4 py-4 text-center">
-                                                No courses found
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredCourses.map((course) => (
-                                            <tr key={course.id}>
-                                                <td className="px-4 py-2 border-b max-w-[150px] truncate">{course.id}</td>
-                                                <td className="px-4 py-2 border-b">{course.name}</td>
-                                                <td className="px-4 py-2 text-center border-b">{course.maxNumber}</td>
-                                                <td className="px-4 py-2 border-b">{course.schedule || 'N/A'}</td>
-                                                <td className="px-4 py-2 border-b">{course.adviserId || 'N/A'}</td>
-                                                <td className="px-2 py-2 text-center border-b">
-                                                    <button 
-                                                        onClick={() => handleAddCourse(course.id)}
-                                                        disabled={loading}
-                                                        className="bg-dark-red-2 text-white px-2 py-1 rounded hover:bg-dark-red-5 disabled:opacity-50"
-                                                    >
-                                                        Add
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                    {/* Search Field - Made Shorter */}
+                    <div className="mb-6">
+                        <SearchField
+                            name="courseSearch"
+                            id="courseSearch"
+                            placeholder="Search Here"
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            onClick={handleSearchClick}
+                            className="w-80 max-w-md"
+                        />
                     </div>
-                </Modal.Body>
-            </Modal>
-        </Flowbite>
+
+                    {/* Courses Table */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b-2 border-dark-red-2">
+                                    <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                                        Course ID
+                                    </th>
+                                    <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                                        Course Name
+                                    </th>
+                                    <th className="text-center py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                                        Population
+                                    </th>
+                                    <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                                        Schedule
+                                    </th>
+                                    <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                                        Adviser
+                                    </th>
+                                    <th className="text-center py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
+                                        Action
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="6" className="py-8 text-center text-gray-500 border-t border-b border-dark-red-2">
+                                            Loading courses...
+                                        </td>
+                                    </tr>
+                                ) : filteredCourses.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="py-8 text-center text-gray-500 border-t border-b border-dark-red-2">
+                                            No courses found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredCourses.map((course) => (
+                                        <tr 
+                                            key={course.id}
+                                            className="hover:bg-gray-50 transition-colors duration-200"
+                                        >
+                                            <td className="py-3 px-4 border-t border-b border-dark-red-2 max-w-[150px] truncate">
+                                                {course.id}
+                                            </td>
+                                            <td className="py-3 px-4 border-t border-b border-dark-red-2">
+                                                {course.name}
+                                            </td>
+                                            <td className="py-3 px-4 text-center border-t border-b border-dark-red-2">
+                                                {course.maxNumber}/10
+                                            </td>
+                                            <td className="py-3 px-4 border-t border-b border-dark-red-2">
+                                                {course.schedule || 'N/A'}
+                                            </td>
+                                            <td className="py-3 px-4 border-t border-b border-dark-red-2">
+                                                {course.adviserId || 'N/A'}
+                                            </td>
+                                            <td className="py-3 px-4 text-center border-t border-b border-dark-red-2">
+                                                <button 
+                                                    onClick={() => handleAddCourse(course.id)}
+                                                    disabled={loading}
+                                                    className="text-dark-red-2 hover:text-dark-red-5 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    aria-label="Add course"
+                                                >
+                                                    <svg 
+                                                        xmlns="http://www.w3.org/2000/svg" 
+                                                        width="24" 
+                                                        height="24" 
+                                                        viewBox="0 0 32 32"
+                                                        fill="currentColor"
+                                                    >
+                                                        <path d="M 16 3 C 8.832031 3 3 8.832031 3 16 C 3 23.167969 8.832031 29 16 29 C 23.167969 29 29 23.167969 29 16 C 29 8.832031 23.167969 3 16 3 Z M 16 5 C 22.085938 5 27 9.914063 27 16 C 27 22.085938 22.085938 27 16 27 C 9.914063 27 5 22.085938 5 16 C 5 9.914063 9.914063 5 16 5 Z M 15 10 L 15 15 L 10 15 L 10 17 L 15 17 L 15 22 L 17 22 L 17 17 L 22 17 L 22 15 L 17 15 L 17 10 Z"></path>
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <DiscardChangesModal
+                show={showDiscardModal}
+                onConfirm={handleDiscardChanges}
+                onCancel={handleCancelDiscard}
+            />
+        </>
     );
-};
-
-
+}
 
 export default AddCourseModal;

@@ -22,6 +22,7 @@ model users {
   birthmonth Int
   birthdate Int
   birthyear Int
+  phoneNumber String?
   profilePicLink String?
   status         String?
   email     String   @unique
@@ -33,6 +34,7 @@ model users {
   firstLogin Boolean @default(true)
   resetToken String?
   resetTokenExpiry DateTime?
+  changePassword Boolean @default(true)
 
   advisedCourses course[] @relation("UserAdvisesCourses")
 }

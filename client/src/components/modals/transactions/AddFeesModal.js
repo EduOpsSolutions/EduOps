@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from "react";
 import DiscardChangesModal from "../common/DiscardChangesModal";
+import ModalTextField from "../../form/ModalTextField";
 
-const AddFeesModal = ({ isOpen, onClose, studentName, course }) => {
+const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course }) => {
   const [formData, setFormData] = useState({
-    feeName: "",
+    description: "",
     amount: "",
     dueDate: "",
   });
 
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setShowDiscardModal(false);
       setFormData({
-        feeName: "",
+        description: "",
         amount: "",
         dueDate: "",
       });
@@ -29,11 +31,35 @@ const AddFeesModal = ({ isOpen, onClose, studentName, course }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("New fee data:", formData);
-    console.log("For student:", studentName);
-    onClose();
+    
+    try {
+      setLoading(true); 
+      
+      const feeData = {
+        description: formData.description,
+        amount: parseFloat(formData.amount).toFixed(2),
+        dueDate: formatDate(formData.dueDate),
+      };
+
+      if (onSubmit && typeof onSubmit === "function") {
+        await onSubmit(feeData); 
+      }
+      
+      onClose();
+    } catch (error) {
+      console.error("Failed to add fee:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hasChanges = () => {
@@ -62,7 +88,7 @@ const AddFeesModal = ({ isOpen, onClose, studentName, course }) => {
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative">
+        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-2xl mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-2xl font-bold">Add Fees</h2>
             <button
@@ -94,70 +120,71 @@ const AddFeesModal = ({ isOpen, onClose, studentName, course }) => {
             </p>
           </div>
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Fee Name</label>
-              <input
-                type="text"
-                name="feeName"
-                value={formData.feeName}
-                onChange={handleInputChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Enter fee name"
-                required
-              />
-            </div>
+            {/* Description */}
+            <ModalTextField
+              label="Description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Enter fee description"
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Amount</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
-                  ₱
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  className="w-full border-2 border-red-900 rounded pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-            </div>
+            {/* Amount */}
+            <ModalTextField
+              label="Amount"
+              name="amount"
+              type="number"
+              step="0.01"
+              value={formData.amount}
+              onChange={handleInputChange}
+              placeholder="0.00"
+              min="0"
+              required
+            >
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                ₱
+              </span>
+            </ModalTextField>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Due Date</label>
-              <input
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleInputChange}
-                className="w-full border-2 border-red-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                required
-              />
-            </div>
+            {/* Due Date */}
+            <ModalTextField
+              label="Due Date"
+              name="dueDate"
+              type="date"
+              value={formData.dueDate}
+              onChange={handleInputChange}
+              required
+            />
 
+            {/* Submit Button */}
             <div className="flex justify-center mt-6">
               <button
                 type="submit"
-                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150"
+                disabled={loading} 
+                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Fees
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Adding...</span>
+                  </div>
+                ) : (
+                  'Add Fees'
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      {showDiscardModal && (
-        <DiscardChangesModal
-          isOpen={showDiscardModal}
-          onClose={handleCancelDiscard}
-          onDiscard={handleDiscardChanges}
-        />
-      )}
+      <DiscardChangesModal
+        show={showDiscardModal}
+        onConfirm={handleDiscardChanges}
+        onCancel={handleCancelDiscard}
+      />
     </>
   );
 };

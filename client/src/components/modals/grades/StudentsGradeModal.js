@@ -1,19 +1,18 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React from 'react';
-import GradeDocumentModalButton from "../../buttons/GradeDocumentModalButton";
-import GradeStatusModalButton from "../../buttons/GradeStatusModalButton";
-import ThinRedButton from "../../buttons/ThinRedButton";
-import SmallGreySelectField from "../../textFields/SmallGreySelectField";
-
+import React, { useEffect } from 'react';
+import GradeStudentsTable from "../../tables/GradeStudentsTable";
+import GradeModalFooter from "./GradeModalFooter";
+import useGradeStore from "../../../stores/gradeStore";
+import Swal from 'sweetalert2';
 
 // To customize measurements of header 
 const customModalTheme = {
     modal: {
         "root": {
-            "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
+            "base": "fixed inset-0 z-50 h-screen w-screen overflow-y-auto overflow-x-hidden transition-opacity",
             "show": {
-            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-            "off": "hidden ease-out"
+                "on": "flex justify-center items-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
+                "off": "hidden ease-out"
             },
         },
         "header": {
@@ -25,18 +24,137 @@ const customModalTheme = {
                 "icon": "h-5 w-5"
             }
         },
-    }  
+    }
 };
 
-// To do: Make this modal accept props wherein you can pass the status of this thingy if locked sha or not.
-// If ever locked, make lines 197-214 (basta sa footer area na naay visibility) hidden
-
 function StudentsGradeModal(props) {
-    const gradeStatusOptions = [
-        { value: 'pass', label: 'PASS' },
-        { value: 'fail', label: 'FAIL' },
-        { value: 'ng', label: 'NG' },
-    ];
+    const {
+        students,
+        gradesVisible,
+        saving,
+        changesMade,
+        gradeStatusOptions,
+        getStudentGrade,
+        handleGradeChange,
+        setGradeVisibility,
+        saveGradeChanges,
+        resetGradeChanges,
+        setChangesMade,
+        setLocalGrades
+    } = useGradeStore();
+
+    const courseInfo = {
+        courseName: props.course ? props.course.name : '',
+        courseSchedule: props.course ? props.course.schedule : '',
+        courseTime: props.course ? props.course.time : '',
+        courseRoom: props.course ? props.course.room : ''
+    };
+
+    const handleDocumentUpload = (studentId) => {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                Swal.fire({
+                    title: 'Uploading...',
+                    text: `Uploading "${file.name}" for student ID: ${studentId}`,
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                setTimeout(() => {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: `Document "${file.name}" uploaded successfully for student ID: ${studentId}`,
+                        icon: 'success',
+                        confirmButtonColor: '#992525',
+                    });
+
+                    setChangesMade(true);
+                }, 1000);
+            }
+        };
+
+        fileInput.click();
+    };
+
+    const handleVisibilityToggle = (visible) => {
+        setGradeVisibility(visible);
+    };
+
+    const handleSaveGrades = async () => {
+        try {
+            const result = await Swal.fire({
+                title: 'Save Grades',
+                text: 'Are you sure you want to save the grades?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Save',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#992525',
+                cancelButtonColor: '#6b7280',
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Saving...',
+                    text: 'Please wait while we save the grades.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                await saveGradeChanges();
+
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Grades saved successfully',
+                    icon: 'success',
+                    confirmButtonColor: '#992525',
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Failed to save grades: ' + error.message,
+                icon: 'error',
+                confirmButtonColor: '#992525',
+            });
+        }
+    };
+
+    const handleModalClose = async () => {
+        if (changesMade) {
+            const result = await Swal.fire({
+                title: 'Discard Changes?',
+                text: 'Any unsaved changes will be lost. Are you sure you want to close?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Discard',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#992525',
+                cancelButtonColor: '#6b7280',
+            });
+
+            if (result.isConfirmed) {
+                resetGradeChanges();
+                props.setStudentsGradeModal(false);
+            }
+        } else {
+            props.setStudentsGradeModal(false);
+        }
+    };
+
+    useEffect(() => {
+        if (props.students_grade_modal) {
+            setChangesMade(false);
+        }
+    }, [props.students_grade_modal, students, gradesVisible, setChangesMade]);
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
@@ -44,177 +162,58 @@ function StudentsGradeModal(props) {
                 dismissible
                 show={props.students_grade_modal}
                 size="7xl"
-                onClose={() => props.setStudentsGradeModal(false)}
+                onClose={() => handleModalClose()}
                 popup
                 className="transition duration-150 ease-out"
+                theme={{
+                    root: {
+                        base: "fixed inset-0 z-50 h-screen w-screen overflow-y-auto overflow-x-hidden transition-opacity",
+                        show: {
+                            on: "flex justify-center items-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
+                            off: "hidden ease-out"
+                        }
+                    },
+                    content: {
+                        base: "relative w-full p-4 h-auto",
+                        inner: "bg-transparent relative rounded-lg max-h-[90vh] overflow-y-auto"
+                    }
+                }}
             >
-            <div className="py-4 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
-                <Modal.Header className="z-10 transition ease-in-out duration-300 " />
-                    {/* Replace with backend logic for getting the course name and pass it into this thingy */}
-                    <p className="font-bold -mt-10 ml-6 mb-4 text-left text-2xl transition ease-in-out duration-300">
-                        A1 | TTh 6:30AM - 7:30AM
+                <div className="py-4 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
+                    <Modal.Header className="z-10 transition ease-in-out duration-300" />
+
+                    <p className="font-bold -mt-8 sm:-mt-10 mx-4 sm:ml-6 mb-2 sm:mb-4 text-left text-lg sm:text-xl md:text-2xl transition ease-in-out duration-300 break-words">
+                        <span className="block md:inline">{courseInfo.courseName}</span>
+                        <span className="hidden md:inline"> | </span>
+                        <span className="block md:inline">{courseInfo.courseSchedule} {courseInfo.courseTime}</span>
+                        {courseInfo.courseRoom && (
+                            <>
+                                <span className="hidden md:inline"> | </span>
+                                <span className="block md:inline">{courseInfo.courseRoom}</span>
+                            </>
+                        )}
                     </p>
+
                     <Modal.Body>
-                        {/*You can achange the height to be more dynamic pero if that is okay na then you can leave it like that*/}
-                        <div class="h-[500px]"> 
-                            <div className="h-[90%] border-y-dark-red-2 border-y-2 overflow-y-auto">
-                                <table class="text-base text-left rtl:text-right text-black mx-auto w-full">
-                                    <thead class="text-base text-black text-center border-b-dark-red-2 border-b-2 p-0">
-                                        <tr>
-                                            <th scope="col" class="px-2 py-1">
-                                            ID
-                                            </th>
-                                            <th scope="col" class="px-2 py-1">
-                                            Name
-                                            </th>
-                                            <th scope="col" class="px-2 py-1">
-                                            Grade Document
-                                            </th>
-                                            <th scope="col" class="pr-2 py-1">
-                                                Status
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                {/* Note: Replace table body data with backend logic with classnames of first tr and add Onclick logic*/}
-                                {/* PS it should account na in case overflow probably hehe */}
-                                {/* Also make sure to replace ang status and hasDoc based sa naa sa database*/}
-                                    <tbody className="text-center">
-                                        <tr>
-                                            <td class="px-2 py-1">2012923</td>
-                                            <td class="px-2 py-1">Juan Dela Cruz</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={false} status="unlocked" /></td>
-                                            <td class="px-2 py-1">
-                                                <SmallGreySelectField name="status" id="status" required={true} options={gradeStatusOptions} />
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">2102312</td>
-                                            <td class="px-2 py-1">Marsa Fe</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="unlocked" /></td>
-                                            <td class="px-2 py-1">
-                                                <SmallGreySelectField name="status" id="status" required={true} options={gradeStatusOptions} />
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">092214</td>
-                                            <td class="px-2 py-1">Angelou Sereño</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="unlocked" /></td>
-                                            <td class="px-2 py-1">
-                                                <SmallGreySelectField name="status" id="status" required={true} options={gradeStatusOptions} />
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">2012923</td>
-                                            <td class="px-2 py-1">Juan Dela Cruz</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={false} status="unlocked" /></td>
-                                            <td class="px-2 py-1">
-                                                <SmallGreySelectField name="status" id="status" required={true} options={gradeStatusOptions} />
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">2102312</td>
-                                            <td class="px-2 py-1">Marsa Fe</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="unlocked" /></td>
-                                            <td class="px-2 py-1">
-                                                <SmallGreySelectField name="status" id="status" required={true} options={gradeStatusOptions} />
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">092214</td>
-                                            <td class="px-2 py-1">Angelou Sereño</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="unlocked" /></td>
-                                            <td class="px-2 py-1">
-                                                <SmallGreySelectField name="status" id="status" required={true} options={gradeStatusOptions} />
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Calibri Sans</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={false} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="NG"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Lorem Ipsum</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="PASS"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Dios Mio</td> 
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="NG"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Kapoy Na</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="FAIL"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Calibri Sans</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={false} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="NG"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Lorem Ipsum</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="PASS"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Dios Mio</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="PASS"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="px-2 py-1">12412</td>
-                                            <td class="px-2 py-1">Kapoy Na</td>
-                                            <td class="px-2 py-1"><GradeDocumentModalButton hasDoc={true} status="locked" /></td>
-                                            <td class="px-2 py-1">
-                                                <GradeStatusModalButton status="FAIL"></GradeStatusModalButton>
-                                            </td>
-                                        </tr>
-                                        
-                                    </tbody>
-                                </table>
+                        <div className="h-[400px] sm:h-[450px] md:h-[500px] max-h-[65vh]">
+                            <div className="h-[85%] sm:h-[90%] border-y-dark-red-2 border-y-2 overflow-y-auto">
+                                <GradeStudentsTable
+                                    students={students}
+                                    gradeStatusOptions={gradeStatusOptions}
+                                    getStudentGrade={getStudentGrade}
+                                    handleGradeChange={handleGradeChange}
+                                    handleDocumentUpload={handleDocumentUpload}
+                                />
                             </div>
-                            <div className="flex flex-row items-center justify-between mt-6 w-full">
-                                <div className="flex flex-row items-center">
-                                    <div class="flex items-center me-4">
-                                        <label for="inline-checkbox" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Visibility:</label>
-                                        <input id="inline-checkbox" type="checkbox" value="" class="w-4 h-4 ml-4 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-dark-red-2 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"/>
-                                    </div>
-                                    <div className="ml-4">
-                                        {/* Insert function to upload a csv file */}
-                                        <ThinRedButton onClick={() => {}} color="bg-grey" hoverColor="bg-grey-2">
-                                            Upload CSV
-                                        </ThinRedButton>
-                                    </div>
-                                </div>
-                                <div className="">
-                                    {/* Insert function to save grades */}
-                                    <ThinRedButton onClick={() => {}} color="bg-dark-red-2" hoverColor="bg-dark-red-5">
-                                        Save Grades
-                                    </ThinRedButton>
-                                </div>
-                            </div>
+
+                            <GradeModalFooter
+                                isVisible={gradesVisible}
+                                handleVisibilityToggle={handleVisibilityToggle}
+                                handleSaveGrades={handleSaveGrades}
+                                saving={saving}
+                                setLocalGrades={setLocalGrades}
+                                setChangesMade={setChangesMade}
+                            />
                         </div>
                     </Modal.Body>
                 </div>

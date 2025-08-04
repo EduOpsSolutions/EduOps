@@ -1,110 +1,231 @@
-import { Flowbite, Modal } from "flowbite-react";
-import React, { useState } from 'react';
-import ThinRedButton from "../../buttons/ThinRedButton";
+import React, { useState, useEffect } from 'react';
 import axiosInstance from "../../../utils/axios";
-
-// To customize measurements of header 
-const customModalTheme = {
-    modal: {
-        "root": {
-            "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
-            "show": {
-            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-            "off": "hidden ease-out"
-            },
-        },
-        "header": {
-            "base": "flex items-start justify-between rounded-t border-b p-5 dark:border-gray-600",
-            "popup": "border-b-0 p-2",
-            "title": "text-xl font-medium text-gray-900 dark:text-white text-center",
-            "close": {
-                "base": "ml-auto mr-2 inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white",
-                "icon": "h-5 w-5"
-            }
-        },
-    }  
-};
-
-// To do: Make this modal accept props wherein you can pass the status of this thingy if locked sha or not.
-// If ever locked, make lines 197-214 (basta sa footer area na naay visibility) hidden
+import DiscardChangesModal from '../common/DiscardChangesModal';
+import ModalTextField from '../../form/ModalTextField';
 
 function AcademicPeriodModal({ setAddAcademicPeriodModal, addAcademicPeriodModal, fetchPeriods }) {
+    const [formData, setFormData] = useState({
+        batchName: '',
+        periodName: '',
+        startAt: '',
+        endAt: ''
+    });
 
-    const [batchName, setBatchName] = useState('');
-    const [periodName, setPeriodName] = useState('');
-    const [startAt, setStartDate] = useState('');
-    const [endAt, setEndDate] = useState('');
+    const [showDiscardModal, setShowDiscardModal] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleSubmit = async () => {
+    useEffect(() => {
+        if (!addAcademicPeriodModal) {
+            setShowDiscardModal(false);
+            setFormData({
+                batchName: '',
+                periodName: '',
+                startAt: '',
+                endAt: ''
+            });
+            setError('');
+        }
+    }, [addAcademicPeriodModal]);
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        if (error) setError('');
+    };
+
+    const validateForm = () => {
+        if (!formData.batchName.trim()) {
+            setError('Batch name is required');
+            return false;
+        }
+        if (!formData.periodName.trim()) {
+            setError('Period name is required');
+            return false;
+        }
+        if (!formData.startAt) {
+            setError('Start date is required');
+            return false;
+        }
+        if (!formData.endAt) {
+            setError('End date is required');
+            return false;
+        }
+        if (new Date(formData.startAt) >= new Date(formData.endAt)) {
+            setError('End date must be after start date');
+            return false;
+        }
+        return true;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) return;
+
         try {
-            const startDateTime = new Date(startAt);
+            setLoading(true);
+            setError('');
+
+            const startDateTime = new Date(formData.startAt);
             startDateTime.setHours(0, 0, 0, 0);
 
-            const endDateTime = new Date(endAt);
+            const endDateTime = new Date(formData.endAt);
             endDateTime.setHours(23, 59, 59, 999);
 
             const payload = {
-                batchName,
-                periodName,
+                batchName: formData.batchName.trim(),
+                periodName: formData.periodName.trim(),
                 startAt: startDateTime.toISOString(),
                 endAt: endDateTime.toISOString(),
             };
+
             console.log('Payload for creating academic period:', payload);
             const response = await axiosInstance.post('/academic-periods/create', payload);
             console.log('Academic Period created:', response.data);
+            
             await fetchPeriods();
             setAddAcademicPeriodModal(false);
+            
         } catch (error) {
             console.error('Failed to create academic period: ', error.response?.data || error.message);
+            setError(error.response?.data?.message || 'Failed to create academic period. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
+    const hasChanges = () => {
+        return Object.values(formData).some(value => value.trim() !== "");
+    };
+
+    const handleClose = () => {
+        if (hasChanges()) {
+            setShowDiscardModal(true);
+        } else {
+            setAddAcademicPeriodModal(false);
+        }
+    };
+
+    const handleDiscardChanges = () => {
+        setShowDiscardModal(false);
+        setAddAcademicPeriodModal(false);
+    };
+
+    const handleCancelDiscard = () => {
+        setShowDiscardModal(false);
+    };
+
+    if (!addAcademicPeriodModal) return null;
 
     return (
-        <Flowbite theme={{ theme: customModalTheme }}>
-            <Modal
-                dismissible
-                show={addAcademicPeriodModal}
-                size="2xl"
-                onClose={() => setAddAcademicPeriodModal(false)}
-                popup
-                className="transition duration-150 ease-out">
-                <div className="py-4 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
-                    <Modal.Header className="z-10 transition ease-in-out duration-300 " />
-                    {/* Replace with backend logic for getting the course name and pass it into this thingy */}
-                    <p className="font-bold -mt-10 ml-6 mb-4 text-center text-2xl transition ease-in-out duration-300">
-                        Period Creation
-                    </p>
-                    <Modal.Body>
-                        <div>
-                            <div class="mt-5">
-                                <p>Batch Name</p>
-                                <input type="text" class="w-full border-red-900" value={batchName} onChange={(e) => setBatchName(e.target.value)}></input>
-                            </div>
-                            <div class="mt-5">
-                                <p>Period Name</p>
-                                <input type="text" class="w-full border-red-900" value={periodName} onChange={(e) => setPeriodName(e.target.value)}></input>
-                            </div>
-                            <div className="flex justify-end mt-5">
-                                <div class="w-1/2 mr-5">
-                                    <p>Start Date</p>
-                                    <input type="date" class="w-full border-red-900" value={startAt} onChange={(e) => setStartDate(e.target.value)}></input>
-                                </div>
-                                <div class="w-1/2 mr-5">
-                                    <p>End Date</p>
-                                    <input type="date" class="w-full border-red-900" value={endAt} onChange={(e) => setEndDate(e.target.value)}></input>
-                                </div>
-                            </div>
+        <>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-2xl mx-4 relative max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-start justify-between mb-6">
+                        <h2 className="text-2xl font-bold">Period Creation</h2>
+                        <button
+                            className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
+                            onClick={handleClose}
+                        >
+                            <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                            {error}
                         </div>
-                        <div className="flex justify-center mt-10">
-                            <ThinRedButton onClick={handleSubmit} color="bg-dark-red-2" hoverColor="bg-dark-red-5">
-                                Submit
-                            </ThinRedButton>
+                    )}
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Batch Name */}
+                        <ModalTextField
+                            label="Batch Name"
+                            name="batchName"
+                            value={formData.batchName}
+                            onChange={handleInputChange}
+                            placeholder="Enter batch name"
+                            required
+                        />
+
+                        {/* Period Name */}
+                        <ModalTextField
+                            label="Period Name"
+                            name="periodName"
+                            value={formData.periodName}
+                            onChange={handleInputChange}
+                            placeholder="Enter period name"
+                            required
+                        />
+
+                        {/* Date Range */}
+                        <div className="flex flex-row justify-center items-center gap-4">
+                            <ModalTextField
+                                label="Start Date"
+                                name="startAt"
+                                type="date"
+                                value={formData.startAt}
+                                onChange={handleInputChange}
+                                required
+                                className="w-1/2"
+                            />
+
+                            <ModalTextField
+                                label="End Date"
+                                name="endAt"
+                                type="date"
+                                value={formData.endAt}
+                                onChange={handleInputChange}
+                                required
+                                className="w-1/2"
+                            />
                         </div>
-                    </Modal.Body>
+
+                        {/* Submit Button */}
+                        <div className="flex justify-center mt-6">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? (
+                                    <div className="flex items-center space-x-2">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                        <span>Creating...</span>
+                                    </div>
+                                ) : (
+                                    'Submit'
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </Modal>
-        </Flowbite>
+            </div>
+
+            <DiscardChangesModal
+                show={showDiscardModal}
+                onConfirm={handleDiscardChanges}
+                onCancel={handleCancelDiscard}
+            />
+        </>
     );
 }
 

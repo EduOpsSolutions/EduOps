@@ -1,77 +1,55 @@
-import Cookies from "js-cookie";
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Bg_image from "../../assets/images/GermanyBg.png";
-import Left_section_image from "../../assets/images/PhpGermanFlag.jpg";
-import Logo from "../../assets/images/SprachinsLogo.png";
-import PrimaryButton from "../../components/buttons/PrimaryButton";
-import SecondaryButton from "../../components/buttons/SecondaryButton";
-import DevLoginModal from "../../components/modals/common/DevLoginModal";
-import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
-import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
-
-Cookies.remove();
+import Cookies from 'js-cookie';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Bg_image from '../../assets/images/GermanyBg.png';
+import Left_section_image from '../../assets/images/PhpGermanFlag.jpg';
+import Logo from '../../assets/images/SprachinsLogo.png';
+import PrimaryButton from '../../components/buttons/PrimaryButton';
+import SecondaryButton from '../../components/buttons/SecondaryButton';
+import DevLoginModal from '../../components/modals/common/DevLoginModal';
+import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
+import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
+import Swal from 'sweetalert2';
+import { BsEye, BsEyeSlash } from 'react-icons/bs';
+import useAuthStore from '../../stores/authStore';
 
 function Login() {
+  const { login, isLoading, getUser } = useAuthStore();
+
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
   const [password_reset_modal, setPasswordResetModal] = useState(false);
   const [dev_login_modal, setDevLoginModal] = useState(false);
 
   const navigate = useNavigate();
 
-  //hyperlink to another page
-  const navigateToForgotPassword = () => {
-    navigate("/forgot-password");
-  };
+  const handleLogin = async () => {
+    try {
+      const result = await login(email, password);
+      console.log('Login result:', result);
 
-  const navigateToSignUp = () => {
-    navigate("/sign-up");
-  }
-
-  const navigateToStudent = () => {
-    navigate("/student");
-  };
-
-  const navigateToPrivacyPolicy = () => {
-    navigate("../legal/privacy-policy");
-  };
-
-  const navigateToTerms = () => {
-    navigate("../legal/terms");
-  };
-
-  const removeAllCookies = () => {
-    const allCookies = Cookies.get();
-    Object.keys(allCookies).forEach((cookieName) => {
-      // Remove each cookie with the necessary attributes
-      Cookies.remove(cookieName, {
-        secure: true,
-        httpOnly: false,
-        sameSite: "Strict",
-      });
-    });
-  };
-
-  const submitForm = async () => {
-    removeAllCookies(); //flushes the old cookies to ensure fresh login
-    const expiry = in30Minutes(); //expiry of token for 30 mins
-    Cookies.set(
-      "studentId",
-      "01202412312002", //set this when sucessfully logging in. This will store student data and json web tokens to ensure secure communication between server and client
-      {
-        secure: true,
-        httpOnly: false,
-        sameSite: "Strict",
-        expires: expiry,
+      if (result.success) {
+        const userRole = getUser().role;
+        if (userRole === 'student') {
+          navigate('/student');
+        } else if (userRole === 'admin') {
+          navigate('/admin');
+        } else if (userRole === 'teacher') {
+          navigate('/teacher');
+        } else {
+          navigate('/');
+        }
       }
-    );
-    Cookies.set("token", "BSQ1361Afadfae213DQ1", {
-      secure: true,
-      httpOnly: false,
-      sameSite: "Strict",
-      expires: expiry,
-    });
-    navigate("/student");
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: error.message || 'A client-side error occurred.',
+        confirmButtonColor: '#DE0000',
+        customClass: {
+          confirmButton: 'bg-german-red hover:bg-dark-red-2 text-white',
+        },
+      });
+    }
   };
 
   const handlePasswordChange = (e) => {
@@ -82,24 +60,9 @@ function Login() {
     setEmail(e.target.value);
   };
 
-  var in30Minutes = () => {
-    //token expiry for 30 mins
-    const date = new Date();
-    date.setTime(date.getTime() + 30 * 60 * 1000);
-    return date;
-  };
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(true);
-
-  useEffect(() => {
-    return () => {
-      Cookies.remove();
-    };
-  }, []);
-
-  // Editor's Note: Need to fix responsiveness of the page.
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     // Backgroung image and overlay
@@ -107,9 +70,9 @@ function Login() {
       className="flex justify-center items-center bg-white-yellow-tone"
       style={{
         backgroundImage: `url(${Bg_image})`,
-        backgroundSize: "135%",
-        backgroundPosition: "20% 70%",
-        minHeight: "100vh",
+        backgroundSize: '135%',
+        backgroundPosition: '20% 70%',
+        minHeight: '100vh',
       }}
     >
       <div className="absolute inset-0 bg-white-yellow-tone opacity-75"></div>
@@ -123,9 +86,9 @@ function Login() {
               className="absolute inset-0 w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage: `url(${Left_section_image})`,
-                backgroundSize: "115%",
-                backgroundPosition: "100% 40%",
-                clipPath: "polygon(0 0, 100% 0, 80% 100%, 0% 100%)",
+                backgroundSize: '115%',
+                backgroundPosition: '100% 40%',
+                clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
               }}
             ></div>
 
@@ -138,7 +101,7 @@ function Login() {
             <p className="font-semibold text-[28px] text-white font-sans">
               WELCOME TO
             </p>
-            <img className="w-[60%] h-auto mt-2" src={Logo} />
+            <img className="w-[60%] h-auto mt-2" src={Logo} alt="Logo" />
 
             {/* Login form */}
             <form className="flex flex-col items-center w-2/3 mt-2">
@@ -183,13 +146,27 @@ function Login() {
                   />
                 </svg>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"
-                  className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
+                  className="border border-black pl-10 pr-10 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
                   placeholder="Password"
                   onChange={handlePasswordChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleLogin();
+                    }
+                  }}
                 />
+                <button
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPassword(!showPassword);
+                  }}
+                >
+                  {showPassword ? <BsEye /> : <BsEyeSlash />}
+                </button>
               </div>
 
               {/* need to change hover color */}
@@ -204,7 +181,7 @@ function Login() {
 
               {/* Modals */}
               {/* Note: Need to add transition effect on modals */}
-          
+
               {/* Forget Password Modal */}
               <ForgetPasswordModal
                 forget_pass_modal={forget_pass_modal}
@@ -225,9 +202,10 @@ function Login() {
               */}
 
               {/* DELETE THIS AFTER IMPLEMENTING BACKEND LOGIC FOR LOGGING IN */}
-              <PrimaryButton onClick={() => setDevLoginModal(true)}>Login</PrimaryButton> 
+              <PrimaryButton disabled={isLoading} onClick={handleLogin}>
+                Login
+              </PrimaryButton>
 
-              
               {/* ALSO DELETE THIS AFTER BACKEND LOGIC FOR LOGGING IN */}
               <DevLoginModal
                 dev_login_modal={dev_login_modal}
@@ -241,7 +219,7 @@ function Login() {
                 <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
                   New Student?
                 </p>
-                <SecondaryButton onClick={navigateToSignUp}>
+                <SecondaryButton onClick={() => navigate('/sign-up')}>
                   Enroll Now
                 </SecondaryButton>
               </div>
@@ -254,25 +232,26 @@ function Login() {
               </div>
             </div>
 
-              {/* Terms and Privacy Policy Section*/}
-            <div className='w-80'>
-              <p className="text-sm mt-2 text-white-yellow-tone text-center">By using this service, you understood and agree to our {' '}
-              <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
-                <a onClick={navigateToTerms}>Terms</a>
-              </span>
-              {' and '}
-              <span className="cursor-pointer text-german-yellow hover:text-bright-red underline"> 
-                <a onClick={navigateToPrivacyPolicy}>Privacy Policy</a>
-              </span>
-
+            {/* Terms and Privacy Policy Section*/}
+            <div className="w-80">
+              <p className="text-sm mt-2 text-white-yellow-tone text-center">
+                By using this service, you understood and agree to our{' '}
+                <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
+                  <button onClick={() => navigate('../legal/terms')}>
+                    Terms
+                  </button>
+                </span>
+                {' and '}
+                <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
+                  <button onClick={() => navigate('../legal/privacy-policy')}>
+                    Privacy Policy
+                  </button>
+                </span>
               </p>
             </div>
           </div>
         </div>
       </div>
-
-    
-      
     </div>
   );
 }

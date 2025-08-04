@@ -27,7 +27,7 @@
 }
 
 .course-table {
-  border-collapse: collapse; 
+  border-collapse: collapse;
 }
 
 .course-table td {
@@ -35,4 +35,15 @@
   border-bottom: 1px solid darkred;
   padding: 8px;
   text-align: center;
+}
+
+.swal2-cancel.swal-cancel-outline {
+  color: #ff0000 !important;
+  background: #fff !important;
+  outline: 2px solid #ff0000 !important;
+  box-shadow: none !important;
+}
+.swal2-cancel.swal-cancel-outline:hover {
+  background: #ff0000 !important;
+  color: #fff !important;
 }

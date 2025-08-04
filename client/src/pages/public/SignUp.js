@@ -109,9 +109,10 @@ function SignUp() {
     };
 
     return (
-        <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
+        <>
             <UserNavbar role="public" />
-            <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-32 mb-12 flex flex-col">
+            <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
+                <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-8 mb-12 flex flex-col">
                 <BackButton onClick={navigateToLogin} className="top-0 left-0 mt-2 ml-2" />
                 <form className="px-8 py-4 flex flex-col" onSubmit={handleSubmit}>
                     <h1 className='text-center text-3xl font-bold'>Enrollment Form</h1>
@@ -183,8 +184,9 @@ function SignUp() {
                     {/* Add Onclick function to go to enrollment */}
                     <SmallButton type="submit">Proceed</SmallButton>
                 </form>
-            </div>
-        </section>
+                </div>
+            </section>
+        </>
     );
 }
 
