@@ -44,7 +44,7 @@ const Pagination = ({
             <select
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="border-2 border-red-900 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="border border-dark-red-2 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
             >
               {itemsPerPageOptions.map((option) => (
                 <option key={option} value={option}>

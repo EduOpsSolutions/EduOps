@@ -6,6 +6,8 @@ import ThinRedButton from "../../components/buttons/ThinRedButton";
 function EnrollmentRequests() {
   const [enrollmentRequests, setEnrollmentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchEnrollmentRequests();
@@ -14,88 +16,223 @@ function EnrollmentRequests() {
   const fetchEnrollmentRequests = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await axios.get('/enrollment-request');
       if (!response.data.error) {
         setEnrollmentRequests(response.data.data);
       } else {
-        console.error('Error fetching enrollment requests:', response.data.message);
+        setError('Error fetching enrollment requests: ' + response.data.message);
       }
     } catch (error) {
       console.error('Error fetching enrollment requests:', error);
+      setError('Failed to load enrollment requests. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const clearError = () => {
+    setError('');
+  };
+
+  const handleSearch = () => {
+    console.log('Searching for:', searchTerm);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const filteredRequests = enrollmentRequests.filter(request =>
+    request.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.id?.toString().includes(searchTerm) ||
+    request.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="bg_custom bg-white-yellow-tone">
-      <div className="relative z-[2]">
-        <div className="flex flex-col justify-center items-center">
-          <div className="flex m-4">
-            <p className="text-6xl font-semibold ml-2">Enrollment Requests</p>
+      <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+        <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold">Enrollment Requests</h1>
           </div>
-        </div>
-      </div>
 
-      <div className="w-5/6 mx-auto">
-        <div className="flex flex-row justify-between items-center my-8 pt-5">
-          <SearchField name="enrollment" id="enrollment" placeholder="Search User" className="flex-grow"></SearchField>
-          <div className="flex-shrink-0">
-            <ThinRedButton onClick={() => {}}>
-              <p className="text-xs">End Enrollment</p>
-            </ThinRedButton>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col justify-center items-center">
-        <div className='h-[60vh] w-5/6 bg-white-yellow-tone px-5 border-dark-red border-2'>
-          {loading ? (
-            <div className="flex justify-center items-center h-full">
-              Loading enrollment requests...
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              <div className="flex justify-between items-center">
+                <span>{error}</span>
+                <button
+                  onClick={clearError}
+                  className="text-red-700 hover:text-red-900"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
-          ) : (
-            <table className="course-table mt-3 min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Courses</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Balance</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Paid</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">O.R.</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Step</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {enrollmentRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">{request.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.courses}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.amountBalance}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.amountPaid}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.or}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.phoneNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{request.step}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex space-x-2">
-                        <button><i className="fas fa-eye"></i></button>
-                        <button><i className="fas fa-edit"></i></button>
-                        <button><i className="fas fa-info-circle"></i></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           )}
+
+          <div className="mb-6 md:mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+              {/* Search Field */}
+              <div className="order-1 sm:order-1">
+                <SearchField
+                  name="searchTerm"
+                  placeholder="Search User"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  onClick={handleSearch}
+                  className="w-full sm:w-80"
+                />
+              </div>
+              
+              <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
+                <ThinRedButton onClick={() => {}}>
+                  End Enrollment
+                </ThinRedButton>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Section */}
+          <div className="pt-2">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+                  <p className="text-lg">Loading Enrollment Requests...</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto -mx-2 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b-2 border-gray-300">
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            ID
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Name
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Courses
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Amount Balance
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Amount Paid
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            O.R.
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Phone
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Email
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Date
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Step
+                          </th>
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRequests.map((request, index) => (
+                          <tr
+                            key={request.id || index}
+                            className="cursor-pointer transition-colors duration-200 hover:bg-dark-red hover:text-white"
+                          >
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.id}>
+                                {request.id}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-24 sm:max-w-32 md:max-w-none" title={request.name}>
+                                {request.name}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.courses || 'N/A'}>
+                                {request.courses || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-28 md:max-w-none" title={request.amountBalance || 'N/A'}>
+                                {request.amountBalance || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.amountPaid || 'N/A'}>
+                                {request.amountPaid || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.or || 'N/A'}>
+                                {request.or || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.phoneNumber || 'N/A'}>
+                                {request.phoneNumber || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.email || 'N/A'}>
+                                {request.email || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.date || 'N/A'}>
+                                {request.date || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.step || 'N/A'}>
+                                {request.step || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div className="flex space-x-2">
+                                <button className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150" title="View">
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150" title="Edit">
+                                  <i className="fas fa-edit"></i>
+                                </button>
+                                <button className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150" title="Info">
+                                  <i className="fas fa-info-circle"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredRequests.length === 0 && !loading && (
+                          <tr>
+                            <td
+                              colSpan="11"
+                              className="text-center py-6 md:py-8 text-gray-500 border-t border-b border-red-900 text-sm md:text-base"
+                            >
+                              No enrollment requests found
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

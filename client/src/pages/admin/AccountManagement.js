@@ -1,187 +1,191 @@
-import React, { useState, useEffect } from 'react';
-import Table from '../../components/tables/Table';
-import Swal from 'sweetalert2';
+import React, { useEffect } from 'react';
 import SearchField from '../../components/textFields/SearchField';
 import DropDown from '../../components/form/DropDown';
-import { getCookieItem } from '../../utils/jwt';
-import axiosInstance from '../../utils/axios';
 import Pagination from '../../components/common/Pagination';
 import UserAccountDetailsModal from '../../components/modals/manage-accounts/UserAccountDetailsModal';
+import StatisticsCards from '../../components/modals/manage-accounts/StatisticsCards';
+import UsersTable from '../../components/modals/manage-accounts/UsersTable';
+import useUserAccountStore from '../../stores/userAccountStore';
 
 export default function AccountManagement() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingSave, setLoadingSave] = useState(false);
-  const [error, setError] = useState(null);
-  const [search, setSearch] = useState(null);
-  const [role, setRole] = useState('');
-  const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showUserAccountDetailsModal, setShowUserAccountDetailsModal] =
-    useState(false);
+  const {
+    data,
+    loading,
+    loadingSave,
+    error,
+    search,
+    role,
+    page,
+    itemsPerPage,
+    selectedUser,
+    showUserAccountDetailsModal,
+    stats,
+  
+    setSearch,
+    setRole,
+    setPage,
+    setItemsPerPage,
+    setSelectedUser,
+    clearError,
+    fetchData,
+    handleSave,
+    handleSearch,
+    openUserModal,
+    closeUserModal
+  } = useUserAccountStore();
 
-  const handleSave = async (selectedUser) => {
-    const token = getCookieItem('token');
-    setError(null);
-    setLoadingSave(true);
-    try {
-      const response = await axiosInstance.put(
-        `${process.env.REACT_APP_API_URL}/users/${selectedUser.id}`,
-        selectedUser,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: response.data.message,
-      });
-      fetchData();
-    } catch (error) {
-      setError(true);
-      Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: error.response.data.message
-          ? error.response.data.message
-          : `Something went wrong! ${error.message}`,
-      });
-      console.log('error', error);
-    } finally {
-      setLoadingSave(false);
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getRoleDisplay = (role) => {
+    if (!role) return 'N/A';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  const getStatusDisplay = (status) => {
+    if (!status) return 'N/A';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  const getUserInitials = (firstName, lastName) => {
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  };
+
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800 border border-red-200';
+      case 'teacher':
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+      case 'student':
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
   };
 
-  const fetchData = async () => {
-    const token = getCookieItem('token');
-    setError(null);
-    setLoading(true);
-    try {
-      const response = await axiosInstance.get(
-        `${process.env.REACT_APP_API_URL}/users`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            search: search,
-            role,
-            page,
-            take: itemsPerPage,
-          },
-        }
-      );
-      setData(response.data);
-    } catch (error) {
-      setError(true);
-      Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: error.response.data.message
-          ? error.response.data.message
-          : `Something went wrong! ${error.message}`,
-      });
-      console.log('error', error);
-    } finally {
-      setLoading(false);
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 border border-green-200';
+      case 'disabled':
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
+      case 'deleted':
+        return 'bg-red-100 text-red-800 border border-red-200';
+      case 'suspended':
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [role]);
+  const roleDropdownOptions = [
+    { value: '', label: 'All Roles' },
+    { value: 'admin', label: 'Admin' },
+    { value: 'teacher', label: 'Teacher' },
+    { value: 'student', label: 'Student' },
+  ];
 
   useEffect(() => {
     fetchData();
-  }, [page, itemsPerPage]);
+  }, [role, page, itemsPerPage, fetchData]);
 
   return (
-    <div className="bg_custom bg-white-yellow-tone flex flex-col">
-      <p className="text-2xl font-bold w-full text-center pt-2">
-        User Accounts
-      </p>
+    <div className="bg_custom bg-white-yellow-tone">
+      <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+        <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+          
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold">User Accounts</h1>
+          </div>
 
-      <div className="p-4 flex flex-col h-[6rem] w-[60%] mx-auto mt-2 rounded-md bg-white border-2 border-german-red">
-        <div className="flex gap-4">
-          <SearchField
-            name="search"
-            id="search"
-            placeholder="Search by name, email, or role"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-1/3"
-            onClick={() => {
-              fetchData();
-            }}
-          />
+          <StatisticsCards stats={stats} />
 
-          <DropDown
-            name="role"
-            id="role"
-            options={[
-              { value: '', label: 'All' },
-              { value: 'admin', label: 'Admin' },
-              { value: 'student', label: 'Student' },
-              { value: 'teacher', label: 'Teacher' },
-            ]}
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          />
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              <div className="flex justify-between items-center">
+                <span>{error}</span>
+                <button
+                  onClick={clearError}
+                  className="text-red-700 hover:text-red-900"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div className="mb-6 md:mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+              <div className="order-1 sm:order-1">
+                <SearchField
+                  name="search"
+                  placeholder="Search by name, email, or role"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onClick={handleSearch}
+                  className="w-full sm:w-80"
+                />
+              </div>
+              
+              <div className="flex justify-center sm:justify-start w-full sm:w-auto order-2 sm:order-2">
+                <DropDown
+                  name="role"
+                  id="role"
+                  options={roleDropdownOptions}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-48"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <UsersTable 
+              data={data.data}
+              loading={loading}
+              onUserClick={openUserModal}
+              formatDate={formatDate}
+              getRoleDisplay={getRoleDisplay}
+              getStatusDisplay={getStatusDisplay}
+              getUserInitials={getUserInitials}
+              getRoleBadgeColor={getRoleBadgeColor}
+              getStatusBadgeColor={getStatusBadgeColor}
+            />
+
+            {!loading && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={data.page || 1}
+                  totalPages={data.max_page || 1}
+                  onPageChange={setPage}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  totalItems={data.max_result || 0}
+                  itemName="users"
+                  showItemsPerPageSelector={true}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <Table
-        headers={[
-          'ID',
-          'First Name',
-          'Middle Name',
-          'Last Name',
-          'Email',
-          'Role',
-          'Status',
-          'Created At',
-          'Updated At',
-          'Deleted At',
-        ]}
-        className="w-[90%] mx-auto mt-4 h-max-[40rem] overflow-y-auto"
-        data={data.data}
-        isLoading={loading}
-        isError={error}
-        onClickItem={(item) => {
-          setSelectedUser(item);
-          setShowUserAccountDetailsModal(true);
-        }}
-      />
-
-      <Pagination
-        currentPage={data.page}
-        onPageChange={setPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={data.max_result}
-        totalPages={data.max_page}
-        itemName="users"
-        className="lg:mx-[20rem] md:mx-[10rem] mx-2"
-      />
       <UserAccountDetailsModal
         data={selectedUser}
         setData={setSelectedUser}
         show={showUserAccountDetailsModal}
-        handleClose={() => setShowUserAccountDetailsModal(false)}
+        handleClose={closeUserModal}
         handleSave={handleSave}
         loadingSave={loadingSave}
       />
-
-      <br />
-      <br />
-      <br />
-      <br />
     </div>
   );
 }
