@@ -12,6 +12,7 @@ function Assessment() {
 
   // Search store
   const searchStore = useAssessmentSearchStore();
+  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
   
   // Assessment store
   const {
@@ -33,14 +34,13 @@ function Assessment() {
   } = useAssessmentStore();
 
   useEffect(() => {
-    searchStore.initializeSearch();
-    searchStore.handleSearch();
-    
+    initializeSearch();
+    performSearch();
     return () => {
       resetStore();
-      searchStore.resetSearch();
+      resetSearch();
     };
-  }, []);
+  }, [initializeSearch, performSearch, resetStore, resetSearch]);
 
   // Search form config
   const searchFormConfig = {
@@ -95,7 +95,8 @@ function Assessment() {
   };
 
   return (
-    <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
+    <>
+      <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-8 lg:gap-16 lg:items-start">
         <div className="w-full lg:w-80 lg:flex-shrink-0 lg:self-start">
           <SearchFormVertical
@@ -149,7 +150,7 @@ function Assessment() {
                   onItemsPerPageChange={searchStore.handleItemsPerPageChange}
                   totalItems={searchStore.totalItems}
                   itemName="students"
-                  itemsPerPageOptions={[5, 10, 15, 20]}
+                  itemsPerPageOptions={[10, 25, 50, 100]}
                   showItemsPerPageSelector={true}
                 />
               )}
@@ -255,6 +256,7 @@ function Assessment() {
         </div>
       </div>
       
+      </div>
       <TransactionHistoryModal
         transaction_history_modal={transactionHistoryModal}
         setTransactionHistoryModal={closeTransactionHistoryModal}
@@ -267,7 +269,7 @@ function Assessment() {
         studentName={selectedStudent?.name || ""}
         course={selectedStudent?.course || ""}
       />
-    </div>
+    </>
   );
 }
 

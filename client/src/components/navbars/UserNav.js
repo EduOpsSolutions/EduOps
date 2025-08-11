@@ -7,7 +7,7 @@ import UserActionsDropdown from './UserDropdown';
 import NavigationDropdown from './NavigationDropdown';
 
 function UserNavbar({ role }) {
-  const { isCompactMenuOpen, toggleCompactMenu, getNavigationItems } = useNavigationStore();
+  const { isCompactMenuOpen, toggleCompactMenu, getNavigationItems, closeCompactMenu } = useNavigationStore();
   const navigationItems = getNavigationItems(role);
 
   const renderNavigationItem = (key, item) => {
@@ -26,6 +26,7 @@ function UserNavbar({ role }) {
         key={key}
         to={item.path}
         className="hover:text-dark-red-4 text-base sm:text-lg font-bold"
+        onClick={closeCompactMenu}
       >
         {item.label}
       </Link>
@@ -45,17 +46,19 @@ function UserNavbar({ role }) {
   }
 
   return (
-    <nav className="w-full h-auto sm:h-20 flex flex-col sm:flex-row justify-between items-center bg-german-red text-white px-4 sm:px-8 py-2 border-b-[5px] border-dark-red-2 z-10 select-none">
-      <div className="w-full sm:w-auto flex justify-between items-center">
+    <nav className="w-full h-auto md:h-20 flex flex-col md:flex-row justify-between items-center bg-german-red text-white px-4 md:px-8 py-2 border-b-[5px] border-dark-red-2 z-10 select-none">
+  <div className="w-full md:w-auto flex justify-between items-center">
         <Link to={`/${role}`} className="flex items-center">
           <img src={logo} alt="" className="h-16 w-auto" />
         </Link>
 
-        <div className="sm:hidden flex items-center gap-2">
-          <div className={`${isCompactMenuOpen ? 'flex' : 'hidden'} items-center gap-2`}>
-            <NotificationDropdown isCompact={true} />
-            <UserActionsDropdown role={role} isCompact={true} />
-          </div>
+  <div className="md:hidden flex items-center gap-2">
+    <div className={`${isCompactMenuOpen ? 'flex' : 'hidden'} items-center gap-2`}>  
+      <NotificationDropdown isCompact={true} />
+      <div className="flex">
+        <UserActionsDropdown role={role} isCompact={true} />
+      </div>
+    </div>
           
           <button
             onClick={toggleCompactMenu}
@@ -87,13 +90,13 @@ function UserNavbar({ role }) {
         </div>
       </div>
 
-      <div className={`${isCompactMenuOpen ? 'flex' : 'hidden'} sm:flex flex-col sm:flex-row w-full sm:w-auto items-center gap-4 sm:gap-6 py-4 sm:py-0`}>
+  <div className={`${isCompactMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row w-full md:w-auto items-center gap-4 md:gap-6 py-4 md:py-0`}>
         {Object.entries(navigationItems).map(([key, item]) =>
           renderNavigationItem(key, item)
         )}
       </div>
 
-      <div className="hidden sm:flex items-center gap-4">
+  <div className="hidden md:flex items-center gap-6">
         <NotificationDropdown isCompact={false} />
         <UserActionsDropdown role={role} isCompact={false} />
       </div>
