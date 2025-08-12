@@ -24,7 +24,7 @@ import ResetPassword from './pages/public/ResetPassword';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
-import Documents from './pages/student/Documents';
+import StudentDocuments from './pages/student/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
@@ -37,6 +37,7 @@ import Assessment from './pages/student/Assessment';
 import TeacherLayout from './components/layout/TeacherLayout';
 import TeacherHome from './pages/teacher/Home';
 import TeachingLoad from './pages/teacher/TeachingLoad';
+import TeacherDocuments from './pages/teacher/Documents';
 
 /* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
@@ -89,7 +90,7 @@ function App() {
                 <Route path="grades" element={<Grades />} />
                 <Route path="assessment" element={<Assessment />} />
                 <Route path="ledger" element={<Ledger />} />
-                <Route path="documents" element={<Documents />} />
+                <Route path="documents" element={<StudentDocuments />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
@@ -102,7 +103,7 @@ function App() {
                 <Route index element={<TeacherHome />} />
                 <Route path="profile" element={<Profile role="teacher" />} />
                 <Route path="teachingLoad" element={<TeachingLoad />} />
-                <Route path="documents" element={<Documents />} />
+                <Route path="documents" element={<TeacherDocuments />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="terms" element={<Terms />} />
