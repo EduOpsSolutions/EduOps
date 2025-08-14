@@ -6,10 +6,10 @@ import SearchResults from "../../components/common/SearchResults";
 import LedgerDetails from "../../components/tables/LedgerDetailsTable";
 
 function Ledger() {
-  
+
   // Search store
   const searchStore = useLedgerSearchStore();
-  
+
   // Ledger store
   const {
     // State
@@ -17,25 +17,19 @@ function Ledger() {
     showLedger,
     isModalOpen,
     ledgerEntries,
-    
+
     // Actions
     handleStudentClick,
     handleBackToResults,
     openAddTransactionModal,
     closeAddTransactionModal,
-    handleModalSubmit,
-    resetStore
+    handleModalSubmit
   } = useLedgerStore();
 
   useEffect(() => {
     searchStore.initializeSearch();
-    searchStore.handleSearch(); 
-    
-    return () => {
-      resetStore();
-      searchStore.resetSearch();
-    };
-  }, []);
+    searchStore.handleSearch();
+  }, [searchStore]);
 
   // Search form config
   const searchFormConfig = {
@@ -89,17 +83,17 @@ function Ledger() {
     { key: "batch", header: "Batch" },
     { key: "year", header: "Year" }
   ];
-  
+
   // Event handlers
   const handleSearch = () => {
     searchStore.handleSearch();
     handleBackToResults();
   };
-  
+
   const handleStudentClickWrapper = (student) => {
     handleStudentClick(student);
   };
-  
+
 
   // Pagination config
   const paginationConfig = {
@@ -115,9 +109,9 @@ function Ledger() {
 
   return (
     <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
-      
+
       {/* Search Form */}
-      <SearchForm 
+      <SearchForm
         searchLogic={searchStore}
         fields={searchFormConfig}
         onSearch={handleSearch}
