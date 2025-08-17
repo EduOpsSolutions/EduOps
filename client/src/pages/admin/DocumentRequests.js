@@ -6,6 +6,7 @@ import { useDocumentRequestSearchStore, useDocumentRequestStore } from "../../st
 
 function DocumentRequests() {
   const searchStore = useDocumentRequestSearchStore();
+  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
 
   const {
     selectedRequest,
@@ -21,14 +22,13 @@ function DocumentRequests() {
   } = useDocumentRequestStore();
 
   useEffect(() => {
-    searchStore.initializeSearch();
-    searchStore.handleSearch();
-    
+    initializeSearch();
+    performSearch();
     return () => {
       resetStore();
-      searchStore.resetSearch();
+      resetSearch();
     };
-  }, []); 
+  }, [initializeSearch, performSearch, resetStore, resetSearch]);
 
   const searchFormConfig = {
     title: "SEARCH",
@@ -79,7 +79,7 @@ function DocumentRequests() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    searchStore.handleSearch();
+    performSearch();
   };
 
   const handleStatusChange = (e) => {
@@ -104,7 +104,7 @@ function DocumentRequests() {
           />
         </div>
 
-        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
+  <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
           <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-3 sm:mb-5">
             Document Requests
           </p>

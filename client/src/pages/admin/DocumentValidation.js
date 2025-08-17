@@ -85,7 +85,7 @@ function DocumentValidation() {
           />
         </div>
 
-        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
+  <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
           <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-6">
             Document Validation
           </p>

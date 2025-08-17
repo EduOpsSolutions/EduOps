@@ -9,6 +9,7 @@ function Ledger() {
 
   // Search store
   const searchStore = useLedgerSearchStore();
+  const { initializeSearch, handleSearch: performSearch } = searchStore;
 
   // Ledger store
   const {
@@ -27,9 +28,9 @@ function Ledger() {
   } = useLedgerStore();
 
   useEffect(() => {
-    searchStore.initializeSearch();
-    searchStore.handleSearch();
-  }, [searchStore]);
+    initializeSearch();
+    performSearch();
+  }, [initializeSearch, performSearch]);
 
   // Search form config
   const searchFormConfig = {
@@ -86,7 +87,7 @@ function Ledger() {
 
   // Event handlers
   const handleSearch = () => {
-    searchStore.handleSearch();
+    performSearch();
     handleBackToResults();
   };
 
