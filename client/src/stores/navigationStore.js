@@ -7,7 +7,7 @@ const getNavigationConfig = (role) => {
       enrollment: {
         label: 'Enrollment',
         items: [
-          { path: `/${role}/`, label: 'Student Admission' },
+          { path: `/${role}/notfound`, label: 'Student Admission' },
           { path: `/${role}/schedule`, label: 'Schedule' },
           { path: `/${role}/studyLoad`, label: 'Study Load' },
         ]
@@ -66,7 +66,7 @@ const getNavigationConfig = (role) => {
         label: 'Accounts',
         items: [
           { path: `/${role}/account-management`, label: 'Manage Accounts' },
-          { path: `/${role}/`, label: 'Create User' },
+          { path: `/${role}/notfound`, label: 'Create User' },
         ]
       },
     }
