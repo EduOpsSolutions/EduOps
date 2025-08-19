@@ -4,7 +4,7 @@ import usePostsStore from '../../stores/postsStore';
 
 function Home() {
     const { getVisiblePosts } = usePostsStore();
-    const visiblePosts = getVisiblePosts();
+    const visiblePosts = getVisiblePosts('teacher');
 
     return (
         <div className="bg_custom bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
