@@ -12,6 +12,7 @@ function Assessment() {
 
   // Search store
   const searchStore = useAssessmentSearchStore();
+  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
   
   // Assessment store
   const {
@@ -33,14 +34,13 @@ function Assessment() {
   } = useAssessmentStore();
 
   useEffect(() => {
-    searchStore.initializeSearch();
-    searchStore.handleSearch();
-    
+    initializeSearch();
+    performSearch();
     return () => {
       resetStore();
-      searchStore.resetSearch();
+      resetSearch();
     };
-  }, []);
+  }, [initializeSearch, performSearch, resetStore, resetSearch]);
 
   // Search form config
   const searchFormConfig = {
@@ -95,7 +95,8 @@ function Assessment() {
   };
 
   return (
-    <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
+    <>
+      <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-8 lg:gap-16 lg:items-start">
         <div className="w-full lg:w-80 lg:flex-shrink-0 lg:self-start">
           <SearchFormVertical
@@ -105,7 +106,7 @@ function Assessment() {
           />
         </div>
 
-        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
+  <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
           <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-3 sm:mb-5">
             Tuition Fee Assessment
           </p>
@@ -149,7 +150,7 @@ function Assessment() {
                   onItemsPerPageChange={searchStore.handleItemsPerPageChange}
                   totalItems={searchStore.totalItems}
                   itemName="students"
-                  itemsPerPageOptions={[5, 10, 15, 20]}
+                  itemsPerPageOptions={[10, 25, 50, 100]}
                   showItemsPerPageSelector={true}
                 />
               )}
@@ -255,6 +256,7 @@ function Assessment() {
         </div>
       </div>
       
+      </div>
       <TransactionHistoryModal
         transaction_history_modal={transactionHistoryModal}
         setTransactionHistoryModal={closeTransactionHistoryModal}
@@ -267,7 +269,7 @@ function Assessment() {
         studentName={selectedStudent?.name || ""}
         course={selectedStudent?.course || ""}
       />
-    </div>
+    </>
   );
 }
 

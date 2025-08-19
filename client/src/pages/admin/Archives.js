@@ -39,7 +39,7 @@ function Archives() {
                             Back
                         </button>
 
-                        <div className="bg-white rounded-3xl py-6 px-8 shadow-[0_15px_20px_rgba(0,0,0,0.369)] mb-8">
+                        <div className="bg-white rounded-3xl py-6 px-8 mb-8">
                             <div className="flex items-center justify-center">
                                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">
                                     Archived Posts
@@ -69,7 +69,7 @@ function Archives() {
                                 />
                             ))
                         ) : (
-                            <div className="bg-white rounded-3xl py-16 px-8 shadow-[0_15px_20px_rgba(0,0,0,0.369)] text-center">
+                            <div className="bg-white rounded-3xl py-16 px-8 text-center">
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 24 24"

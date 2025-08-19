@@ -1,5 +1,5 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import PostTagButton from '../../buttons/PostTagButton';
 import EmojiPicker from 'emoji-picker-react';
 import usePostsStore from '../../../stores/postsStore';
@@ -188,17 +188,11 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
         closeEmojiPicker,
         updatePost,
         resetForm,
-        hasAttachments,
-        initializeEditForm
+        hasAttachments
     } = usePostsStore();
 
-    const { title, content, sendOption, selectedImages, selectedFiles, isSubmitting } = formData;
 
-    useEffect(() => {
-        if (edit_post_modal && postData) {
-            initializeEditForm(postData);
-        }
-    }, [edit_post_modal, postData, initializeEditForm]);
+    const { title, content, sendOption, selectedImages, selectedFiles, isSubmitting } = formData;
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {

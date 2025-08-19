@@ -6,6 +6,7 @@ import { useDocumentValidationSearchStore, useDocumentValidationStore } from "..
 
 function DocumentValidation() {
   const searchStore = useDocumentValidationSearchStore();
+  const { initializeSearch, resetSearch } = searchStore;
   
   const {
     selectedDocument,
@@ -21,13 +22,13 @@ function DocumentValidation() {
 
   useEffect(() => {
     fetchDocuments();
-    searchStore.initializeSearch();
+    initializeSearch();
     
     return () => {
       resetStore();
-      searchStore.resetSearch();
+      resetSearch();
     };
-  }, []);
+  }, [fetchDocuments, initializeSearch, resetStore, resetSearch]);
 
   const searchFormConfig = {
     title: "SEARCH",
@@ -49,7 +50,7 @@ function DocumentValidation() {
     onItemsPerPageChange: searchStore.handleItemsPerPageChange,
     totalItems: searchStore.totalItems,
     itemName: "documents",
-    itemsPerPageOptions: [5, 10, 15, 20],
+  itemsPerPageOptions: [10, 25, 50, 100],
     showItemsPerPageSelector: true
   };
 
@@ -59,7 +60,8 @@ function DocumentValidation() {
   };
 
   return (
-    <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
+    <>
+      <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           <div className="flex justify-between items-center">
@@ -83,7 +85,7 @@ function DocumentValidation() {
           />
         </div>
 
-        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
+  <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
           <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-6">
             Document Validation
           </p>
@@ -192,12 +194,14 @@ function DocumentValidation() {
         </div>
       </div>
 
+      </div>
+
       <DocumentViewerModal
         isOpen={isViewerModalOpen}
         onClose={handleCloseViewer}
         document={selectedDocument}
       />
-    </div>
+    </>
   );
 }
 
