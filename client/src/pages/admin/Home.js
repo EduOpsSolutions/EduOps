@@ -16,7 +16,7 @@ function Home() {
         deletePost
     } = usePostsStore();
 
-    const visiblePosts = getVisiblePosts();
+    const visiblePosts = getVisiblePosts('admin');
 
     const handleHidePost = (postId) => {
         hidePost(postId);
