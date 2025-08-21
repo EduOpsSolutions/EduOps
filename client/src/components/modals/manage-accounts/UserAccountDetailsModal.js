@@ -34,12 +34,23 @@ const UserAccountDetailsModal = React.memo(({
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    if (name === 'status' && value === 'deleted') {
-      setFormData(prevData => ({
-        ...prevData,
-        [name]: value,
-        deletedAt: new Date(),
-      }));
+    if (name === 'status') {
+      if (value === 'deleted') {
+        setFormData(prevData => ({
+          ...prevData,
+          [name]: value,
+          deletedAt: new Date(),
+        }));
+      } else {
+
+        setFormData(prevData => {
+          const newData = { ...prevData, [name]: value };
+          if (prevData.status === 'deleted') {
+            delete newData.deletedAt;
+          }
+          return newData;
+        });
+      }
     } else {
       setFormData(prevData => ({ ...prevData, [name]: value }));
     }
