@@ -161,7 +161,6 @@ model posts {
   tag         PostTag  @default(global)
   status      PostStatus @default(visible)
   department  String?
-  userId      String
   user        users    @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
