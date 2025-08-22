@@ -160,7 +160,6 @@ model posts {
   content     String   @db.Text
   tag         PostTag  @default(global)
   status      PostStatus @default(visible)
-  postedBy    String
   department  String?
   userId      String
   user        users    @relation(fields: [userId], references: [id])
