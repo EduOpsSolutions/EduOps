@@ -6,7 +6,7 @@ CREATE TABLE `posts` (
     `id` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
     `content` TEXT NOT NULL,
-    `tag` ENUM('global', 'broadcast') NOT NULL DEFAULT 'global',
+    `tag` ENUM('global', 'student', 'teacher') NOT NULL DEFAULT 'global',
     `status` ENUM('visible', 'hidden', 'locked') NOT NULL DEFAULT 'visible',
     `postedBy` VARCHAR(191) NOT NULL,
     `department` VARCHAR(191) NULL,
