@@ -30,7 +30,7 @@ const LabelledInputField = ({
         id={id}
         className={cn(
           disabled && 'bg-gray-200',
-          'block py-2.5 px-2 w-full text-sm pl-2 text-gray-900 bg-transparent border-2 border-b-2 bg-white border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-dark-red focus:outline-none focus:ring-0 focus:border-dark-red peer',
+          'block py-2.5 px-2 w-full text-sm pl-2 text-gray-900 bg-transparent border-2 border-b-2 bg-white border-gray-300 rounded-md appearance-none dark:text-white dark:border-gray-600 dark:focus:border-dark-red focus:outline-none focus:ring-0 focus:border-dark-red peer',
           className
         )}
         placeholder={placeholder}

@@ -9,7 +9,7 @@ import React from "react";
  */
 const SearchFormVertical = ({ searchLogic, fields, onSearch }) => {
   return (
-    <div className="bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-7 shadow-[0_4px_3px_0_rgba(0,0,0,0.5)]">
+    <div className="bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-7">
       <form
         className="flex flex-col gap-4 sm:gap-6 lg:gap-7"
         onSubmit={onSearch}
@@ -62,7 +62,7 @@ const SearchFormVertical = ({ searchLogic, fields, onSearch }) => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-1.5 text-center shadow-sm shadow-black ease-in duration-150 w-full sm:w-auto"
+            className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-1.5 text-center ease-in duration-150 w-full sm:w-auto"
           >
             Search
           </button>

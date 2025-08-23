@@ -37,6 +37,7 @@ model users {
   changePassword Boolean @default(true)
 
   advisedCourses course[] @relation("UserAdvisesCourses")
+  posts         posts[]
 }
 
 model enrollment_request {
@@ -151,4 +152,50 @@ enum  Visibility{
 enum RequisiteType{
   prerequisite
   corequisite
+}
+
+model posts {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  tag         PostTag  @default(global)
+  status      PostStatus @default(visible)
+  department  String?
+  user        users    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  isArchived  Boolean  @default(false)
+
+  files       post_files[]
+}
+
+model post_files {
+  id         String   @id @default(cuid())
+  url        String
+  fileName   String?
+  fileType   String?
+  fileSize   Int?
+  postId     String   @map("post_id")
+  post       posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  status     FileStatus @default(visible)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum PostTag {
+  global
+  student
+  teacher
+}
+
+enum PostStatus {
+  visible
+  hidden
+  locked
+}
+
+enum FileStatus {
+  visible
+  deleted
 }

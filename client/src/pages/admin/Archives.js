@@ -1,10 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import PostCard from "../../components/post/PostCard";
 import usePostsStore from '../../stores/postsStore';
 
 function Archives() {
-    const navigate = useNavigate();
 
     const {
         getArchivedPosts,
@@ -29,17 +27,7 @@ function Archives() {
             <div className="relative z-[2]">
                 <div className="flex flex-col justify-center items-center">
                     <div className="w-full max-w-6xl mx-auto my-4 sm:my-6 md:my-8">
-                        <button
-                            onClick={() => navigate('/admin')}
-                            className="flex items-center gap-2 text-dark-red-2 hover:text-dark-red-5 font-semibold text-sm sm:text-base mb-4 transition-colors duration-200"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
-                                <path fillRule="evenodd" d="M11.03 3.97a.75.75 0 0 1 0 1.06l-6.22 6.22H21a.75.75 0 0 1 0 1.5H4.81l6.22 6.22a.75.75 0 1 1-1.06 1.06l-7.5-7.5a.75.75 0 0 1 0-1.06l7.5-7.5a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-                            </svg>
-                            Back
-                        </button>
-
-                        <div className="bg-white rounded-3xl py-6 px-8 shadow-[0_15px_20px_rgba(0,0,0,0.369)] mb-8">
+                        <div className="bg-white rounded-3xl py-6 px-8 mb-8 shadow-lg">
                             <div className="flex items-center justify-center">
                                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">
                                     Archived Posts
@@ -69,7 +57,7 @@ function Archives() {
                                 />
                             ))
                         ) : (
-                            <div className="bg-white rounded-3xl py-16 px-8 shadow-[0_15px_20px_rgba(0,0,0,0.369)] text-center">
+                            <div className="bg-white rounded-3xl py-16 px-8 text-center">
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 24 24"
