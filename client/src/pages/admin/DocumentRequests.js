@@ -125,18 +125,18 @@ function DocumentRequests() {
           />
         </div>
 
-        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
+        <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10 overflow-hidden">
           <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-3 sm:mb-5">
             Document Requests
           </p>
 
           <div className="pt-2">
-            <div className="overflow-x-auto -mx-2 sm:mx-0">
-              <div className="inline-block min-w-full align-middle">
-                <table className="min-w-full">
+            <div className="overflow-x-auto w-full">
+              <div className="w-full align-middle">
+                <table className="w-full table-auto">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                      <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base whitespace-nowrap">
                         Date
                       </th>
                       <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
@@ -145,13 +145,13 @@ function DocumentRequests() {
                       <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                         Document
                       </th>
-                      <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                      <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base whitespace-nowrap">
                         Status
                       </th>
                       <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                         Remarks
                       </th>
-                      <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                      <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base whitespace-nowrap">
                         Actions
                       </th>
                     </tr>
@@ -164,10 +164,10 @@ function DocumentRequests() {
                         onClick={() => viewRequestDetails(request)}
                       >
                         <td
-                          className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base"
+                          className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base whitespace-nowrap"
                         >
                           <div
-                            className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                            className="truncate w-20 sm:w-24 md:w-auto"
                             title={request.displayDate}
                           >
                             {request.displayDate}
@@ -177,7 +177,7 @@ function DocumentRequests() {
                           className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base"
                         >
                           <div
-                            className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none"
+                            className="truncate w-16 sm:w-24 md:w-32 lg:w-auto"
                             title={request.name}
                           >
                             {request.name}
@@ -187,7 +187,7 @@ function DocumentRequests() {
                           className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base"
                         >
                           <div
-                            className="truncate max-w-20 sm:max-w-28 md:max-w-36 lg:max-w-none"
+                            className="truncate w-20 sm:w-28 md:w-36 lg:w-auto"
                             title={request.document}
                           >
                             {request.document}
@@ -206,23 +206,23 @@ function DocumentRequests() {
                           className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base"
                         >
                           <div
-                            className="truncate max-w-20 sm:max-w-24 md:max-w-28 lg:max-w-none"
+                            className="truncate w-20 sm:w-24 md:w-28 lg:w-auto"
                             title={request.remarks}
                           >
                             {request.remarks}
                           </div>
                         </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base whitespace-nowrap">
                           <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRequestSelect(request);
                               }}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200"
+                              className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 border border-transparent text-xs font-medium rounded-md text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200"
                               title="Update Status"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                               <span className="hidden sm:inline">Update</span>
