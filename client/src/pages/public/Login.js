@@ -9,6 +9,7 @@ import SecondaryButton from '../../components/buttons/SecondaryButton';
 import DevLoginModal from '../../components/modals/common/DevLoginModal';
 import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
 import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
+import TrackEnrollmentModal from '../../components/modals/enrollment/TrackEnrollmentModal';
 import Swal from 'sweetalert2';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import useAuthStore from '../../stores/authStore';
@@ -19,6 +20,7 @@ function Login() {
   const [forget_pass_modal, setForgetPasswordModal] = useState(false);
   const [password_reset_modal, setPasswordResetModal] = useState(false);
   const [dev_login_modal, setDevLoginModal] = useState(false);
+  const [trackEnrollmentModal, setTrackEnrollmentModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -228,7 +230,14 @@ function Login() {
                 <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
                   Track your enrollment?
                 </p>
-                <SecondaryButton>Track Here</SecondaryButton>
+                <SecondaryButton onClick={() => setTrackEnrollmentModal(true)}>
+                  Track Here
+                </SecondaryButton>
+
+                <TrackEnrollmentModal
+                  isOpen={trackEnrollmentModal}
+                  onClose={() => setTrackEnrollmentModal(false)}
+                />
               </div>
             </div>
 
