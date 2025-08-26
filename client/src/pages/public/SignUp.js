@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Bg_image from '../../assets/images/Bg7.jpg';
-import BackButton from '../../components/buttons/BackButton';
 import SmallButton from '../../components/buttons/SmallButton';
 import UserNavbar from '../../components/navbars/UserNav';
 import FileUploadButton from '../../components/textFields/FileUploadButton';
@@ -11,11 +10,7 @@ import SelectField from '../../components/textFields/SelectField';
 
 function SignUp() {
     const navigate = useNavigate();
-
-    // Function to navigate to login page
-    const navigateToLogin = () => {
-        navigate("/");
-    };
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Add any missing options
     const civilStatusOptions = [
@@ -54,6 +49,7 @@ function SignUp() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        setIsSubmitting(true);
         const formData = new FormData(event.target);
         const enrollmentData = {};
 
@@ -99,91 +95,94 @@ function SignUp() {
             const result = await response.json();
             if (!response.ok) throw new Error(result.message);
 
-            alert('Enrollment successful!');
-            navigate('/paymentForm');
+            alert('Enrollment form submitted successfully!');
+            navigate('/enrollment'); //temporary
 
         } catch (error) {
             console.error('Error details:', error);
             alert(error.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     return (
         <>
             <UserNavbar role="public" />
-            <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%',}}>
+            <section className='flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply' style={{ backgroundImage: `url(${Bg_image})`, minHeight: '100vh', backgroundPosition: '100% 35%', }}>
                 <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-8 mb-12 flex flex-col">
-                <BackButton onClick={navigateToLogin} className="top-0 left-0 mt-2 ml-2" />
-                <form className="px-8 py-4 flex flex-col" onSubmit={handleSubmit}>
-                    <h1 className='text-center text-3xl font-bold'>Enrollment Form</h1>
-                    <p className='italic mb-5 font-semibold'>Items with (*) are required fields</p>
-                    <div className="grid md:grid-cols-3 md:gap-6">
-                        <NotLabelledInputField name="firstName" id="first_name" label="First name*" type="text" required={true} />
-                        <NotLabelledInputField name="middleName" id="middle_name" label="Middle name*" type="text" required={true} />
-                        <NotLabelledInputField name="lastName" id="last_name" label="Last name*" type="text" required={true} />
-                    </div>
-                    <div className="grid md:grid-cols-4 md:gap-6">
-                        <LabelledInputField name="extensions" id="extensions" label="Extensions" type="text" required={false} placeholder="Jr., Sr. III" />
+                    <form className="px-8 py-4 flex flex-col" onSubmit={handleSubmit}>
+                        <h1 className='text-center text-3xl font-bold'>Enrollment Form</h1>
+                        <p className='italic mb-5 font-semibold'>Items with (*) are required fields</p>
+                        <div className="grid md:grid-cols-3 md:gap-6">
+                            <NotLabelledInputField name="firstName" id="first_name" label="First name*" type="text" required={true} />
+                            <NotLabelledInputField name="middleName" id="middle_name" label="Middle name*" type="text" required={true} />
+                            <NotLabelledInputField name="lastName" id="last_name" label="Last name*" type="text" required={true} />
+                        </div>
+                        <div className="grid md:grid-cols-4 md:gap-6">
+                            <LabelledInputField name="extensions" id="extensions" label="Extensions" type="text" required={false} placeholder="Jr., Sr. III" />
+                            <div className="grid md:grid-cols-2 md:gap-6">
+                                <LabelledInputField name="honorrific" id="honorrific" label="Honorrific*" type="text" required={true} placeholder="Mr., Ms" />
+                                <LabelledInputField name="sex" id="sex" label="Sex*" type="text" required={true} placeholder="M/F" />
+                            </div>
+                            <LabelledInputField name="birthDate" id="birthdate" label="Birth Date*" type="date" required={true} />
+                            <SelectField name="civilStatus" id="civil_status" label="Civil Status*" required={true} options={civilStatusOptions} />
+                        </div>
+                        <div className="grid md:grid-cols-3 md:gap-6">
+                            <div className="col-span-2">
+                                <LabelledInputField name="address" id="address" label="Current Address*" type="text" required={true} placeholder="Street, Barangay, City, Province, Zip Code" />
+                            </div>
+                            <div className="col-span-1">
+                                <SelectField name="referredBy" id="referred_by" label="Referred By*" required={true} options={referredByOptions} />
+                            </div>
+                        </div>
                         <div className="grid md:grid-cols-2 md:gap-6">
-                            <LabelledInputField name="honorrific" id="honorrific" label="Honorrific*" type="text" required={true} placeholder="Mr., Ms" />
-                            <LabelledInputField name="sex" id="sex" label="Sex*" type="text" required={true} placeholder="M/F" />
+                            <LabelledInputField name="contactNumber" id="contact_number" label="Contact Number*" type="tel" required={true} placeholder="+63 9xxxxxxxxxx" />
+                            <LabelledInputField name="altContactNumber" id="alt_contact_number" label="Alternate Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                         </div>
-                        <LabelledInputField name="birthDate" id="birthdate" label="Birth Date*" type="date" required={true} />
-                        <SelectField name="civilStatus" id="civil_status" label="Civil Status*" required={true} options={civilStatusOptions} />
-                    </div>
-                    <div className="grid md:grid-cols-3 md:gap-6">
-                        <div className="col-span-2">
-                            <LabelledInputField name="address" id="address" label="Current Address*" type="text" required={true} placeholder="Street, Barangay, City, Province, Zip Code" />
+                        <div className="grid md:grid-cols-2 md:gap-6">
+                            <LabelledInputField name="preferredEmail" id="preferred_email" label="Preferred Email Address*" type="email" required={true} placeholder="johndoe@gmail.com" />
+                            <LabelledInputField name="altEmail" id="alt_email" label="Alternate Email Address" type="email" required={false} placeholder="example@gmail.com" />
                         </div>
-                        <div className="col-span-1">
-                            <SelectField name="referredBy" id="referred_by" label="Referred By*" required={true} options={referredByOptions} />
+                        <div className="grid md:grid-cols-2 md:gap-6">
+                            <LabelledInputField name="motherName" id="mother_name" label="Mother's Maiden Full Name" type="text" required={false} placeholder="" />
+                            <LabelledInputField name="motherContact" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
                         </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 md:gap-6">
-                        <LabelledInputField name="contactNumber" id="contact_number" label="Contact Number*" type="tel" required={true} placeholder="+63 9xxxxxxxxxx" />
-                        <LabelledInputField name="altContactNumber" id="alt_contact_number" label="Alternate Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                    </div>
-                    <div className="grid md:grid-cols-2 md:gap-6">
-                        <LabelledInputField name="preferredEmail" id="preferred_email" label="Preferred Email Address*" type="email" required={true} placeholder="johndoe@gmail.com" />
-                        <LabelledInputField name="altEmail" id="alt_email" label="Alternate Email Address" type="email" required={false} placeholder="example@gmail.com" />
-                    </div>
-                    <div className="grid md:grid-cols-2 md:gap-6">
-                        <LabelledInputField name="motherName" id="mother_name" label="Mother's Maiden Full Name" type="text" required={false} placeholder="" />
-                        <LabelledInputField name="motherContact" id="mother_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                    </div>
-                    <div className="grid md:grid-cols-2 md:gap-6">
-                        <LabelledInputField name="fatherName" id="father_name" label="Father's Full Name" type="text" required={false} placeholder="" />
-                        <LabelledInputField name="fatherContact" id="father_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                    </div>
-                    <div className="grid md:grid-cols-2 md:gap-6">
-                        <LabelledInputField name="guardianName" id="guardian_name" label="Guardian's Full Name" type="text" required={false} placeholder="" />
-                        <LabelledInputField name="guardianContact" id="guardian_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
-                    </div>
+                        <div className="grid md:grid-cols-2 md:gap-6">
+                            <LabelledInputField name="fatherName" id="father_name" label="Father's Full Name" type="text" required={false} placeholder="" />
+                            <LabelledInputField name="fatherContact" id="father_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
+                        </div>
+                        <div className="grid md:grid-cols-2 md:gap-6">
+                            <LabelledInputField name="guardianName" id="guardian_name" label="Guardian's Full Name" type="text" required={false} placeholder="" />
+                            <LabelledInputField name="guardianContact" id="guardian_contact_number" label="Contact Number" type="tel" required={false} placeholder="+63 9xxxxxxxxxx" />
+                        </div>
 
-                    {/* Temporary code. Replace with actual logic to select courses like modal or someth */}
-                    <div className="grid md:grid-cols-3 md:gap-6">
-                        <div>
-                            <SelectField name="coursesToEnroll" id="courses_to_enroll" label="Select Course(s) to Enroll* [TEMPORARY]" required={true} options={courseOptions} />
+                        {/* Temporary code. Replace with actual logic to select courses like modal or someth */}
+                        <div className="grid md:grid-cols-3 md:gap-6">
+                            <div>
+                                <SelectField name="coursesToEnroll" id="courses_to_enroll" label="Select Course(s) to Enroll* [TEMPORARY]" required={true} options={courseOptions} />
+                            </div>
                         </div>
-                    </div>
 
-                    <FileUploadButton
-                        label="Upload Valid ID (front and back)*"
-                        id="validId"
-                        name="validIdPath"
-                        onChange={(e) => handleFileChange(e, setValidId)}
-                        ariaDescribedBy="valid_id_help"
-                    />
-                    <FileUploadButton
-                        label="Upload 2X2 ID Photo (white background)*"
-                        id="idPhoto"
-                        name="idPhotoPath"
-                        onChange={(e) => handleFileChange(e, setIdPhoto)}
-                        ariaDescribedBy="2x2_id_help"
-                    />
-                    {/* Add Onclick function to go to enrollment */}
-                    <SmallButton type="submit">Proceed</SmallButton>
-                </form>
+                        <FileUploadButton
+                            label="Upload Valid ID (front and back)*"
+                            id="validId"
+                            name="validIdPath"
+                            onChange={(e) => handleFileChange(e, setValidId)}
+                            ariaDescribedBy="valid_id_help"
+                        />
+                        <FileUploadButton
+                            label="Upload 2X2 ID Photo (white background)*"
+                            id="idPhoto"
+                            name="idPhotoPath"
+                            onChange={(e) => handleFileChange(e, setIdPhoto)}
+                            ariaDescribedBy="2x2_id_help"
+                        />
+                        {/* Button navigates to enrollment page after submission */}
+                        <SmallButton type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Submitting...' : 'Proceed'}
+                        </SmallButton>
+                    </form>
                 </div>
             </section>
         </>
