@@ -1,57 +1,156 @@
-import React, { useState } from 'react'
-import { RxCrossCircled, RxCircle, RxCheckCircled, RxCountdownTimer } from "react-icons/rx";
+import React, { useEffect } from 'react';
+import UserNavbar from '../../components/navbars/UserNav';
+import useEnrollmentStore from '../../stores/enrollmentProgressStore';
+import EnrollmentProgressBar from '../../components/enrollment/ProgressBar';
 
 function Enrollment() {
+  const {
+    enrollmentId,
+    enrollmentStatus,
+    remarkMsg,
+    currentStep,
+    paymentProof,
+    isStepCompleted,
+    isStepCurrent,
+    fetchEnrollmentData,
+    setPaymentProof,
+    uploadPaymentProof,
+    advanceToNextStep
+  } = useEnrollmentStore();
 
-  const [remark_msg, setremark_msg] = useState("This is a test message.");
-  const [enrollment_id, setenrollment_id] = useState("E2024082002");
-  const [enrollment_status, setenrollment_status] = useState("Pending");
+  useEffect(() => {
+    fetchEnrollmentData();
+  }, [fetchEnrollmentData]);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setPaymentProof(file);
+  };
+
   return (
-    <div className='flex flex-col justify-center items-center'>
-        <div className='flex flex-col items-center mt-10 w-[80vw] p-5 border border-solid shadow-lg rounded-lg'> {/*This is the main box container*/}
-          <div className='w-[90%]'>
-            <p className='mt-5 text-start'>Enrollee ID: {enrollment_id}</p>
-            <p className='mt-2 text-start text-xl'>Enrollment Status: {enrollment_status}</p>
-          </div>
-          <div className='flex flex-row mt-10'> {/*This is the container of the indicators*/}
-            <div className='flex flex-col justify-center items-center'>
-                    <RxCheckCircled size='12rem' color='#86de5d'/> {/*this is for the success indicator */}
-                    <p>Enrollment Form</p>
-                </div>
-                <div className='flex flex-col justify-center items-center'>
-                    <RxCheckCircled size='12rem' color='#86de5d'/> {/*this is for the fail indicator */}
-                    <p>Form Verification</p>
-                </div>
-                <div className='flex flex-col justify-center items-center'>
-                    <RxCircle  size='12rem' /> {/*this is for the in progress indicator */}
-                    <p>Payment</p>
-                </div>
-                <div className='flex flex-col justify-center items-center'>
-                    <RxCountdownTimer size='12rem' /> {/*this is for the in progress indicator */}
-                    <p>Payment Verification</p>
-                </div>
-                <div className='flex flex-col justify-center items-center'>
-                    <RxCountdownTimer size='12rem' /> {/*this is for the in progress indicator */}
-                    <p>Complete</p>
-                </div>
-            </div>  
-              <div className='w-[70%] p-4 shadow-lg rounded-lg border-solid border-neutral-200 border justify-center items-center mt-20'>
-                  <p className='text-center'>Remarks: {remark_msg}</p>
-              </div>
-
-              <button 
-                class="w-[12rem] mt-10 focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-md text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
-                Proceed to Payment
-            </button>
-
-            <div className='flex mt-20 w-[90%] justify-start'>
-                  <p className='text-start text-xs'>For enrollment concerns please contact: (+63) 97239232223 <br/> Email: info@sprachinstitut-cebu.inc</p>
-              </div>
-
+    <>
+      <UserNavbar role="public" />
+      <div className="bg_custom bg-white-yellow-tone">
+        <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+          <div className="w-full max-w-7xl bg-white shadow-lg border border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+            <div className="text-center mb-6 md:mb-8">
             </div>
 
-    </div>
-  )
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-6 px-4">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 font-medium">Enrollee ID:</span>
+                <span className="font-bold text-dark-red">{enrollmentId}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 font-medium">Status:</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${enrollmentStatus === "Completed"
+                  ? "bg-green-100 text-green-800 border border-green-200"
+                  : "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                  }`}>
+                  {enrollmentStatus}
+                </span>
+              </div>
+            </div>
+
+            {/* Enrollment Progress Section */}
+            <div className="bg-white shadow-md border border-dark-red rounded-lg p-4 md:p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4 text-dark-red">Enrollment Progress</h2>
+              <EnrollmentProgressBar
+                currentStep={currentStep}
+                completedSteps={useEnrollmentStore(state => state.completedSteps)}
+                isStepCompleted={isStepCompleted}
+                isStepCurrent={isStepCurrent}
+              />
+            </div>
+
+            {/* Remarks Section */}
+            <div className="bg-white shadow-md border border-dark-red rounded-lg p-4 md:p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-2 text-dark-red">Remarks</h2>
+              <p className="text-gray-700">{remarkMsg}</p>
+
+              {/* Payment Proof Upload */}
+              {currentStep === 3 && (
+                <div className="mt-4">
+                  <div className="mb-5 group">
+                    <label className="block mb-2 text-sm font-medium text-gray-900" htmlFor="paymentProof">
+                      Upload Proof of Payment*
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <label className="inline-block text-sm border border-dark-red bg-german-red text-white py-1 px-3 rounded text-center whitespace-nowrap hover:bg-dark-red transition-colors cursor-pointer" htmlFor="paymentProof">
+                        Choose File
+                      </label>
+                      <input
+                        className="hidden"
+                        aria-describedby="payment_proof_help"
+                        id="paymentProof"
+                        name="paymentProofPath"
+                        type="file"
+                        onChange={handleFileChange}
+                        accept=".jpg,.jpeg,.png,.pdf"
+                      />
+                      <div className="text-sm text-black bg-white py-1 px-3 rounded border border-gray-300 truncate flex-1">
+                        {paymentProof ? paymentProof.name : 'No file chosen'}
+                      </div>
+                    </div>
+                  </div>
+                  <p id="payment_proof_help" className="mt-1 text-sm text-gray-500">
+                    Please upload a clear image or PDF of your payment receipt
+                  </p>
+                  {paymentProof && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm text-green-800 flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        File uploaded: {paymentProof.name}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-center my-6">
+              {currentStep === 3 && (
+                <button
+                  onClick={async () => {
+                    if (paymentProof) {
+                      const success = await uploadPaymentProof();
+                      if (!success) {
+                        alert("Failed to upload payment proof. Please try again.");
+                        return;
+                      }
+                    }
+                    advanceToNextStep();
+                  }}
+                  className="px-6 py-2.5 bg-german-red hover:bg-dark-red text-white font-medium rounded-md transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center whitespace-nowrap">
+                  <span>Proceed to Payment</span>
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                  </svg>
+                </button>
+              )}
+              {/* Temporary Next Button for Demo */}
+              <button
+                onClick={() => {
+                  advanceToNextStep();
+                }}
+                className="fixed bottom-4 right-4 px-4 py-2 bg-german-red text-white rounded shadow-md hover:bg-dark-red">
+                Next
+              </button>
+            </div>
+
+            {/* Contact Information Footer */}
+            <div className="mt-8 text-sm text-gray-600 pt-4 text-center">
+              <p>For enrollment concerns please contact: <span className="font-medium">(+63) 97239232223</span></p>
+              <p>Email: <span className="font-medium">info@sprachinstitut-cebu.inc</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }
 
-export default Enrollment
+export default Enrollment;

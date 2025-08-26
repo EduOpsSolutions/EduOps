@@ -71,6 +71,7 @@ function App() {
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
+          <Route path="enrollment" element={<Enrollment />} />
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>
@@ -84,7 +85,6 @@ function App() {
               {/* Student Page Routes */}
               <Route path="student" element={<StudentLayout />}>
                 <Route index element={<Home />} /> {/* localhost/student */}
-                <Route path="enrollment" element={<Enrollment />} />
                 <Route path="schedule" element={<StudentSchedule />} />
                 <Route path="studyLoad" element={<StudyLoad />} />
                 <Route path="grades" element={<Grades />} />
