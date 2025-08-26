@@ -47,6 +47,7 @@ import EnrollmentRequests from './pages/admin/EnrollmentRequests';
 import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 import Transaction from './pages/admin/Transaction';
 import AccountManagement from './pages/admin/AccountManagement';
+import CreateUser from './pages/admin/CreateUser';
 import useAuthStore from './stores/authStore';
 import AdminLedger from './pages/admin/Ledger';
 import AdminAssessment from './pages/admin/Assessment';
@@ -130,6 +131,7 @@ function App() {
                   path="account-management"
                   element={<AccountManagement />}
                 />
+                <Route path="create-user" element={<CreateUser />} />
                 <Route path="ledger" element={<AdminLedger />} />
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />

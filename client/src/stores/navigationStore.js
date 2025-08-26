@@ -66,7 +66,7 @@ const getNavigationConfig = (role) => {
         label: 'Accounts',
         items: [
           { path: `/${role}/account-management`, label: 'Manage Accounts' },
-          { path: `/${role}/notfound`, label: 'Create User' },
+          { path: `/${role}/create-user`, label: 'Create User' },
         ]
       },
     }
