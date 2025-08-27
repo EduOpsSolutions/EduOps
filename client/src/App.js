@@ -24,7 +24,7 @@ import ResetPassword from './pages/public/ResetPassword';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
-import Documents from './pages/student/Documents';
+import StudentDocuments from './pages/student/Documents';
 import Enrollment from './pages/student/Enrollment';
 import Grades from './pages/student/Grades';
 import Home from './pages/student/Home';
@@ -37,6 +37,7 @@ import Assessment from './pages/student/Assessment';
 import TeacherLayout from './components/layout/TeacherLayout';
 import TeacherHome from './pages/teacher/Home';
 import TeachingLoad from './pages/teacher/TeachingLoad';
+import TeacherDocuments from './pages/teacher/Documents';
 
 /* Admin Pages */
 import AdminLayout from './components/layout/AdminLayout';
@@ -46,11 +47,16 @@ import EnrollmentRequests from './pages/admin/EnrollmentRequests';
 import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
 import Transaction from './pages/admin/Transaction';
 import AccountManagement from './pages/admin/AccountManagement';
+import CreateUser from './pages/admin/CreateUser';
 import useAuthStore from './stores/authStore';
 import AdminLedger from './pages/admin/Ledger';
 import AdminAssessment from './pages/admin/Assessment';
 import ManageFees from './pages/admin/ManageFees';
 import DocumentValidation from './pages/admin/DocumentValidation';
+import Archives from './pages/admin/Archives';
+import AdminGrades from './pages/admin/Grades';
+import DocumentRequests from './pages/admin/DocumentRequests';
+import ManageDocuments from './pages/admin/ManageDocuments';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -66,6 +72,7 @@ function App() {
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
+          <Route path="enrollment" element={<Enrollment />} />
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>
@@ -79,13 +86,12 @@ function App() {
               {/* Student Page Routes */}
               <Route path="student" element={<StudentLayout />}>
                 <Route index element={<Home />} /> {/* localhost/student */}
-                <Route path="enrollment" element={<Enrollment />} />
                 <Route path="schedule" element={<StudentSchedule />} />
                 <Route path="studyLoad" element={<StudyLoad />} />
                 <Route path="grades" element={<Grades />} />
                 <Route path="assessment" element={<Assessment />} />
                 <Route path="ledger" element={<Ledger />} />
-                <Route path="documents" element={<Documents />} />
+                <Route path="documents" element={<StudentDocuments />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
@@ -98,7 +104,7 @@ function App() {
                 <Route index element={<TeacherHome />} />
                 <Route path="profile" element={<Profile role="teacher" />} />
                 <Route path="teachingLoad" element={<TeachingLoad />} />
-                <Route path="documents" element={<Documents />} />
+                <Route path="documents" element={<TeacherDocuments />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="terms" element={<Terms />} />
@@ -115,6 +121,7 @@ function App() {
                   element={<EnrollmentRequests />}
                 />
                 <Route path="enrollmentperiod" element={<EnrollmentPeriod />} />
+                <Route path="archives" element={<Archives />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="terms" element={<Terms />} />
@@ -124,10 +131,14 @@ function App() {
                   path="account-management"
                   element={<AccountManagement />}
                 />
+                <Route path="create-user" element={<CreateUser />} />
                 <Route path="ledger" element={<AdminLedger />} />
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
                 <Route path="document-validation" element={<DocumentValidation />} />
+                <Route path="grades" element={<AdminGrades />} />
+                <Route path="document-requests" element={<DocumentRequests />} />
+                <Route path="manage-documents" element={<ManageDocuments />} />
               </Route>
             </>
           ) : (

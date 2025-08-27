@@ -13,7 +13,7 @@ const mockDocuments = [
   {
     id: 2,
     fileSignature: "sdj3154d",
-    documentName: "TOR - James Williams", 
+    documentName: "TOR - James Williams",
     createdAt: "2024-02-10"
   },
   {
@@ -41,10 +41,10 @@ export const useDocumentValidationSearchStore = createSearchStore({
   filterFunction: (data, searchParams) => {
     return data.filter(document => {
       return (
-        (searchParams.fileSignature === '' || 
-         document.fileSignature.toLowerCase().includes(searchParams.fileSignature.toLowerCase())) &&
-        (searchParams.documentName === '' || 
-         document.documentName.toLowerCase().includes(searchParams.documentName.toLowerCase()))
+        (searchParams.fileSignature === '' ||
+          document.fileSignature.toLowerCase().includes(searchParams.fileSignature.toLowerCase())) &&
+        (searchParams.documentName === '' ||
+          document.documentName.toLowerCase().includes(searchParams.documentName.toLowerCase()))
       );
     });
   }
@@ -54,16 +54,16 @@ export const useDocumentValidationStore = create((set, get) => ({
   selectedDocument: null,
   loading: false,
   error: '',
-  
+
   isViewerModalOpen: false,
-  
+
   fetchDocuments: async () => {
     try {
       set({ loading: true, error: '' });
-      
+
       const searchStore = useDocumentValidationSearchStore.getState();
       searchStore.setData(mockDocuments);
-      
+
       set({ error: '' });
     } catch (error) {
       console.error("Failed to fetch documents:", error);
@@ -92,12 +92,18 @@ export const useDocumentValidationStore = create((set, get) => ({
       const result = await Swal.fire({
         title: 'Download Document',
         text: `Do you want to download "${document.documentName}"?`,
-        icon: 'warning',
+        icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Download',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#dc2626',
+        confirmButtonColor: '#992525',
         cancelButtonColor: '#6b7280',
+        buttonsStyling: true,
+        focusConfirm: false,
+        customClass: {
+          confirmButton: 'swal2-confirm',
+          cancelButton: 'swal2-cancel'
+        }
       });
 
       if (result.isConfirmed) {
@@ -115,11 +121,15 @@ export const useDocumentValidationStore = create((set, get) => ({
             title: 'Download Successful',
             text: `"${document.documentName}" has been downloaded successfully.`,
             icon: 'success',
-            confirmButtonColor: '#dc2626',
+            confirmButtonColor: '#992525',
+            buttonsStyling: true,
+            customClass: {
+              confirmButton: 'swal2-confirm'
+            }
           });
-          
+
           const element = document.createElement('a');
-          element.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
+          element.setAttribute('href', 'data:text/plain;charset=utf-8,' +
             encodeURIComponent(`Document: ${document.documentName}\nFile Signature: ${document.fileSignature}\nCreated: ${document.createdAt}`));
           element.setAttribute('download', `${document.fileSignature}.txt`);
           element.style.display = 'none';
@@ -134,7 +144,11 @@ export const useDocumentValidationStore = create((set, get) => ({
         title: 'Download Failed',
         text: `Failed to download "${document.documentName}". Please try again.`,
         icon: 'error',
-        confirmButtonColor: '#dc2626',
+        confirmButtonColor: '#992525',
+        buttonsStyling: true,
+        customClass: {
+          confirmButton: 'swal2-confirm'
+        }
       });
     }
   },

@@ -7,7 +7,7 @@ const getNavigationConfig = (role) => {
       enrollment: {
         label: 'Enrollment',
         items: [
-          { path: `/${role}/`, label: 'Student Admission' },
+          { path: `/${role}/notfound`, label: 'Student Admission' },
           { path: `/${role}/schedule`, label: 'Schedule' },
           { path: `/${role}/studyLoad`, label: 'Study Load' },
         ]
@@ -56,9 +56,9 @@ const getNavigationConfig = (role) => {
       documents: {
         label: 'Documents',
         items: [
-          { path: `/${role}/`, label: 'Manage Documents' },
-          { path: `/${role}/`, label: 'Document Requests' },
-          { path: `/${role}/`, label: 'Reports' },
+          { path: `/${role}/manage-documents`, label: 'Manage Documents' },
+          { path: `/${role}/document-requests`, label: 'Document Requests' },
+          { path: `/${role}/notfound`, label: 'Reports' },
           { path: `/${role}/document-validation`, label: 'Document Validation' },
         ]
       },
@@ -66,7 +66,7 @@ const getNavigationConfig = (role) => {
         label: 'Accounts',
         items: [
           { path: `/${role}/account-management`, label: 'Manage Accounts' },
-          { path: `/${role}/`, label: 'Create User' },
+          { path: `/${role}/create-user`, label: 'Create User' },
         ]
       },
     }

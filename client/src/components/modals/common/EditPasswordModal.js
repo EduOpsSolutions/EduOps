@@ -1,71 +1,42 @@
-import { Flowbite, Modal } from 'flowbite-react';
 import React, { useState } from 'react';
-import GrayButton from '../../buttons/GrayButton';
-import SmallButton from '../../buttons/SmallButton';
-import LabelledInputField from '../../textFields/LabelledInputField';
 import Swal from 'sweetalert2';
 import { getCookieItem } from '../../../utils/jwt';
 import axiosInstance from '../../../utils/axios';
 import useAuthStore from '../../../stores/authStore';
+import { BsEye, BsEyeSlash } from 'react-icons/bs';
 
-// To customize measurements of header
-const customModalTheme = {
-  modal: {
-    root: {
-      base: 'fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity',
-      show: {
-        on: 'flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in',
-        off: 'hidden ease-out',
-      },
-    },
-    content: {
-      base: 'relative h-full w-full p-4 md:h-auto',
-      inner:
-        'relative flex max-h-[90dvh] flex-col rounded-lg bg-white shadow dark:bg-gray-700',
-    },
-    body: {
-      base: 'flex-1 overflow-auto px-6 pt-6 pb-2',
-      popup: 'pt-0',
-    },
-    header: {
-      base: 'flex items-start justify-between rounded-t border-b p-5 dark:border-gray-600',
-      popup: 'border-b-0 p-2',
-      title: 'text-xl font-medium text-gray-900 dark:text-white',
-      close: {
-        base: 'ml-auto inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white',
-        icon: 'h-5 w-5',
-      },
-    },
-    footer: {
-      base: 'flex items-center rounded-b',
-    },
-  },
-};
-
-function EditPasswordModal(props) {
+const EditPasswordModal = ({
+  edit_password_modal,
+  setEditPasswordModal
+}) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { user } = useAuthStore();
 
+  // Password visibility states
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const changePassword = async () => {
+    setError('');
+
     // Validate inputs
     if (!currentPassword || !newPassword || !confirmNewPassword) {
-      Swal.fire({
-        title: 'Error',
-        text: 'Please fill in all password fields',
-        icon: 'error',
-      });
+      setError('Please fill in all password fields');
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      Swal.fire({
-        title: 'Error',
-        text: 'New password and confirm password do not match',
-        icon: 'error',
-      });
+      setError('New password and confirm password do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters long');
       return;
     }
 
@@ -84,99 +55,200 @@ function EditPasswordModal(props) {
           title: 'Success',
           text: 'Password changed successfully!',
           icon: 'success',
+          confirmButtonColor: '#890E07',
         });
         // Clear the form and close modal
         setCurrentPassword('');
         setNewPassword('');
         setConfirmNewPassword('');
-        props.setEditPasswordModal(false);
+        setError('');
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
+        setEditPasswordModal(false);
       } else {
-        Swal.fire({
-          title: 'Error',
-          text: response.data.message || 'Something went wrong!',
-          icon: 'error',
-        });
+        setError(response.data.message || 'Something went wrong!');
       }
     } catch (error) {
       console.error('Something went wrong!', error);
-      Swal.fire({
-        title: 'Error',
-        text:
-          error.response?.data?.message ||
-          error.message ||
-          'Something went wrong!',
-        icon: 'error',
-      });
+      setError(
+        error.response?.data?.message ||
+        error.message ||
+        'Something went wrong!'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    // Logic to handle cancel action
-    props.setEditPasswordModal(false);
+  const hasChanges = () => {
+    return currentPassword || newPassword || confirmNewPassword;
   };
 
+  const handleClose = () => {
+    if (hasChanges()) {
+      Swal.fire({
+        title: 'Unsaved Changes',
+        text: 'You have unsaved changes that will be lost. Do you want to continue?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'No, Keep Editing',
+        cancelButtonText: 'Yes, Discard Changes',
+        confirmButtonColor: '#6b7280',
+        cancelButtonColor: '#992525',
+      }).then((result) => {
+        if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmNewPassword('');
+          setError('');
+          setShowCurrentPassword(false);
+          setShowNewPassword(false);
+          setShowConfirmPassword(false);
+          setEditPasswordModal(false);
+        }
+      });
+    } else {
+      setEditPasswordModal(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await changePassword();
+  };
+
+  if (!edit_password_modal) return null;
+
   return (
-    <Flowbite theme={{ theme: customModalTheme }}>
-      <Modal
-        dismissible
-        show={props.edit_password_modal}
-        size="md"
-        onClose={() => props.setEditPasswordModal(false)}
-        popup
-        className="transition duration-150 ease-out -p-16"
-      >
-        <div className="py-4 flex flex-col bg-white-yellow-tone transition duration-150 ease-out">
-          <Modal.Header className="z-10 transition ease-in-out duration-300" />
-          <p className="font-bold -mt-10 mb-4 text-center text-2xl transition ease-in-out duration-300">
-            Change Password
-          </p>
-          <Modal.Body>
-            <LabelledInputField
-              name="currentPassword"
-              id="currentPassword"
-              label="Old Password:"
-              type="password"
-              required={true}
-              placeholder=""
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-            <LabelledInputField
-              name="newPassword"
-              id="newPassword"
-              label="New Password:"
-              type="password"
-              required={true}
-              placeholder=""
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <LabelledInputField
-              name="confirmNewPassword"
-              id="confirmNewPassword"
-              label="Confirm Password:"
-              type="password"
-              required={true}
-              placeholder=""
-              onChange={(e) => setConfirmNewPassword(e.target.value)}
-            />
-            <div className="flex flex-col md:flex-row justify-between gap-4 items-center">
-              <GrayButton className="w-1/2 md:w-auto" onClick={handleCancel}>
-                Cancel
-              </GrayButton>
-              <SmallButton
-                className="!w-1/2 md:w-auto"
-                onClick={changePassword}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Loading...' : 'Confirm'}
-              </SmallButton>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative max-h-[90vh] overflow-y-auto">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-center">Change Password</h2>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
             </div>
-          </Modal.Body>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Current Password Field */}
+            <div className="relative">
+              <label className="block text-sm font-medium mb-1">
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  name="currentPassword"
+                  value={currentPassword}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="Enter current password"
+                  required
+                  className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  {showCurrentPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* New Password Field */}
+            <div className="relative">
+              <label className="block text-sm font-medium mb-1">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  name="newPassword"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="Enter new password"
+                  required
+                  className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password Field */}
+            <div className="relative">
+              <label className="block text-sm font-medium mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmNewPassword"
+                  value={confirmNewPassword}
+                  onChange={(e) => {
+                    setConfirmNewPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="Confirm new password"
+                  required
+                  className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={isLoading}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-6 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Changing...</span>
+                  </div>
+                ) : (
+                  'Change Password'
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-      </Modal>
-    </Flowbite>
+      </div>
+    </>
   );
-}
+};
 
 export default EditPasswordModal;

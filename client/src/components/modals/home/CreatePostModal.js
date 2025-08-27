@@ -2,7 +2,7 @@ import { Flowbite, Modal } from "flowbite-react";
 import React, { useRef } from 'react';
 import PostTagButton from '../../buttons/PostTagButton';
 import EmojiPicker from 'emoji-picker-react';
-import useCreatePostStore from '../../../stores/createPostStore';
+import usePostsStore from '../../../stores/postsStore';
 
 const MODAL_THEME = {
     modal: {
@@ -26,15 +26,15 @@ const MODAL_THEME = {
 
 const FORM_CONFIG = {
     heights: {
-        container: "h-[450px] sm:h-[500px] lg:h-[550px]",
-        textareaWithAttachments: "h-[200px] sm:h-[250px] lg:h-[301px] mb-3 sm:mb-4",
-        textareaWithoutAttachments: "h-[220px] sm:h-[270px] lg:h-[293px] mb-4 sm:mb-5 lg:mb-6",
-        attachmentsContainer: "h-32 sm:h-36 lg:h-40"
+        container: "flex flex-col",
+        textareaWithAttachments: "h-[160px] sm:h-[180px] lg:h-[200px] mb-3 sm:mb-4",
+        textareaWithoutAttachments: "h-[180px] sm:h-[200px] lg:h-[220px] mb-3 sm:mb-4",
+        attachmentsContainer: "h-24 sm:h-28 lg:h-32"
     },
     styles: {
-        input: "rounded-lg border-0 bg-[#F5F5F5] py-3 sm:py-4 lg:py-5 px-4 sm:px-6 lg:px-7 text-sm sm:text-base placeholder:text-[#575757] focus:outline-none focus:ring-0",
+        input: "rounded-lg border-0 bg-[#F5F5F5] py-2.5 sm:py-3 px-4 sm:px-5 text-sm sm:text-base placeholder:text-[#575757] focus:outline-none focus:ring-0",
         textarea: "bg-transparent border-0 size-full resize-none py-0 ps-0 text-sm sm:text-base placeholder:text-[#575757] focus:outline-none focus:ring-0",
-        contentContainer: "mt-2 sm:mt-3 mb-4 sm:mb-6 lg:mb-7 rounded-lg border-0 bg-[#F5F5F5] py-4 sm:py-5 lg:py-6 px-4 sm:px-6 lg:px-7 h-full"
+        contentContainer: "mt-2 sm:mt-3 mb-1 sm:mb-2 rounded-lg border-0 bg-[#F5F5F5] py-3 sm:py-4 px-4 sm:px-5"
     }
 };
 
@@ -47,7 +47,6 @@ const SEND_OPTIONS = [
 const getTextareaHeight = (hasAttachments) => 
     hasAttachments ? FORM_CONFIG.heights.textareaWithAttachments : FORM_CONFIG.heights.textareaWithoutAttachments;
 
-// Components
 const CloseButton = ({ onClick }) => (
     <button
         className="ml-2 sm:ml-3 mr-auto inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white"
@@ -99,13 +98,12 @@ const FilePreview = ({ fileName, onRemove }) => (
 
 const ActionButtons = ({ emojiPickerRef, textAreaRef }) => {
     const {
-        tag,
-        showEmojiPicker,
+        formData,
         toggleTag,
         toggleEmojiPicker,
         insertEmoji,
         addFiles
-    } = useCreatePostStore();
+    } = usePostsStore();
 
     const handleFileUpload = (event, type) => {
         const files = Array.from(event.target.files);
@@ -115,7 +113,7 @@ const ActionButtons = ({ emojiPickerRef, textAreaRef }) => {
     return (
         <div className="flex flex-row items-center gap-2 sm:gap-0">
             <PostTagButton 
-                tag={tag} 
+                tag={formData.tag} 
                 status="unlocked" 
                 onClick={toggleTag} 
             />
@@ -155,7 +153,7 @@ const ActionButtons = ({ emojiPickerRef, textAreaRef }) => {
                 className="relative ml-auto"
                 onClick={toggleEmojiPicker}
             >
-                {showEmojiPicker && (
+                {formData.showEmojiPicker && (
                     <div ref={emojiPickerRef} className="absolute -right-2 sm:-right-3 bottom-8 sm:bottom-10 z-50" onClick={(e) => e.stopPropagation()}>
                         <div className="scale-75 sm:scale-90 lg:scale-100 origin-bottom-right">
                             <EmojiPicker 
@@ -181,12 +179,7 @@ function CreatePostModal(props) {
     const textAreaRef = useRef(null);
     const emojiPickerRef = useRef(null);
     const {
-        title,
-        content,
-        sendOption,
-        selectedImages,
-        selectedFiles,
-        isSubmitting,
+        formData,
         setTitle,
         setContent,
         setSendOption,
@@ -196,7 +189,9 @@ function CreatePostModal(props) {
         submitPost,
         resetForm,
         hasAttachments
-    } = useCreatePostStore();
+    } = usePostsStore();
+
+    const { sendOption, isSubmitting } = formData;
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -232,30 +227,30 @@ function CreatePostModal(props) {
             <Modal
                 dismissible
                 show={props.create_post_modal}
-                size="4xl"
+                size="3xl"
                 onClose={handleClose}
                 popup
                 className="transition duration-150 ease-out px-2 sm:px-4"
             >
-                <div className="py-3 sm:py-5 flex flex-col border-german-red border-2 text-x bg-white rounded-lg transition duration-150 ease-out">
+                <div className="py-3 sm:py-4 flex flex-col border-german-red border-2 bg-white rounded-lg transition duration-150 ease-out w-full max-w-4xl mx-auto">
                     <Modal.Header className="z-10 transition ease-in-out duration-300">
                         <CloseButton onClick={handleClose} />
                     </Modal.Header>
                     
-                    <p className="font-bold -mt-10 sm:-mt-12 ml-4 sm:ml-6 mb-4 sm:mb-6 text-center text-xl sm:text-2xl lg:text-3xl transition ease-in-out duration-300">
+                    <p className="font-bold -mt-9 sm:-mt-10 ml-4 sm:ml-6 mb-3 sm:mb-4 text-center text-xl sm:text-2xl lg:text-3xl transition ease-in-out duration-300">
                         Create Post
                     </p>
                     
-                    <Modal.Body className="overflow-visible px-3 sm:px-6">
+                    <Modal.Body className="overflow-visible px-3 sm:px-5 pt-0">
                         <form onSubmit={handleSubmit}>
-                            <div className={`${FORM_CONFIG.heights.container} flex flex-col mt-1`}> 
+                            <div className={`${FORM_CONFIG.heights.container} flex flex-col`}> 
                                 <input 
                                     type="text" 
                                     name="new-post-title" 
                                     id="new-post-title" 
                                     placeholder="Post Title" 
                                     className={FORM_CONFIG.styles.input}
-                                    value={title}
+                                    value={formData.title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     required
                                 />
@@ -269,20 +264,20 @@ function CreatePostModal(props) {
                                             className={FORM_CONFIG.styles.textarea}
                                             required
                                             ref={textAreaRef}
-                                            value={content}
+                                            value={formData.content}
                                             onChange={(e) => setContent(e.target.value)}
                                         />
                                         
                                         {attachmentsExist && (
                                             <div className={`${FORM_CONFIG.heights.attachmentsContainer} flex flex-row items-center gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pt-2`}>
-                                                {selectedImages.map((image, index) => (
+                                                {formData.selectedImages.map((image, index) => (
                                                     <ImagePreview 
                                                         key={image} 
                                                         src={image} 
                                                         onRemove={() => removeImage(image)} 
                                                     />
                                                 ))}
-                                                {selectedFiles.map((fileName, index) => (
+                                                {formData.selectedFiles.map((fileName, index) => (
                                                     <FilePreview 
                                                         key={`${fileName}-${index}`} 
                                                         fileName={fileName} 
@@ -299,13 +294,13 @@ function CreatePostModal(props) {
                                     />
                                 </div>
                                 
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0">
-                                    <div className="flex items-center">
-                                        <label htmlFor="new-post-choice" className="me-2 sm:me-3 text-sm sm:text-base">Send a copy</label>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mt-1">
+                                    <div className="flex items-center justify-start">
+                                        <label htmlFor="new-post-choice" className="me-2 text-sm sm:text-base font-medium whitespace-nowrap">Send a copy</label>
                                         <select 
                                             name="new-post-choice" 
                                             id="new-post-choice" 
-                                            className="rounded-md border-black text-sm sm:text-base focus:outline-none focus:ring-0 focus:border-black cursor-pointer"
+                                            className="rounded-md border-black text-sm sm:text-base focus:outline-none focus:ring-0 focus:border-black cursor-pointer px-2 py-1 bg-white"
                                             value={sendOption}
                                             onChange={(e) => setSendOption(e.target.value)}
                                         >
@@ -315,20 +310,19 @@ function CreatePostModal(props) {
                                         </select>
                                     </div>
                                     
-                                    <div className="flex gap-3 sm:ml-auto sm:gap-0">
+                                    <div className="flex gap-2 sm:gap-3 flex-shrink-0">
                                         <button
                                             type="button"
                                             onClick={handleClose}
                                             disabled={isSubmitting}
-                                            className="flex-1 sm:flex-none bg-grey-1 hover:bg-grey-2 focus:outline-none text-black font-semibold rounded-md text-sm sm:text-md px-6 py-3 sm:px-8 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[120px] disabled:opacity-50"
+                                            className="flex-1 sm:flex-none bg-grey-1 hover:bg-grey-2 focus:outline-none text-black font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50"
                                         >
                                             Cancel
                                         </button>
-                                        <span className="hidden sm:inline mx-3"></span>
                                         <button 
                                             type="submit" 
                                             disabled={isSubmitting}
-                                            className="flex-1 sm:flex-none text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm sm:text-md px-6 py-3 sm:px-8 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[120px] disabled:opacity-50"
+                                            className="flex-1 sm:flex-none text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50"
                                         >
                                             {isSubmitting ? 'Creating...' : 'Create'}
                                         </button>

@@ -1,10 +1,11 @@
 import React from 'react';
 import { Dropdown } from 'flowbite-react';
 import { Link } from 'react-router-dom';
+import useNavigationStore from '../../stores/navigationStore';
 
 const NavigationDropdown = ({ label, items, className = "" }) => {
+  const { closeCompactMenu } = useNavigationStore();
   if (!items || items.length === 0) return null;
-
   return (
     <Dropdown
       label=""
@@ -25,6 +26,7 @@ const NavigationDropdown = ({ label, items, className = "" }) => {
           as={Link}
           to={item.path}
           className="relative px-5 text-base justify-center text-white hover:bg-dark-red-4 focus:bg-dark-red-4"
+          onClick={closeCompactMenu}
         >
           {item.label}
         </Dropdown.Item>

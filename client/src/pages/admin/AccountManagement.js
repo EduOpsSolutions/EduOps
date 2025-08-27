@@ -20,7 +20,7 @@ export default function AccountManagement() {
     selectedUser,
     showUserAccountDetailsModal,
     stats,
-  
+
     setSearch,
     setRole,
     setPage,
@@ -100,7 +100,7 @@ export default function AccountManagement() {
     <div className="bg_custom bg-white-yellow-tone">
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
-          
+
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold">User Accounts</h1>
           </div>
@@ -120,7 +120,7 @@ export default function AccountManagement() {
               </div>
             </div>
           )}
-          
+
           <div className="mb-6 md:mb-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
               <div className="order-1 sm:order-1">
@@ -133,8 +133,8 @@ export default function AccountManagement() {
                   className="w-full sm:w-80"
                 />
               </div>
-              
-              <div className="flex justify-center sm:justify-start w-full sm:w-auto order-2 sm:order-2">
+
+              <div className="flex justify-center sm:justify-start w-full sm:w-auto order-2 sm:order-2 space-x-3">
                 <DropDown
                   name="role"
                   id="role"
@@ -143,12 +143,18 @@ export default function AccountManagement() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-48"
                 />
+                <a
+                  href="/admin/create-user"
+                  className="bg-dark-red-2 text-white px-4 py-2 rounded-3xl hover:bg-dark-red-5 transition-colors duration-150 flex items-center"
+                >
+                  <span className="mr-1">+</span> Add User
+                </a>
               </div>
             </div>
           </div>
 
           <div className="pt-2">
-            <UsersTable 
+            <UsersTable
               data={data.data}
               loading={loading}
               onUserClick={openUserModal}
