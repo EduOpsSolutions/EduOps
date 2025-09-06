@@ -66,7 +66,15 @@ export const uploadFile = async (file, directory) => {
     const db_file_record = await prisma.files.create({
       data: {
         url: downloadURL,
-        token: downloadURL.split('&token=')[1],
+        token: (() => {
+          try {
+            const urlObj = new URL(downloadURL);
+            return urlObj.searchParams.get('token');
+          } catch (e) {
+            console.error('Failed to parse token from downloadURL:', e);
+            return null;
+          }
+        })(),
         fileName: file.filename,
         originalName: file.originalname,
         directory: file_dir,
