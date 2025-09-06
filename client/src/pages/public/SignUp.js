@@ -117,7 +117,7 @@ function SignUp() {
       if (!response.ok) throw new Error(result.message);
 
       alert('Enrollment form submitted successfully!');
-      // navigate('/enrollment'); //temporary
+      navigate('/enrollment'); //temporary
     } catch (error) {
       console.error('Error details:', error);
       alert(error.message);
