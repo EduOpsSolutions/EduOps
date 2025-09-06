@@ -2,11 +2,13 @@ import React from 'react';
 import { Dropdown } from 'flowbite-react';
 import { Link } from 'react-router-dom';
 import useAuthStore from '../../stores/authStore';
+import useNavigationStore from '../../stores/navigationStore';
 
 const UserActionsDropdown = ({ role, isCompact = false }) => {
   const { logout, getUser } = useAuthStore();
+  const { closeCompactMenu } = useNavigationStore();
   const userInitials = String(getUser().firstName).slice(0, 2).toUpperCase();
-  
+
   const avatarSize = isCompact ? "size-[40px]" : "size-[48px]";
   const textSize = isCompact ? "text-lg" : "text-xl";
 
@@ -26,6 +28,7 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
         as={Link}
         to={`/${role}/profile`}
         className="text-base text-white hover:bg-dark-red-4 focus:bg-dark-red-4"
+        onClick={() => isCompact && closeCompactMenu()}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -41,10 +44,13 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
         </svg>
         View Profile
       </Dropdown.Item>
-      
+
       <Dropdown.Item
         as={Link}
-        onClick={logout}
+        onClick={() => {
+          logout();
+          isCompact && closeCompactMenu();
+        }}
         to="/login"
         className="text-base text-white hover:bg-dark-red-4 focus:bg-dark-red-4"
       >
@@ -62,15 +68,23 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
         </svg>
         Logout
       </Dropdown.Item>
-      
+
       <Dropdown.Divider className="bg-black mx-4" />
-      
+
       <Dropdown.Item className="text-xs text-white hover:bg-transparent focus:bg-transparent">
-        <Link to={`/${role}/legal/terms`} className="">
+        <Link
+          to={`/${role}/legal/terms`}
+          className=""
+          onClick={() => isCompact && closeCompactMenu()}
+        >
           Terms
         </Link>
         <span className="mx-1"> • </span>
-        <Link to={`/${role}/legal/privacy-policy`} className="">
+        <Link
+          to={`/${role}/legal/privacy-policy`}
+          className=""
+          onClick={() => isCompact && closeCompactMenu()}
+        >
           Privacy
         </Link>
         <span className="mx-1"> • </span>

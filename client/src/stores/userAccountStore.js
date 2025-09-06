@@ -112,6 +112,31 @@ const useUserAccountStore = create((set, get) => ({
     }
   },
 
+  uploadProfilePicture: async (userId, imageFile) => {
+    const token = getCookieItem('token');
+    
+    try {
+      const formData = new FormData();
+      formData.append('profilePicture', imageFile);
+      formData.append('userId', userId);
+
+      const response = await axiosInstance.post(
+        `${process.env.REACT_APP_API_URL}/users/upload-profile-picture`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   handleSearch: () => {
     set({ page: 1 });
     get().fetchData();

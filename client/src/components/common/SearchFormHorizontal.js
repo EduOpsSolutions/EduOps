@@ -63,7 +63,7 @@ const SearchForm = ({ searchLogic, fields, onSearch }) => {
       <div className="flex justify-end mt-4">
         <button
           type="submit"
-          className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-1.5 text-center shadow-sm shadow-black ease-in duration-150 w-full sm:w-auto"
+          className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-1.5 text-center ease-in duration-150 w-full sm:w-auto"
           onClick={onSearch}
         >
           Search

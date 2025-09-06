@@ -40,7 +40,6 @@ const secret = createSecretKey(process.env.JWT_SECRET, 'utf-8');
  * @returns {object} {token, expiresIn, signedAt} - The signed token
  */
 export const signJWT = async (payload) => {
-  console.log('PAYLOADKOBEH', payload);
   try {
     const token = await new SignJWT(payload)
       .setProtectedHeader({ alg: 'HS256' })

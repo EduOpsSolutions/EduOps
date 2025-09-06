@@ -275,6 +275,115 @@ const changePassword = async (req, res) => {
   }
 };
 
+const createStudentAccount = async (req, res) => {
+  try {
+    const {
+      userId,
+      firstName,
+      middleName,
+      lastName,
+      birthmonth,
+      birthdate,
+      birthyear,
+      email,
+      password,
+    } = req.body;
+
+    const isUserIdTaken = await prisma.users.findUnique({
+      where: { userId },
+    });
+
+    if (isUserIdTaken) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'User ID already taken' });
+    }
+
+    const isEmailTaken = await prisma.users.findUnique({
+      where: { email },
+    });
+
+    if (isEmailTaken) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'Email already taken' });
+    }
+
+    const user = await prisma.users.create({
+      data: {
+        userId,
+        firstName,
+        middleName,
+        lastName,
+        birthmonth,
+        birthdate,
+        birthyear,
+        email,
+        password: bcrypt.hashSync(password, SALT),
+        status: 'active',
+      },
+    });
+    res.status(201).json({
+      error: false,
+      message: 'User created successfully',
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message, error: true });
+  }
+};
+
+const inspectEmailExists = async (req, res) => {
+  const { email, altEmail } = req.query;
+  try {
+    let user = null;
+    if (!email && !altEmail) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'Email or altEmail is required' });
+    }
+    if (!altEmail) {
+      user = await prisma.users.findFirst({
+        where: {
+          email,
+        },
+      });
+    } else {
+      user = await prisma.users.findFirst({
+        where: {
+          OR: [{ email: email }, { email: altEmail }],
+        },
+      });
+    }
+    res.json({
+      error: false,
+      message: 'Email exists',
+      data: user ? true : false,
+      user: user
+        ? {
+            id: user.id,
+            firstName: user.firstName,
+            middleName: user.middleName,
+            lastName: user.lastName,
+            email: user.email,
+            userId: user.userId,
+            status: user.status,
+            role: user.role,
+            profilePicLink: user.profilePicLink,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          }
+        : null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to inspect user with email',
+      error: true,
+      error_details: error,
+      error_info: error,
+    });
+  }
+};
+
 export {
   getAllUsers,
   getUserById,
@@ -284,4 +393,6 @@ export {
   deactivateUser,
   activateUser,
   changePassword,
+  createStudentAccount,
+  inspectEmailExists,
 };
