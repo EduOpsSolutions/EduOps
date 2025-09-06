@@ -27,9 +27,17 @@ export const storage = getStorage(firebaseApp);
 
 export const uploadFile = async (file, directory) => {
   try {
-    // Read the file from disk
-    const fs = await import('fs');
-    const fileBuffer = await fs.promises.readFile(file.path);
+    // Use the buffer from memory storage
+    const fileBuffer = file.buffer;
+
+    // Generate filename since memory storage doesn't create one
+    const path = await import('path');
+    const ext = path.extname(file.originalname);
+    const name = path.basename(file.originalname, ext);
+    const filename = `${file.fieldname}_${name}_${new Date()
+      .toISOString()
+      .replace(/:/g, '-')}${ext}`;
+
     let file_dir = 'uncategorized';
     switch (directory) {
       case filePaths.userProfiles:
@@ -54,14 +62,11 @@ export const uploadFile = async (file, directory) => {
       default:
         file_dir = 'uncategorized';
     }
-    const storageRef = ref(storage, `${file_dir}/${file.filename}`);
+    const storageRef = ref(storage, `${file_dir}/${filename}`);
     const uploadTask = await uploadBytesResumable(storageRef, fileBuffer);
 
     // Get the download URL
     const downloadURL = await getDownloadURL(storageRef);
-
-    // Clean up the temporary file
-    await fs.promises.unlink(file.path);
 
     const db_file_record = await prisma.files.create({
       data: {
@@ -75,7 +80,7 @@ export const uploadFile = async (file, directory) => {
             return null;
           }
         })(),
-        fileName: file.filename,
+        fileName: filename,
         originalName: file.originalname,
         directory: file_dir,
       },
@@ -85,7 +90,7 @@ export const uploadFile = async (file, directory) => {
       success: true,
       database_ref: db_file_record,
       downloadURL,
-      fileName: file.filename,
+      fileName: filename,
       originalName: file.originalname,
     };
   } catch (error) {

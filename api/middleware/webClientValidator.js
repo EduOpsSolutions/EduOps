@@ -39,14 +39,16 @@ const validateWebClientOrigin = (req, res, next) => {
 
     // Additional security check: validate user-agent to ensure it's a browser request
     const userAgent = req.get('User-Agent');
-    if (!userAgent || !userAgent.includes('Mozilla')) {
-      return res.status(403).json({
-        error: true,
-        message: 'Access denied: Invalid client type',
-        code: 'INVALID_CLIENT',
-      });
+    //checking if in production then validate user-agent (do not allow postman requests)
+    if (process.env.NODE_ENV === 'production') {
+      if (!userAgent || !userAgent.includes('Mozilla')) {
+        return res.status(403).json({
+          error: true,
+          message: 'Access denied: Invalid client type',
+          code: 'INVALID_CLIENT',
+        });
+      }
     }
-
     next();
   } catch (error) {
     console.error('Web client validation error:', error);
