@@ -7,13 +7,14 @@ const ImageUploadField = ({
   onImageChange,
   onImageRemove,
   disabled = false,
-  accept = ".jpg,.jpeg,.png",
-  maxSize = 5 * 1024 * 1024, // 5MB default
-  className = ""
+  accept = '.jpg,.jpeg,.png',
+  maxSize = 100 * 1024 * 1024, // 100MB default
+  className = '',
 }) => {
   // Only set previewUrl if currentImage is a valid URL (contains http or blob)
   const [previewUrl, setPreviewUrl] = useState(
-    currentImage && (currentImage.startsWith('http') || currentImage.startsWith('blob'))
+    currentImage &&
+      (currentImage.startsWith('http') || currentImage.startsWith('blob'))
       ? currentImage
       : null
   );
@@ -35,7 +36,9 @@ const ImageUploadField = ({
 
     // Validate file size
     if (file.size > maxSize) {
-      setError(`File size must be less than ${Math.round(maxSize / (1024 * 1024))}MB`);
+      setError(
+        `File size must be less than ${Math.round(maxSize / (1024 * 1024))}MB`
+      );
       return;
     }
 
@@ -161,9 +164,7 @@ const ImageUploadField = ({
       {/* Error message */}
       {error && (
         <div className="text-center">
-          <p className="text-red-600 text-xs max-w-xs mb-1">
-            {error}
-          </p>
+          <p className="text-red-600 text-xs max-w-xs mb-1">{error}</p>
           <p className="text-xs text-gray-400">
             Accepted: JPG, PNG (max {Math.round(maxSize / (1024 * 1024))}MB)
           </p>

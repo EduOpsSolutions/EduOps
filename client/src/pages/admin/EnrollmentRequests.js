@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import axios from '../../utils/axios';
-import SearchField from "../../components/textFields/SearchField";
-import ThinRedButton from "../../components/buttons/ThinRedButton";
-
+import SearchField from '../../components/textFields/SearchField';
+import ThinRedButton from '../../components/buttons/ThinRedButton';
+import axiosInstance from '../../utils/axios.js';
+import EnrollmentDetailsModal from '../../components/modals/enrollment/EnrollmentDetailsModal';
+import { getCookieItem } from '../../utils/jwt';
 function EnrollmentRequests() {
   const [enrollmentRequests, setEnrollmentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [selectedEnrollmentRequest, setSelectedEnrollmentRequest] =
+    useState(null);
+  const [showEnrollmentDetailsModal, setShowEnrollmentDetailsModal] =
+    useState(false);
   useEffect(() => {
     fetchEnrollmentRequests();
   }, []);
@@ -17,11 +21,20 @@ function EnrollmentRequests() {
     try {
       setLoading(true);
       setError('');
-      const response = await axios.get('/enrollment-request');
+      const response = await axiosInstance.get('/enrollment/requests', {
+        params: {
+          search: searchTerm,
+        },
+        headers: {
+          Authorization: `Bearer ${getCookieItem('token')}`,
+        },
+      });
       if (!response.data.error) {
         setEnrollmentRequests(response.data.data);
       } else {
-        setError('Error fetching enrollment requests: ' + response.data.message);
+        setError(
+          'Error fetching enrollment requests: ' + response.data.message
+        );
       }
     } catch (error) {
       console.error('Error fetching enrollment requests:', error);
@@ -36,25 +49,30 @@ function EnrollmentRequests() {
   };
 
   const handleSearch = () => {
-    console.log('Searching for:', searchTerm);
+    fetchEnrollmentRequests();
   };
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  const filteredRequests = enrollmentRequests.filter(request =>
-    request.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    request.id?.toString().includes(searchTerm) ||
-    request.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="bg_custom bg-white-yellow-tone">
+      <EnrollmentDetailsModal
+        data={selectedEnrollmentRequest}
+        show={showEnrollmentDetailsModal}
+        handleClose={() => {
+          setShowEnrollmentDetailsModal(false);
+          setSelectedEnrollmentRequest(null);
+        }}
+        handleSave={() => {}}
+      />
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
           <div className="text-center mb-6 md:mb-8">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold">Enrollment Requests</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold">
+              Enrollment Requests
+            </h1>
           </div>
 
           {/* Error Display */}
@@ -83,13 +101,16 @@ function EnrollmentRequests() {
                   onChange={handleSearchChange}
                   onClick={handleSearch}
                   className="w-full sm:w-80"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
                 />
               </div>
-              
+
               <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
-                <ThinRedButton onClick={() => {}}>
-                  End Enrollment
-                </ThinRedButton>
+                <ThinRedButton onClick={() => {}}>End Enrollment</ThinRedButton>
               </div>
             </div>
           </div>
@@ -140,83 +161,136 @@ function EnrollmentRequests() {
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Step
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          {/* <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Actions
-                          </th>
+                          </th> */}
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredRequests.map((request, index) => (
+                        {enrollmentRequests.map((request, index) => (
                           <tr
                             key={request.id || index}
                             className="cursor-pointer transition-colors duration-200 hover:bg-dark-red hover:text-white"
+                            onClick={() => {
+                              setSelectedEnrollmentRequest(request);
+                              setShowEnrollmentDetailsModal(true);
+                            }}
                           >
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.id}>
-                                {request.id}
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.id}
+                              >
+                                {request.enrollmentId}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-24 sm:max-w-32 md:max-w-none" title={request.name}>
+                              <div
+                                className="truncate max-w-24 sm:max-w-32 md:max-w-none"
+                                title={request.name}
+                              >
                                 {request.name}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.courses || 'N/A'}>
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.courses || 'N/A'}
+                              >
                                 {request.courses || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-28 md:max-w-none" title={request.amountBalance || 'N/A'}>
+                              <div
+                                className="truncate max-w-20 sm:max-w-28 md:max-w-none"
+                                title={request.amountBalance || 'N/A'}
+                              >
                                 {request.amountBalance || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.amountPaid || 'N/A'}>
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.amountPaid || 'N/A'}
+                              >
                                 {request.amountPaid || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.or || 'N/A'}>
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.or || 'N/A'}
+                              >
                                 {request.or || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.phoneNumber || 'N/A'}>
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.phoneNumber || 'N/A'}
+                              >
                                 {request.phoneNumber || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.email || 'N/A'}>
-                                {request.email || 'N/A'}
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.preferredEmail || 'N/A'}
+                              >
+                                {request.preferredEmail || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.date || 'N/A'}>
-                                {request.date || 'N/A'}
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.date || 'N/A'}
+                              >
+                                {new Date(request.createdAt).toLocaleDateString(
+                                  'en-US',
+                                  {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                  }
+                                ) || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={request.step || 'N/A'}>
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.step || 'N/A'}
+                              >
                                 {request.step || 'N/A'}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            {/* <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div className="flex space-x-2">
-                                <button className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150" title="View">
+                                <button
+                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
+                                  title="View"
+                                >
                                   <i className="fas fa-eye"></i>
                                 </button>
-                                <button className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150" title="Edit">
+                                <button
+                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
+                                  title="Edit"
+                                >
                                   <i className="fas fa-edit"></i>
                                 </button>
-                                <button className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150" title="Info">
+                                <button
+                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
+                                  title="Info"
+                                >
                                   <i className="fas fa-info-circle"></i>
                                 </button>
                               </div>
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
-                        {filteredRequests.length === 0 && !loading && (
+                        {enrollmentRequests.length === 0 && !loading && (
                           <tr>
                             <td
                               colSpan="11"

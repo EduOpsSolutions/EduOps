@@ -63,8 +63,8 @@ model enrollment_request {
   guardianName      String?
   guardianContact   String?
   coursesToEnroll   String
-  validIdPath       String?  
-  idPhotoPath       String?
+  validIdPath       String? @db.LongText 
+  idPhotoPath       String? @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -161,7 +161,7 @@ model posts {
   tag         PostTag  @default(global)
   status      PostStatus @default(visible)
   department  String?
-  user        users    @relation(fields: [userId], references: [id])
+  user        users    @relation(fields: [id], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
@@ -181,6 +181,18 @@ model post_files {
   status     FileStatus @default(visible)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model files {
+  id    Int     @id @default(autoincrement())
+  url    String @db.LongText
+  token String? @unique
+  fileName String?
+  originalName String?
+  directory String? @default("uncategorized")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 enum PostTag {
