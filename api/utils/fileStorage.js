@@ -7,6 +7,9 @@ import {
 
 import { initializeApp } from 'firebase/app';
 import { filePaths } from '../constants/file_paths.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_APIKEY,
@@ -24,7 +27,6 @@ export const storage = getStorage(firebaseApp);
 
 export const uploadFile = async (file, directory) => {
   try {
-    console.log('Received the parameter: ', directory);
     // Read the file from disk
     const fs = await import('fs');
     const fileBuffer = await fs.promises.readFile(file.path);
@@ -54,7 +56,6 @@ export const uploadFile = async (file, directory) => {
     }
     const storageRef = ref(storage, `${file_dir}/${file.filename}`);
     const uploadTask = await uploadBytesResumable(storageRef, fileBuffer);
-    console.log('uploadTask', uploadTask);
 
     // Get the download URL
     const downloadURL = await getDownloadURL(storageRef);
@@ -62,8 +63,19 @@ export const uploadFile = async (file, directory) => {
     // Clean up the temporary file
     await fs.promises.unlink(file.path);
 
+    const db_file_record = await prisma.files.create({
+      data: {
+        url: downloadURL,
+        token: downloadURL.split('&token=')[1],
+        fileName: file.filename,
+        originalName: file.originalname,
+        directory: file_dir,
+      },
+    });
+
     return {
       success: true,
+      database_ref: db_file_record,
       downloadURL,
       fileName: file.filename,
       originalName: file.originalname,
@@ -77,12 +89,22 @@ export const uploadFile = async (file, directory) => {
 export const uploadMultipleFiles = async (files, directory) => {
   try {
     const uploadedFiles = [];
+    const failedFiles = [];
     for (const file of files) {
-      const result = await uploadFile(file, directory);
-      uploadedFiles.push(result);
+      const result = await uploadFile(file, directory).catch((error) => {
+        console.error('Error uploading file:', error);
+      });
+      if (result.success === true) {
+        uploadedFiles.push(result);
+      } else {
+        failedFiles.push(file.originalname);
+      }
     }
 
-    return uploadedFiles;
+    return {
+      uploadedFiles,
+      failedFiles,
+    };
   } catch (error) {
     console.error('Error uploading multiple files:', error);
     throw new Error(`Upload failed: ${error.message}`);

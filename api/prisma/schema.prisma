@@ -183,6 +183,18 @@ model post_files {
   updatedAt  DateTime @updatedAt
 }
 
+model files {
+  id    Int     @id @default(autoincrement())
+  url    String @db.LongText
+  token String? @unique
+  fileName String?
+  originalName String?
+  directory String? @default("uncategorized")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
 enum PostTag {
   global
   student
