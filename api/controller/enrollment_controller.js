@@ -384,7 +384,14 @@ const createEnrollmentRequest = async (req, res) => {
 };
 
 const getEnrollmentRequests = async (req, res) => {
-  const { id, status, page = 1, limit = 10, search } = req.query;
+  const {
+    id,
+    status,
+    page = 1,
+    limit = 10,
+    search,
+    order = 'desc',
+  } = req.query;
   const enrollmentRequests = await prisma.enrollment_request.findMany({
     where: {
       id: id,
@@ -401,6 +408,7 @@ const getEnrollmentRequests = async (req, res) => {
     },
     skip: (page - 1) * limit,
     take: limit,
+    orderBy: { createdAt: order },
   });
 
   const new_data = await Promise.all(

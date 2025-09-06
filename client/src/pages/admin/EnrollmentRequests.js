@@ -161,9 +161,9 @@ function EnrollmentRequests() {
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Step
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          {/* <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Actions
-                          </th>
+                          </th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -266,7 +266,7 @@ function EnrollmentRequests() {
                                 {request.step || 'N/A'}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            {/* <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div className="flex space-x-2">
                                 <button
                                   className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
@@ -287,7 +287,7 @@ function EnrollmentRequests() {
                                   <i className="fas fa-info-circle"></i>
                                 </button>
                               </div>
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                         {enrollmentRequests.length === 0 && !loading && (
