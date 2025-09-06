@@ -7,7 +7,6 @@ import ModalSelectField from '../../form/ModalSelectField';
 import PrimaryButton from '../../buttons/PrimaryButton';
 import { FaEye } from 'react-icons/fa';
 import CommonModal from '../common/CommonModal';
-import FallbackImage from '../../../assets/images/fallback.jpg';
 
 export default function EnrollmentDetailsModal({
   data,
@@ -18,6 +17,7 @@ export default function EnrollmentDetailsModal({
   const [formData, setFormData] = useState(data);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewFile, setPreviewFile] = useState({ url: null, title: '' });
   const [emailCheckLoading, setEmailCheckLoading] = useState(true);
   const [emailExists, setEmailExists] = useState(false);
 
@@ -156,39 +156,38 @@ export default function EnrollmentDetailsModal({
     }
   };
 
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-800 border border-purple-200';
-      case 'teacher':
-        return 'bg-blue-100 text-blue-800 border border-blue-200';
-      case 'student':
-        return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border border-gray-200';
-    }
-  };
-
   if (!show) return null;
 
   const handleCloseModal = () => {
     setShowPreview(false);
+    setPreviewFile({ url: null, title: '' });
+  };
+
+  const handlePreviewFile = (fileUrl, title) => {
+    setPreviewFile({ url: fileUrl, title: title });
+    setShowPreview(true);
+  };
+
+  const handleFormSave = async () => {
+    setLoading(true);
+    try {
+      await handleSave(formData);
+    } catch (error) {
+      console.error('Error saving form data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <CommonModal
-        title="Preview"
+        title={previewFile.title}
         handleClose={handleCloseModal}
         show={showPreview}
+        fileUrl={previewFile.url}
         className="w-full h-[90%]"
-      >
-        <img
-          src={formData?.validIdPath || FallbackImage}
-          alt="Preview"
-          className="w-full h-full object-contain"
-        />
-      </CommonModal>
+      />
       <div className="bg-white-yellow-tone rounded-lg w-full max-w-4xl relative max-h-[90vh] overflow-y-auto flex flex-col">
         <div className="flex items-start justify-between mb-4 sm:mb-6 p-6 sticky top-0 bg-white-yellow-tone z-10 border-b ">
           <h2 className="text-xl sm:text-2xl font-bold pr-4">
@@ -476,7 +475,13 @@ export default function EnrollmentDetailsModal({
                   <div className="flex flex-row space-x-4 items-center my-2">
                     <PrimaryButton
                       className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
-                      onClick={() => setShowPreview(true)}
+                      onClick={() =>
+                        handlePreviewFile(
+                          formData?.validIdPath,
+                          'Valid ID Preview'
+                        )
+                      }
+                      disabled={!formData?.validIdPath}
                     >
                       <FaEye />
                     </PrimaryButton>
@@ -486,7 +491,13 @@ export default function EnrollmentDetailsModal({
                   <div className="flex flex-row space-x-4 items-center my-2">
                     <PrimaryButton
                       className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
-                      onClick={() => setShowPreview(true)}
+                      onClick={() =>
+                        handlePreviewFile(
+                          formData?.idPhotoPath,
+                          'ID Photo Preview'
+                        )
+                      }
+                      disabled={!formData?.idPhotoPath}
                     >
                       <FaEye />
                     </PrimaryButton>
@@ -500,7 +511,7 @@ export default function EnrollmentDetailsModal({
 
         <div className="flex justify-center mt-6 sticky bottom-0 bg-white-yellow-tone p-4 border-t">
           <button
-            onClick={() => handleSave(formData)}
+            onClick={handleFormSave}
             disabled={loading}
             className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >

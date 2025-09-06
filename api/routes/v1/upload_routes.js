@@ -1,58 +1,36 @@
 import express from 'express';
 import { uploadSingle } from '../../middleware/multerMiddleware.js';
-import { uploadFile } from '../../utils/fileStorage.js';
+import { uploadFileController } from '../../controller/upload_controller.js';
 import { uploadMultiple } from '../../middleware/multerMiddleware.js';
-import { uploadMultipleFiles } from '../../utils/fileStorage.js';
+import { uploadMultipleFilesController } from '../../controller/upload_controller.js';
+import { verifyToken } from '../../middleware/authValidator.js';
+import { validateWebClientOrigin } from '../../middleware/webClientValidator.js';
 
 const router = express.Router();
 
-router.post('/', uploadSingle('file'), async (req, res) => {
-  const { directory } = req.query;
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        error: true,
-        message: 'No file uploaded',
-      });
-    }
+//recommended for single upload
+router.post('/', uploadSingle('file'), verifyToken, uploadFileController);
 
-    const file = req.file;
-    const result = await uploadFile(file, directory);
-    res.json({
-      error: false,
-      data: result,
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({
-      error: true,
-      message: error.message || 'Failed to upload file',
-    });
-  }
-});
+//recommended for multiple files
+router.post(
+  '/multiple',
+  uploadMultiple('files'),
+  verifyToken,
+  uploadMultipleFilesController
+);
 
-router.post('/multiple', uploadMultiple('files'), async (req, res) => {
-  const { directory } = req.query;
-  try {
-    if (!req.files) {
-      return res.status(400).json({
-        error: true,
-        message: 'No file uploaded',
-      });
-    }
+//restricted to web client only - for enrollment form use only
+router.post(
+  '/guest',
+  validateWebClientOrigin,
+  uploadSingle('file'),
+  uploadFileController
+);
+router.post(
+  '/guest/multiple',
+  validateWebClientOrigin,
+  uploadMultiple('files'),
+  uploadMultipleFilesController
+);
 
-    const file = req.files;
-    const result = await uploadMultipleFiles(file, directory);
-    res.json({
-      error: false,
-      data: result,
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({
-      error: true,
-      message: error.message || 'Failed to upload file',
-    });
-  }
-});
 export { router };

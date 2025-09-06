@@ -7,3 +7,5 @@ export const filePaths = {
   paymentProofs: 'payment-proofs',
   uncategorized: 'uncategorized',
 };
+
+export const guestFilePaths = ['guest', 'uncategorized', 'public'];
