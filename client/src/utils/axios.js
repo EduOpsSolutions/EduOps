@@ -8,10 +8,22 @@ const axiosInstance = axios.create({
   baseURL: 'http://localhost:5555/api/v1',
   headers: {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${getCookieItem('token')}`,
   },
 });
 
+// Add request interceptor to set Authorization header dynamically
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = getCookieItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete config.headers['Authorization'];
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 // Add response interceptor to handle 401 errors
 axiosInstance.interceptors.response.use(
   (response) => {
