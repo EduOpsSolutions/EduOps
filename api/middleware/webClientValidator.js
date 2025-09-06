@@ -14,7 +14,7 @@ const validateWebClientOrigin = (req, res, next) => {
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:3000', // Development
       process.env.PRODUCTION_CLIENT_URL, // Production
-      'https://preprod-eduops.danred-server.uk/', // Add your production domain
+      'https://preprod-eduops.danred-server.uk', // Add your production domain
     ].filter(Boolean); // Remove undefined values
 
     // Check if origin is from allowed web client
@@ -29,7 +29,19 @@ const validateWebClientOrigin = (req, res, next) => {
     // Extract base origin (remove path and query params)
     const requestOrigin = new URL(origin).origin;
 
+    // Debug logging for development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Origin validation:');
+      console.log('Request origin:', requestOrigin);
+      console.log('Allowed origins:', allowedOrigins);
+    }
+
     if (!allowedOrigins.includes(requestOrigin)) {
+      console.log('Origin validation failed:', {
+        requestOrigin,
+        allowedOrigins,
+        userAgent: req.get('User-Agent'),
+      });
       return res.status(403).json({
         error: true,
         message: 'Access denied: Unauthorized origin',
