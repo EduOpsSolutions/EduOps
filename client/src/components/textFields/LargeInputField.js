@@ -9,7 +9,7 @@ const LargeInputField = ({ name, id, label, required = true, placeholder = "" })
             <textarea
                 name={name}
                 id={id}
-                className="block w-full h-[84%] text-sm p-2 text-gray-900 border-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-dark-red focus:outline-none focus:ring-0 focus:border-dark-red resize-none"
+                className="block w-full h-[84%] text-sm p-2 text-gray-900 border-2 border-gray-300 rounded-md appearance-none dark:text-white dark:border-gray-600 dark:focus:border-dark-red focus:outline-none focus:ring-0 focus:border-dark-red resize-none"
                 placeholder={placeholder}
                 required={required}
                 rows="4"

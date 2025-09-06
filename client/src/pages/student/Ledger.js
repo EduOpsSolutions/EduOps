@@ -1,60 +1,77 @@
-import React from 'react';
-import { Link, useLocation } from "react-router-dom";
-import ThinRedButton from '../../components/buttons/ThinRedButton';
-import BackButton from '../../components/buttons/BackButton';
+import React, { useState } from "react";
+import { useLedgerStore } from "../../stores/ledgerStore";
+import ThinRedButton from "../../components/buttons/ThinRedButton";
+import Pagination from "../../components/common/Pagination";
+
 
 function Ledger() {
-    const location = useLocation();
-    const status = location.state?.status;
-    const showButton = status === 'fromAssessment' ? 1 : 0;
+    const { ledgerEntries } = useLedgerStore();
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const totalItems = ledgerEntries.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const visibleEntries = ledgerEntries.slice(
+        (currentPage - 1) * itemsPerPage,
+        (currentPage - 1) * itemsPerPage + itemsPerPage
+    );
 
-    return(
-        <div className='bg-white-yellow-tone h-[calc(100vh-80px)] overflow-hidden box-border flex flex-col py-12 px-20'>
-            <div className='h-full flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-5 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]'>
-                <div className='flex flex-row gap-7 items-center pb-4 border-b-2 border-dark-red-2'>
-                    {showButton === 1 && (
-                        <div className='m-6 relative bottom-6 right-6'>
-                            <Link to='/student'><BackButton /></Link>
-                        </div>
-                    )}
-                    <p className='text-xl uppercase grow'>Dolor, Polano I</p>
-                    <span className='m-0'>
+    return (
+        <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
+            <div className="h-full flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pb-4 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
+                    <p className="text-xl uppercase grow">Dolor, Polano I</p>
+                    <span className="m-0">
                         <ThinRedButton>Print Ledger</ThinRedButton>
                     </span>
                 </div>
-                <table className='w-full table-fixed'>
-                    <thead>
-                        <tr className='border-b-2 border-dark-red-2'>
-                            <th className='py-3 font-normal'> Date </th>
-                            <th className='py-3 font-normal'> Time </th>
-                            <th className='py-3 font-normal'> O.R Number </th>
-                            <th className='py-3 font-normal'> Debit Amount </th>
-                            <th className='py-3 font-normal'> Credit Amount </th>
-                            <th className='py-3 font-normal'> Balance </th>
-                            <th className='py-3 font-normal'> Type </th>
-                            <th className='py-3 font-normal'> Remarks </th>
-                        </tr>
-                    </thead>
-                </table>
-                <div className='grow overflow-y-auto'>
-                    <table className='w-full table-fixed'>
-                        <tbody>
-                            <tr  className='border-b-2 border-[rgb(137,14,7,.49)]'>
-                                <td className='py-3 text-center'> 4/3/24 </td>
-                                <td className='py-3 text-center'> 6:29:23AM </td>
-                                <td className='py-3 text-center'> 1000000058 </td>
-                                <td className='py-3 text-center'> 28,650.00 </td>
-                                <td className='py-3 text-center'> 0.00 </td>
-                                <td className='py-3 text-center'> 28,650.00 </td>
-                                <td className='py-3 text-center'> Assessment </td>
-                                <td className='py-3 text-center'> Assessment Computation </td>
+                <div className="grow overflow-auto">
+                    <table className="min-w-full table-auto">
+                        <thead>
+                            <tr className="border-b-2 border-dark-red-2">
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Date</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Time</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">O.R Number</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Debit Amount</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Credit Amount</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Balance</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Type</th>
+                                <th className="py-3 px-4 font-normal whitespace-nowrap">Remarks</th>
                             </tr>
+                        </thead>
+                        <tbody>
+                            {visibleEntries.map((entry) => (
+                                <tr key={entry.id} className="border-b-2 border-[rgb(137,14,7,.49)]">
+                                    <td className="py-3 px-4 text-center">{entry.date}</td>
+                                    <td className="py-3 px-4 text-center">{entry.time}</td>
+                                    <td className="py-3 px-4 text-center">{entry.orNumber}</td>
+                                    <td className="py-3 px-4 text-center">{entry.debitAmount}</td>
+                                    <td className="py-3 px-4 text-center">{entry.creditAmount}</td>
+                                    <td className="py-3 px-4 text-center">{entry.balance}</td>
+                                    <td className="py-3 px-4 text-center">{entry.type}</td>
+                                    <td className="py-3 px-4 text-center">{entry.remarks}</td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
+                <div className="mt-4">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={(page) => setCurrentPage(page)}
+                        itemsPerPage={itemsPerPage}
+                        onItemsPerPageChange={(size) => {
+                            setItemsPerPage(size);
+                            setCurrentPage(1);
+                        }}
+                        totalItems={totalItems}
+                        itemName="transactions"
+                        showItemsPerPageSelector={true}
+                    />
+                </div>
             </div>
         </div>
-    )
+    );
 }
 
-export default Ledger
+export default Ledger;

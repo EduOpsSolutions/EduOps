@@ -8,6 +8,8 @@ import {
   deleteUser,
   deactivateUser,
   activateUser,
+  createStudentAccount,
+  inspectEmailExists,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
@@ -21,6 +23,12 @@ import { verifyToken } from '../../utils/verifyToken.js';
 /* GET users listing. */
 router.post('/deactivate', verifyToken, validateUserIsAdmin, deactivateUser);
 router.post('/activate', verifyToken, validateUserIsAdmin, activateUser);
+router.get(
+  '/inspect-email-exists',
+  verifyToken,
+  validateUserIsAdmin,
+  inspectEmailExists
+);
 router.put(
   '/:id',
   verifyToken,
@@ -38,5 +46,11 @@ router.post(
   createUser
 );
 router.delete('/:id', verifyToken, validateUserIsAdmin, deleteUser);
+router.post(
+  '/create-student-account',
+  verifyToken,
+  validateUserIsAdmin,
+  createStudentAccount
+);
 
 export { router };

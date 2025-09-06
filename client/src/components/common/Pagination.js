@@ -11,7 +11,7 @@ const Pagination = ({
   onItemsPerPageChange,
   totalItems,
   itemName = 'items',
-  itemsPerPageOptions = [5, 10, 15, 20, 25, 50],
+  itemsPerPageOptions = [10, 25, 50, 100],
   showItemsPerPageSelector = true,
 }) => {
   const indexOfLastItem = currentPage * itemsPerPage;

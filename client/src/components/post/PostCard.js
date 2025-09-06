@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import usePostsStore from '../../stores/postsStore';
 import PostTagButton from '../buttons/PostTagButton';
 import EditPostModal from '../modals/home/EditPostModal';
 import Swal from 'sweetalert2';
@@ -23,6 +24,7 @@ const PostCard = ({
 }) => {
     const [showMenu, setShowMenu] = useState(false);
     const [editPostModal, setEditPostModal] = useState(false);
+    const { initializeEditForm } = usePostsStore();
     const kebabMenuRef = useRef(null);
 
     const postData = {
@@ -54,6 +56,7 @@ const PostCard = ({
     }, [showMenu]);
 
     const handleEditPost = () => {
+        initializeEditForm(postData);
         setEditPostModal(true);
         setShowMenu(false);
         if (onEditPost) onEditPost(id);

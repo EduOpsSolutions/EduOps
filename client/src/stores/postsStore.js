@@ -1,45 +1,29 @@
 import { create } from 'zustand';
-import John_logo from '../assets/images/John.jpg';
-import Tricia_logo from '../assets/images/Tricia.png';
 import Config from '../utils/config.js';
-
-const createImagePreview = (file) => URL.createObjectURL(file);
-const getFileName = (file) => file.name;
+import { 
+  POST_TAGS, 
+  USER_ROLES,
+  initialPosts,
+  defaultFormData,
+  createImagePreview,
+  getFileName,
+  getNextTag,
+  createPostObject,
+  createUpdatedPostData,
+  isPostVisibleToRole as checkPostVisibility,
+  filterVisiblePosts,
+  filterArchivedPosts,
+  validatePostForm
+} from './postsStoreState';
 
 const usePostsStore = create((set, get) => ({
-    posts: [
-        {
-            id: 1,
-            profilePic: John_logo,
-            postedBy: "John Carlo",
-            department: "Department Office",
-            title: "Test Post",
-            content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-            tag: "global",
-            status: "locked",
-            createdAt: "March 4, 2024 - 9:35 AM",
-            updatedAt: "",
-            isArchived: false
-        },
-        {
-            id: 2,
-            profilePic: Tricia_logo,
-            postedBy: "Tricia Diaz",
-            department: "Department Office",
-            title: "Another Post",
-            content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-            tag: "broadcast",
-            status: "locked",
-            createdAt: "February 29, 2024 - 3:10 PM",
-            updatedAt: "",
-            isArchived: false
-        },
-    ],
-
-    formData: {
+    posts: initialPosts,
+    formData: { ...defaultFormData },
+    
+    defaultFormData: {
         title: '',
         content: '',
-        tag: 'global',
+        tag: POST_TAGS.GLOBAL,
         sendOption: 'email',
         selectedImages: [],
         selectedFiles: [],
@@ -48,13 +32,18 @@ const usePostsStore = create((set, get) => ({
         editingPostId: null
     },
 
-    // Posts
-    getVisiblePosts: () => {
-        return get().posts.filter(post => !post.isArchived);
+    // Posts section
+    /**
+     * Returns posts that should be visible to a user based on their role and post tags
+     * @param {string} userRole 
+     * @returns {Array} 
+     */
+    getVisiblePosts: (userRole = USER_ROLES.GUEST) => {
+        return filterVisiblePosts(get().posts, userRole);
     },
 
     getArchivedPosts: () => {
-        return get().posts.filter(post => post.isArchived);
+        return filterArchivedPosts(get().posts);
     },
 
     hidePost: (postId) => {
@@ -63,6 +52,7 @@ const usePostsStore = create((set, get) => ({
                 post.id === postId ? { ...post, isArchived: true } : post
             )
         }));
+        return true;
     },
 
     unhidePost: (postId) => {
@@ -71,12 +61,14 @@ const usePostsStore = create((set, get) => ({
                 post.id === postId ? { ...post, isArchived: false } : post
             )
         }));
+        return true;
     },
 
     deletePost: (postId) => {
         set(state => ({
             posts: state.posts.filter(post => post.id !== postId)
         }));
+        return true;
     },
 
     // Form
@@ -96,12 +88,21 @@ const usePostsStore = create((set, get) => ({
         formData: { ...state.formData, sendOption }
     })),
 
-    toggleTag: () => set(state => ({
-        formData: { 
-            ...state.formData, 
-            tag: state.formData.tag === 'global' ? 'broadcast' : 'global' 
-        }
-    })),
+    /**
+     * Cycles through available post tags in a predefined order
+     * @returns {Object}
+     */
+    toggleTag: () => set(state => {
+        const currentTag = state.formData.tag;
+        const nextTag = getNextTag(currentTag);
+        
+        return {
+            formData: { 
+                ...state.formData, 
+                tag: nextTag
+            }
+        };
+    }),
 
     addFiles: (files, type) => {
         if (type === 'photo') {
@@ -175,22 +176,13 @@ const usePostsStore = create((set, get) => ({
         }
     },
 
+    /**
+     * Validates the form data before submission
+     * @returns {Object} 
+     */
     validateForm: () => {
         const { formData } = get();
-
-        if (!formData.title.trim() || !formData.content.trim()) {
-            return { isValid: false, error: 'Title and content are required' };
-        }
-
-        const totalAttachments = formData.selectedImages.length + formData.selectedFiles.length;
-        if (totalAttachments > Config.MAX_ATTACHMENTS) {
-            return {
-                isValid: false,
-                error: `You can't upload more than ${Config.MAX_ATTACHMENTS} attachments.`
-            };
-        }
-
-        return { isValid: true, error: null };
+        return validatePostForm(formData, Config.MAX_ATTACHMENTS);
     },
 
     initializeEditForm: (postData) => {
@@ -206,25 +198,23 @@ const usePostsStore = create((set, get) => ({
         }));
     },
 
-    resetForm: () => set(state => ({
-        formData: {
-            title: '',
-            content: '',
-            tag: 'global',
-            sendOption: 'email',
-            selectedImages: [],
-            selectedFiles: [],
-            showEmojiPicker: false,
-            isSubmitting: false,
-            editingPostId: null
-        }
+    resetForm: () => set(() => ({
+        formData: { ...defaultFormData }
     })),
 
+    /**
+     * Creates and submits a new post
+     * @param {Function} onSuccess 
+     * @returns {Promise<boolean>}
+     */
     submitPost: async (onSuccess) => {
-        const validation = get().validateForm();
+        if (typeof onSuccess !== 'function' && onSuccess !== undefined) {
+            onSuccess = undefined;
+        }
 
+        const validation = get().validateForm();
         if (!validation.isValid) {
-            console.log(validation.error);
+            console.log('Form validation failed:', validation.error);
             return false;
         }
 
@@ -235,36 +225,15 @@ const usePostsStore = create((set, get) => ({
         try {
             const { formData } = get();
 
-            const newPost = {
-                profilePic: John_logo,
-                postedBy: "John Carlo",
-                department: "Department Office",
-                title: formData.title,
-                content: formData.content,
-                tag: formData.tag,
-                status: "locked",
-                createdAt: new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) + ' - ' + new Date().toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }),
-                updatedAt: "",
-                images: formData.selectedImages,
-                files: formData.selectedFiles,
-                sendOption: formData.sendOption
-            };
+            const newPost = createPostObject(formData);
 
             set(state => ({
-                posts: [{ ...newPost, id: Date.now(), isArchived: false }, ...state.posts]
+                posts: [newPost, ...state.posts]
             }));
 
-            console.log('Post created:', newPost);
+            console.log('Post created successfully:', newPost);
 
             get().resetForm();
-
             if (onSuccess) onSuccess();
             return true;
 
@@ -279,6 +248,10 @@ const usePostsStore = create((set, get) => ({
     },
 
     updatePost: async (postId, onSuccess) => {
+        if (typeof onSuccess !== 'function' && onSuccess !== undefined) {
+            onSuccess = undefined;
+        }
+        
         const validation = get().validateForm();
 
         if (!validation.isValid) {
@@ -292,21 +265,8 @@ const usePostsStore = create((set, get) => ({
 
         try {
             const { formData } = get();
-
-            const updatedData = {
-                title: formData.title,
-                content: formData.content,
-                tag: formData.tag,
-                sendOption: formData.sendOption,
-                updatedAt: new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) + ' - ' + new Date().toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })
-            };
+            
+            const updatedData = createUpdatedPostData(formData);
 
             set(state => ({
                 posts: state.posts.map(post => 
@@ -339,7 +299,43 @@ const usePostsStore = create((set, get) => ({
     getAttachmentCount: () => {
         const { formData } = get();
         return formData.selectedImages.length + formData.selectedFiles.length;
-    }
+    },
+    
+    /**
+     * Get all posts that a specific user role should be able to see
+     * @param {string} userRole 
+     * @param {boolean} includeArchived 
+     * @returns {Array} 
+     */
+    getPostsForUser: (userRole = USER_ROLES.GUEST, includeArchived = false) => {
+        const visiblePosts = get().getVisiblePosts(userRole);
+
+        if (userRole === USER_ROLES.ADMIN && includeArchived) {
+            const archivedPosts = filterArchivedPosts(get().posts);
+            return [...visiblePosts, ...archivedPosts];
+        }
+        
+        return visiblePosts;
+    },
+    
+    /**
+     * Determines if a specific post should be visible to a user with the given role
+     * @param {number|string} postId 
+     * @param {string} userRole 
+     * @returns {boolean} 
+     */
+    isPostVisibleToRole: (postId, userRole = USER_ROLES.GUEST) => {
+        const post = get().posts.find(p => p.id === postId);
+        return checkPostVisibility(post, userRole);
+    },
+
+    getState: () => {
+        return {
+            posts: get().posts,
+            formData: get().formData
+        };
+    },
+    
 }));
 
 export default usePostsStore;

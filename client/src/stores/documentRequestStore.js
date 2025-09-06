@@ -9,7 +9,18 @@ const sampleDocumentRequests = [
     name: "Arthur Morgan",
     document: "Certificate of Good Moral",
     status: "Delivered",
-    remarks: "Done"
+    remarks: "Done",
+    email: "arthur.morgan@example.com",
+    phone: "555-123-4567",
+    mode: "delivery",
+    paymentMethod: "Cash on Delivery",
+    address: "2861 Valentine Ave, Valentine, TX 78814",
+    city: "Valentine",
+    state: "TX",
+    zipCode: "78814",
+    country: "United States",
+    purpose: "Employment Application",
+    additionalNotes: "Please expedite if possible"
   },
   {
     id: 2,
@@ -18,7 +29,13 @@ const sampleDocumentRequests = [
     name: "John Marston",
     document: "Form 138",
     status: "Delivered",
-    remarks: "Done"
+    remarks: "Done",
+    email: "john.marston@example.com",
+    phone: "555-234-5678",
+    mode: "pickup",
+    paymentMethod: "Cash (Pay upon Pickup)",
+    purpose: "School Transfer",
+    additionalNotes: "Need for enrollment at new school"
   },
   {
     id: 3,
@@ -27,7 +44,18 @@ const sampleDocumentRequests = [
     name: "Polano Dolor",
     document: "Certificate of Enrollment",
     status: "In Transit",
-    remarks: "Processing"
+    remarks: "Processing",
+    email: "polano.dolor@example.com",
+    phone: "555-345-6789",
+    mode: "delivery",
+    paymentMethod: "Online (Maya)",
+    address: "1478 Saint Denis St, Lemoyne, LA 70130",
+    city: "Lemoyne",
+    state: "LA",
+    zipCode: "70130",
+    country: "United States",
+    purpose: "Scholarship Application",
+    additionalNotes: "Required for scholarship submission"
   },
   {
     id: 4,
@@ -36,7 +64,13 @@ const sampleDocumentRequests = [
     name: "John Doe",
     document: "Transcript of Records",
     status: "In Process",
-    remarks: "Under review"
+    remarks: "Under review",
+    email: "john.doe@example.com",
+    phone: "555-456-7890",
+    mode: "pickup",
+    paymentMethod: "Cash (Pay upon Pickup)",
+    purpose: "Graduate Studies Application",
+    additionalNotes: "Need certified copy"
   },
 ];
 
@@ -75,7 +109,7 @@ const useDocumentRequestSearchStore = createSearchStore({
     filteredResults.sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
-      
+
       if (params.sortBy === "ascending") {
         return dateA - dateB;
       } else {
@@ -91,6 +125,7 @@ const useDocumentRequestSearchStore = createSearchStore({
 const useDocumentRequestStore = create((set, get) => ({
   selectedRequest: null,
   updateModal: false,
+  viewDetailsModal: false,
   updateStatus: "In Transit",
   updateRemarks: "",
 
@@ -103,12 +138,30 @@ const useDocumentRequestStore = create((set, get) => ({
     });
   },
 
+  viewRequestDetails: (request, event) => {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    set({
+      selectedRequest: request,
+      viewDetailsModal: true
+    });
+  },
+
   closeUpdateModal: () => {
     set({
       updateModal: false,
       selectedRequest: null,
       updateStatus: "In Transit",
       updateRemarks: ""
+    });
+  },
+
+  closeViewDetailsModal: () => {
+    set({
+      viewDetailsModal: false,
+      selectedRequest: null
     });
   },
 
@@ -122,7 +175,7 @@ const useDocumentRequestStore = create((set, get) => ({
 
   handleSubmitStatusUpdate: () => {
     const { selectedRequest, updateStatus, updateRemarks } = get();
-    
+
     if (!selectedRequest) return;
 
     const searchStore = useDocumentRequestSearchStore.getState();
@@ -147,6 +200,7 @@ const useDocumentRequestStore = create((set, get) => ({
     set({
       selectedRequest: null,
       updateModal: false,
+      viewDetailsModal: false,
       updateStatus: "In Transit",
       updateRemarks: ""
     });
