@@ -31,7 +31,6 @@ const ModalTextField = ({
         >
           {options.map((option) => (
             <option
-              selected={value === option.value}
               key={option.value}
               value={option.value}
             >
