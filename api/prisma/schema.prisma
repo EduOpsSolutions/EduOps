@@ -65,8 +65,12 @@ model enrollment_request {
   coursesToEnroll   String
   validIdPath       String? @db.LongText 
   idPhotoPath       String? @db.LongText
+  officialReceipt   String? @db.LongText
+  amountBalance     Decimal? @db.Decimal(10, 2) @default(0.00)
+  amountPaid        Decimal? @db.Decimal(10, 2) @default(0.00)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 model course {

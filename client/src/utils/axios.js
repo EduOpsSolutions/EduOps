@@ -36,7 +36,8 @@ axiosInstance.interceptors.response.use(
       error.response &&
       error.response.status >= 400 &&
       error.response.status < 500 &&
-      error.response.data.message.includes('Please login again.')
+      (error.response.data.message.includes('Please login again.') ||
+        error.response?.data?.message?.includes('Unauthorized'))
     ) {
       const { logout } = useAuthStore.getState();
       logout();

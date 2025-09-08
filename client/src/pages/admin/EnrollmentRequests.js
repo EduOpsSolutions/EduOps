@@ -179,7 +179,7 @@ function EnrollmentRequests() {
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.id}
+                                title={request.enrollmentId}
                               >
                                 {request.enrollmentId}
                               </div>
@@ -187,33 +187,34 @@ function EnrollmentRequests() {
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-24 sm:max-w-32 md:max-w-none"
-                                title={request.name}
+                                title={'Full Name'}
                               >
-                                {request.name}
+                                {request.firstName} {request.middleName}{' '}
+                                {request.lastName}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.courses || 'N/A'}
+                                title={'Course To Enroll'}
                               >
-                                {request.courses || 'N/A'}
+                                {request.coursesToEnroll || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-28 md:max-w-none"
-                                title={request.amountBalance || 'N/A'}
+                                title={'Amount Balance'}
                               >
-                                {request.amountBalance || 'N/A'}
+                                {request.amountBalance || Number(0).toFixed(2)}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.amountPaid || 'N/A'}
+                                title={'Amount Paid'}
                               >
-                                {request.amountPaid || 'N/A'}
+                                {request.amountPaid || Number(0).toFixed(2)}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
