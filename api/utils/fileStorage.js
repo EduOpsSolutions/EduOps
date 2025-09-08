@@ -4,7 +4,6 @@ import {
   uploadBytesResumable,
   getDownloadURL,
   deleteObject,
-  refFromURL,
 } from 'firebase/storage';
 
 import { initializeApp } from 'firebase/app';
@@ -163,9 +162,9 @@ export const deleteFile = async (fileName, id) => {
     // Delete from Firebase Storage using the URL
     if (fileRecord.url) {
       try {
-        const fileRef = refFromURL(storage, fileRecord.url);
-        await deleteObject(fileRef);
-        console.log('File deleted from Firebase storage successfully');
+        const fileRef = `${fileRecord.directory}/${fileRecord.fileName}`;
+        const result = await deleteObject(fileRef);
+        console.log('File deleted from Firebase storage successfully', result);
       } catch (storageError) {
         console.error(
           'Error deleting file from Firebase storage:',

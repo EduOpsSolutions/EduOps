@@ -15,10 +15,12 @@ import {
 import {
   validateUpdateUser,
   validateCreateUser,
-  extractUserIdFromToken,
 } from '../../middleware/userValidator.js';
 
-import { validateUserIsAdmin } from '../../middleware/authValidator.js';
+import {
+  validateUserIsAdmin,
+  extractUserIdFromToken,
+} from '../../middleware/authValidator.js';
 
 import { verifyToken } from '../../utils/verifyToken.js';
 
