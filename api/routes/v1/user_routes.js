@@ -31,6 +31,12 @@ router.get(
   validateUserIsAdmin,
   inspectEmailExists
 );
+router.get(
+  '/inspect-email-exists',
+  verifyToken,
+  validateUserIsAdmin,
+  inspectEmailExists
+);
 router.put(
   '/:id',
   verifyToken,
