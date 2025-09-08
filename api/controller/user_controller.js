@@ -384,6 +384,34 @@ const inspectEmailExists = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  const { userId } = req;
+  const {
+    firstName,
+    middleName,
+    lastName,
+    birthmonth,
+    birthdate,
+    birthyear,
+    phoneNumber,
+    profilePicLink,
+  } = req.body;
+  await prisma.users.update({
+    where: { id: userId },
+    data: {
+      firstName,
+      middleName,
+      lastName,
+      birthmonth,
+      birthdate,
+      birthyear,
+      phoneNumber,
+      profilePicLink,
+    },
+  });
+  res.json({ error: false, message: 'Profile updated successfully' });
+};
+
 export {
   getAllUsers,
   getUserById,
@@ -395,4 +423,5 @@ export {
   changePassword,
   createStudentAccount,
   inspectEmailExists,
+  updateProfile,
 };

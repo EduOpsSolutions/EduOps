@@ -10,10 +10,12 @@ import {
   activateUser,
   createStudentAccount,
   inspectEmailExists,
+  updateProfile,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
   validateCreateUser,
+  extractUserIdFromToken,
 } from '../../middleware/userValidator.js';
 
 import { validateUserIsAdmin } from '../../middleware/authValidator.js';
@@ -51,6 +53,12 @@ router.post(
   verifyToken,
   validateUserIsAdmin,
   createStudentAccount
+);
+router.put(
+  '/update-profile',
+  verifyToken,
+  extractUserIdFromToken,
+  updateProfile
 );
 
 export { router };

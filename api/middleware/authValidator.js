@@ -130,6 +130,51 @@ const validatePassword = (req, res, next) => {
   next();
 };
 
+const extractUserIdFromToken = async (req, res, next) => {
+  try {
+    // Check if authorization header exists
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: true,
+        message: 'No valid authorization token provided',
+      });
+    }
+
+    // Extract token from header
+    const token = authHeader.split(' ')[1];
+
+    // Verify and decode the token
+    const decoded = await verifyJWT(token);
+
+    if (!decoded || !decoded.payload) {
+      return res.status(401).json({
+        error: true,
+        message: 'Invalid or expired token',
+      });
+    }
+
+    // Extract user ID from the decoded payload
+    const userId = decoded.payload.data.id;
+
+    // Log the user ID for debugging purposes
+    console.log('🔑 Extracted User ID from token:', userId);
+    console.log('📋 Full user data from token:', decoded.payload.data);
+
+    // Add the user ID to the request object for controllers to use
+    req.userId = userId;
+    req.userData = decoded.payload.data; // Also provide full user data if needed
+
+    next();
+  } catch (error) {
+    console.error('❌ Error extracting user ID from token:', error.message);
+    return res.status(401).json({
+      error: true,
+      message: 'Failed to extract user information from token',
+    });
+  }
+};
+
 export {
   validateLogin,
   validateUserIsAdmin,
@@ -138,4 +183,5 @@ export {
   verifyToken,
   validateIsActiveUser,
   validatePassword,
+  extractUserIdFromToken,
 };

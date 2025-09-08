@@ -3,6 +3,8 @@ import {
   ref,
   uploadBytesResumable,
   getDownloadURL,
+  deleteObject,
+  refFromURL,
 } from 'firebase/storage';
 
 import { initializeApp } from 'firebase/app';
@@ -121,5 +123,72 @@ export const uploadMultipleFiles = async (files, directory) => {
   } catch (error) {
     console.error('Error uploading multiple files:', error);
     throw new Error(`Upload failed: ${error.message}`);
+  }
+};
+
+/**
+ * Delete a file from the database and Firebase storage
+ * @param {string} fileName - The name of the file (optional if id is provided)
+ * @param {number} id - The id of the file (optional if fileName is provided)
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export const deleteFile = async (fileName, id) => {
+  try {
+    let fileRecord;
+
+    // Find the file record based on id or fileName
+    if (id) {
+      fileRecord = await prisma.files.findUnique({
+        where: { id: parseInt(id) },
+      });
+    } else if (fileName) {
+      fileRecord = await prisma.files.findUnique({
+        where: { fileName: fileName },
+      });
+    } else {
+      throw new Error('Either id or fileName must be provided');
+    }
+
+    if (!fileRecord) {
+      throw new Error('File not found in database');
+    }
+
+    if (fileRecord.deletedAt) {
+      return {
+        success: false,
+        message: 'File is already deleted',
+      };
+    }
+
+    // Delete from Firebase Storage using the URL
+    if (fileRecord.url) {
+      try {
+        const fileRef = refFromURL(storage, fileRecord.url);
+        await deleteObject(fileRef);
+        console.log('File deleted from Firebase storage successfully');
+      } catch (storageError) {
+        console.error(
+          'Error deleting file from Firebase storage:',
+          storageError
+        );
+        // Continue with database soft delete even if storage delete fails
+      }
+    }
+
+    // Soft delete in database by setting deletedAt timestamp
+    await prisma.files.update({
+      where: { id: fileRecord.id },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      message: 'File deleted successfully',
+    };
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    throw new Error(`Delete failed: ${error.message}`);
   }
 };
