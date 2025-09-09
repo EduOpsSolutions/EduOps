@@ -183,6 +183,19 @@ function Enrollment() {
 
             {/* Action Buttons */}
             <div className="flex justify-center my-6">
+              {currentStep === 3 && !paymentProof && !isUploadingPaymentProof && (
+                <button
+                  onClick={() => {
+                    // Add payment link
+                    console.log('Proceeding to payment...');
+                  }}
+                  className="px-6 py-2.5 bg-german-red hover:bg-dark-red text-white font-medium rounded-md transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center whitespace-nowrap"
+                >
+                  <span>Proceed to Payment</span>
+                </button>
+              )}
+
+              {/* Proceed to Next Step Button - Step 3 (after payment proof upload) */}
               {currentStep === 3 &&
                 paymentProof &&
                 !isUploadingPaymentProof && (
