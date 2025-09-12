@@ -38,6 +38,7 @@ model users {
 
   advisedCourses course[] @relation("UserAdvisesCourses")
   posts         posts[]
+  payments      payments[]
 }
 
 model enrollment_request {
@@ -67,6 +68,8 @@ model enrollment_request {
   idPhotoPath       String? @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  payments          payments[]
 }
 
 model course {
@@ -210,4 +213,37 @@ enum PostStatus {
 enum FileStatus {
   visible
   deleted
+}
+
+model payments {
+  id                String   @id
+  paymentId         String   @unique //paymongo payment id
+  userId            String?
+  enrollmentId      String
+  firstName         String
+  middleName        String?
+  lastName          String
+  email             String
+  phoneNumber       String?
+  feeType           String
+  amount            Decimal  @db.Decimal(10, 2)
+  currency          String   @default("PHP")
+  status            PaymentStatus @default(pending)
+  paymentMethod     String?
+  checkoutUrl       String?  @db.LongText
+  paymongoResponse  Json?
+  paidAt            DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              users?   @relation(fields: [userId], references: [id])
+  enrollment        enrollment_request @relation(fields: [enrollmentId], references: [enrollmentId])
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  expired
+  cancelled
 }
