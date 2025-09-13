@@ -50,6 +50,7 @@ function Archives() {
                                     createdAt={post.createdAt}
                                     updatedAt={post.updatedAt}
                                     isArchived={post.isArchived}
+                                    files={post.files} // Add files prop
                                     onHidePost={() => { }}
                                     onUnhidePost={handleUnhidePost}
                                     onDeletePost={handleDeletePost}

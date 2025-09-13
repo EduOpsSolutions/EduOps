@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import John_logo from '../../assets/images/John.jpg';
 import CreatePostModal from '../../components/modals/home/CreatePostModal';
@@ -13,8 +13,24 @@ function Home() {
         getVisiblePosts,
         hidePost,
         unhidePost,
-        deletePost
+        deletePost,
+        fetchPosts,
+        isLoading,
+        error
     } = usePostsStore();
+
+    // Fetch posts on component mount
+    useEffect(() => {
+        const loadPosts = async () => {
+            try {
+                await fetchPosts();
+            } catch (err) {
+                console.error('Failed to load posts:', err);
+            }
+        };
+
+        loadPosts();
+    }, [fetchPosts]);
 
     const visiblePosts = getVisiblePosts('admin');
 
@@ -76,27 +92,56 @@ function Home() {
                             </button>
                         </div>
 
-                        {visiblePosts.map((post) => (
-                            <PostCard
-                                key={post.id}
-                                id={post.id}
-                                profilePic={post.profilePic}
-                                postedBy={post.postedBy}
-                                department={post.department}
-                                title={post.title}
-                                content={post.content}
-                                tag={post.tag}
-                                status={post.status}
-                                createdAt={post.createdAt}
-                                updatedAt={post.updatedAt}
-                                isArchived={post.isArchived}
-                                onHidePost={handleHidePost}
-                                onUnhidePost={handleUnhidePost}
-                                onDeletePost={handleDeletePost}
-                                onEditPost={handleEditPost}
-                                showKebabMenu={true}
-                            />
-                        ))}
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                                <p>{error}</p>
+                                <button 
+                                    onClick={() => fetchPosts()} 
+                                    className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        )}
+
+                        {isLoading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                                <p className="ml-4 text-gray-600">Loading posts...</p>
+                            </div>
+                        ) : (
+                            <>
+                                {visiblePosts.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <p className="text-gray-600 text-lg">No posts available</p>
+                                        <p className="text-gray-500">Create your first post to get started!</p>
+                                    </div>
+                                ) : (
+                                    visiblePosts.map((post) => (
+                                        <PostCard
+                                            key={post.id}
+                                            id={post.id}
+                                            profilePic={post.profilePic}
+                                            postedBy={post.postedBy}
+                                            department={post.department}
+                                            title={post.title}
+                                            content={post.content}
+                                            tag={post.tag}
+                                            status={post.status}
+                                            createdAt={post.createdAt}
+                                            updatedAt={post.updatedAt}
+                                            isArchived={post.isArchived}
+                                            files={post.files} // Add files prop
+                                            onHidePost={handleHidePost}
+                                            onUnhidePost={handleUnhidePost}
+                                            onDeletePost={handleDeletePost}
+                                            onEditPost={handleEditPost}
+                                            showKebabMenu={true}
+                                        />
+                                    ))
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

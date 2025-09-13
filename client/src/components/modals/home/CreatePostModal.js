@@ -188,10 +188,20 @@ function CreatePostModal(props) {
         closeEmojiPicker,
         submitPost,
         resetForm,
-        hasAttachments
+        hasAttachments,
+        fetchPosts,
+        error,
+        clearError
     } = usePostsStore();
 
     const { sendOption, isSubmitting } = formData;
+
+    // Clear any existing errors when modal opens
+    React.useEffect(() => {
+        if (props.create_post_modal) {
+            clearError();
+        }
+    }, [props.create_post_modal, clearError]);
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -209,9 +219,13 @@ function CreatePostModal(props) {
         
         const success = await submitPost(() => {
             props.setCreatePostModal(false);
+            // Refresh posts list after successful creation
+            fetchPosts();
         });
         
         if (!success) {
+            // Error is already handled in the store and displayed in the form
+            console.log('Post creation failed');
         }
     };
 
@@ -240,6 +254,12 @@ function CreatePostModal(props) {
                     <p className="font-bold -mt-9 sm:-mt-10 ml-4 sm:ml-6 mb-3 sm:mb-4 text-center text-xl sm:text-2xl lg:text-3xl transition ease-in-out duration-300">
                         Create Post
                     </p>
+                    
+                    {error && (
+                        <div className="mx-4 sm:mx-6 mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
                     
                     <Modal.Body className="overflow-visible px-3 sm:px-5 pt-0">
                         <form onSubmit={handleSubmit}>

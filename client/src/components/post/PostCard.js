@@ -4,6 +4,175 @@ import PostTagButton from '../buttons/PostTagButton';
 import EditPostModal from '../modals/home/EditPostModal';
 import Swal from 'sweetalert2';
 
+// Modal for viewing images in full size
+const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleEscape);
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleEscape);
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            onClick={onClose}
+        >
+            <div className="relative max-w-full max-h-full">
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <img 
+                    src={imageUrl} 
+                    alt={imageName || 'Full size image'} 
+                    className="max-w-full max-h-full object-contain"
+                    onClick={(e) => e.stopPropagation()}
+                />
+                {imageName && (
+                    <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 text-white text-center p-2 rounded">
+                        {imageName}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// Component to render individual file attachments
+const FileAttachment = ({ file, onImageClick }) => {
+    const isImage = file.fileType?.startsWith('image/');
+    
+    if (isImage) {
+        return (
+            <div className="relative group">
+                <div 
+                    className="w-48 h-32 bg-gray-100 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
+                    onClick={() => onImageClick(file.url, file.fileName)}
+                >
+                    <img 
+                        src={file.url} 
+                        alt={file.fileName || 'Post image'} 
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                    />
+                </div>
+                {file.fileName && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        {file.fileName}
+                    </div>
+                )} 
+            </div> 
+        );
+    }
+    
+    // For non-image files, show a download link
+    return (
+        <div className="flex items-center p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+            <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-4.5B4.125 8.25 3 9.375 3 10.5v2.625a3.375 3.375 0 003.375 3.375h4.5a3.375 3.375 0 003.375-3.375v-2.625z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75" />
+                </svg>
+            </div>
+            <div className="ml-3 flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                    {file.fileName || 'Download file'}
+                </p>
+                <p className="text-xs text-gray-500">
+                    {file.fileType} {file.fileSize && `• ${(file.fileSize / 1024 / 1024).toFixed(2)} MB`}
+                </p>
+            </div>
+            <a 
+                href={file.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-3 flex-shrink-0 text-blue-600 hover:text-blue-800"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+            </a>
+        </div>
+    );
+};
+
+// Component to render all file attachments
+const PostAttachments = ({ files }) => {
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    if (!files || files.length === 0) return null;
+    
+    const images = files.filter(file => file.fileType?.startsWith('image/'));
+    const documents = files.filter(file => !file.fileType?.startsWith('image/'));
+    
+    const handleImageClick = (imageUrl, imageName) => {
+        setSelectedImage({ url: imageUrl, name: imageName });
+        setIsModalOpen(true);
+    };
+    
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedImage(null);
+    };
+    
+    return (
+        <div className="mb-6">
+            {/* Images Grid */}
+            {images.length > 0 && (
+                <div className={`grid gap-3 mb-4 justify-start ${
+                    images.length === 1 ? 'grid-cols-1 max-w-48' :
+                    images.length === 2 ? 'grid-cols-2' :
+                    images.length === 3 ? 'grid-cols-3' :
+                    'grid-cols-2 md:grid-cols-3'
+                }`}>
+                    {images.map((file, index) => (
+                        <FileAttachment 
+                            key={file.id || index} 
+                            file={file} 
+                            onImageClick={handleImageClick}
+                        />
+                    ))}
+                </div>
+            )}
+            
+            {/* Document Files */}
+            {documents.length > 0 && (
+                <div className="grid gap-3 mb-4 justify-start">
+                    {documents.map((file, index) => (
+                        <FileAttachment key={file.id || index} file={file} />
+                    ))}
+                </div>
+            )}
+            
+            {/* Image Modal */}
+            <ImageModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                imageUrl={selectedImage?.url}
+                imageName={selectedImage?.name}
+            />
+        </div>
+    );
+};
+
 const PostCard = ({
     id,
     profilePic,
@@ -16,6 +185,7 @@ const PostCard = ({
     createdAt,
     updatedAt,
     isArchived = false,
+    files = [], // Add files prop
     onHidePost,
     onUnhidePost,
     onDeletePost,
@@ -36,7 +206,8 @@ const PostCard = ({
         postedBy,
         department,
         createdAt,
-        updatedAt
+        updatedAt,
+        files // Add files to postData
     };
 
     useEffect(() => {
@@ -193,7 +364,11 @@ const PostCard = ({
                 </div>
 
                 <div className="text-3xl mb-[15px]">{title}</div>
-                <div className="text-justify mb-9">{content}</div>
+                <div className="text-justify mb-6">{content}</div>
+                
+                {/* File Attachments */}
+                <PostAttachments files={files} />
+                
                 <div className="flex flex-row justify-between items-end">
                     <PostTagButton tag={tag} status={status} />
                     <div className="font-light">{createdAt}</div>

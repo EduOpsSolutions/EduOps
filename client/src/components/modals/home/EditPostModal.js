@@ -73,6 +73,44 @@ const ImagePreview = ({ src, onRemove }) => (
     </div>
 );
 
+const ExistingImagePreview = ({ file, onRemove }) => (
+    <div className="flex-none relative w-16 h-16 sm:w-[70px] sm:h-[70px] lg:w-[75px] lg:h-[75px]">
+        <button
+            type="button"
+            className="absolute -right-1 sm:-right-2 -top-1 sm:-top-[6px] bg-red-500 rounded-full p-0.5 sm:p-1"
+            onClick={() => onRemove(file.id)}
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="#F5F5F5" className="w-4 h-4 sm:w-5 sm:h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <img src={file.url} alt={file.fileName || ''} className="h-full w-full rounded-xl sm:rounded-2xl object-cover border-2 sm:border-[3px] border-red-500" />
+    </div>
+);
+
+const ExistingFilePreview = ({ file, onRemove }) => (
+    <div className="flex-none relative h-12 sm:h-14 lg:h-16 w-32 sm:w-36 lg:w-40 bg-red-500 rounded-xl sm:rounded-2xl">
+        <button
+            type="button"
+            className="absolute -right-1 sm:-right-2 -top-1 sm:-top-[6px] bg-red-500 rounded-full p-0.5 sm:p-1 drop-shadow-[0px_2px_1px_rgba(0,0,0,.5)]"
+            onClick={() => onRemove(file.id)}
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="#F5F5F5" className="w-4 h-4 sm:w-5 sm:h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <div className="size-full flex flex-row items-center justify-center p-1.5 sm:p-2 text-xs sm:text-sm text-[#F5F5F5] font-bold select-none">
+            <div className="min-h-8 min-w-8 sm:min-h-9 sm:min-w-9 lg:min-h-10 lg:min-w-10 flex justify-center pt-1.5 sm:pt-2 lg:pt-[7px] rounded-full bg-[#333333] me-1.5 sm:me-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F5F5F5" className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6">
+                    <path fillRule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z" clipRule="evenodd" />
+                    <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
+                </svg>
+            </div>
+            <p className="whitespace-nowrap overflow-hidden text-ellipsis inline-block">{file.fileName}</p>
+        </div>
+    </div>
+);
+
 const FilePreview = ({ fileName, onRemove }) => (
     <div className="flex-none relative h-12 sm:h-14 lg:h-16 w-32 sm:w-36 lg:w-40 bg-[#777777] rounded-xl sm:rounded-2xl">
         <button
@@ -185,14 +223,19 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
         setSendOption,
         removeImage,
         removeFile,
+        removeExistingFile,
+        getExistingImages,
+        getExistingDocuments,
         closeEmojiPicker,
         updatePost,
         resetForm,
-        hasAttachments
+        hasAttachments,
+        initializeEditForm
     } = usePostsStore();
 
-
     const { title, content, sendOption, selectedImages, selectedFiles, isSubmitting } = formData;
+    const existingImages = getExistingImages();
+    const existingDocuments = getExistingDocuments();
 
     React.useEffect(() => {
         const handleClickOutside = (event) => {
@@ -271,16 +314,34 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
 
                                         {attachmentsExist && (
                                             <div className={`${FORM_CONFIG.heights.attachmentsContainer} flex flex-row items-center gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pt-2`}>
+                                                {/* Existing Images */}
+                                                {existingImages.map((file) => (
+                                                    <ExistingImagePreview
+                                                        key={`existing-${file.id}`}
+                                                        file={file}
+                                                        onRemove={removeExistingFile}
+                                                    />
+                                                ))}
+                                                {/* New Images */}
                                                 {selectedImages.map((image, index) => (
                                                     <ImagePreview
-                                                        key={image}
+                                                        key={`new-${image}`}
                                                         src={image}
                                                         onRemove={() => removeImage(image)}
                                                     />
                                                 ))}
+                                                {/* Existing Documents */}
+                                                {existingDocuments.map((file) => (
+                                                    <ExistingFilePreview
+                                                        key={`existing-doc-${file.id}`}
+                                                        file={file}
+                                                        onRemove={removeExistingFile}
+                                                    />
+                                                ))}
+                                                {/* New Documents */}
                                                 {selectedFiles.map((fileName, index) => (
                                                     <FilePreview
-                                                        key={`${fileName}-${index}`}
+                                                        key={`new-file-${fileName}-${index}`}
                                                         fileName={fileName}
                                                         onRemove={() => removeFile(fileName)}
                                                     />
