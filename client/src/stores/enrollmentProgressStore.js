@@ -12,10 +12,10 @@ const useEnrollmentStore = create((set, get) => ({
   email: '',
   coursesToEnroll: '',
   createdAt: null,
-
+  coursePrice: null, // coursePrice 
   // Step tracking
-  currentStep: 1,
-  completedSteps: [],
+  currentStep: 2,
+  completedSteps: [1],
 
   // Helper functions
   isStepCompleted: (stepNumber) => get().completedSteps.includes(stepNumber),
@@ -24,18 +24,25 @@ const useEnrollmentStore = create((set, get) => ({
     !get().completedSteps.includes(stepNumber) &&
     stepNumber !== get().currentStep,
 
-  // Set enrollment data from tracking
   setEnrollmentData: (data) => {
+    let currentStep = data.currentStep || 2;
+    let completedSteps = data.completedSteps || [1];
+
+    if (currentStep >= 2 && !completedSteps.includes(1)) {
+      completedSteps = [1, ...completedSteps];
+    }
+
     set({
       enrollmentId: data.enrollmentId,
       enrollmentStatus: data.status,
-      currentStep: data.currentStep,
-      completedSteps: data.completedSteps,
+      currentStep: currentStep,
+      completedSteps: completedSteps,
       remarkMsg: data.remarkMsg,
       fullName: data.fullName,
       email: data.email,
       coursesToEnroll: data.coursesToEnroll,
       createdAt: data.createdAt,
+      coursePrice: data.coursePrice, // Add course price to the store
     });
   },
 
@@ -49,9 +56,10 @@ const useEnrollmentStore = create((set, get) => ({
       email: '',
       coursesToEnroll: '',
       createdAt: null,
-      currentStep: 1,
-      completedSteps: [],
+      currentStep: 2,
+      completedSteps: [1],
       paymentProof: null,
+      coursePrice: null, 
     });
   },
 
@@ -71,15 +79,14 @@ const useEnrollmentStore = create((set, get) => ({
 
       ...(currentStep === 2
         ? {
-            enrollmentStatus: 'VERIFIED',
-            remarkMsg:
-              'Your form has been verified by the administrator. Please proceed to payment.',
+            enrollmentStatus: 'Enrollment Form Verified',
+            remarkMsg: `Please pay the amount of ${get().coursePrice} to proceed with your enrollment.`,
           }
         : {}),
 
       ...(currentStep === 3
         ? {
-            enrollmentStatus: 'PAYMENT_PENDING',
+            enrollmentStatus: 'Pending',
             remarkMsg:
               'Your payment is being verified. This may take 1-2 business days.',
           }
@@ -87,7 +94,7 @@ const useEnrollmentStore = create((set, get) => ({
 
       ...(currentStep === 4
         ? {
-            enrollmentStatus: 'COMPLETED',
+            enrollmentStatus: 'Completed',
             remarkMsg: 'Congratulations! Your enrollment is complete.',
           }
         : {}),
@@ -98,7 +105,6 @@ const useEnrollmentStore = create((set, get) => ({
   fetchEnrollmentData: async () => {
     const { enrollmentId } = get();
     
-    // If no enrollment ID, don't fetch
     if (!enrollmentId) {
       console.log('No enrollment ID available for fetching data');
       return;
