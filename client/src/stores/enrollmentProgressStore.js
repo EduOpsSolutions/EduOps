@@ -3,16 +3,19 @@ import { guestUploadFile } from '../utils/files';
 import Swal from 'sweetalert2';
 
 const useEnrollmentStore = create((set, get) => ({
-  enrollmentId: 'E2024082002',
+  enrollmentId: null,
   enrollmentStatus: 'Pending',
-  remarkMsg:
-    'Your enrollment form has been submitted and is pending verification by an administrator.',
+  remarkMsg: 'Please track your enrollment to view progress.',
   paymentProof: null,
   isUploadingPaymentProof: false,
+  fullName: '',
+  email: '',
+  coursesToEnroll: '',
+  createdAt: null,
 
   // Step tracking
-  currentStep: 2,
-  completedSteps: [1],
+  currentStep: 1,
+  completedSteps: [],
 
   // Helper functions
   isStepCompleted: (stepNumber) => get().completedSteps.includes(stepNumber),
@@ -20,6 +23,37 @@ const useEnrollmentStore = create((set, get) => ({
   isStepPending: (stepNumber) =>
     !get().completedSteps.includes(stepNumber) &&
     stepNumber !== get().currentStep,
+
+  // Set enrollment data from tracking
+  setEnrollmentData: (data) => {
+    set({
+      enrollmentId: data.enrollmentId,
+      enrollmentStatus: data.status,
+      currentStep: data.currentStep,
+      completedSteps: data.completedSteps,
+      remarkMsg: data.remarkMsg,
+      fullName: data.fullName,
+      email: data.email,
+      coursesToEnroll: data.coursesToEnroll,
+      createdAt: data.createdAt,
+    });
+  },
+
+  // Clear enrollment data
+  clearEnrollmentData: () => {
+    set({
+      enrollmentId: null,
+      enrollmentStatus: 'Pending',
+      remarkMsg: 'Please track your enrollment to view progress.',
+      fullName: '',
+      email: '',
+      coursesToEnroll: '',
+      createdAt: null,
+      currentStep: 1,
+      completedSteps: [],
+      paymentProof: null,
+    });
+  },
 
   advanceToNextStep: () => {
     const { currentStep } = get();
@@ -37,7 +71,7 @@ const useEnrollmentStore = create((set, get) => ({
 
       ...(currentStep === 2
         ? {
-            enrollmentStatus: 'Pending',
+            enrollmentStatus: 'VERIFIED',
             remarkMsg:
               'Your form has been verified by the administrator. Please proceed to payment.',
           }
@@ -45,7 +79,7 @@ const useEnrollmentStore = create((set, get) => ({
 
       ...(currentStep === 3
         ? {
-            enrollmentStatus: 'Pending',
+            enrollmentStatus: 'PAYMENT_PENDING',
             remarkMsg:
               'Your payment is being verified. This may take 1-2 business days.',
           }
@@ -53,33 +87,26 @@ const useEnrollmentStore = create((set, get) => ({
 
       ...(currentStep === 4
         ? {
-            enrollmentStatus: 'Completed',
+            enrollmentStatus: 'COMPLETED',
             remarkMsg: 'Congratulations! Your enrollment is complete.',
           }
         : {}),
     }));
   },
 
-  // Fetch enrollment data
+  // Fetch enrollment data - now using real data if available
   fetchEnrollmentData: async () => {
-    try {
-      // Simulate API response
-      const data = {
-        enrollment_id: get().enrollmentId,
-        status: 'Pending',
-        current_step: 2,
-        completed_steps: [1],
-        remarks:
-          'Your enrollment form has been submitted and is pending verification by an administrator.',
-      };
+    const { enrollmentId } = get();
+    
+    // If no enrollment ID, don't fetch
+    if (!enrollmentId) {
+      console.log('No enrollment ID available for fetching data');
+      return;
+    }
 
-      set({
-        enrollmentId: data.enrollment_id,
-        enrollmentStatus: data.status,
-        currentStep: data.current_step,
-        completedSteps: data.completed_steps,
-        remarkMsg: data.remarks,
-      });
+    try {
+      // This could be enhanced to re-fetch from API if needed
+      console.log('Enrollment data already available in store');
     } catch (error) {
       console.error('Error fetching enrollment data:', error);
     }
