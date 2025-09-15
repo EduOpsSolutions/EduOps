@@ -21,6 +21,7 @@ function Enrollment() {
     email,
     coursesToEnroll,
     createdAt,
+    completedSteps,
   } = useEnrollmentStore();
 
   useEffect(() => {
@@ -152,9 +153,7 @@ function Enrollment() {
               </h2>
               <EnrollmentProgressBar
                 currentStep={currentStep}
-                completedSteps={useEnrollmentStore(
-                  (state) => state.completedSteps
-                )}
+                completedSteps={completedSteps}
                 isStepCompleted={isStepCompleted}
                 isStepCurrent={isStepCurrent}
               />
