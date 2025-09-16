@@ -444,55 +444,6 @@ const getEnrollmentRequests = async (req, res) => {
   res.status(200).json({ ...retval, error: false });
 };
 
-//get single enrollment request by ID
-const getEnrollmentRequestById = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const enrollmentRequest = await prisma.enrollment_request.findUnique({
-      where: { id: parseInt(id) },
-    });
-    if (!enrollmentRequest) {
-      return res
-        .status(404)
-        .json({ message: 'Enrollment request not found', error: true });
-    }
-    res.status(200).json({
-      message: 'Enrollment request fetched successfully',
-      data: enrollmentRequest,
-      error: false,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message, error: true });
-  }
-};
-
-//get enrollment request by email
-const getEnrollmentRequestByEmail = async (req, res) => {
-  const { email } = req.params;
-  try {
-    const enrollmentRequest = await prisma.enrollment_request.findFirst({
-      where: {
-        OR: [
-          { preferredEmail: email },
-          { altEmail: email },
-        ],
-      },
-    });
-
-    if (!enrollmentRequest) {
-      return res
-        .status(404)
-        .json({ message: 'Enrollment request not found', error: true });
-    }
-    res.status(200).json({
-      message: 'Enrollment request fetched successfully',
-      data: enrollmentRequest,
-      error: false,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message, error: true });
-  }
-};
 
 // Track enrollment by ID and/or email - for public enrollment tracking
 const trackEnrollment = async (req, res) => {
