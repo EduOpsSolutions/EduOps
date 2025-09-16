@@ -2,14 +2,18 @@ import React, { useState } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import ForgotEnrollmentIdModal from "./ForgotIdModal";
+import { trackEnrollment } from "../../../utils/enrollmentApi";
+import useEnrollmentStore from "../../../stores/enrollmentProgressStore";
 
 function TrackEnrollmentModal({ isOpen, onClose }) {
     const [enrollmentId, setEnrollmentId] = useState("");
     const [email, setEmail] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const [forgotEnrollmentIdModal, setForgotEnrollmentIdModal] = useState(false);
     const navigate = useNavigate();
+    const { setEnrollmentData } = useEnrollmentStore();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!enrollmentId && !email) {
@@ -22,7 +26,40 @@ function TrackEnrollmentModal({ isOpen, onClose }) {
             return;
         }
 
-        navigate('/enrollment');
+        setIsLoading(true);
+
+        try {
+            const response = await trackEnrollment(enrollmentId, email);
+            
+            if (!response.error) {
+                // Set the enrollment data in the store
+                setEnrollmentData(response.data);
+                
+                // Show success message
+                Swal.fire({
+                    title: "Enrollment Found!",
+                    text: `Welcome back, ${response.data.fullName}!`,
+                    icon: "success",
+                    confirmButtonColor: "#992525",
+                });
+
+                // Close modal and navigate
+                onClose();
+                navigate('/enrollment');
+            } else {
+                throw new Error(response.message);
+            }
+        } catch (error) {
+            console.error('Error tracking enrollment:', error);
+            Swal.fire({
+                title: "Enrollment Not Found",
+                text: error.message || "Please check your enrollment ID or email and try again.",
+                icon: "error",
+                confirmButtonColor: "#992525",
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -88,9 +125,40 @@ function TrackEnrollmentModal({ isOpen, onClose }) {
                     <div className="flex justify-center mt-6">
                         <button
                             type="submit"
-                            className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150"
+                            disabled={isLoading}
+                            className={`px-8 py-2 rounded font-semibold transition-colors duration-150 ${
+                                isLoading
+                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                    : 'bg-dark-red-2 hover:bg-dark-red-5 text-white'
+                            }`}
                         >
-                            Confirm
+                            {isLoading ? (
+                                <div className="flex items-center">
+                                    <svg
+                                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-current"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
+                                    </svg>
+                                    Searching...
+                                </div>
+                            ) : (
+                                'Confirm'
+                            )}
                         </button>
                     </div>
                 </form>

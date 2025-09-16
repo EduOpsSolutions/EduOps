@@ -383,6 +383,7 @@ const createEnrollmentRequest = async (req, res) => {
   }
 };
 
+// Get enrollment requests with filtering, pagination, and search
 const getEnrollmentRequests = async (req, res) => {
   const {
     id,
@@ -395,7 +396,7 @@ const getEnrollmentRequests = async (req, res) => {
   const enrollmentRequests = await prisma.enrollment_request.findMany({
     where: {
       id: id,
-      status: status,
+      enrollmentStatus: status,
       ...(search && {
         OR: [
           { enrollmentId: { contains: search } },
@@ -429,7 +430,7 @@ const getEnrollmentRequests = async (req, res) => {
   const total = await prisma.enrollment_request.count({
     where: {
       id: id,
-      status: status,
+      enrollmentStatus: status,
     },
   });
 
@@ -443,4 +444,125 @@ const getEnrollmentRequests = async (req, res) => {
   res.status(200).json({ ...retval, error: false });
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests };
+
+// Track enrollment by ID and/or email - for public enrollment tracking
+const trackEnrollment = async (req, res) => {
+  const { enrollmentId, email } = req.body;
+  
+  try {
+    // Validate that at least one parameter is provided
+    if (!enrollmentId && !email) {
+      return res.status(400).json({
+        message: 'Please provide either enrollment ID or email',
+        error: true
+      });
+    }
+
+    // Build the where clause based on provided parameters
+    let whereClause = {};
+    if (enrollmentId && email) {
+      // Both provided - must match both
+      whereClause = {
+        AND: [
+          { enrollmentId: enrollmentId },
+          {
+            OR: [
+              { preferredEmail: email },
+              { altEmail: email }
+            ]
+          }
+        ]
+      };
+    } else if (enrollmentId) {
+      // Only enrollment ID provided
+      whereClause = { enrollmentId: enrollmentId };
+    } else if (email) {
+      // Only email provided
+      whereClause = {
+        OR: [
+          { preferredEmail: email },
+          { altEmail: email }
+        ]
+      };
+    }
+
+    const enrollmentRequest = await prisma.enrollment_request.findFirst({
+      where: whereClause,
+    });
+
+    if (!enrollmentRequest) {
+      return res.status(404).json({
+        message: 'Enrollment request not found. Please check your enrollment ID or email.',
+        error: true
+      });
+    }
+
+    // Map enrollment status to progress steps
+    let currentStep = 1;
+    let completedSteps = [];
+    let remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
+
+    switch (enrollmentRequest.enrollmentStatus.toUpperCase()) {
+      case 'PENDING':
+        currentStep = 2;
+        completedSteps = [1];
+        remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
+        break;
+      case 'VERIFIED':
+        currentStep = 3;
+        completedSteps = [1, 2];
+        remarkMsg = 'Your form has been verified by the administrator. Please proceed to payment.';
+        break;
+      case 'PAYMENT_PENDING':
+        currentStep = 4;
+        completedSteps = [1, 2, 3];
+        remarkMsg = 'Your payment is being verified. This may take 1-2 business days.';
+        break;
+      case 'APPROVED':
+        currentStep = 5;
+        completedSteps = [1, 2, 3, 4];
+        remarkMsg = 'Congratulations! Your enrollment has been approved.';
+        break;
+      case 'COMPLETED':
+        currentStep = 5;
+        completedSteps = [1, 2, 3, 4, 5];
+        remarkMsg = 'Congratulations! Your enrollment is complete.';
+        break;
+      case 'REJECTED':
+        currentStep = 1;
+        completedSteps = [];
+        remarkMsg = 'Your enrollment request has been rejected. Please contact our admissions office for more information.';
+        break;
+      default:
+        currentStep = 1;
+        completedSteps = [];
+        remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
+    }
+
+    // Return enrollment tracking data
+    res.status(200).json({
+      message: 'Enrollment found successfully',
+      error: false,
+      data: {
+        enrollmentId: enrollmentRequest.enrollmentId,
+        status: enrollmentRequest.enrollmentStatus,
+        currentStep,
+        completedSteps,
+        remarkMsg,
+        fullName: `${enrollmentRequest.firstName} ${enrollmentRequest.middleName || ''} ${enrollmentRequest.lastName}`.trim(),
+        email: enrollmentRequest.preferredEmail,
+        createdAt: enrollmentRequest.createdAt,
+        coursesToEnroll: enrollmentRequest.coursesToEnroll
+      }
+    });
+
+  } catch (error) {
+    console.error('Error tracking enrollment:', error);
+    res.status(500).json({ 
+      message: 'An error occurred while tracking your enrollment', 
+      error: true 
+    });
+  }
+};
+
+export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment };

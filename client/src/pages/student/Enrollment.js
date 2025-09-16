@@ -17,6 +17,11 @@ function Enrollment() {
     setPaymentProof,
     uploadPaymentProof,
     advanceToNextStep,
+    fullName,
+    email,
+    coursesToEnroll,
+    createdAt,
+    completedSteps,
   } = useEnrollmentStore();
 
   useEffect(() => {
@@ -35,6 +40,51 @@ function Enrollment() {
     }
   };
 
+  // If no enrollment data, show placeholder
+  if (!enrollmentId) {
+    return (
+      <>
+        <UserNavbar role="public" />
+        <div className="bg_custom bg-white-yellow-tone">
+          <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+            <div className="w-full max-w-7xl bg-white shadow-lg border border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+              <div className="text-center py-12">
+                <div className="mb-6">
+                  <svg
+                    className="mx-auto h-16 w-16 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+                  No Enrollment Data Found
+                </h2>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Please use the "Track Enrollment" feature to search for your enrollment
+                  using your Enrollment ID or email address.
+                </p>
+                <button
+                  onClick={() => window.history.back()}
+                  className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-6 py-2 rounded font-semibold transition-colors duration-150"
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <UserNavbar role="public" />
@@ -43,22 +93,56 @@ function Enrollment() {
           <div className="w-full max-w-7xl bg-white shadow-lg border border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
             <div className="text-center mb-6 md:mb-8"></div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-6 px-4">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 font-medium">Enrollee ID:</span>
-                <span className="font-bold text-dark-red">{enrollmentId}</span>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 px-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600 font-medium">Enrollee ID:</span>
+                  <span className="font-bold text-dark-red">{enrollmentId}</span>
+                </div>
+                {fullName && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium">Name:</span>
+                    <span className="font-semibold text-gray-800">{fullName}</span>
+                  </div>
+                )}
+                {coursesToEnroll && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium">Course:</span>
+                    <span className="text-gray-800">{coursesToEnroll}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 font-medium">Status:</span>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    enrollmentStatus === 'Completed'
-                      ? 'bg-green-100 text-green-800 border border-green-200'
-                      : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                  }`}
-                >
-                  {enrollmentStatus}
-                </span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600 font-medium">Status:</span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      enrollmentStatus === 'COMPLETED'
+                        ? 'bg-green-100 text-green-800 border border-green-200'
+                        : enrollmentStatus === 'APPROVED'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                        : enrollmentStatus === 'VERIFIED'
+                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                        : enrollmentStatus === 'REJECTED'
+                        ? 'bg-red-100 text-red-800 border border-red-200'
+                        : 'bg-gray-100 text-gray-800 border border-gray-200'
+                    }`}
+                  >
+                    {enrollmentStatus}
+                  </span>
+                </div>
+                {createdAt && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium">Applied:</span>
+                    <span className="text-gray-800">
+                      {new Date(createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -69,9 +153,7 @@ function Enrollment() {
               </h2>
               <EnrollmentProgressBar
                 currentStep={currentStep}
-                completedSteps={useEnrollmentStore(
-                  (state) => state.completedSteps
-                )}
+                completedSteps={completedSteps}
                 isStepCompleted={isStepCompleted}
                 isStepCurrent={isStepCurrent}
               />
