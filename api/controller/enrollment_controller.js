@@ -551,7 +551,7 @@ const trackEnrollment = async (req, res) => {
     let completedSteps = [];
     let remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
 
-    switch (enrollmentRequest.enrollmentStatus.toLowerCase()) {
+    switch (enrollmentRequest.enrollmentStatus.toUpperCase()) {
       case 'PENDING':
         currentStep = 2;
         completedSteps = [1];
