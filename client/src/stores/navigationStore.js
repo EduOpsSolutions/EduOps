@@ -10,7 +10,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/notfound`, label: 'Student Admission' },
           { path: `/${role}/schedule`, label: 'Schedule' },
           { path: `/${role}/studyLoad`, label: 'Study Load' },
-        ]
+        ],
       },
       grades: { path: `/${role}/grades`, label: 'Grades' },
       payment: {
@@ -18,7 +18,7 @@ const getNavigationConfig = (role) => {
         items: [
           { path: `/${role}/assessment`, label: 'Assessment' },
           { path: `/${role}/ledger`, label: 'Ledger' },
-        ]
+        ],
       },
       documents: { path: `/${role}/documents`, label: 'Documents' },
     },
@@ -29,7 +29,7 @@ const getNavigationConfig = (role) => {
         items: [
           { path: `/${role}/schedule`, label: 'Schedule' },
           { path: `/${role}/teachingLoad`, label: 'Teaching Load' },
-        ]
+        ],
       },
       documents: { path: `/${role}/documents`, label: 'Documents' },
     },
@@ -41,7 +41,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/coursemanagement`, label: 'Course Assignment' },
           { path: `/${role}/enrollmentperiod`, label: 'Enrollment Period' },
           { path: `/${role}/enrollmentrequests`, label: 'Enrollment Request' },
-        ]
+        ],
       },
       grades: { path: `/${role}/grades`, label: 'Grades' },
       payment: {
@@ -51,25 +51,28 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/ledger`, label: 'Ledger' },
           { path: `/${role}/managefees`, label: 'Manage Fees' },
           { path: `/${role}/transaction`, label: 'Manage Transactions' },
-        ]
+        ],
       },
       documents: {
         label: 'Documents',
         items: [
           { path: `/${role}/manage-documents`, label: 'Manage Documents' },
           { path: `/${role}/document-requests`, label: 'Document Requests' },
-          { path: `/${role}/notfound`, label: 'Reports' },
-          { path: `/${role}/document-validation`, label: 'Document Validation' },
-        ]
+          { path: `/${role}/`, label: 'Reports' },
+          {
+            path: `/${role}/document-validation`,
+            label: 'Document Validation',
+          },
+        ],
       },
       accounts: {
         label: 'Accounts',
         items: [
           { path: `/${role}/account-management`, label: 'Manage Accounts' },
           { path: `/${role}/create-user`, label: 'Create User' },
-        ]
+        ],
       },
-    }
+    },
   };
 
   return baseConfig[role] || {};
@@ -79,10 +82,10 @@ const useNavigationStore = create((set, get) => ({
   isCompactMenuOpen: false,
   activeDropdown: null,
 
-
-  toggleCompactMenu: () => set((state) => ({
-    isCompactMenuOpen: !state.isCompactMenuOpen
-  })),
+  toggleCompactMenu: () =>
+    set((state) => ({
+      isCompactMenuOpen: !state.isCompactMenuOpen,
+    })),
 
   closeCompactMenu: () => set({ isCompactMenuOpen: false }),
 
@@ -93,4 +96,4 @@ const useNavigationStore = create((set, get) => ({
   getNavigationItems: (role) => getNavigationConfig(role),
 }));
 
-export default useNavigationStore; 
+export default useNavigationStore;
