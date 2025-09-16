@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import Config from '../utils/config.js';
+import POSTS_API, { formatPostData, formatBackendPost } from '../utils/postsApi.js';
 import { 
   POST_TAGS, 
   USER_ROLES,
-  initialPosts,
   defaultFormData,
   createImagePreview,
   getFileName,
@@ -17,8 +17,13 @@ import {
 } from './postsStoreState';
 
 const usePostsStore = create((set, get) => ({
-    posts: initialPosts,
+    posts: [],
     formData: { ...defaultFormData },
+    isLoading: false,
+    error: null,
+    actualFiles: [], // Store actual File objects for upload
+    existingFiles: [], // Store existing files from the post being edited
+    filesToDelete: [], // Track files marked for deletion
     
     defaultFormData: {
         title: '',
@@ -32,7 +37,61 @@ const usePostsStore = create((set, get) => ({
         editingPostId: null
     },
 
-    // Posts section
+    // API Actions
+    /**
+     * Fetch all posts from backend
+     * @param {Object} filters - Optional filters (tag, status, userId, isArchived)
+     */
+    fetchPosts: async (filters = {}) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+            const response = await POSTS_API.getPosts(filters);
+            const formattedPosts = response.data.data.map(formatBackendPost);
+            
+            set({ 
+                posts: formattedPosts,
+                isLoading: false 
+            });
+            
+            return formattedPosts;
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            set({ 
+                error: error.response?.data?.message || 'Failed to fetch posts',
+                isLoading: false 
+            });
+            throw error;
+        }
+    },
+
+    /**
+     * Fetch current user's posts
+     */
+    fetchMyPosts: async (filters = {}) => {
+        set({ isLoading: true, error: null });
+        
+        try {
+            const response = await POSTS_API.getMyPosts(filters);
+            const formattedPosts = response.data.data.map(formatBackendPost);
+            
+            set({ 
+                posts: formattedPosts,
+                isLoading: false 
+            });
+            
+            return formattedPosts;
+        } catch (error) {
+            console.error('Error fetching my posts:', error);
+            set({ 
+                error: error.response?.data?.message || 'Failed to fetch your posts',
+                isLoading: false 
+            });
+            throw error;
+        }
+    },
+
+    // Posts section - Updated for backend integration
     /**
      * Returns posts that should be visible to a user based on their role and post tags
      * @param {string} userRole 
@@ -46,29 +105,59 @@ const usePostsStore = create((set, get) => ({
         return filterArchivedPosts(get().posts);
     },
 
-    hidePost: (postId) => {
-        set(state => ({
-            posts: state.posts.map(post => 
-                post.id === postId ? { ...post, isArchived: true } : post
-            )
-        }));
-        return true;
+    hidePost: async (postId) => {
+        try {
+            await POSTS_API.archivePost(postId);
+            
+            // Update local state
+            set(state => ({
+                posts: state.posts.map(post => 
+                    post.id === postId ? { ...post, isArchived: true } : post
+                )
+            }));
+            
+            return true;
+        } catch (error) {
+            console.error('Error hiding post:', error);
+            set({ error: error.response?.data?.message || 'Failed to hide post' });
+            throw error;
+        }
     },
 
-    unhidePost: (postId) => {
-        set(state => ({
-            posts: state.posts.map(post => 
-                post.id === postId ? { ...post, isArchived: false } : post
-            )
-        }));
-        return true;
+    unhidePost: async (postId) => {
+        try {
+            await POSTS_API.unarchivePost(postId);
+            
+            // Update local state
+            set(state => ({
+                posts: state.posts.map(post => 
+                    post.id === postId ? { ...post, isArchived: false } : post
+                )
+            }));
+            
+            return true;
+        } catch (error) {
+            console.error('Error unhiding post:', error);
+            set({ error: error.response?.data?.message || 'Failed to unhide post' });
+            throw error;
+        }
     },
 
-    deletePost: (postId) => {
-        set(state => ({
-            posts: state.posts.filter(post => post.id !== postId)
-        }));
-        return true;
+    deletePost: async (postId) => {
+        try {
+            await POSTS_API.deletePost(postId);
+            
+            // Remove from local state
+            set(state => ({
+                posts: state.posts.filter(post => post.id !== postId)
+            }));
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            set({ error: error.response?.data?.message || 'Failed to delete post' });
+            throw error;
+        }
     },
 
     // Form
@@ -111,7 +200,9 @@ const usePostsStore = create((set, get) => ({
                 formData: {
                     ...state.formData,
                     selectedImages: [...state.formData.selectedImages, ...imageUrls]
-                }
+                },
+                // Store actual File objects for upload
+                actualFiles: [...state.actualFiles, ...files]
             }));
         } else if (type === 'file') {
             const fileNames = files.map(getFileName);
@@ -119,24 +210,73 @@ const usePostsStore = create((set, get) => ({
                 formData: {
                     ...state.formData,
                     selectedFiles: [...state.formData.selectedFiles, ...fileNames]
-                }
+                },
+                // Store actual File objects for upload
+                actualFiles: [...state.actualFiles, ...files]
             }));
         }
     },
 
-    removeImage: (imageUrl) => set(state => ({
-        formData: {
-            ...state.formData,
-            selectedImages: state.formData.selectedImages.filter(img => img !== imageUrl)
-        }
-    })),
+    removeImage: (imageUrl) => {
+        set(state => {
+            const imageIndex = state.formData.selectedImages.indexOf(imageUrl);
+            if (imageIndex !== -1) {
+                // Remove the corresponding file from actualFiles
+                const newActualFiles = [...state.actualFiles];
+                newActualFiles.splice(imageIndex, 1);
+                
+                return {
+                    formData: {
+                        ...state.formData,
+                        selectedImages: state.formData.selectedImages.filter(img => img !== imageUrl)
+                    },
+                    actualFiles: newActualFiles
+                };
+            }
+            return state;
+        });
+    },
 
-    removeFile: (fileName) => set(state => ({
-        formData: {
-            ...state.formData,
-            selectedFiles: state.formData.selectedFiles.filter(file => file !== fileName)
-        }
-    })),
+    removeFile: (fileName) => {
+        set(state => {
+            const fileIndex = state.formData.selectedFiles.indexOf(fileName);
+            if (fileIndex !== -1) {
+                // Remove the corresponding file from actualFiles
+                const newActualFiles = [...state.actualFiles];
+                const imageCount = state.formData.selectedImages.length;
+                newActualFiles.splice(imageCount + fileIndex, 1);
+                
+                return {
+                    formData: {
+                        ...state.formData,
+                        selectedFiles: state.formData.selectedFiles.filter(file => file !== fileName)
+                    },
+                    actualFiles: newActualFiles
+                };
+            }
+            return state;
+        });
+    },
+
+    // Remove existing file (mark for deletion)
+    removeExistingFile: (fileId) => {
+        set(state => ({
+            existingFiles: state.existingFiles.filter(file => file.id !== fileId),
+            filesToDelete: [...state.filesToDelete, fileId]
+        }));
+    },
+
+    // Get all existing images
+    getExistingImages: () => {
+        const { existingFiles } = get();
+        return existingFiles.filter(file => file.fileType?.startsWith('image/'));
+    },
+
+    // Get all existing documents
+    getExistingDocuments: () => {
+        const { existingFiles } = get();
+        return existingFiles.filter(file => !file.fileType?.startsWith('image/'));
+    },
 
     toggleEmojiPicker: () => set(state => ({
         formData: {
@@ -193,17 +333,29 @@ const usePostsStore = create((set, get) => ({
                 content: postData.content || '',
                 tag: postData.tag || 'global',
                 sendOption: postData.sendOption || 'email',
-                editingPostId: postData.id
-            }
+                editingPostId: postData.id,
+                // Clear new file selections when editing
+                selectedImages: [],
+                selectedFiles: []
+            },
+            existingFiles: postData.files || [],
+            filesToDelete: [],
+            actualFiles: []
         }));
     },
 
     resetForm: () => set(() => ({
-        formData: { ...defaultFormData }
+        formData: { ...defaultFormData },
+        actualFiles: [],
+        existingFiles: [],
+        filesToDelete: [],
+        error: null // Clear any errors when resetting
     })),
 
+    clearError: () => set({ error: null }),
+
     /**
-     * Creates and submits a new post
+     * Creates and submits a new post to the backend
      * @param {Function} onSuccess 
      * @returns {Promise<boolean>}
      */
@@ -215,18 +367,26 @@ const usePostsStore = create((set, get) => ({
         const validation = get().validateForm();
         if (!validation.isValid) {
             console.log('Form validation failed:', validation.error);
+            set({ error: validation.error });
             return false;
         }
 
         set(state => ({
-            formData: { ...state.formData, isSubmitting: true }
+            formData: { ...state.formData, isSubmitting: true },
+            error: null
         }));
 
         try {
-            const { formData } = get();
+            const { formData, actualFiles } = get();
 
-            const newPost = createPostObject(formData);
+            // Create FormData for the API request
+            const postFormData = formatPostData(formData, actualFiles);
 
+            // Submit to backend
+            const response = await POSTS_API.createPost(postFormData);
+            const newPost = formatBackendPost(response.data.data);
+
+            // Add to local state
             set(state => ({
                 posts: [newPost, ...state.posts]
             }));
@@ -239,6 +399,9 @@ const usePostsStore = create((set, get) => ({
 
         } catch (error) {
             console.error('Error submitting post:', error);
+            set({ 
+                error: error.response?.data?.message || 'Failed to create post'
+            });
             return false;
         } finally {
             set(state => ({
@@ -256,25 +419,62 @@ const usePostsStore = create((set, get) => ({
 
         if (!validation.isValid) {
             console.log(validation.error);
+            set({ error: validation.error });
             return false;
         }
 
         set(state => ({
-            formData: { ...state.formData, isSubmitting: true }
+            formData: { ...state.formData, isSubmitting: true },
+            error: null
         }));
 
         try {
-            const { formData } = get();
+            const { formData, filesToDelete, actualFiles } = get();
             
-            const updatedData = createUpdatedPostData(formData);
+            // 1. First, delete files that were marked for deletion
+            for (const fileId of filesToDelete) {
+                try {
+                    await POSTS_API.deletePostFile(postId, fileId);
+                } catch (fileDeleteError) {
+                    console.error('Error deleting file:', fileDeleteError);
+                    // Continue with other operations even if file deletion fails
+                }
+            }
 
+            // 2. Add new files if any
+            if (actualFiles.length > 0) {
+                try {
+                    const postFormData = new FormData();
+                    actualFiles.forEach(file => {
+                        postFormData.append('files', file);
+                    });
+                    await POSTS_API.addFilesToPost(postId, postFormData);
+                } catch (fileUploadError) {
+                    console.error('Error uploading new files:', fileUploadError);
+                    // Continue with post update even if file upload fails
+                }
+            }
+            
+            // 3. Update post content
+            const updateData = {
+                title: formData.title,
+                content: formData.content,
+                tag: formData.tag,
+                status: formData.status
+            };
+
+            // Submit to backend
+            const response = await POSTS_API.updatePost(postId, updateData);
+            const updatedPost = formatBackendPost(response.data.data);
+
+            // Update local state
             set(state => ({
                 posts: state.posts.map(post => 
-                    post.id === postId ? { ...post, ...updatedData } : post
+                    post.id === postId ? updatedPost : post
                 )
             }));
 
-            console.log('Post updated:', updatedData);
+            console.log('Post updated:', updatedPost);
 
             get().resetForm();
 
@@ -283,6 +483,9 @@ const usePostsStore = create((set, get) => ({
 
         } catch (error) {
             console.error('Error updating post:', error);
+            set({ 
+                error: error.response?.data?.message || 'Failed to update post'
+            });
             return false;
         } finally {
             set(state => ({
@@ -292,13 +495,15 @@ const usePostsStore = create((set, get) => ({
     },
 
     hasAttachments: () => {
-        const { formData } = get();
-        return formData.selectedImages.length > 0 || formData.selectedFiles.length > 0;
+        const { formData, existingFiles } = get();
+        return formData.selectedImages.length > 0 || 
+               formData.selectedFiles.length > 0 || 
+               existingFiles.length > 0;
     },
 
     getAttachmentCount: () => {
-        const { formData } = get();
-        return formData.selectedImages.length + formData.selectedFiles.length;
+        const { formData, existingFiles } = get();
+        return formData.selectedImages.length + formData.selectedFiles.length + existingFiles.length;
     },
     
     /**
