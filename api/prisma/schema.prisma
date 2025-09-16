@@ -163,8 +163,8 @@ model posts {
   content     String   @db.Text
   tag         PostTag  @default(global)
   status      PostStatus @default(visible)
-  department  String?
-  user        users    @relation(fields: [id], references: [id])
+  userId      String
+  user        users    @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
