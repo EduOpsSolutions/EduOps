@@ -384,6 +384,7 @@ const createEnrollmentRequest = async (req, res) => {
 };
 
 // Get enrollment requests with filtering, pagination, and search
+// Get enrollment requests with filtering, pagination, and search
 const getEnrollmentRequests = async (req, res) => {
   const {
     id,
@@ -396,6 +397,7 @@ const getEnrollmentRequests = async (req, res) => {
   const enrollmentRequests = await prisma.enrollment_request.findMany({
     where: {
       id: id,
+      enrollmentStatus: status,
       enrollmentStatus: status,
       ...(search && {
         OR: [
@@ -430,6 +432,7 @@ const getEnrollmentRequests = async (req, res) => {
   const total = await prisma.enrollment_request.count({
     where: {
       id: id,
+      enrollmentStatus: status,
       enrollmentStatus: status,
     },
   });
