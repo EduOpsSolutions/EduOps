@@ -15,7 +15,7 @@ function EnrollmentRequests() {
     useState(false);
   useEffect(() => {
     fetchEnrollmentRequests();
-  }, []);
+  }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEnrollmentRequests = async () => {
     try {
@@ -189,7 +189,7 @@ function EnrollmentRequests() {
                                 className="truncate max-w-24 sm:max-w-32 md:max-w-none"
                                 title={request.name}
                               >
-                                {request.name}
+                                {request.firstName} {request.lastName} 
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">

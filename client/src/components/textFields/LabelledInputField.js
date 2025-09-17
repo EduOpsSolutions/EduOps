@@ -13,6 +13,9 @@ const LabelledInputField = ({
   disabled,
   className,
   showLabel = true,
+  minLength,
+  maxLength,
+  ...rest
 }) => {
   return (
     <div className="relative z-0 w-full mb-5 group">
@@ -38,6 +41,9 @@ const LabelledInputField = ({
         value={value}
         onChange={onChange}
         disabled={disabled}
+        minLength={minLength}
+        maxLength={maxLength}
+        {...rest}
       />
     </div>
   );
