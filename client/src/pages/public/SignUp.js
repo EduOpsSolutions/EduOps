@@ -8,11 +8,13 @@ import LabelledInputField from '../../components/textFields/LabelledInputField';
 import NotLabelledInputField from '../../components/textFields/NotLabelledInputField';
 import SelectField from '../../components/textFields/SelectField';
 import { guestUploadFile } from '../../utils/files';
+import useEnrollmentStore from '../../stores/enrollmentProgressStore';
 import Swal from 'sweetalert2';
 
 function SignUp() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { setEnrollmentData } = useEnrollmentStore();
 
   // Add any missing options
   const civilStatusOptions = [
@@ -116,8 +118,23 @@ function SignUp() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message);
 
+      // Set enrollment data in store with proper initial state
+      const enrollmentStoreData = {
+        enrollmentId: result.data.enrollmentId,
+        status: 'PENDING', // Default status for new enrollments
+        currentStep: 2, 
+        completedSteps: [1], 
+        remarkMsg: 'Your enrollment form has been submitted. Please wait for verification.',
+        fullName: `${result.data.firstName} ${result.data.middleName ? result.data.middleName + ' ' : ''}${result.data.lastName}`,
+        email: result.data.preferredEmail,
+        coursesToEnroll: result.data.coursesToEnroll,
+        createdAt: result.data.createdAt,
+      };
+
+      setEnrollmentData(enrollmentStoreData);
+
       alert('Enrollment form submitted successfully!');
-      navigate('/enrollment'); //temporary
+      navigate('/enrollment');
     } catch (error) {
       console.error('Error details:', error);
       alert(error.message);

@@ -2,12 +2,11 @@ import React from 'react';
 import EnrollmentStepIcon from './StepIcon';
 
 function EnrollmentProgressBar({
-  currentStep,
-  completedSteps,
   isStepCompleted,
   isStepCurrent,
-  isStepRejected
+  isStepRejected = null
 }) {
+
   const stepLabels = [
     'Enrollment Form',
     'Verification',
