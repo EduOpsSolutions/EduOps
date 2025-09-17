@@ -1,14 +1,34 @@
 import Joi from 'joi';
 
 const createPaymentSchema = Joi.object({
-    enrollmentId: Joi.string().min(1).max(100).required(),
-    firstName: Joi.string().min(1).max(100).required(),
+    enrollmentId: Joi.string().min(1).max(100).required().messages({
+        'any.required': 'Enrollment ID is required',
+        'string.empty': 'Enrollment ID cannot be empty',
+        'string.min': 'Enrollment ID must be at least 1 character long'
+    }),
+    firstName: Joi.string().min(1).max(100).required().messages({
+        'any.required': 'First name is required',
+        'string.empty': 'First name cannot be empty'
+    }),
     middleName: Joi.string().max(100).allow('', null).optional(),
-    lastName: Joi.string().min(1).max(100).required(),
-    email: Joi.string().email().required(),
+    lastName: Joi.string().min(1).max(100).required().messages({
+        'any.required': 'Last name is required',
+        'string.empty': 'Last name cannot be empty'
+    }),
+    email: Joi.string().email().required().messages({
+        'any.required': 'Email address is required',
+        'string.email': 'Please provide a valid email address'
+    }),
     phoneNumber: Joi.string().max(20).allow('', null).optional(),
-    feeType: Joi.string().min(1).max(100).required(),
-    amount: Joi.number().min(1).max(100000).precision(2).required()
+    feeType: Joi.string().min(1).max(100).required().messages({
+        'any.required': 'Fee type is required',
+        'string.empty': 'Fee type cannot be empty'
+    }),
+    amount: Joi.number().min(1).max(100000).precision(2).required().messages({
+        'any.required': 'Amount is required',
+        'number.min': 'Amount must be at least 1 PHP',
+        'number.max': 'Amount cannot exceed 100,000 PHP'
+    })
 }).unknown(true);
 
 const paginationSchema = Joi.object({

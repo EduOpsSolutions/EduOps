@@ -49,7 +49,7 @@ const usePaymentStore = create((set, get) => ({
 
   validateRequiredFields: () => {
     const { formData } = get();
-    return formData.first_name && formData.last_name && formData.email_address && formData.fee && formData.amount;
+    return formData.first_name && formData.last_name && formData.email_address && formData.fee && formData.amount && formData.enrollment_id;
   },
 
   validatePhoneNumber: () => {
@@ -74,7 +74,7 @@ const usePaymentStore = create((set, get) => ({
       email: formData.email_address.trim(),
       phoneNumber: formData.phone_number || null,
       amount: parseFloat(formData.amount),
-      enrollmentId: formData.enrollment_id || undefined,
+      enrollmentId: formData.enrollment_id?.trim() || '',
       feeType: feeLabel
     };
   },

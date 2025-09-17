@@ -107,12 +107,21 @@ export const createPayment = async (req, res) => {
             amount,
         } = req.body;
 
+        // Validate enrollment ID is provided
+        if (!enrollmentId) {
+            return sendError(
+                res,
+                "Enrollment ID is required for payment processing",
+                400
+            );
+        }
+
         // Validate enrollment exists
         const enrollment = await findEnrollment(enrollmentId);
         if (!enrollment) {
             return sendError(
                 res,
-                `Enrollment not found with ID "${enrollmentId}"`,
+                `Enrollment not found with ID "${enrollmentId}". Please verify your enrollment ID and try again.`,
                 404
             );
         }
