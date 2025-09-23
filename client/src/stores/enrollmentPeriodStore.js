@@ -6,7 +6,8 @@ export const useEnrollmentPeriodSearchStore = createSearchStore({
   defaultSearchParams: {
     periodName: '',
     batch: '',
-    year: ''
+    year: '',
+    status: ''
   },
   initialItemsPerPage: 10,
   showResultsOnLoad: true,
@@ -17,7 +18,8 @@ export const useEnrollmentPeriodSearchStore = createSearchStore({
          period.periodName.toLowerCase().includes(searchParams.periodName.toLowerCase())) &&
         (searchParams.batch === '' || period.batchName.includes(searchParams.batch)) &&
         (searchParams.year === '' || 
-         new Date(period.startAt).getFullYear().toString().includes(searchParams.year))
+         new Date(period.startAt).getFullYear().toString().includes(searchParams.year)) &&
+        (searchParams.status === '' || period.status === searchParams.status)
       );
     });
   }
@@ -44,14 +46,36 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
       const visiblePeriods = response.data
         .filter(period => period && !period.deletedAt)
-        .map(period => ({
-          ...period,
-          id: period.id,
-          periodName: period.periodName,
-          batchName: period.batchName,
-          startAt: period.startAt,
-          year: new Date(period.startAt).getFullYear().toString()
-        }));
+        .map(period => {
+          const now = new Date();
+          const startDate = new Date(period.startAt);
+          const endDate = new Date(period.endAt);
+          
+          let status;
+          // Check if enrollment was manually ended
+          if (period.enrollmentEnded) {
+            status = 'Ended';
+          } else if (now < startDate) {
+            status = 'Upcoming';
+          } else if (now >= startDate && now <= endDate) {
+            status = 'Ongoing';
+          } else {
+            status = 'Ended';
+          }
+
+          return {
+            ...period,
+            id: period.id,
+            periodName: period.periodName,
+            batchName: period.batchName,
+            startAt: period.startAt,
+            endAt: period.endAt,
+            status: status,
+            year: new Date(period.startAt).getFullYear().toString(),
+            createdAt: period.createdAt
+          };
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by creation date, newest first
 
       const searchStore = useEnrollmentPeriodSearchStore.getState();
       searchStore.setData(visiblePeriods);
@@ -118,6 +142,28 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
       } finally {
         set({ loading: false });
       }
+    }
+  },
+
+  endEnrollment: async (periodId) => {
+    try {
+      set({ loading: true, error: '' });
+      
+      // Call API to end enrollment for the period
+      await axiosInstance.patch(`/academic-periods/${periodId}/end-enrollment`);
+
+      // Refresh the periods data to reflect the change
+      const { fetchPeriods } = get();
+      await fetchPeriods();
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to end enrollment:", error);
+      const errorMessage = error.response?.data?.message || 'Failed to end enrollment. Please try again.';
+      set({ error: errorMessage });
+      return { success: false, error: errorMessage };
+    } finally {
+      set({ loading: false });
     }
   },
 

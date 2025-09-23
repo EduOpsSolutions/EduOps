@@ -74,6 +74,17 @@ function EnrollmentPeriod() {
           { value: "2023", label: "2023" },
           { value: "2022", label: "2022" }
         ]
+      },
+      {
+        name: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { value: "", label: "All Statuses" },
+          { value: "Ongoing", label: "Ongoing" },
+          { value: "Ended", label: "Ended" },
+          { value: "Upcoming", label: "Upcoming" }
+        ]
       }
     ]
   };
@@ -81,7 +92,8 @@ function EnrollmentPeriod() {
   const searchResultsColumns = [
     { key: "periodName", header: "Period" },
     { key: "batchName", header: "Batch" },
-    { key: "year", header: "Year" }
+    { key: "year", header: "Year" },
+    { key: "status", header: "Status" }
   ];
 
   const paginationConfig = {
@@ -99,6 +111,19 @@ function EnrollmentPeriod() {
   
   const handlePeriodClick = (period) => {
     handlePeriodSelect(period);
+  };
+
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'Ongoing':
+        return 'bg-green-100 text-green-800 border border-green-200';
+      case 'Ended':
+        return 'bg-red-100 text-red-800 border border-red-200';
+      case 'Upcoming':
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
+    }
   };
 
   return (
@@ -132,6 +157,13 @@ function EnrollmentPeriod() {
         columns={searchResultsColumns}
         onItemClick={handlePeriodClick}
         pagination={paginationConfig}
+        columnRenderers={{
+          status: (status) => (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(status)}`}>
+              {status}
+            </span>
+          )
+        }}
         actionButton={
           <ThinRedButton onClick={() => useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: true })}>
             Create Period

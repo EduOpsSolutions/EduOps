@@ -9,6 +9,7 @@ import Pagination from "./Pagination";
  * @param {Array} props.columns 
  * @param {Function} props.onItemClick 
  * @param {Object} props.pagination 
+ * @param {Object} props.columnRenderers 
  */
 const SearchResults = ({ 
   visible, 
@@ -17,7 +18,8 @@ const SearchResults = ({
   onItemClick,
   pagination,
   actionButton = null,
-  title = "SEARCH RESULTS"
+  title = "SEARCH RESULTS",
+  columnRenderers = {}
 }) => {
   if (!visible) return null;
   
@@ -58,7 +60,10 @@ const SearchResults = ({
                     key={`${item.id}-${column.key}`} 
                     className="py-2 sm:py-3 px-2 sm:px-4 border-t border-b border-dark-red-2 text-sm sm:text-base"
                   >
-                    {item[column.key]}
+                    {columnRenderers[column.key] 
+                      ? columnRenderers[column.key](item[column.key], item)
+                      : item[column.key]
+                    }
                   </td>
                 ))}
               </tr>
