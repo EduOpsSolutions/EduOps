@@ -565,4 +565,4 @@ const trackEnrollment = async (req, res) => {
   }
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests, getEnrollmentRequestById, getEnrollmentRequestByEmail, trackEnrollment };
+export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment };

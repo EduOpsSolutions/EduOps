@@ -4,6 +4,8 @@ import ThinRedButton from '../../components/buttons/ThinRedButton';
 import axiosInstance from '../../utils/axios.js';
 import EnrollmentDetailsModal from '../../components/modals/enrollment/EnrollmentDetailsModal';
 import { getCookieItem } from '../../utils/jwt';
+import { useEnrollmentPeriodStore } from '../../stores/enrollmentPeriodStore';
+import Swal from 'sweetalert2';
 function EnrollmentRequests() {
   const [enrollmentRequests, setEnrollmentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,9 +15,13 @@ function EnrollmentRequests() {
     useState(null);
   const [showEnrollmentDetailsModal, setShowEnrollmentDetailsModal] =
     useState(false);
+  const [activePeriods, setActivePeriods] = useState([]);
+  
+  const { endEnrollment } = useEnrollmentPeriodStore();
   useEffect(() => {
     fetchEnrollmentRequests();
-  }, []);
+    fetchActivePeriods();
+  }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEnrollmentRequests = async () => {
     try {
@@ -54,6 +60,112 @@ function EnrollmentRequests() {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+  };
+
+  const fetchActivePeriods = async () => {
+    try {
+      const response = await axiosInstance.get('/academic-periods');
+      const ongoingPeriods = response.data.filter(period => {
+        const now = new Date();
+        const startDate = new Date(period.startAt);
+        const endDate = new Date(period.endAt);
+        return !period.enrollmentEnded && now >= startDate && now <= endDate;
+      });
+      setActivePeriods(ongoingPeriods);
+    } catch (error) {
+      console.error('Error fetching active periods:', error);
+    }
+  };
+
+  const handleEndEnrollment = async () => {
+    try {
+      // First fetch active periods
+      const response = await axiosInstance.get('/academic-periods');
+      const ongoingPeriods = response.data.filter(period => {
+        const now = new Date();
+        const startDate = new Date(period.startAt);
+        const endDate = new Date(period.endAt);
+        return !period.enrollmentEnded && now >= startDate && now <= endDate;
+      });
+
+      if (ongoingPeriods.length === 0) {
+        await Swal.fire({
+          title: 'No Active Enrollment',
+          text: 'There are no ongoing enrollment periods to end.',
+          icon: 'info',
+          confirmButtonColor: '#890E07'
+        });
+        return;
+      }
+
+      // If multiple periods, let user select which one to end
+      let selectedPeriod;
+      if (ongoingPeriods.length === 1) {
+        selectedPeriod = ongoingPeriods[0];
+      } else {
+        const { value: periodId } = await Swal.fire({
+          title: 'Select Enrollment Period to End',
+          text: 'Multiple ongoing enrollment periods found. Select which one to end:',
+          input: 'select',
+          inputOptions: ongoingPeriods.reduce((options, period) => {
+            options[period.id] = `${period.periodName} - ${period.batchName}`;
+            return options;
+          }, {}),
+          inputPlaceholder: 'Select a period...',
+          showCancelButton: true,
+          confirmButtonColor: '#890E07',
+          cancelButtonColor: '#6B7280'
+        });
+
+        if (!periodId) return;
+        selectedPeriod = ongoingPeriods.find(p => p.id === periodId);
+      }
+
+      // Confirm the action
+      const result = await Swal.fire({
+        title: 'End Enrollment Period?',
+        html: `
+          <p>Are you sure you want to end enrollment for:</p>
+          <p><strong>${selectedPeriod.periodName} - ${selectedPeriod.batchName}</strong></p>
+          <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">This action will prevent new enrollees.</p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#890E07',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, end enrollment',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (!result.isConfirmed) return;
+
+      // End the enrollment
+      const endResult = await endEnrollment(selectedPeriod.id);
+      
+      if (endResult.success) {
+        await Swal.fire({
+          title: 'Enrollment Ended',
+          text: `Enrollment for ${selectedPeriod.periodName} - ${selectedPeriod.batchName} has been successfully ended.`,
+          icon: 'success',
+          confirmButtonColor: '#890E07'
+        });
+      } else {
+        await Swal.fire({
+          title: 'Error',
+          text: endResult.error || 'Failed to end enrollment. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#890E07'
+        });
+      }
+    } catch (error) {
+      console.error('Error ending enrollment:', error);
+      await Swal.fire({
+        title: 'Error',
+        text: 'Failed to end enrollment. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#890E07'
+      });
+    }
   };
 
   return (
@@ -110,7 +222,7 @@ function EnrollmentRequests() {
               </div>
 
               <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
-                <ThinRedButton onClick={() => {}}>End Enrollment</ThinRedButton>
+                <ThinRedButton onClick={handleEndEnrollment}>End Enrollment</ThinRedButton>
               </div>
             </div>
           </div>
@@ -189,7 +301,7 @@ function EnrollmentRequests() {
                                 className="truncate max-w-24 sm:max-w-32 md:max-w-none"
                                 title={request.name}
                               >
-                                {request.name}
+                                {request.firstName} {request.lastName} 
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
@@ -266,28 +378,6 @@ function EnrollmentRequests() {
                                 {request.step || 'N/A'}
                               </div>
                             </td>
-                            {/* <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="flex space-x-2">
-                                <button
-                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
-                                  title="View"
-                                >
-                                  <i className="fas fa-eye"></i>
-                                </button>
-                                <button
-                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
-                                  title="Edit"
-                                >
-                                  <i className="fas fa-edit"></i>
-                                </button>
-                                <button
-                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
-                                  title="Info"
-                                >
-                                  <i className="fas fa-info-circle"></i>
-                                </button>
-                              </div>
-                            </td> */}
                           </tr>
                         ))}
                         {enrollmentRequests.length === 0 && !loading && (

@@ -29,14 +29,14 @@ function CourseManagement() {
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
       resetStore();
       searchStore.resetSearch();
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => {
     searchStore.handleSearch();
@@ -148,13 +148,13 @@ function CourseManagement() {
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-28 md:max-w-none" title={course.schedule || 'N/A'}>
-                                {course.schedule || 'N/A'}
+                              <div className="truncate max-w-20 sm:max-w-28 md:max-w-none" title={course.schedule ? `${course.schedule.days}, ${course.schedule.time}` : 'N/A'}>
+                                {course.schedule ? `${course.schedule.days}, ${course.schedule.time}` : 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.category || 'N/A'}>
-                                {course.category || 'N/A'}
+                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.adviser ? `${course.adviser.firstName} ${course.adviser.middleName ? course.adviser.middleName + ' ' : ''}${course.adviser.lastName}` : 'N/A'}>
+                                {course.adviser ? `${course.adviser.firstName} ${course.adviser.middleName ? course.adviser.middleName + ' ' : ''}${course.adviser.lastName}` : 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
