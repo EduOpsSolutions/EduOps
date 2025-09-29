@@ -1,25 +1,24 @@
 import { PrismaClient } from '@prisma/client';
+import { sendEmail } from '../utils/mailer.js';
 
 const prisma = new PrismaClient();
-import { sendEmail } from '../utils/mailer.js';
 
 function generateRandomId() {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   const numbers = '0123456789';
 
-  let randomLetters = '';
-  for (let i = 0; i < 5; i++) {
-    randomLetters += letters.charAt(Math.floor(Math.random() * letters.length));
-  }
+  const randomLetters = Array.from({ length: 5 }, () =>
+    letters.charAt(Math.floor(Math.random() * letters.length))
+  ).join('');
 
-  let randomNumbers = '';
-  for (let i = 0; i < 3; i++) {
-    randomNumbers += numbers.charAt(Math.floor(Math.random() * numbers.length));
-  }
+  const randomNumbers = Array.from({ length: 3 }, () =>
+    numbers.charAt(Math.floor(Math.random() * numbers.length))
+  ).join('');
 
   return randomLetters + randomNumbers;
 }
 
+// Generate unique enrollment ID
 async function generateEnrollmentId() {
   let newId;
   let exists = true;
@@ -265,23 +264,21 @@ const createEnrollmentRequest = async (req, res) => {
               <tr class="section-header">
                 <td colspan="2">Personal Information</td>
               </tr>
-              <tr><td>Full Name</td><td>${firstName} ${
-        middleName || ''
+              <tr><td>Full Name</td><td>${firstName} ${middleName || ''
       } ${lastName}</td></tr>
               <tr><td>Birth Date</td><td>${new Date(
-                birthDate
-              ).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}</td></tr>
+        birthDate
+      ).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}</td></tr>
               <tr><td>Civil Status</td><td>${civilStatus}</td></tr>
               <tr><td>Address</td><td>${address}</td></tr>
-              ${
-                referredBy
-                  ? `<tr><td>Referred By</td><td>${referredBy}</td></tr>`
-                  : ''
-              }
+              ${referredBy
+        ? `<tr><td>Referred By</td><td>${referredBy}</td></tr>`
+        : ''
+      }
             </table>
 
             <table class="info-table">
@@ -289,60 +286,51 @@ const createEnrollmentRequest = async (req, res) => {
                 <td colspan="2">Contact Information</td>
               </tr>
               <tr><td>Primary Contact</td><td>${contactNumber}</td></tr>
-              ${
-                altContactNumber
-                  ? `<tr><td>Alternative Contact</td><td>${altContactNumber}</td></tr>`
-                  : ''
-              }
+              ${altContactNumber
+        ? `<tr><td>Alternative Contact</td><td>${altContactNumber}</td></tr>`
+        : ''
+      }
               <tr><td>Primary Email</td><td>${preferredEmail}</td></tr>
-              ${
-                altEmail
-                  ? `<tr><td>Alternative Email</td><td>${altEmail}</td></tr>`
-                  : ''
-              }
+              ${altEmail
+        ? `<tr><td>Alternative Email</td><td>${altEmail}</td></tr>`
+        : ''
+      }
             </table>
 
-            ${
-              motherName || fatherName || guardianName
-                ? `
+            ${motherName || fatherName || guardianName
+        ? `
             <table class="info-table">
               <tr class="section-header">
                 <td colspan="2">Emergency Contact Information</td>
               </tr>
-              ${
-                motherName
-                  ? `<tr><td>Mother's Name</td><td>${motherName}</td></tr>`
-                  : ''
-              }
-              ${
-                motherContact
-                  ? `<tr><td>Mother's Contact</td><td>${motherContact}</td></tr>`
-                  : ''
-              }
-              ${
-                fatherName
-                  ? `<tr><td>Father's Name</td><td>${fatherName}</td></tr>`
-                  : ''
-              }
-              ${
-                fatherContact
-                  ? `<tr><td>Father's Contact</td><td>${fatherContact}</td></tr>`
-                  : ''
-              }
-              ${
-                guardianName
-                  ? `<tr><td>Guardian's Name</td><td>${guardianName}</td></tr>`
-                  : ''
-              }
-              ${
-                guardianContact
-                  ? `<tr><td>Guardian's Contact</td><td>${guardianContact}</td></tr>`
-                  : ''
-              }
+              ${motherName
+          ? `<tr><td>Mother's Name</td><td>${motherName}</td></tr>`
+          : ''
+        }
+              ${motherContact
+          ? `<tr><td>Mother's Contact</td><td>${motherContact}</td></tr>`
+          : ''
+        }
+              ${fatherName
+          ? `<tr><td>Father's Name</td><td>${fatherName}</td></tr>`
+          : ''
+        }
+              ${fatherContact
+          ? `<tr><td>Father's Contact</td><td>${fatherContact}</td></tr>`
+          : ''
+        }
+              ${guardianName
+          ? `<tr><td>Guardian's Name</td><td>${guardianName}</td></tr>`
+          : ''
+        }
+              ${guardianContact
+          ? `<tr><td>Guardian's Contact</td><td>${guardianContact}</td></tr>`
+          : ''
+        }
             </table>
             `
-                : ''
-            }
+        : ''
+      }
 
             <table class="info-table">
               <tr class="section-header">
@@ -379,7 +367,19 @@ const createEnrollmentRequest = async (req, res) => {
       data: enrollmentRequest,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message, error: true });
+    console.error('Enrollment creation error:', error);
+
+    let userMessage = 'Failed to create enrollment request. Please check your data and try again.';
+
+    if (error.message.includes('idPhotoPath')) {
+      userMessage = 'Invalid ID photo upload. Please try uploading your ID photo again.';
+    } else if (error.message.includes('validIdPath')) {
+      userMessage = 'Invalid valid ID upload. Please try uploading your valid ID again.';
+    } else if (error.message.includes('email')) {
+      userMessage = 'Email address is already in use or invalid.';
+    }
+
+    res.status(500).json({ message: userMessage, error: true });
   }
 };
 
@@ -448,7 +448,7 @@ const getEnrollmentRequests = async (req, res) => {
 // Track enrollment by ID and/or email - for public enrollment tracking
 const trackEnrollment = async (req, res) => {
   const { enrollmentId, email } = req.body;
-  
+
   try {
     // Validate that at least one parameter is provided
     if (!enrollmentId && !email) {
@@ -497,36 +497,57 @@ const trackEnrollment = async (req, res) => {
       });
     }
 
+    const course = await prisma.course.findFirst({
+      where: {
+        name: enrollmentRequest.coursesToEnroll
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true
+      }
+    });
+
     // Map enrollment status to progress steps
     let currentStep = 1;
     let completedSteps = [];
     let remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
 
+    const coursePrice = course ? parseFloat(course.price) : null;
+    console.log('Enrollment request data:', {
+      courseTablePrice: course?.price,
+      finalCoursePrice: coursePrice,
+      courseName: enrollmentRequest.coursesToEnroll,
+      foundCourse: course
+    });
+
+    const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : '';
+
     switch (enrollmentRequest.enrollmentStatus.toUpperCase()) {
       case 'PENDING':
         currentStep = 2;
         completedSteps = [1];
-        remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
+        remarkMsg = `Your enrollment form has been submitted and is pending verification by an administrator.${priceText}`;
         break;
       case 'VERIFIED':
         currentStep = 3;
         completedSteps = [1, 2];
-        remarkMsg = 'Your form has been verified by the administrator. Please proceed to payment.';
+        remarkMsg = `Your form has been verified by the administrator. Please proceed to payment.${priceText}`;
         break;
       case 'PAYMENT_PENDING':
         currentStep = 4;
         completedSteps = [1, 2, 3];
-        remarkMsg = 'Your payment is being verified. This may take 1-2 business days.';
+        remarkMsg = `Your payment is being verified. This may take 1-2 business days.${priceText}`;
         break;
       case 'APPROVED':
         currentStep = 5;
         completedSteps = [1, 2, 3, 4];
-        remarkMsg = 'Congratulations! Your enrollment has been approved.';
+        remarkMsg = `Congratulations! Your enrollment has been approved.${priceText}`;
         break;
       case 'COMPLETED':
         currentStep = 5;
         completedSteps = [1, 2, 3, 4, 5];
-        remarkMsg = 'Congratulations! Your enrollment is complete.';
+        remarkMsg = `Congratulations! Your enrollment is complete.${priceText}`;
         break;
       case 'REJECTED':
         currentStep = 1;
@@ -552,17 +573,63 @@ const trackEnrollment = async (req, res) => {
         fullName: `${enrollmentRequest.firstName} ${enrollmentRequest.middleName || ''} ${enrollmentRequest.lastName}`.trim(),
         email: enrollmentRequest.preferredEmail,
         createdAt: enrollmentRequest.createdAt,
-        coursesToEnroll: enrollmentRequest.coursesToEnroll
+        coursesToEnroll: enrollmentRequest.coursesToEnroll,
+        coursePrice: coursePrice,
+        courseName: course?.name || enrollmentRequest.coursesToEnroll,
+        paymentProofPath: enrollmentRequest.paymentProofPath
       }
     });
 
   } catch (error) {
     console.error('Error tracking enrollment:', error);
-    res.status(500).json({ 
-      message: 'An error occurred while tracking your enrollment', 
-      error: true 
+    res.status(500).json({
+      message: 'An error occurred while tracking your enrollment',
+      error: true
     });
   }
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment };
+// Update enrollment request with payment proof
+const updateEnrollmentPaymentProof = async (req, res) => {
+  try {
+    const { enrollmentId, paymentProofPath } = req.body;
+
+    if (!enrollmentId || !paymentProofPath) {
+      return res.status(400).json({
+        message: 'Enrollment ID and payment proof path are required',
+        error: true
+      });
+    }
+
+    const updatedEnrollment = await prisma.enrollment_request.update({
+      where: { enrollmentId },
+      data: {
+        paymentProofPath,
+        enrollmentStatus: 'PAYMENT_PENDING'
+      }
+    });
+
+    res.status(200).json({
+      message: 'Payment proof uploaded successfully',
+      error: false,
+      data: updatedEnrollment
+    });
+
+  } catch (error) {
+    console.error('Error updating payment proof:', error);
+
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        message: 'Enrollment request not found',
+        error: true
+      });
+    }
+
+    res.status(500).json({
+      message: 'An error occurred while updating payment proof',
+      error: true
+    });
+  }
+};
+
+export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof };
