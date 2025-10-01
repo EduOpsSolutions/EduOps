@@ -5,6 +5,7 @@ import {
     createAcademicPeriod,
     updateAcademicPeriod,
     deleteAcademicPeriod,
+    endEnrollment,
 } from '../../controller/academic_period_controller.js';
 
 const router = express.Router();
@@ -13,6 +14,7 @@ router.get('/', getAcademicPeriods);
 router.get('/:id', getAcademicPeriod);
 router.post('/create', createAcademicPeriod);
 router.put('/:id', updateAcademicPeriod);
+router.patch('/:id/end-enrollment', endEnrollment);
 router.delete('/delete/:id', deleteAcademicPeriod);
 
 

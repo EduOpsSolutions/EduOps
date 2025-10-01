@@ -168,6 +168,20 @@ export default function EnrollmentDetailsModal({
     setShowPreview(true);
   };
 
+  const handlePreviewPaymentProof = () => {
+    if (!formData?.paymentProofPath) {
+      Swal.fire({
+        title: 'Payment Proof Not Available',
+        text: 'Proof of payment has not been uploaded yet.',
+        icon: 'info',
+        confirmButtonColor: '#dc2626',
+      });
+      return;
+    }
+    
+    handlePreviewFile(formData.paymentProofPath, 'Proof of Payment Preview');
+  };
+
   const handleFormSave = async () => {
     setLoading(true);
     try {
@@ -502,6 +516,16 @@ export default function EnrollmentDetailsModal({
                       <FaEye />
                     </PrimaryButton>
                     <p>ID Photo</p>
+                  </div>
+
+                  <div className="flex flex-row space-x-4 items-center my-2">
+                    <PrimaryButton
+                      className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
+                      onClick={handlePreviewPaymentProof}
+                    >
+                      <FaEye />
+                    </PrimaryButton>
+                    <p>Proof of Payment</p>
                   </div>
                 </div>
               </div>

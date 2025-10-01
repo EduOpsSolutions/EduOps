@@ -65,6 +65,7 @@ model enrollment_request {
   coursesToEnroll   String
   validIdPath       String? @db.LongText 
   idPhotoPath       String? @db.LongText
+  paymentProofPath  String? @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -104,6 +105,7 @@ model academic_period {
   id            String    @id @default(cuid())
   batchName     String
   periodName    String
+  status        AcademicPeriodStatus @default(upcoming)
   startAt       DateTime
   endAt         DateTime
   createdAt     DateTime  @default(now())
@@ -147,6 +149,12 @@ model logs {
 enum  Visibility{
   hidden
   visible
+}
+
+enum AcademicPeriodStatus{
+  upcoming
+  ongoing
+  ended
 }
 
 enum RequisiteType{
