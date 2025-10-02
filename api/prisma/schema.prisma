@@ -23,7 +23,7 @@ model users {
   birthdate Int
   birthyear Int
   phoneNumber String?
-  profilePicLink String?
+  profilePicLink String? @db.LongText
   status         String?
   email     String   @unique
   password  String
