@@ -36,8 +36,10 @@ model users {
   resetTokenExpiry DateTime?
   changePassword Boolean @default(true)
 
-  advisedCourses course[] @relation("UserAdvisesCourses")
   posts         posts[]
+  teacherSchedules schedule[] @relation("TeacherSchedules")
+  studentSchedules user_schedule[] @relation("StudentSchedules")
+  enrollments   student_enrollment[] @relation("StudentEnrollments")
 }
 
 model enrollment_request {
@@ -83,11 +85,60 @@ model course {
   price     Decimal @db.Decimal(10, 2)
   schedule  Json?
 
-  adviserId String?
-  adviser   users? @relation("UserAdvisesCourses", fields: [adviserId], references: [id])
-
   courseRequisite course_requisite[]
   academicPeriods academic_period_courses[]
+  schedules schedule[]
+}
+
+model schedule {
+  id        Int   @id @default(autoincrement())
+  days      String
+  time      String
+  courseId  String?
+  periodId  String?
+  teacherId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  course    course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  period    academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  teacher   users? @relation("TeacherSchedules", fields: [teacherId], references: [id], onDelete: SetNull)
+  userSchedules user_schedule[]
+}
+
+model user_schedule {
+  id        Int   @id @default(autoincrement())
+  userId    String?
+  scheduleId Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  user      users? @relation("StudentSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  schedule  schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+}
+
+model student_enrollment {
+  id        String   @id @default(cuid())
+  studentId String
+  periodId  String
+  status    EnrollmentStatus @default(enrolled)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  student   users @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+  period    academic_period @relation("PeriodEnrollments", fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, periodId])
+}
+
+enum EnrollmentStatus {
+  enrolled
+  completed
+  dropped
+  withdrawn
 }
 
 model course_requisite {
@@ -113,6 +164,8 @@ model academic_period {
   deletedAt     DateTime?
 
   courses       academic_period_courses[]
+  schedules     schedule[]
+  enrollments   student_enrollment[] @relation("PeriodEnrollments")
 }
 
 model academic_period_courses{
