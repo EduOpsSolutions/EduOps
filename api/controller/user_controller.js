@@ -497,6 +497,60 @@ const removeProfilePicture = async (req, res) => {
   }
 };
 
+// Get student by ID (userId)
+const getStudentById = async (req, res) => {
+  const { studentId } = req.params;
+
+  if (!studentId) {
+    return res.status(400).json({ 
+      error: true,
+      success: false,
+      message: 'Student ID is required' 
+    });
+  }
+
+  try {
+    const student = await prisma.users.findFirst({
+      where: {
+        userId: studentId,
+        role: 'STUDENT',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({ 
+        error: true,
+        success: false,
+        message: 'Student not found with the provided ID' 
+      });
+    }
+
+    res.json({ 
+      error: false,
+      success: true,
+      data: student,
+      message: 'Student found successfully'
+    });
+  } catch (error) {
+    console.error('Error fetching student by ID:', error);
+    res.status(500).json({ 
+      error: true,
+      success: false,
+      message: 'Server error while fetching student',
+      error_details: error.message
+    });
+  }
+};
+
 export {
   getAllUsers,
   getUserById,
@@ -510,4 +564,5 @@ export {
   inspectEmailExists,
   updateProfilePicture,
   removeProfilePicture,
+  getStudentById,
 };

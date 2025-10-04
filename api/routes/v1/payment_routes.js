@@ -5,14 +5,13 @@ import {
     validatePagination,
     validatePaymentId,
     validateUserId,
-    validateEmail,
-    validateEnrollmentId
+    validateEmail
 } from '../../middleware/paymentValidator.js';
 
 const {
     createPayment,
     getPaymentDetails,
-    getPaymentsByEnrollmentId,
+    getPaymentsByUserId,
     getUserPaymentsByEmail,
     cancelPayment,
     handleWebhook,
@@ -36,8 +35,8 @@ router.post('/', validateCreatePayment, createPayment);
 // Get payment details by ID
 router.get('/:paymentId', validatePaymentId, getPaymentDetails);
 
-// Get payments by enrollment ID
-router.get('/enrollment/:enrollmentId', validateEnrollmentId, validatePagination, getPaymentsByEnrollmentId);
+// Get payments by user ID
+router.get('/user/:userId', validateUserId, validatePagination, getPaymentsByUserId);
 
 // Cancel a pending payment
 router.put('/:paymentId/cancel', validatePaymentId, cancelPayment);

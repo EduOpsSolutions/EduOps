@@ -1,19 +1,10 @@
 import Joi from 'joi';
 
 const createPaymentSchema = Joi.object({
-    enrollmentId: Joi.string().min(1).max(100).required().messages({
-        'any.required': 'Enrollment ID is required',
-        'string.empty': 'Enrollment ID cannot be empty',
-        'string.min': 'Enrollment ID must be at least 1 character long'
-    }),
-    firstName: Joi.string().min(1).max(100).required().messages({
-        'any.required': 'First name is required',
-        'string.empty': 'First name cannot be empty'
-    }),
-    middleName: Joi.string().max(100).allow('', null).optional(),
-    lastName: Joi.string().min(1).max(100).required().messages({
-        'any.required': 'Last name is required',
-        'string.empty': 'Last name cannot be empty'
+    userId: Joi.string().min(1).max(100).required().messages({
+        'any.required': 'User ID is required',
+        'string.empty': 'User ID cannot be empty',
+        'string.min': 'User ID must be at least 1 character long'
     }),
     email: Joi.string().email().required().messages({
         'any.required': 'Email address is required',

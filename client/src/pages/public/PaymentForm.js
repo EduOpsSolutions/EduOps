@@ -10,14 +10,23 @@ function PaymentForm() {
     formData,
     loading,
     phoneError,
+    nameError,
     feesOptions,
     updateFormField,
     handleSubmit,
+    validateAndFetchStudentByID,
   } = usePaymentStore();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     updateFormField(name, value);
+  };
+
+  const handleStudentIdBlur = async (e) => {
+    const studentId = e.target.value;
+    if (studentId) {
+      await validateAndFetchStudentByID(studentId);
+    }
   };
 
   const onSubmit = async (e) => {
@@ -35,7 +44,7 @@ function PaymentForm() {
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-3xl font-bold">Payment Form</h1>
             <p className="italic mt-2 font-semibold">
-              Fields marked with (*) are required. Please enter the correct
+              Fields marked with (*) are required. Please enter the correct student
               information.
             </p>
           </div>
@@ -44,28 +53,35 @@ function PaymentForm() {
             {/* Personal Information */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <LabelledInputField
-                name="enrollment_id"
-                id="enrollment_id"
-                label="Enrollment ID*"
+                name="student_id"
+                id="student_id"
+                label="Student ID*"
                 type="text"
-                required={false}
-                placeholder="Enter ID"
-                value={formData.enrollment_id}
+                required={true}
+                placeholder="Enter Student ID"
+                value={formData.student_id || ""}
                 onChange={handleInputChange}
+                onBlur={handleStudentIdBlur}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <LabelledInputField
-                name="first_name"
-                id="first_name"
-                label="First Name*"
-                type="text"
-                required={true}
-                placeholder="First Name"
-                value={formData.first_name}
-                onChange={handleInputChange}
-              />
+              <div>
+                <LabelledInputField
+                  name="first_name"
+                  id="first_name"
+                  label="First Name"
+                  type="text"
+                  required={true}
+                  placeholder="First Name"
+                  value={formData.first_name}
+                  onChange={handleInputChange}
+                  readOnly={true}
+                  className={
+                    nameError ? "border-red-500 focus:border-red-500 bg-gray-100" : "bg-gray-100"
+                  }
+                />
+              </div>
               <LabelledInputField
                 name="middle_name"
                 id="middle_name"
@@ -74,19 +90,34 @@ function PaymentForm() {
                 placeholder="Middle Name"
                 value={formData.middle_name}
                 onChange={handleInputChange}
+                readOnly={true}
+                className="bg-gray-100"
               />
 
-              <LabelledInputField
-                name="last_name"
-                id="last_name"
-                label="Last Name*"
-                type="text"
-                required={true}
-                placeholder="Last Name"
-                value={formData.last_name}
-                onChange={handleInputChange}
-              />
+              <div>
+                <LabelledInputField
+                  name="last_name"
+                  id="last_name"
+                  label="Last Name"
+                  type="text"
+                  required={true}
+                  placeholder="Last Name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  readOnly={true}
+                  className={
+                    nameError ? "border-red-500 focus:border-red-500 bg-gray-100" : "bg-gray-100"
+                  }
+                />
+              </div>
             </div>
+
+            {/* Name Validation Error */}
+            {nameError && (
+              <div className="mb-6 -mt-2">
+                <p className="text-red-500 text-sm">{nameError}</p>
+              </div>
+            )}
 
             {/* Contact Information */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -154,7 +185,7 @@ function PaymentForm() {
 
             {/* Submit Button */}
             <div className="flex justify-center">
-              <SmallButton type="submit" disabled={loading}>
+              <SmallButton type="submit" disabled={loading || nameError}>
                 {loading ? (
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

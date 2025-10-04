@@ -69,8 +69,6 @@ model enrollment_request {
   paymentProofPath  String? @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  payments          payments[]
 }
 
 model course {
@@ -226,8 +224,7 @@ enum FileStatus {
 model payments {
   id                String   @id
   paymentId         String   @unique //paymongo payment id
-  userId            String?
-  enrollmentId      String
+  userId            String   //student ID
   firstName         String
   middleName        String?
   lastName          String
@@ -244,8 +241,7 @@ model payments {
   expiresAt         DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  user              users?   @relation(fields: [userId], references: [id])
-  enrollment        enrollment_request @relation(fields: [enrollmentId], references: [enrollmentId])
+  user              users    @relation(fields: [userId], references: [id])
 }
 
 enum PaymentStatus {

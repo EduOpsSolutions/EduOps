@@ -12,18 +12,16 @@ import { sendPaymentLinkEmail } from "../services/paymentEmailService.js";
 
 const prisma = new PrismaClient();
 
+// Fee type name
+const FEE_TYPE_MAP = {
+    'tuition_fee': 'Tuition Fee',
+    'document_fee': 'Document Fee',
+    'book_fee': 'Book Fee',
+};
+
 // Response helpers
-const sendSuccess = (
-    res,
-    data,
-    message = "Operation successful",
-    statusCode = 200
-) => {
-    return res.status(statusCode).json({
-        success: true,
-        message,
-        data,
-    });
+const sendSuccess = (res, data, message = "Operation successful", statusCode = 200) => {
+    return res.status(statusCode).json({ success: true, message, data });
 };
 
 const sendError = (res, message, statusCode = 500, error = null) => {
@@ -32,49 +30,7 @@ const sendError = (res, message, statusCode = 500, error = null) => {
     return res.status(statusCode).json(response);
 };
 
-// Database operations
-const findEnrollment = async (enrollmentId) => {
-    return prisma.enrollment_request.findUnique({
-        where: { enrollmentId },
-    });
-};
-
-const findPayment = async (paymentId, includeRelations = false) => {
-    const options = { where: { id: paymentId } };
-
-    if (includeRelations) {
-        options.include = {
-            user: {
-                select: { id: true, firstName: true, lastName: true, email: true },
-            },
-            enrollment: {
-                select: { enrollmentId: true, enrollmentStatus: true },
-            },
-        };
-    }
-
-    return prisma.payments.findUnique(options);
-};
-
-const syncPaymentStatus = async (payment) => {
-    const paymongoResult = await getPaymentLink(payment.paymentId);
-
-    if (paymongoResult.success) {
-        const paymongoStatus = paymongoResult.data.data.attributes.status;
-
-        if (payment.status !== paymongoStatus) {
-            await prisma.payments.update({
-                where: { id: payment.id },
-                data: {
-                    status: paymongoStatus,
-                    paidAt: paymongoStatus === "paid" ? new Date() : null,
-                },
-            });
-            payment.status = paymongoStatus;
-        }
-    }
-};
-
+// Generate unique payment ID
 const generatePaymentId = async () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let paymentId;
@@ -96,137 +52,94 @@ const generatePaymentId = async () => {
 
 export const createPayment = async (req, res) => {
     try {
-        const {
-            enrollmentId,
-            firstName,
-            middleName,
-            lastName,
-            email,
-            phoneNumber,
-            feeType,
-            amount,
-        } = req.body;
+        const { userId, firstName, middleName, lastName, email, phoneNumber, feeType, amount } = req.body;
 
-        // Validate enrollment ID is provided
-        if (!enrollmentId) {
-            return sendError(
-                res,
-                "Enrollment ID is required for payment processing",
-                400
-            );
-        }
-
-        // Validate enrollment exists
-        const enrollment = await findEnrollment(enrollmentId);
-        if (!enrollment) {
-            return sendError(
-                res,
-                `Enrollment not found with ID "${enrollmentId}". Please verify your enrollment ID and try again.`,
-                404
-            );
-        }
+        const feeName = FEE_TYPE_MAP[feeType] || feeType;
         const paymentAmount = parseFloat(amount);
-        const paymentDescription = `${feeType} - Payment by ${firstName} ${lastName}`;
+        const fullName = middleName ? `${firstName} ${middleName} ${lastName}` : `${firstName} ${lastName}`;
+        const paymentDescription = `${feeName} - Payment for ${fullName}`;
 
-        const paymentLinkResult = await createPaymentLinkOrMock({
+        // Create payment link
+        const paymentLinkResult = await createPaymentLink({
             amount: paymentAmount,
             description: paymentDescription,
             remarks: `EduOps ${feeType} payment`,
         });
 
         if (!paymentLinkResult.success) {
-            return sendError(
-                res,
-                "Failed to create payment link",
-                400,
-                paymentLinkResult.error
-            );
+            return sendError(res, "Failed to create payment link", 400, paymentLinkResult.error);
         }
 
-        const payment = await savePaymentRecord(paymentLinkResult, {
-            enrollmentId,
-            firstName,
-            middleName,
-            lastName,
-            email,
-            phoneNumber,
-            feeType,
-            amount: paymentAmount,
+        // Save payment record
+        const customPaymentId = await generatePaymentId();
+        const payment = await prisma.payments.create({
+            data: {
+                id: customPaymentId,
+                paymentId: paymentLinkResult.paymentLinkId,
+                userId: userId,
+                firstName,
+                middleName: middleName || null,
+                lastName,
+                email,
+                phoneNumber: phoneNumber || null,
+                feeType,
+                amount: paymentAmount,
+                checkoutUrl: paymentLinkResult.checkoutUrl,
+                paymongoResponse: paymentLinkResult.data,
+                status: "pending",
+            },
         });
 
-        await sendPaymentLinkEmail(
-            email,
-            payment.checkoutUrl,
-            {
-                amount: paymentAmount,
-                description: paymentDescription,
-                remarks: `EduOps ${feeType} payment`,
-            },
-            { firstName, lastName, email }
-        );
+        // Send payment link email
+        await sendPaymentLinkEmail(email, payment.checkoutUrl, {
+            amount: paymentAmount,
+            description: paymentDescription,
+            remarks: `EduOps ${feeType} payment`,
+        }, { firstName, lastName, email });
 
-        return sendSuccess(
-            res,
-            {
-                paymentId: payment.id,
-                checkoutUrl: payment.checkoutUrl,
-                amount: payment.amount,
-                status: payment.status,
-            },
-            "Payment link created successfully",
-            201
-        );
+        return sendSuccess(res, {
+            paymentId: payment.id,
+            checkoutUrl: payment.checkoutUrl,
+            amount: payment.amount,
+            status: payment.status,
+        }, "Payment link created successfully", 201);
     } catch (error) {
         console.error("Create payment error:", error);
         return sendError(res, "Internal server error", 500, error.message);
     }
 };
 
-const createPaymentLinkOrMock = async (paymentData) => {
-    if (!process.env.PAYMONGO_SECRET_KEY) {
-        return {
-            success: true,
-            data: { mock: true },
-            checkoutUrl: "https://checkout.paymongo.com/s/mock-payment-link",
-            paymentLinkId: "mock-payment-" + Date.now(),
-        };
-    }
-    return createPaymentLink(paymentData);
-};
-
-const savePaymentRecord = async (paymentLinkResult, paymentDetails) => {
-    const customPaymentId = await generatePaymentId();
-
-    return prisma.payments.create({
-        data: {
-            id: customPaymentId,
-            paymentId: paymentLinkResult.paymentLinkId,
-            enrollmentId: paymentDetails.enrollmentId,
-            firstName: paymentDetails.firstName,
-            middleName: paymentDetails.middleName || null,
-            lastName: paymentDetails.lastName,
-            email: paymentDetails.email,
-            phoneNumber: paymentDetails.phoneNumber || null,
-            feeType: paymentDetails.feeType,
-            amount: paymentDetails.amount,
-            checkoutUrl: paymentLinkResult.checkoutUrl,
-            paymongoResponse: paymentLinkResult.data,
-            status: "pending",
-        },
-    });
-};
 
 export const getPaymentDetails = async (req, res) => {
     try {
         const { paymentId } = req.params;
 
-        const payment = await findPayment(paymentId, true);
+        const payment = await prisma.payments.findUnique({
+            where: { id: paymentId },
+            include: {
+                user: { select: { id: true, userId: true, firstName: true, lastName: true, email: true } },
+            },
+        });
+
         if (!payment) {
             return sendError(res, "Payment not found", 404);
         }
 
         // Sync status with PayMongo
-        await syncPaymentStatus(payment);
+        const paymongoResult = await getPaymentLink(payment.paymentId);
+        if (paymongoResult.success) {
+            const paymongoStatus = paymongoResult.data.data.attributes.status;
+            if (payment.status !== paymongoStatus) {
+                await prisma.payments.update({
+                    where: { id: payment.id },
+                    data: {
+                        status: paymongoStatus,
+                        paidAt: paymongoStatus === "paid" ? new Date() : null,
+                    },
+                });
+                payment.status = paymongoStatus;
+            }
+        }
 
         return sendSuccess(res, payment);
     } catch (error) {
@@ -235,18 +148,24 @@ export const getPaymentDetails = async (req, res) => {
     }
 };
 
-export const getPaymentsByEnrollmentId = async (req, res) => {
+
+
+export const getPaymentsByUserId = async (req, res) => {
     try {
-        const { enrollmentId } = req.params;
+        const { userId } = req.params;
         const { page = 1, limit = 10, status } = req.query;
 
-        const enrollment = await findEnrollment(enrollmentId);
-        if (!enrollment) {
-            return sendError(res, "Enrollment not found", 404);
+        const user = await prisma.users.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            return sendError(res, "User not found", 404);
         }
 
-        const whereClause = { enrollmentId };
+        const whereClause = { userId };
         if (status) whereClause.status = status;
+
         const [payments, total] = await Promise.all([
             prisma.payments.findMany({
                 where: whereClause,
@@ -254,9 +173,7 @@ export const getPaymentsByEnrollmentId = async (req, res) => {
                 skip: (page - 1) * limit,
                 take: parseInt(limit),
                 include: {
-                    enrollment: {
-                        select: { enrollmentId: true, enrollmentStatus: true },
-                    },
+                    user: { select: { id: true, userId: true, firstName: true, lastName: true, email: true } },
                 },
             }),
             prisma.payments.count({ where: whereClause }),
@@ -272,22 +189,25 @@ export const getPaymentsByEnrollmentId = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Get payments by enrollment ID error:", error);
+        console.error("Get payments by user ID error:", error);
         return sendError(res, "Internal server error", 500, error.message);
     }
 };
+
+
 
 export const cancelPayment = async (req, res) => {
     try {
         const { paymentId } = req.params;
 
-        // Find payment
-        const payment = await findPayment(paymentId);
+        const payment = await prisma.payments.findUnique({
+            where: { id: paymentId },
+        });
+
         if (!payment) {
             return sendError(res, "Payment not found", 404);
         }
 
-        // Check if payment can be cancelled
         if (payment.status !== "pending") {
             return sendError(res, "Payment cannot be cancelled", 400);
         }
@@ -295,12 +215,7 @@ export const cancelPayment = async (req, res) => {
         // Archive payment link in PayMongo
         const archiveResult = await archivePaymentLink(payment.paymentId);
         if (!archiveResult.success) {
-            return sendError(
-                res,
-                "Failed to cancel payment",
-                400,
-                archiveResult.error
-            );
+            return sendError(res, "Failed to cancel payment", 400, archiveResult.error);
         }
 
         // Update payment status
@@ -315,6 +230,8 @@ export const cancelPayment = async (req, res) => {
         return sendError(res, "Internal server error", 500, error.message);
     }
 };
+
+
 
 /* Handle PayMongo webhooks */
 export const handleWebhook = async (req, res) => {
@@ -331,7 +248,6 @@ export const handleWebhook = async (req, res) => {
         }
 
         const eventResult = processWebhookEvent(req.body);
-
         if (!eventResult.success) {
             return sendError(res, "Failed to process webhook event", 400);
         }
@@ -341,8 +257,9 @@ export const handleWebhook = async (req, res) => {
         // Handle payment completion
         if (eventType === "link.payment.paid") {
             const paymentLinkId = eventData.attributes.id;
-
-            const payment = await findPayment(paymentLinkId, "paymentId");
+            const payment = await prisma.payments.findFirst({
+                where: { paymentId: paymentLinkId },
+            });
 
             if (payment) {
                 await prisma.payments.update({
@@ -351,7 +268,6 @@ export const handleWebhook = async (req, res) => {
                         status: "paid",
                         paidAt: new Date(),
                         paymongoResponse: eventData,
-                        updatedAt: new Date(),
                     },
                 });
             }
@@ -364,19 +280,14 @@ export const handleWebhook = async (req, res) => {
     }
 };
 
+
+
 export const getAvailablePaymentMethods = async (req, res) => {
     try {
         const result = await getPaymentMethods();
-
         if (!result.success) {
-            return sendError(
-                res,
-                "Failed to fetch payment methods",
-                400,
-                result.error
-            );
+            return sendError(res, "Failed to fetch payment methods", 400, result.error);
         }
-
         return sendSuccess(res, result.data);
     } catch (error) {
         console.error("Get payment methods error:", error);
@@ -387,7 +298,7 @@ export const getAvailablePaymentMethods = async (req, res) => {
 export default {
     createPayment,
     getPaymentDetails,
-    getPaymentsByEnrollmentId,
+    getPaymentsByUserId,
     cancelPayment,
     handleWebhook,
     getAvailablePaymentMethods,
