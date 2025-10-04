@@ -65,3 +65,42 @@ export const setTokenCookie = async (token) => {
 export const removeTokenCookie = (cookieName) => {
   Cookies.remove(cookieName, { path: '/' });
 };
+
+/**
+ * Checks if a JWT token is expired
+ * @param {string} token - The JWT token to check
+ * @returns {boolean} True if token is expired, false otherwise
+ */
+export const isTokenExpired = (token) => {
+  if (!token) return true;
+
+  try {
+    const decoded = decodeToken(token);
+    if (!decoded || !decoded.exp) return true;
+
+    // Check if token is expired (exp is in seconds, Date.now() is in milliseconds)
+    const currentTime = Math.floor(Date.now() / 1000);
+    return decoded.exp < currentTime;
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return true;
+  }
+};
+
+/**
+ * Validates if a token exists and is not expired
+ * @param {string} token - The JWT token to validate
+ * @returns {boolean} True if token is valid and not expired
+ */
+export const isTokenValid = (token) => {
+  return token && !isTokenExpired(token);
+};
+
+/**
+ * Gets the current token and validates it
+ * @returns {string|null} Valid token or null if invalid/expired
+ */
+export const getValidToken = () => {
+  const token = getCookieItem('token');
+  return isTokenValid(token) ? token : null;
+};

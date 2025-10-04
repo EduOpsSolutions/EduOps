@@ -4,6 +4,8 @@ import ThinRedButton from '../../components/buttons/ThinRedButton';
 import axiosInstance from '../../utils/axios.js';
 import EnrollmentDetailsModal from '../../components/modals/enrollment/EnrollmentDetailsModal';
 import { getCookieItem } from '../../utils/jwt';
+import { useEnrollmentPeriodStore } from '../../stores/enrollmentPeriodStore';
+import Swal from 'sweetalert2';
 function EnrollmentRequests() {
   const [enrollmentRequests, setEnrollmentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,8 +15,13 @@ function EnrollmentRequests() {
     useState(null);
   const [showEnrollmentDetailsModal, setShowEnrollmentDetailsModal] =
     useState(false);
+  const [activePeriods, setActivePeriods] = useState([]);
+  const [currentPeriodInfo, setCurrentPeriodInfo] = useState(null);
+  
+  const { endEnrollment } = useEnrollmentPeriodStore();
   useEffect(() => {
     fetchEnrollmentRequests();
+    fetchActivePeriods();
   }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEnrollmentRequests = async () => {
@@ -56,6 +63,119 @@ function EnrollmentRequests() {
     setSearchTerm(e.target.value);
   };
 
+  const fetchActivePeriods = async () => {
+    try {
+      const response = await axiosInstance.get('/academic-periods');
+      const now = new Date();
+      
+      const ongoingPeriods = response.data.filter(period => {
+        const startDate = new Date(period.startAt);
+        const endDate = new Date(period.endAt);
+        return period.status !== 'ended' && now >= startDate && now <= endDate;
+      });
+      
+      const allPeriods = response.data
+        .filter(period => !period.deletedAt)
+        .map(period => {
+          const startDate = new Date(period.startAt);
+          const endDate = new Date(period.endAt);
+          
+          let status;
+          if (period.status === 'ended') {
+            status = 'Ended';
+          } else if (now < startDate) {
+            status = 'Upcoming';
+          } else if (now >= startDate && now <= endDate) {
+            status = 'Ongoing';
+          } else {
+            status = 'Ended';
+          }
+          
+          return { ...period, calculatedStatus: status };
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Set the most recent period as current info
+      if (allPeriods.length > 0) {
+        const currentPeriod = allPeriods.find(p => p.calculatedStatus === 'Ongoing') || allPeriods[0];
+        setCurrentPeriodInfo(currentPeriod);
+      }
+      
+      setActivePeriods(ongoingPeriods);
+    } catch (error) {
+      console.error('Error fetching active periods:', error);
+    }
+  };
+
+  const handleEndEnrollment = async () => {
+    try {
+      const response = await axiosInstance.get('/academic-periods');
+      const ongoingPeriods = response.data.filter(period => {
+        const now = new Date();
+        const startDate = new Date(period.startAt);
+        const endDate = new Date(period.endAt);
+        return period.status !== 'ended' && now >= startDate && now <= endDate;
+      });
+
+      if (ongoingPeriods.length === 0) {
+        await Swal.fire({
+          title: 'No Active Enrollment',
+          text: 'There is no ongoing enrollment period to end.',
+          icon: 'info',
+          confirmButtonColor: '#890E07'
+        });
+        return;
+      }
+
+      const selectedPeriod = ongoingPeriods[0];
+
+      const result = await Swal.fire({
+        title: 'End Enrollment Period?',
+        html: `
+          <p>Are you sure you want to end enrollment for:</p>
+          <p><strong>${selectedPeriod.periodName} - ${selectedPeriod.batchName}</strong></p>
+          <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">This action will prevent new enrollees.</p>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#890E07',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, end enrollment',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (!result.isConfirmed) return;
+
+      const endResult = await endEnrollment(selectedPeriod.id);
+      
+      if (endResult.success) {
+        await Swal.fire({
+          title: 'Enrollment Ended',
+          text: `Enrollment for ${selectedPeriod.periodName} - ${selectedPeriod.batchName} has been successfully ended.`,
+          icon: 'success',
+          confirmButtonColor: '#890E07'
+        });
+        
+        await fetchActivePeriods();
+      } else {
+        await Swal.fire({
+          title: 'Error',
+          text: endResult.error || 'Failed to end enrollment. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#890E07'
+        });
+      }
+    } catch (error) {
+      console.error('Error ending enrollment:', error);
+      await Swal.fire({
+        title: 'Error',
+        text: 'Failed to end enrollment. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#890E07'
+      });
+    }
+  };
+
   return (
     <div className="bg_custom bg-white-yellow-tone">
       <EnrollmentDetailsModal
@@ -74,6 +194,72 @@ function EnrollmentRequests() {
               Enrollment Requests
             </h1>
           </div>
+
+          {/* Current Enrollment Period Info */}
+          {currentPeriodInfo && (
+            <div className="mb-6 md:mb-8">
+              <div className={`p-4 rounded-lg border-2 ${
+                currentPeriodInfo.calculatedStatus === 'Ongoing' 
+                  ? 'bg-green-50 border-green-200' 
+                  : currentPeriodInfo.calculatedStatus === 'Ended'
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="text-center sm:text-left">
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-800">
+                      Current Enrollment Period
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-600">
+                      <strong>{currentPeriodInfo.periodName}</strong> - {currentPeriodInfo.batchName}
+                    </p>
+                    <p className="text-xs md:text-sm text-gray-500">
+                      {new Date(currentPeriodInfo.startAt).toLocaleDateString()} - {new Date(currentPeriodInfo.endAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      currentPeriodInfo.calculatedStatus === 'Ongoing' 
+                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                        : currentPeriodInfo.calculatedStatus === 'Ended'
+                        ? 'bg-red-100 text-red-800 border border-red-200'
+                        : 'bg-blue-100 text-blue-800 border border-blue-200'
+                    }`}>
+                      {currentPeriodInfo.calculatedStatus}
+                    </span>
+                    {currentPeriodInfo.calculatedStatus === 'Ended' && (
+                      <p className="text-xs text-red-600 mt-1">
+                        No new enrollments accepted
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* No Active Periods Warning */}
+          {currentPeriodInfo && activePeriods.length === 0 && currentPeriodInfo.calculatedStatus === 'Ended' && (
+            <div className="mb-6 md:mb-8">
+              <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0">
+                    <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      No Active Enrollment Period
+                    </h3>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      There is currently no ongoing enrollment period. No new enrollment requests will be accepted until a new period begins.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Error Display */}
           {error && (
@@ -110,7 +296,17 @@ function EnrollmentRequests() {
               </div>
 
               <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
-                <ThinRedButton onClick={() => {}}>End Enrollment</ThinRedButton>
+                {activePeriods.length === 1 ? (
+                  <ThinRedButton onClick={handleEndEnrollment}>
+                    End Enrollment
+                  </ThinRedButton>
+                ) : (
+                  <div className="text-sm text-gray-500 py-2 px-4 bg-gray-100 rounded-lg">
+                    {currentPeriodInfo?.calculatedStatus === 'Ended' 
+                      ? 'Enrollment Already Ended' 
+                      : 'No Active Enrollment Period'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -266,28 +462,6 @@ function EnrollmentRequests() {
                                 {request.step || 'N/A'}
                               </div>
                             </td>
-                            {/* <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="flex space-x-2">
-                                <button
-                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
-                                  title="View"
-                                >
-                                  <i className="fas fa-eye"></i>
-                                </button>
-                                <button
-                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
-                                  title="Edit"
-                                >
-                                  <i className="fas fa-edit"></i>
-                                </button>
-                                <button
-                                  className="text-dark-red-2 hover:text-dark-red-5 transition-colors duration-150"
-                                  title="Info"
-                                >
-                                  <i className="fas fa-info-circle"></i>
-                                </button>
-                              </div>
-                            </td> */}
                           </tr>
                         ))}
                         {enrollmentRequests.length === 0 && !loading && (

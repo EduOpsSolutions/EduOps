@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import axiosInstance from '../utils/axios';
 import Swal from 'sweetalert2';
+import { trackEnrollment } from '../utils/enrollmentApi';
 
 const initialFormData = {
   first_name: '',
@@ -25,9 +26,10 @@ const usePaymentStore = create((set, get) => ({
   phoneError: '',
   error: null,
   feesOptions,
+  enrollmentData: null,
 
   updateFormField: (name, value) => {
-    const { formData } = get();
+    const { formData, fetchEnrollmentData } = get();
 
     if (name === 'phone_number') {
       value = value.replace(/\D/g, '');
@@ -37,13 +39,18 @@ const usePaymentStore = create((set, get) => ({
     set({
       formData: { ...formData, [name]: value }
     });
+
+    if (name === 'enrollment_id' && value.trim()) {
+      fetchEnrollmentData(value.trim());
+    }
   },
 
   resetForm: () => {
     set({
       formData: { ...initialFormData },
       phoneError: '',
-      error: null
+      error: null,
+      enrollmentData: null
     });
   },
 
@@ -62,10 +69,28 @@ const usePaymentStore = create((set, get) => ({
     return true;
   },
 
+  fetchEnrollmentData: async (enrollmentId) => {
+    if (!enrollmentId) return;
+    
+    try {
+      const response = await trackEnrollment(enrollmentId);
+      if (response.success) {
+        set({ enrollmentData: response.data });
+      }
+    } catch (error) {
+      console.error('Error fetching enrollment data:', error);
+    }
+  },
+
   preparePaymentData: () => {
-    const { formData } = get();
+    const { formData, enrollmentData } = get();
     const selectedFee = feesOptions.find(option => option.value === formData.fee);
     const feeLabel = selectedFee ? selectedFee.label : formData.fee;
+
+    let amount = parseFloat(formData.amount);
+    if (enrollmentData?.coursePrice && formData.fee === 'course_fee') {
+      amount = parseFloat(enrollmentData.coursePrice);
+    }
 
     return {
       firstName: formData.first_name,
@@ -73,7 +98,7 @@ const usePaymentStore = create((set, get) => ({
       lastName: formData.last_name,
       email: formData.email_address.trim(),
       phoneNumber: formData.phone_number || null,
-      amount: parseFloat(formData.amount),
+      amount: amount,
       enrollmentId: formData.enrollment_id?.trim() || '',
       feeType: feeLabel
     };
@@ -89,11 +114,25 @@ const usePaymentStore = create((set, get) => ({
   },
 
   showConfirmationDialog: async () => {
-    const { formData } = get();
+    const { formData, enrollmentData } = get();
+    
+    let displayAmount = formData.amount;
+    let courseInfo = '';
+    
+    if (enrollmentData?.coursePrice && formData.fee === 'course_fee') {
+      displayAmount = enrollmentData.coursePrice;
+      courseInfo = `
+        <p style="font-size: 0.875rem; color: #059669; margin-top: 0.5rem;">
+          <strong>Course:</strong> ${enrollmentData.courseName || enrollmentData.coursesToEnroll || 'N/A'}
+        </p>
+      `;
+    }
+    
     const result = await Swal.fire({
       title: 'Confirm Payment',
       html: `
-        <p>Are you sure you want to pay the amount of <strong>₱${formData.amount}</strong>?</p>
+        <p>Are you sure you want to pay the amount of <strong>₱${displayAmount}</strong>?</p>
+        ${courseInfo}
         <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">A payment link will be sent to: <strong>${formData.email_address}</strong></p>
       `,
       icon: 'question',

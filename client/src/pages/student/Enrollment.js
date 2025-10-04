@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import UserNavbar from '../../components/navbars/UserNav';
-import useEnrollmentStore from '../../stores/enrollmentProgressStore';
-import EnrollmentProgressBar from '../../components/enrollment/ProgressBar';
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import UserNavbar from "../../components/navbars/UserNav";
+import useEnrollmentStore from "../../stores/enrollmentProgressStore";
+import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
 
 function Enrollment() {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ function Enrollment() {
     remarkMsg,
     currentStep,
     paymentProof,
+    hasPaymentProof,
     isUploadingPaymentProof,
     isStepCompleted,
     isStepCurrent,
@@ -20,10 +21,11 @@ function Enrollment() {
     uploadPaymentProof,
     advanceToNextStep,
     fullName,
-    email,
     coursesToEnroll,
     createdAt,
     completedSteps,
+    courseName,
+    coursePrice,
   } = useEnrollmentStore();
 
   useEffect(() => {
@@ -32,17 +34,67 @@ function Enrollment() {
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      setPaymentProof(file);
-      try {
-        await uploadPaymentProof();
-      } catch (error) {
-        console.error('Error uploading payment proof:', error);
-      }
+    if (!file) return;
+
+    setPaymentProof(file);
+    try {
+      await uploadPaymentProof();
+    } catch (error) {
+      console.error("Error uploading payment proof:", error);
     }
   };
 
-  // If no enrollment data, show placeholder
+  // Helper component for status indicators
+  const StatusIndicator = ({ type, children }) => {
+    const colors = {
+      uploading: "bg-blue-50 border-blue-200 text-blue-800",
+      success: "bg-green-50 border-green-200 text-green-800",
+    };
+    
+    return (
+      <div className={`mt-2 p-2 rounded-md ${colors[type]}`}>
+        <p className="text-sm flex items-center">
+          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            {type === "uploading" ? (
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            ) : (
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            )}
+          </svg>
+          {children}
+        </p>
+      </div>
+    );
+  };
+
+  // Payment proof status logic
+  const getPaymentProofStatus = () => {
+    if (isUploadingPaymentProof) {
+      return <StatusIndicator type="uploading">Uploading your proof of payment...</StatusIndicator>;
+    }
+    if (paymentProof && !isUploadingPaymentProof) {
+      return <StatusIndicator type="success">File uploaded successfully: {paymentProof.name}</StatusIndicator>;
+    }
+    if (hasPaymentProof && !paymentProof && !isUploadingPaymentProof) {
+      return <StatusIndicator type="success">Payment proof already uploaded and being processed</StatusIndicator>;
+    }
+    return null;
+  };
+
+  // Show payment note when no proof is uploaded
+  const shouldShowPaymentNote = currentStep === 3 && !paymentProof && !hasPaymentProof && !isUploadingPaymentProof;
+  
+  // Show payment button when user needs to pay
+  const shouldShowPaymentButton = currentStep === 3 && !paymentProof && !hasPaymentProof && !isUploadingPaymentProof;
+  
+  // Show next step button when payment proof is ready
+  const shouldShowNextStepButton = currentStep === 3 && (paymentProof || hasPaymentProof) && !isUploadingPaymentProof;
+
+  // No enrollment data state
   if (!enrollmentId) {
     return (
       <>
@@ -70,8 +122,8 @@ function Enrollment() {
                   No Enrollment Data Found
                 </h2>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Please use the "Track Enrollment" feature to search for your enrollment
-                  using your Enrollment ID or email address.
+                  Please use the "Track Enrollment" feature to search for your
+                  enrollment using your Enrollment ID or email address.
                 </p>
                 <button
                   onClick={() => window.history.back()}
@@ -98,19 +150,37 @@ function Enrollment() {
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 px-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-600 font-medium">Enrollee ID:</span>
-                  <span className="font-bold text-dark-red">{enrollmentId}</span>
+                  <span className="text-gray-600 font-medium">
+                    Enrollee ID:
+                  </span>
+                  <span className="font-bold text-dark-red">
+                    {enrollmentId}
+                  </span>
                 </div>
                 {fullName && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 font-medium">Name:</span>
-                    <span className="font-semibold text-gray-800">{fullName}</span>
+                    <span className="font-semibold text-gray-800">
+                      {fullName}
+                    </span>
                   </div>
                 )}
-                {coursesToEnroll && (
+                {(courseName || coursesToEnroll) && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 font-medium">Course:</span>
-                    <span className="text-gray-800">{coursesToEnroll}</span>
+                    <span className="text-gray-800">
+                      {courseName || coursesToEnroll}
+                    </span>
+                  </div>
+                )}
+                {coursePrice && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 font-medium">
+                      Course Fee:
+                    </span>
+                    <span className="font-semibold text-green-700">
+                      ₱{coursePrice}
+                    </span>
                   </div>
                 )}
               </div>
@@ -119,15 +189,15 @@ function Enrollment() {
                   <span className="text-gray-600 font-medium">Status:</span>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      enrollmentStatus === 'COMPLETED'
-                        ? 'bg-green-100 text-green-800 border border-green-200'
-                        : enrollmentStatus === 'APPROVED'
-                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                        : enrollmentStatus === 'VERIFIED'
-                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                        : enrollmentStatus === 'REJECTED'
-                        ? 'bg-red-100 text-red-800 border border-red-200'
-                        : 'bg-gray-100 text-gray-800 border border-gray-200'
+                      enrollmentStatus === "COMPLETED"
+                        ? "bg-green-100 text-green-800 border border-green-200"
+                        : enrollmentStatus === "APPROVED"
+                        ? "bg-blue-100 text-blue-800 border border-blue-200"
+                        : enrollmentStatus === "VERIFIED"
+                        ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                        : enrollmentStatus === "REJECTED"
+                        ? "bg-red-100 text-red-800 border border-red-200"
+                        : "bg-gray-100 text-gray-800 border border-gray-200"
                     }`}
                   >
                     {enrollmentStatus}
@@ -137,10 +207,10 @@ function Enrollment() {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 font-medium">Applied:</span>
                     <span className="text-gray-800">
-                      {new Date(createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
+                      {new Date(createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
                       })}
                     </span>
                   </div>
@@ -182,14 +252,14 @@ function Enrollment() {
                       <label
                         className={`inline-block text-sm border py-1 px-3 rounded text-center whitespace-nowrap transition-colors ${
                           isUploadingPaymentProof
-                            ? 'border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'border-dark-red bg-german-red text-white hover:bg-dark-red cursor-pointer'
+                            ? "border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "border-dark-red bg-german-red text-white hover:bg-dark-red cursor-pointer"
                         }`}
                         htmlFor="paymentProof"
                       >
                         {isUploadingPaymentProof
-                          ? 'Uploading...'
-                          : 'Choose File'}
+                          ? "Uploading..."
+                          : "Choose File"}
                       </label>
                       <input
                         className="hidden"
@@ -203,10 +273,10 @@ function Enrollment() {
                       />
                       <div className="text-sm text-black bg-white py-1 px-3 rounded border border-gray-300 truncate flex-1">
                         {isUploadingPaymentProof
-                          ? 'Uploading file...'
+                          ? "Uploading file..."
                           : paymentProof
                           ? paymentProof.name
-                          : 'No file chosen'}
+                          : "No file chosen"}
                       </div>
                     </div>
                   </div>
@@ -216,38 +286,37 @@ function Enrollment() {
                   >
                     Please upload a clear image or PDF of your payment receipt
                   </p>
-                  {isUploadingPaymentProof && (
-                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                      <p className="text-sm text-blue-800 flex items-center">
+                  {getPaymentProofStatus()}
+                </div>
+              )}
+            </div>
+
+            {/* Note */}
+            {shouldShowPaymentNote && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-6 w-6 text-blue-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <h3 className="text-lg font-semibold text-blue-800 mb-3">
+                      Note:
+                    </h3>
+
+                    <div className="space-y-2 text-sm text-blue-700">
+                      <p className="flex items-center">
                         <svg
-                          className="w-4 h-4 mr-2 animate-spin"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        Uploading your proof of payment...
-                      </p>
-                    </div>
-                  )}
-                  {paymentProof && !isUploadingPaymentProof && (
-                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                      <p className="text-sm text-green-800 flex items-center">
-                        <svg
-                          className="w-4 h-4 mr-2"
+                          className="h-4 w-4 mr-2 text-blue-500"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -257,39 +326,36 @@ function Enrollment() {
                             clipRule="evenodd"
                           />
                         </svg>
-                        File uploaded successfully: {paymentProof.name}
+                        Remember your{" "}
+                        <strong> Enrollee ID: {enrollmentId}</strong>
                       </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Payment Notice */}
-            {currentStep === 3 && !paymentProof && !isUploadingPaymentProof && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-blue-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
-                      Important Payment Information
-                    </h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>
-                        Please remember your <strong>Enrollee ID: {enrollmentId}</strong> when proceeding to payment. 
-                        You will need this ID to complete the payment process.
+                      <p className="flex items-center">
+                        <svg
+                          className="h-4 w-4 mr-2 text-blue-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Upload payment receipt after payment
+                      </p>
+                      <p className="flex items-center">
+                        <svg
+                          className="h-4 w-4 mr-2 text-blue-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Payment verification takes 1-2 business days
                       </p>
                     </div>
                   </div>
@@ -299,21 +365,39 @@ function Enrollment() {
 
             {/* Action Buttons */}
             <div className="flex justify-center my-6">
-              {currentStep === 3 && !paymentProof && !isUploadingPaymentProof && (
-                <button
-                  onClick={() => {
-                    navigate('/paymentForm');
-                  }}
-                  className="px-6 py-2.5 bg-german-red hover:bg-dark-red text-white font-medium rounded-md transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center whitespace-nowrap"
-                >
-                  <span>Proceed to Payment</span>
-                </button>
-              )}
+              {shouldShowPaymentButton && (
+                  <button
+                    onClick={() => {
+                      navigate("/paymentForm");
+                    }}
+                    className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
+                  >
+                    <span>
+                      {coursePrice
+                        ? `Pay ₱${parseFloat(coursePrice).toLocaleString (
+                            "en-PH",
+                            { maximumFractionDigits: 2 }
+                          )} Now`
+                        : "Proceed to Payment"}
+                    </span>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                )}
 
               {/* Proceed to Next Step Button - Step 3 (after payment proof upload) */}
-              {currentStep === 3 &&
-                paymentProof &&
-                !isUploadingPaymentProof && (
+              {shouldShowNextStepButton && (
                   <button
                     onClick={() => {
                       advanceToNextStep();
@@ -351,11 +435,11 @@ function Enrollment() {
             {/* Contact Information Footer */}
             <div className="mt-8 text-sm text-gray-600 pt-4 text-center">
               <p>
-                For enrollment concerns please contact:{' '}
+                For enrollment concerns please contact:{" "}
                 <span className="font-medium">(+63) 97239232223</span>
               </p>
               <p>
-                Email:{' '}
+                Email:{" "}
                 <span className="font-medium">
                   info@sprachinstitut-cebu.inc
                 </span>
