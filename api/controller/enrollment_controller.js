@@ -632,4 +632,28 @@ const updateEnrollmentPaymentProof = async (req, res) => {
   }
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof };
+// Update enrollment status - for admin use
+const updateEnrollmentStatus = async (req, res) => {
+  const { enrollmentId } = req.params;
+  const { enrollmentStatus } = req.body;
+
+  try {
+    const updated = await prisma.enrollment_request.update({
+      where: { enrollmentId },
+      data: { enrollmentStatus },
+    });
+
+    res.status(200).json({
+      message: 'Enrollment status updated successfully',
+      data: updated,
+      error: false,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Failed to update enrollment status',
+      error: true,
+    });
+  }
+};
+
+export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof, updateEnrollmentStatus };

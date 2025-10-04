@@ -4,6 +4,7 @@ import {
   getEnrollmentRequests,
   trackEnrollment,
   updateEnrollmentPaymentProof,
+  updateEnrollmentStatus
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
 import { verifyToken } from "../../utils/verifyToken.js";
@@ -18,6 +19,7 @@ const router = express.Router();
 router.post("/enroll", validateEnrollment, createEnrollmentRequest);
 router.post("/track", trackEnrollment);
 router.patch("/payment-proof", updateEnrollmentPaymentProof);
+router.put("/enroll/:enrollmentId/status", updateEnrollmentStatus);
 
 // Admin routes
 router.get(
