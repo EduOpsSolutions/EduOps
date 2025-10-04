@@ -36,10 +36,11 @@ router.put(
   validateUpdateUser,
   updateUser
 );
+router.get('/validate-token', verifyToken, getAllUsers);
 router.get('/', verifyToken, validateUserIsAdmin, getAllUsers);
 router.get('/:id', verifyToken, validateUserIsAdmin, getUserById);
 router.post(
-  '/create/',
+  '/create',
   verifyToken,
   validateUserIsAdmin,
   validateCreateUser,

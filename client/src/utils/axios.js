@@ -31,20 +31,39 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 unauthorized errors
+    // Handle 401 unauthorized or 403 forbidden errors (expired/invalid token)
     if (
       error.response &&
-      error.response.status >= 400 &&
-      error.response.status < 500 &&
-      error.response.data.message.includes('Please login again.')
+      (error.response.status === 401 || error.response.status === 403)
     ) {
-      const { logout } = useAuthStore.getState();
-      logout();
-      Swal.fire({
-        title: "You've been logged out",
-        text: 'Please login again.',
-        icon: 'error',
-      });
+      const errorMessage = error.response.data?.message || '';
+
+      // Check if it's a token-related error
+      const isTokenError =
+        errorMessage.toLowerCase().includes('token') ||
+        errorMessage.toLowerCase().includes('unauthorized') ||
+        errorMessage.toLowerCase().includes('expired') ||
+        errorMessage.toLowerCase().includes('login');
+
+      // Only logout and show alert for token-related errors
+      // This prevents logout for other 403 errors (like insufficient permissions)
+      if (isTokenError || error.response.status === 401) {
+        const { logout, isAuthenticated } = useAuthStore.getState();
+
+        // Only show alert and logout if user was authenticated
+        if (isAuthenticated) {
+          logout();
+          Swal.fire({
+            title: 'Session Expired',
+            text: 'Your session has expired. Please login again.',
+            icon: 'warning',
+            confirmButtonColor: '#DE0000',
+          }).then(() => {
+            // Redirect to login page
+            window.location.href = '/login';
+          });
+        }
+      }
     }
     // Return the error so it can be handled by the calling code
     return Promise.reject(error);

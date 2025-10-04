@@ -93,7 +93,14 @@ model course {
 model schedule {
   id        Int   @id @default(autoincrement())
   days      String
-  time      String
+  time      String?
+  time_start String?
+  time_end   String?
+  location   String?
+  notes      String? @db.Text
+  color      String? @default("#FFCF00")
+  periodStart DateTime?
+  periodEnd   DateTime?
   courseId  String?
   periodId  String?
   teacherId String?

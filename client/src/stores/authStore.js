@@ -376,6 +376,42 @@ const useAuthStore = create(
         }
       },
 
+      // Validate token by making an API call
+      validateToken: async () => {
+        const token = getCookieItem('token');
+
+        if (!token) {
+          get().logout();
+          return false;
+        }
+
+        try {
+          // Make a lightweight API call to validate the token
+          // Using the /users endpoint which requires authentication
+          const response = await axios.get(
+            `${process.env.REACT_APP_API_URL}/posts`
+          );
+
+          // If the request succeeds, token is valid
+          if (response.status === 200) {
+            return true;
+          }
+        } catch (error) {
+          // If token is expired or invalid, logout
+          if (
+            error.response &&
+            (error.response.status === 401 || error.response.status === 403)
+          ) {
+            console.log('error', error);
+            console.log('Token validation failed, logging out...');
+            get().logout();
+            return false;
+          }
+          // For other errors, assume token might still be valid
+          return true;
+        }
+      },
+
       // Get user full name
       getUserFullName: () => {
         const { user } = get();

@@ -1,31 +1,31 @@
-import { create } from "zustand";
-import axiosInstance from "../utils/axios";
-import createSearchStore from "./searchStore";
+import { create } from 'zustand';
+import axiosInstance from '../utils/axios';
+import createSearchStore from './searchStore';
 
 export const useEnrollmentPeriodSearchStore = createSearchStore({
   defaultSearchParams: {
-    periodName: "",
-    batch: "",
-    year: "",
-    status: "",
+    periodName: '',
+    batch: '',
+    year: '',
+    status: '',
   },
   initialItemsPerPage: 10,
   showResultsOnLoad: true,
   filterFunction: (data, searchParams) => {
     return data.filter((period) => {
       return (
-        (searchParams.periodName === "" ||
+        (searchParams.periodName === '' ||
           period.periodName
             .toLowerCase()
             .includes(searchParams.periodName.toLowerCase())) &&
-        (searchParams.batch === "" ||
+        (searchParams.batch === '' ||
           period.batchName.includes(searchParams.batch)) &&
-        (searchParams.year === "" ||
+        (searchParams.year === '' ||
           new Date(period.startAt)
             .getFullYear()
             .toString()
             .includes(searchParams.year)) &&
-        (searchParams.status === "" || period.status === searchParams.status)
+        (searchParams.status === '' || period.status === searchParams.status)
       );
     });
   },
@@ -35,7 +35,7 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
   selectedPeriod: null,
   periodCourses: [],
   loading: false,
-  error: "",
+  error: '',
 
   showCourses: false,
   addCourseModal: false,
@@ -43,11 +43,11 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
   fetchPeriods: async () => {
     try {
-      set({ loading: true, error: "" });
-      const response = await axiosInstance.get("/academic-periods");
+      set({ loading: true, error: '' });
+      const response = await axiosInstance.get('/academic-periods');
 
       if (!response.data || !Array.isArray(response.data)) {
-        throw new Error("Invalid response format from server");
+        throw new Error('Invalid response format from server');
       }
 
       const visiblePeriods = response.data
@@ -57,16 +57,33 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
           const startDate = new Date(period.startAt);
           const endDate = new Date(period.endAt);
 
-          let status;
-          // Use the status from database if available, otherwise calculate based on dates
-          if (period.status === "ended") {
-            status = "Ended";
-          } else if (now < startDate) {
-            status = "Upcoming";
+          // Calculate actual period status based on dates
+          let periodStatus;
+          if (now < startDate) {
+            periodStatus = 'Upcoming';
           } else if (now >= startDate && now <= endDate) {
-            status = "Ongoing";
+            periodStatus = 'Ongoing';
           } else {
-            status = "Ended";
+            periodStatus = 'Ended';
+          }
+
+          // Determine enrollment status (database status field)
+          const enrollmentOpen =
+            period.status === 'ongoing' || period.status === 'upcoming';
+
+          // Display status combines both period and enrollment info
+          let displayStatus;
+          if (periodStatus === 'Ended') {
+            displayStatus = 'Ended';
+          } else if (periodStatus === 'Ongoing') {
+            displayStatus = enrollmentOpen
+              ? 'Ongoing'
+              : 'Ongoing (Enrollment Closed)';
+          } else {
+            // Upcoming
+            displayStatus = enrollmentOpen
+              ? 'Upcoming'
+              : 'Upcoming (Enrollment Closed)';
           }
 
           return {
@@ -76,7 +93,9 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
             batchName: period.batchName,
             startAt: period.startAt,
             endAt: period.endAt,
-            status: status,
+            status: displayStatus,
+            periodStatus: periodStatus, // The actual period status
+            enrollmentOpen: enrollmentOpen, // Whether enrollment is open
             year: new Date(period.startAt).getFullYear().toString(),
             createdAt: period.createdAt,
           };
@@ -86,10 +105,10 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
       const searchStore = useEnrollmentPeriodSearchStore.getState();
       searchStore.setData(visiblePeriods);
 
-      set({ error: "" });
+      set({ error: '' });
     } catch (error) {
-      console.error("Failed to fetch periods:", error);
-      set({ error: "Failed to load academic periods. Please try again." });
+      console.error('Failed to fetch periods:', error);
+      set({ error: 'Failed to load academic periods. Please try again.' });
     } finally {
       set({ loading: false });
     }
@@ -108,18 +127,18 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
       const activeCourses = response.data.map((pc) => ({
         id: pc.id,
-        course: pc.course?.name || "N/A",
+        course: pc.course?.name || 'N/A',
         schedule:
-          typeof pc.course?.schedule === "string"
+          typeof pc.course?.schedule === 'string'
             ? pc.course.schedule
-            : JSON.stringify(pc.course?.schedule) || "N/A",
+            : JSON.stringify(pc.course?.schedule) || 'N/A',
         enrolledStudents: pc.course?.maxNumber || 0,
       }));
 
-      set({ periodCourses: activeCourses, error: "" });
+      set({ periodCourses: activeCourses, error: '' });
     } catch (error) {
-      console.error("Failed to fetch period courses:", error);
-      set({ error: "Failed to load period courses. Please try again." });
+      console.error('Failed to fetch period courses:', error);
+      set({ error: 'Failed to load period courses. Please try again.' });
     } finally {
       set({ loading: false });
     }
@@ -127,8 +146,8 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
   handlePeriodSelect: (period) => {
     if (!period || !period.id) {
-      console.error("Invalid period selected");
-      set({ error: "Invalid period selected" });
+      console.error('Invalid period selected');
+      set({ error: 'Invalid period selected' });
       return;
     }
     set({ selectedPeriod: period, showCourses: true });
@@ -141,17 +160,17 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
   deleteCourse: async (courseId) => {
     const { selectedPeriod, fetchPeriodCourses } = get();
 
-    if (window.confirm("Are you sure you want to delete this course?")) {
+    if (window.confirm('Are you sure you want to delete this course?')) {
       try {
         set({ loading: true });
         await axiosInstance.delete(
           `/academic-period-courses/${selectedPeriod.id}/courses/${courseId}`
         );
         await fetchPeriodCourses();
-        set({ error: "" });
+        set({ error: '' });
       } catch (error) {
-        console.error("Failed to delete course:", error);
-        set({ error: "Failed to delete course. Please try again." });
+        console.error('Failed to delete course:', error);
+        set({ error: 'Failed to delete course. Please try again.' });
       } finally {
         set({ loading: false });
       }
@@ -160,7 +179,7 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
   endEnrollment: async (periodId) => {
     try {
-      set({ loading: true, error: "" });
+      set({ loading: true, error: '' });
 
       await axiosInstance.patch(`/academic-periods/${periodId}/end-enrollment`);
 
@@ -169,10 +188,10 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
       return { success: true };
     } catch (error) {
-      console.error("Failed to end enrollment:", error);
+      console.error('Failed to end enrollment:', error);
       const errorMessage =
         error.response?.data?.message ||
-        "Failed to end enrollment. Please try again.";
+        'Failed to end enrollment. Please try again.';
       set({ error: errorMessage });
       return { success: false, error: errorMessage };
     } finally {
@@ -185,7 +204,7 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
       selectedPeriod: null,
       periodCourses: [],
       loading: false,
-      error: "",
+      error: '',
       showCourses: false,
       addCourseModal: false,
       addAcademicPeriodModal: false,

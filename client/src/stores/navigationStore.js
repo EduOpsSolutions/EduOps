@@ -41,6 +41,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/coursemanagement`, label: 'Course Assignment' },
           { path: `/${role}/enrollmentperiod`, label: 'Enrollment Period' },
           { path: `/${role}/enrollmentrequests`, label: 'Enrollment Request' },
+          { path: `/${role}/schedule`, label: 'Schedule' },
         ],
       },
       grades: { path: `/${role}/grades`, label: 'Grades' },

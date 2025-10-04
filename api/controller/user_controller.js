@@ -44,6 +44,7 @@ const getAllUsers = async (req, res) => {
     const users = await prisma.users.findMany({
       select: {
         id: true,
+        userId: true,
         firstName: true,
         middleName: true,
         lastName: true,
@@ -105,11 +106,29 @@ const getUserById = async (req, res) => {
   }
 };
 
+// Helper function to generate unique userId
+const generateUserId = async (role) => {
+  const prefix = role === 'teacher' ? 'teacher' : 'student';
+  let counter = 1;
+  let userId;
+
+  do {
+    userId = `${prefix}${counter.toString().padStart(3, '0')}`;
+    const existingUser = await prisma.users.findUnique({
+      where: { userId },
+    });
+    if (!existingUser) break;
+    counter++;
+  } while (counter < 1000); // Prevent infinite loop
+
+  return userId;
+};
+
 // Create new student
 const createUser = async (req, res) => {
   try {
     const {
-      userId,
+      userId: providedUserId,
       firstName,
       middleName,
       lastName,
@@ -118,16 +137,24 @@ const createUser = async (req, res) => {
       birthyear,
       email,
       password,
+      role = 'student',
     } = req.body;
 
-    const isUserIdTaken = await prisma.users.findUnique({
-      where: { userId },
-    });
+    // Generate userId if not provided
+    let userId = providedUserId;
+    if (!userId) {
+      userId = await generateUserId(role);
+    } else {
+      // Check if provided userId is taken
+      const isUserIdTaken = await prisma.users.findUnique({
+        where: { userId },
+      });
 
-    if (isUserIdTaken) {
-      return res
-        .status(400)
-        .json({ error: true, message: 'User ID already taken' });
+      if (isUserIdTaken) {
+        return res
+          .status(400)
+          .json({ error: true, message: 'User ID already taken' });
+      }
     }
 
     const isEmailTaken = await prisma.users.findUnique({
@@ -151,12 +178,14 @@ const createUser = async (req, res) => {
         birthyear,
         email,
         password: bcrypt.hashSync(password, SALT),
+        role,
         status: 'active',
       },
     });
     res.status(201).json({
       error: false,
       message: 'User created successfully',
+      data: { userId: user.userId },
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });
