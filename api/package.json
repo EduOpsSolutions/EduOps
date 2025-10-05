@@ -10,7 +10,7 @@
     "start": "node index.js",
     "seed_students": "node prisma/seed_students_sample.js",
     "dev": "nodemon -e js,mysql,env -w .env -w . index.js",
-    "build": "npx prisma db push && npx prisma generate && npx prisma db seed",
+    "build": "npx prisma migrate deploy && npx prisma generate && npx prisma db seed",
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "firebase": "^12.2.1",
+    "firebase-admin": "^13.5.0",
     "http-errors": "~1.6.3",
     "joi": "^17.13.3",
     "jose": "^5.9.6",

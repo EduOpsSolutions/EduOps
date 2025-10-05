@@ -3,6 +3,9 @@
 /client/.DS_Store
 /api/node_modules
 /api/.env
+/api/.vercel
+/api/.vercel/
+/api/.vercel/project.json
 .env
 .DS_Store
 /client/.DS_Store
