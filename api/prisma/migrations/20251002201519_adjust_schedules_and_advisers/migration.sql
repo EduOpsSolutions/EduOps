@@ -11,7 +11,22 @@ ALTER TABLE `course` DROP FOREIGN KEY `course_adviserId_fkey`;
 ALTER TABLE `course` DROP COLUMN `adviserId`;
 
 -- AlterTable
-ALTER TABLE `schedule` ADD COLUMN `teacherId` VARCHAR(191) NULL;
+-- Conditionally add `teacherId` to `schedule` if it does not exist
+SET @ddl_add_teacher := (
+  SELECT IF(
+    EXISTS(
+      SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'schedule'
+        AND COLUMN_NAME = 'teacherId'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `schedule` ADD COLUMN `teacherId` VARCHAR(191) NULL'
+  )
+);
+PREPARE stmt FROM @ddl_add_teacher;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- CreateTable
 CREATE TABLE `student_enrollment` (
