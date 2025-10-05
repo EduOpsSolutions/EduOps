@@ -10,14 +10,35 @@ function CreateCourseModal({ setCreateCourseModal, create_course_modal, fetchCou
         maxNumber: 30,
         visibility: 'hidden',
         description: '',
-        logo: '',
         price: '',
-        schedule: ''
+        scheduleDays: '',
+        scheduleTime: '',
+        adviser: ''
     });
 
     const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [advisers, setAdvisers] = useState([]);
+
+    const fetchAdvisers = async () => {
+        try {
+            const response = await axiosInstance.get('/users?role=teacher');
+            const teacherOptions = response.data.data.map(teacher => ({
+                value: teacher.id.toString(),
+                label: `${teacher.firstName} ${teacher.middleName ? teacher.middleName + ' ' : ''}${teacher.lastName}`
+            }));
+            setAdvisers(teacherOptions);
+        } catch (error) {
+            console.error('Failed to fetch advisers:', error);
+            // Don't set error as it's not critical for form submission
+            setAdvisers([{ value: 'error', label: 'Failed to load advisers' }]);
+        }
+    };
+
+    useEffect(() => {
+        fetchAdvisers();
+    }, []);
 
     useEffect(() => {
         if (!create_course_modal) {
@@ -27,9 +48,10 @@ function CreateCourseModal({ setCreateCourseModal, create_course_modal, fetchCou
                 maxNumber: 30,
                 visibility: 'hidden',
                 description: '',
-                logo: '',
                 price: '',
-                schedule: ''
+                scheduleDays: '',
+                scheduleTime: '',
+                adviser: ''
             });
             setError('');
         }
@@ -74,9 +96,12 @@ function CreateCourseModal({ setCreateCourseModal, create_course_modal, fetchCou
                 maxNumber: parseInt(formData.maxNumber),
                 visibility: formData.visibility,
                 description: formData.description.trim(),
-                logo: formData.logo.trim(),
                 price: parseFloat(formData.price),
-                schedule: formData.schedule.trim() ? JSON.parse(formData.schedule) : null,
+                schedule: (formData.scheduleDays.trim() && formData.scheduleTime.trim()) ? {
+                    days: formData.scheduleDays.trim(),
+                    time: formData.scheduleTime.trim()
+                } : null,
+                adviserId: formData.adviser.trim() || null
             };
 
             const response = await axiosInstance.post('/courses/create', payload);
@@ -124,6 +149,8 @@ function CreateCourseModal({ setCreateCourseModal, create_course_modal, fetchCou
         { value: 'visible', label: 'Visible' },
         { value: 'hidden', label: 'Hidden' }
     ];
+
+
 
     return (
         <>
@@ -222,23 +249,47 @@ function CreateCourseModal({ setCreateCourseModal, create_course_modal, fetchCou
                             placeholder="Enter course description"
                         />
 
-                        {/* Logo URL */}
-                        <ModalTextField
-                            label="Logo (URL)"
-                            name="logo"
-                            type="url"
-                            value={formData.logo}
-                            onChange={handleInputChange}
-                            placeholder="https://example.com/logo.png"
-                        />
+                        {/* Schedule Fields */}
+                        <div className="flex flex-row justify-center items-center gap-4">
+                            <ModalSelectField
+                                label="Schedule Days"
+                                name="scheduleDays"
+                                value={formData.scheduleDays}
+                                onChange={handleInputChange}
+                                options={[
+                                    { value: '', label: 'Select days' },
+                                    { value: 'MWF', label: 'Monday, Wednesday, Friday' },
+                                    { value: 'TTH', label: 'Tuesday, Thursday' },
+                                    { value: 'MW', label: 'Monday, Wednesday' },
+                                    { value: 'TF', label: 'Tuesday, Friday' },
+                                    { value: 'WF', label: 'Wednesday, Friday' },
+                                    { value: 'SAT', label: 'Saturday' },
+                                    { value: 'SUN', label: 'Sunday' }
+                                ]}
+                                className="w-1/2"
+                            />
+                            
+                            <ModalTextField
+                                label="Schedule Time"
+                                name="scheduleTime"
+                                value={formData.scheduleTime}
+                                onChange={handleInputChange}
+                                placeholder="e.g. 6:30AM - 7:30AM"
+                                className="w-1/2"
+                            />
+                        </div>
 
-                        {/* Schedule */}
-                        <ModalTextField
-                            label="Schedule"
-                            name="schedule"
-                            value={formData.schedule}
+                        {/* Adviser Dropdown - New Field */}
+                        <ModalSelectField
+                            label="Adviser"
+                            name="adviser"
+                            value={formData.adviser}
                             onChange={handleInputChange}
-                            placeholder="Enter Schedule"
+                            options={[
+                                { value: '', label: 'Select an adviser' },
+                                ...advisers
+                            ]}
+                            className="w-full"
                         />
 
                         {/* Submit Button */}

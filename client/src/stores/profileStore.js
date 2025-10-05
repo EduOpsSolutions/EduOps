@@ -27,7 +27,7 @@ const useProfileStore = create((set, get) => ({
   },
 
   cancelChanges: () => {
-    set(state => ({
+    set((state) => ({
       profileImage: null,
       profileImagePreview: null,
       hasChanges: false,
@@ -66,9 +66,10 @@ const useProfileStore = create((set, get) => ({
     try {
       const formData = new FormData();
       formData.append('profilePic', file);
+      // Note: User ID is no longer sent in the request body as it's extracted from JWT token on the backend
 
       const response = await axiosInstance.post(
-        `${process.env.REACT_APP_API_URL}/users/upload-profile-picture`,
+        `${process.env.REACT_APP_API_URL}/users/update-profile-picture`,
         formData,
         {
           headers: {
@@ -78,8 +79,15 @@ const useProfileStore = create((set, get) => ({
         }
       );
 
-      if (response.data && response.data.profilePicLink) {
-        const updatedUser = { ...user, profilePicLink: response.data.profilePicLink };
+      if (
+        response.data &&
+        response.data.data &&
+        response.data.data.profilePicLink
+      ) {
+        const updatedUser = {
+          ...user,
+          profilePicLink: response.data.data.profilePicLink,
+        };
         setUser(updatedUser);
 
         set({
@@ -94,17 +102,17 @@ const useProfileStore = create((set, get) => ({
           text: 'Profile picture has been saved successfully!',
           confirmButtonColor: '#890E07',
         });
-
       } else {
         throw new Error('Invalid response from server');
       }
-
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Oops...',
-        text: error.response?.data?.message || 'Something went wrong! Failed to save profile picture.',
+        text:
+          error.response?.data?.message ||
+          'Something went wrong! Failed to save profile picture.',
         confirmButtonColor: '#890E07',
       });
     } finally {
@@ -116,7 +124,7 @@ const useProfileStore = create((set, get) => ({
     set({ uploadingImage: true });
 
     try {
-      await axiosInstance.delete(
+      const response = await axiosInstance.delete(
         `${process.env.REACT_APP_API_URL}/users/remove-profile-picture`,
         {
           headers: {
@@ -125,7 +133,11 @@ const useProfileStore = create((set, get) => ({
         }
       );
 
-      const updatedUser = { ...user, profilePicLink: null };
+      // Update user with the response data
+      const updatedUser = {
+        ...user,
+        profilePicLink: response.data.data.profilePicLink,
+      };
       setUser(updatedUser);
 
       // Clear local states
@@ -141,13 +153,14 @@ const useProfileStore = create((set, get) => ({
         text: 'Profile picture has been removed successfully!',
         confirmButtonColor: '#890E07',
       });
-
     } catch (error) {
       console.error('Error removing profile picture:', error);
       await Swal.fire({
         icon: 'error',
         title: 'Oops...',
-        text: error.response?.data?.message || 'Something went wrong! Failed to remove profile picture.',
+        text:
+          error.response?.data?.message ||
+          'Something went wrong! Failed to remove profile picture.',
         confirmButtonColor: '#890E07',
       });
     } finally {

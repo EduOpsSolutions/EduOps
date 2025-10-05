@@ -23,8 +23,8 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
         } finally {
             setLoading(false);
         }
-    };    
-    
+    };
+
     const handleAddCourse = async (courseId) => {
         try {
             if (!selectedPeriod) {
@@ -36,7 +36,7 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
                 setError('Course ID is required.');
                 return;
             }
-            
+
             setLoading(true);
             setError('');
 
@@ -47,14 +47,13 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
             const response = await axiosInstance.post(`/academic-period-courses/${selectedPeriod.id}/courses`, {
                 courseId: courseId
             });
-            
+
             if (!response.data) {
                 throw new Error('No response data received');
             }
-            
-            // Refresh the period courses to show the newly added course
+
             await fetchPeriodCourses();
-            
+
             // Close the modal after successful addition
             setAddCourseModal(false);
         } catch (error) {
@@ -82,7 +81,7 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
         console.log('Search clicked with term:', searchTerm);
     };
 
-    const filteredCourses = courses.filter(course => 
+    const filteredCourses = courses.filter(course =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -108,7 +107,7 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
     const handleCancelDiscard = () => {
         setShowDiscardModal(false);
     };
-    
+
     useEffect(() => {
         if (add_course_modal) {
             fetchCourses();
@@ -119,7 +118,7 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
     }, [add_course_modal]);
 
     if (!add_course_modal) return null;
-    
+
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -207,7 +206,7 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
                                     </tr>
                                 ) : (
                                     filteredCourses.map((course) => (
-                                        <tr 
+                                        <tr
                                             key={course.id}
                                             className="hover:bg-gray-50 transition-colors duration-200"
                                         >
@@ -221,22 +220,22 @@ function AddCourseModal({ setAddCourseModal, add_course_modal, selectedPeriod, f
                                                 {course.maxNumber}/10
                                             </td>
                                             <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                                                {course.schedule || 'N/A'}
+                                                {course.schedule ? `${course.schedule.days || ''} ${course.schedule.time || ''}`.trim() || 'N/A' : 'N/A'}
                                             </td>
                                             <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                                                {course.adviserId || 'N/A'}
+                                                {course.adviser ? `${course.adviser.firstName} ${course.adviser.middleName ? course.adviser.middleName + ' ' : ''}${course.adviser.lastName}` : 'N/A'}
                                             </td>
                                             <td className="py-3 px-4 text-center border-t border-b border-dark-red-2">
-                                                <button 
+                                                <button
                                                     onClick={() => handleAddCourse(course.id)}
                                                     disabled={loading}
                                                     className="text-dark-red-2 hover:text-dark-red-5 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     aria-label="Add course"
                                                 >
-                                                    <svg 
-                                                        xmlns="http://www.w3.org/2000/svg" 
-                                                        width="24" 
-                                                        height="24" 
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        width="24"
+                                                        height="24"
                                                         viewBox="0 0 32 32"
                                                         fill="currentColor"
                                                     >
