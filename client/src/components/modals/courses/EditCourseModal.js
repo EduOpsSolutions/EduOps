@@ -10,15 +10,36 @@ function EditCourseModal({ edit_course_modal, setEditCourseModal, selectedCourse
         maxNumber: 30,
         visibility: 'hidden',
         description: '',
-        logo: '',
         price: '',
-        schedule: ''
+        scheduleDays: '',
+        scheduleTime: '',
+        adviser: ''
     });
 
     const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [originalData, setOriginalData] = useState({});
+    const [advisers, setAdvisers] = useState([]);
+
+    // Fetch advisers (teachers) when component mounts
+    const fetchAdvisers = async () => {
+        try {
+            const response = await axiosInstance.get('/users?role=teacher');
+            const teacherOptions = response.data.data.map(teacher => ({
+                value: teacher.id.toString(),
+                label: `${teacher.firstName} ${teacher.middleName ? teacher.middleName + ' ' : ''}${teacher.lastName}`
+            }));
+            setAdvisers(teacherOptions);
+        } catch (error) {
+            console.error('Failed to fetch advisers:', error);
+            setAdvisers([{ value: 'error', label: 'Failed to load advisers' }]);
+        }
+    };
+
+    useEffect(() => {
+        fetchAdvisers();
+    }, []);
 
     useEffect(() => {
         if (selectedCourse && edit_course_modal) {
@@ -27,9 +48,10 @@ function EditCourseModal({ edit_course_modal, setEditCourseModal, selectedCourse
                 maxNumber: selectedCourse.maxNumber || 30,
                 visibility: selectedCourse.visibility || 'hidden',
                 description: selectedCourse.description || '',
-                logo: selectedCourse.logo || '',
                 price: selectedCourse.price || '',
-                schedule: selectedCourse.schedule ? JSON.stringify(selectedCourse.schedule) : ''
+                scheduleDays: selectedCourse.schedule?.days || '',
+                scheduleTime: selectedCourse.schedule?.time || '',
+                adviser: selectedCourse.adviserId || ''
             };
             setFormData(courseData);
             setOriginalData(courseData);
@@ -44,9 +66,10 @@ function EditCourseModal({ edit_course_modal, setEditCourseModal, selectedCourse
                 maxNumber: 30,
                 visibility: 'hidden',
                 description: '',
-                logo: '',
                 price: '',
-                schedule: ''
+                scheduleDays: '',
+                scheduleTime: '',
+                adviser: ''
             });
             setOriginalData({});
             setError('');
@@ -80,7 +103,7 @@ function EditCourseModal({ edit_course_modal, setEditCourseModal, selectedCourse
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) return;
 
         try {
@@ -92,17 +115,20 @@ function EditCourseModal({ edit_course_modal, setEditCourseModal, selectedCourse
                 maxNumber: parseInt(formData.maxNumber),
                 visibility: formData.visibility,
                 description: formData.description.trim(),
-                logo: formData.logo.trim(),
                 price: parseFloat(formData.price),
-                schedule: formData.schedule.trim() ? JSON.parse(formData.schedule) : null,
+                schedule: (formData.scheduleDays.trim() && formData.scheduleTime.trim()) ? {
+                    days: formData.scheduleDays.trim(),
+                    time: formData.scheduleTime.trim()
+                } : null,
+                adviserId: formData.adviser.trim() || null
             };
 
             const response = await axiosInstance.put(`/courses/${selectedCourse.id}`, payload);
             console.log('Course updated:', response.data);
-            
+
             await fetchCourses();
             setEditCourseModal(false);
-            
+
         } catch (error) {
             console.error('Failed to update course: ', error.response?.data || error.message);
             setError(error.response?.data?.message || 'Failed to update course. Please try again.');
@@ -236,23 +262,47 @@ function EditCourseModal({ edit_course_modal, setEditCourseModal, selectedCourse
                             placeholder="Enter course description"
                         />
 
-                        {/* Logo URL */}
-                        <ModalTextField
-                            label="Logo (URL)"
-                            name="logo"
-                            type="url"
-                            value={formData.logo}
-                            onChange={handleInputChange}
-                            placeholder="https://example.com/logo.png"
-                        />
+                        {/* Schedule Fields */}
+                        <div className="flex flex-row justify-center items-center gap-4">
+                            <ModalSelectField
+                                label="Schedule Days"
+                                name="scheduleDays"
+                                value={formData.scheduleDays}
+                                onChange={handleInputChange}
+                                options={[
+                                    { value: '', label: 'Select days' },
+                                    { value: 'MWF', label: 'Monday, Wednesday, Friday' },
+                                    { value: 'TTH', label: 'Tuesday, Thursday' },
+                                    { value: 'MW', label: 'Monday, Wednesday' },
+                                    { value: 'TF', label: 'Tuesday, Friday' },
+                                    { value: 'WF', label: 'Wednesday, Friday' },
+                                    { value: 'SAT', label: 'Saturday' },
+                                    { value: 'SUN', label: 'Sunday' }
+                                ]}
+                                className="w-1/2"
+                            />
 
-                        {/* Schedule */}
-                        <ModalTextField
-                            label="Schedule"
-                            name="schedule"
-                            value={formData.schedule}
+                            <ModalTextField
+                                label="Schedule Time"
+                                name="scheduleTime"
+                                value={formData.scheduleTime}
+                                onChange={handleInputChange}
+                                placeholder="e.g. 6:30AM - 7:30AM"
+                                className="w-1/2"
+                            />
+                        </div>
+
+                        {/* Adviser Dropdown */}
+                        <ModalSelectField
+                            label="Adviser"
+                            name="adviser"
+                            value={formData.adviser}
                             onChange={handleInputChange}
-                            placeholder="Enter Schedule"
+                            options={[
+                                { value: '', label: 'Select an adviser' },
+                                ...advisers
+                            ]}
+                            className="w-full"
                         />
 
                         {/* Submit Button */}

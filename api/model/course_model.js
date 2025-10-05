@@ -6,12 +6,35 @@ export const getAllCourses = (isStudent) => {
         where: {
             deletedAt: null,
             ...(isStudent ? { visibility: 'visible' } : {})
+        },
+        include: {
+            adviser: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    middleName: true,
+                    lastName: true
+                }
+            }
         }
     });
 };
 
 export const getCourseById = (id) => {
-    return prisma.course.findUnique({ where: { id } });
+    return prisma.course.findUnique({ 
+        where: { id },
+        select: {
+            id: true,
+            name: true,
+            adviser: {
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true
+                }
+            }
+        }
+    });
 };
 
 export const createCourse = (data) => {

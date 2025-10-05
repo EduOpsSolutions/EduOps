@@ -1,4 +1,4 @@
-import Cookies from 'js-cookie';
+//import Cookies from 'js-cookie';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Bg_image from '../../assets/images/GermanyBg.png';

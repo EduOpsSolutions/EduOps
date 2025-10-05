@@ -41,3 +41,10 @@ export const getActiveAcademicPeriod = () => {
         }
     });
 }
+
+export const endEnrollmentForPeriod = (id) => {
+    return prisma.academic_period.update({
+        where: { id },
+        data: { status: 'ended' }
+    });
+}

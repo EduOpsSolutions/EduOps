@@ -10,6 +10,8 @@ import {
   activateUser,
   createStudentAccount,
   inspectEmailExists,
+  updateProfilePicture,
+  removeProfilePicture,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
@@ -17,6 +19,7 @@ import {
 } from '../../middleware/userValidator.js';
 
 import { validateUserIsAdmin } from '../../middleware/authValidator.js';
+import { uploadSingle } from '../../middleware/multerMiddleware.js';
 
 import { verifyToken } from '../../utils/verifyToken.js';
 
@@ -45,12 +48,19 @@ router.post(
   validateCreateUser,
   createUser
 );
+router.delete('/remove-profile-picture', verifyToken, removeProfilePicture);
 router.delete('/:id', verifyToken, validateUserIsAdmin, deleteUser);
 router.post(
   '/create-student-account',
   verifyToken,
   validateUserIsAdmin,
   createStudentAccount
+);
+router.post(
+  '/update-profile-picture',
+  verifyToken,
+  uploadSingle('profilePic'),
+  updateProfilePicture
 );
 
 export { router };
