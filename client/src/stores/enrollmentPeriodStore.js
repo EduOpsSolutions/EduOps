@@ -121,18 +121,33 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
     try {
       set({ loading: true });
 
-      const response = await axiosInstance.get(
-        `/academic-period-courses/${selectedPeriod.id}/courses`
-      );
+      // Fetch courses linked to this period
+      const [coursesResp, schedulesResp] = await Promise.all([
+        axiosInstance.get(
+          `/academic-period-courses/${selectedPeriod.id}/courses`
+        ),
+        axiosInstance.get(`/schedules/period/${selectedPeriod.id}`),
+      ]);
 
-      const activeCourses = response.data.map((pc) => ({
+      const schedules = Array.isArray(schedulesResp.data)
+        ? schedulesResp.data
+        : [];
+
+      // Group schedules by courseId for quick access
+      const schedulesByCourseId = schedules.reduce((acc, sched) => {
+        const key = sched.course?.id || sched.courseId || sched.course;
+        if (!key) return acc;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(sched);
+        return acc;
+      }, {});
+
+      const activeCourses = coursesResp.data.map((pc) => ({
         id: pc.id,
+        courseId: pc.courseId,
         course: pc.course?.name || 'N/A',
-        schedule:
-          typeof pc.course?.schedule === 'string'
-            ? pc.course.schedule
-            : JSON.stringify(pc.course?.schedule) || 'N/A',
         enrolledStudents: pc.course?.maxNumber || 0,
+        schedules: schedulesByCourseId[pc.courseId] || [],
       }));
 
       set({ periodCourses: activeCourses, error: '' });

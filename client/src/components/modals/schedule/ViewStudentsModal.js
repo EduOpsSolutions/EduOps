@@ -45,7 +45,7 @@ function ViewStudentsModal({
             courseId,
             periodId,
             enrolledOnly: true,
-            take: 100,
+            take: 50,
           },
           signal: controller.signal,
         });
@@ -241,9 +241,10 @@ function ViewStudentsModal({
           </div>
 
           <div className="grid grid-cols-12 text-sm font-semibold border-b pb-2 items-center">
-            <div className="col-span-1">
+            <div className="col-span-1 px-2">
               <input
                 type="checkbox"
+                className="cursor-pointer"
                 checked={
                   selectedIds.length > 0 &&
                   selectedIds.length === allVisibleIds.length
@@ -268,12 +269,13 @@ function ViewStudentsModal({
               <button
                 key={s.id}
                 type="button"
-                onClick={() => handleSelect(s)}
-                className="w-full grid grid-cols-12 items-center py-3 hover:bg-gray-50 text-left"
+                // onClick={() => handleSelect(s)}
+                className="w-full grid grid-cols-12 items-center py-3 hover:bg-gray-50 text-left cursor-default"
               >
                 <div className="col-span-1 px-2">
                   <input
                     type="checkbox"
+                    className="cursor-pointer"
                     checked={selectedIds.includes(s.id)}
                     onChange={(e) => {
                       e.stopPropagation();
