@@ -256,7 +256,17 @@ function AdminSchedule() {
 
   // Handler for deleting an event
   const handleDeleteEvent = async (event) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
+    Swal.fire({
+      title: 'Are you sure you want to delete this event?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#992525',
+      cancelButtonText: 'Cancel',
+      cancelButtonColor: '#6b7280',
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
+
       try {
         await axiosInstance.delete(`/schedules/${event.id}`);
 
@@ -273,12 +283,12 @@ function AdminSchedule() {
             error.response?.data?.message ||
             'Failed to delete schedule. Please try again.',
           icon: 'error',
-          confirmButtonText: 'Confirm',
+          confirmButtonText: 'OK',
           confirmButtonColor: '#000000',
           confirmButtonTextColor: 'white',
         });
       }
-    }
+    });
   };
 
   // Handler for closing modals

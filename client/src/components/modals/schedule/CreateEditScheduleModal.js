@@ -13,6 +13,8 @@ import TeacherSelect from '../../inputs/TeacherSelect';
 import CourseSelect from '../../inputs/CourseSelect';
 import AcademicPeriodSelect from '../../inputs/AcademicPeriodSelect';
 import Swal from 'sweetalert2';
+import ViewStudentsModal from './ViewStudentsModal';
+import axiosInstance from '../../../utils/axios';
 
 /**
  * Create/Edit Schedule Modal
@@ -152,6 +154,9 @@ function CreateEditScheduleModal({
       days: daysArray.join(','),
     }));
   };
+
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [studentsRefreshTick, setStudentsRefreshTick] = useState(0);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -574,11 +579,13 @@ function CreateEditScheduleModal({
                   ></textarea>
                 </div>
 
-                {/* View Students Button (if editing) */}
-                {event && (
+                {/* View Students Button (admin/teacher, requires course & period) */}
+                {(event || formData.courseId) && (
                   <button
                     type="button"
-                    className="w-full text-sm text-gray-600 hover:text-gray-800 flex items-center justify-center gap-2 py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                    onClick={() => setShowStudentsModal(true)}
+                    disabled={!formData.academicPeriodId || !formData.courseId}
+                    className="w-full text-sm text-gray-600 hover:text-gray-800 flex items-center justify-center gap-2 py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     <MdPerson size={16} />
                     View Students
@@ -619,6 +626,71 @@ function CreateEditScheduleModal({
           </div>
         </form>
       </div>
+
+      <ViewStudentsModal
+        isOpen={showStudentsModal}
+        onClose={() => setShowStudentsModal(false)}
+        courseId={formData.courseId}
+        periodId={formData.academicPeriodId}
+        days={formData.days}
+        time_start={formData.time_start}
+        time_end={formData.time_end}
+        refreshToken={studentsRefreshTick}
+        scheduleId={event?.id}
+        onStudentSelected={({ student, conflict }) => {
+          if (conflict?.hasConflicts) {
+            Swal.fire({
+              title: 'Schedule Conflict',
+              text: 'Selected student has a conflicting schedule in this period.',
+              icon: 'warning',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#992525',
+            });
+            return;
+          }
+          if (!event?.id) {
+            Swal.fire({
+              title: 'Schedule Not Saved',
+              text: 'Save the schedule first before adding students.',
+              icon: 'info',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#000000',
+            });
+            return;
+          }
+          axiosInstance
+            .post(`/schedules/${event.id}/students`, { userId: student.id })
+            .then((resp) => {
+              if (resp?.data?.alreadyLinked) {
+                Swal.fire({
+                  title: 'Already Added',
+                  text: `${student.name} is already linked to this schedule.`,
+                  icon: 'info',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#000000',
+                });
+              } else {
+                Swal.fire({
+                  title: 'Student Added to Schedule',
+                  text: `${student.name} added to schedule.`,
+                  icon: 'success',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#000000',
+                });
+              }
+              setStudentsRefreshTick((v) => v + 1);
+            })
+            .catch(() => {
+              Swal.fire({
+                title: 'Failed to Add Student',
+                text: 'Please try again.',
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#992525',
+              });
+            });
+        }}
+      />
     </div>
   );
 }

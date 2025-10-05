@@ -7,6 +7,8 @@ import {
   createSchedule,
   updateSchedule,
   deleteSchedule,
+  addStudentToSchedule,
+  removeStudentsFromSchedule,
 } from '../../controller/schedule_controller.js';
 import {
   validateCreateSchedule,
@@ -85,5 +87,41 @@ router.put(
  * Admin-only route
  */
 router.delete('/:id', verifyToken, validateUserIsAdmin, deleteSchedule);
+
+/**
+ * POST /api/v1/schedules/:id/students
+ * Attach a student to a schedule
+ * Admins can attach students
+ */
+router.post(
+  '/:id/students',
+  verifyToken,
+  (req, res, next) => {
+    const role = req.user?.data?.role;
+    if (role === 'admin') return next();
+    return res
+      .status(403)
+      .json({ error: true, message: 'User is unauthorized' });
+  },
+  addStudentToSchedule
+);
+
+/**
+ * POST /api/v1/schedules/:id/students:batch-delete
+ * Batch remove students from a schedule
+ * Admins can remove students
+ */
+router.post(
+  '/:id/students:batch-delete',
+  verifyToken,
+  (req, res, next) => {
+    const role = req.user?.data?.role;
+    if (role === 'admin') return next();
+    return res
+      .status(403)
+      .json({ error: true, message: 'User is unauthorized' });
+  },
+  removeStudentsFromSchedule
+);
 
 export { router };

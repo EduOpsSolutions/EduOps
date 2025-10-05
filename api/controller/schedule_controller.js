@@ -1,4 +1,6 @@
 import * as ScheduleModel from '../model/schedule_model.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 /**
  * Get all schedules
@@ -325,6 +327,124 @@ export const deleteSchedule = async (req, res) => {
     res.status(500).json({
       error: true,
       message: 'Failed to delete schedule',
+    });
+  }
+};
+
+/**
+ * Attach a student to a schedule (user_schedule)
+ */
+export const addStudentToSchedule = async (req, res) => {
+  try {
+    const scheduleId = parseInt(req.params.id, 10);
+    const { userId } = req.body;
+
+    if (!scheduleId || !userId) {
+      return res.status(400).json({
+        error: true,
+        message: 'scheduleId (param) and userId (body) are required',
+      });
+    }
+
+    // Ensure schedule exists and not deleted
+    const schedule = await prisma.schedule.findFirst({
+      where: { id: scheduleId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!schedule) {
+      return res
+        .status(404)
+        .json({ error: true, message: 'Schedule not found' });
+    }
+
+    // Ensure user exists and is a student
+    const user = await prisma.users.findFirst({
+      where: { id: userId, role: 'student', deletedAt: null },
+      select: { id: true },
+    });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: true, message: 'Student not found' });
+    }
+
+    // Check if link exists (not deleted)
+    const existing = await prisma.user_schedule.findFirst({
+      where: { userId, scheduleId, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing) {
+      return res.json({ success: true, alreadyLinked: true });
+    }
+
+    // If link exists but deleted, restore it; else create new
+    const softDeleted = await prisma.user_schedule.findFirst({
+      where: { userId, scheduleId, deletedAt: { not: null } },
+      select: { id: true },
+    });
+
+    if (softDeleted) {
+      await prisma.user_schedule.update({
+        where: { id: softDeleted.id },
+        data: { deletedAt: null },
+      });
+      return res.status(201).json({ success: true, restored: true });
+    }
+
+    await prisma.user_schedule.create({
+      data: { userId, scheduleId },
+    });
+    return res.status(201).json({ success: true, created: true });
+  } catch (err) {
+    console.error('addStudentToSchedule error:', err);
+    return res
+      .status(500)
+      .json({ error: true, message: 'Failed to add student to schedule' });
+  }
+};
+
+/**
+ * Batch remove students from a schedule (soft delete user_schedule rows)
+ */
+export const removeStudentsFromSchedule = async (req, res) => {
+  try {
+    const scheduleId = parseInt(req.params.id, 10);
+    const { userIds } = req.body;
+
+    if (!scheduleId || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: true,
+        message: 'scheduleId (param) and userIds[] (body) are required',
+      });
+    }
+
+    // Ensure schedule exists and not deleted
+    const schedule = await prisma.schedule.findFirst({
+      where: { id: scheduleId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!schedule) {
+      return res
+        .status(404)
+        .json({ error: true, message: 'Schedule not found' });
+    }
+
+    // Soft delete links
+    const result = await prisma.user_schedule.updateMany({
+      where: {
+        scheduleId,
+        userId: { in: userIds },
+        deletedAt: null,
+      },
+      data: { deletedAt: new Date() },
+    });
+
+    return res.json({ success: true, count: result.count });
+  } catch (err) {
+    console.error('removeStudentsFromSchedule error:', err);
+    return res.status(500).json({
+      error: true,
+      message: 'Failed to remove students from schedule',
     });
   }
 };
