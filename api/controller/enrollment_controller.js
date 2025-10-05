@@ -632,4 +632,35 @@ const updateEnrollmentPaymentProof = async (req, res) => {
   }
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof };
+// Update enrollment status - for admin use
+const updateEnrollmentStatus = async (req, res) => {
+  const { enrollmentId } = req.params;
+  const { enrollmentStatus } = req.body;
+
+  try {
+    const updated = await prisma.enrollment_request.update({
+      where: { enrollmentId },
+      data: { enrollmentStatus },
+    });
+
+    res.status(200).json({
+      message: 'Enrollment status updated successfully',
+      data: updated,
+      error: false,
+    });
+  } catch (error) {
+    console.error('Error updating enrollment status:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        message: 'Enrollment request not found',
+        error: true,
+      });
+    }
+    res.status(500).json({
+      message: 'An error occurred while updating enrollment status',
+      error: true,
+    });
+  }
+};
+
+export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof, updateEnrollmentStatus };

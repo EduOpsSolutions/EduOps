@@ -185,6 +185,16 @@ export default function EnrollmentDetailsModal({
   const handleFormSave = async () => {
     setLoading(true);
     try {
+      await axiosInstance.put(
+        `/enrollment/enroll/${formData.enrollmentId}/status`,
+        { enrollmentStatus: formData.enrollmentStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${getCookieItem('token')}`,
+          },
+        }
+      );
+
       await handleSave(formData);
     } catch (error) {
       console.error('Error saving form data:', error);
@@ -388,15 +398,16 @@ export default function EnrollmentDetailsModal({
                   />
                   <ModalSelectField
                     label="Enrollment Status"
-                    name="status"
+                    name="enrollmentStatus"
                     value={formData?.enrollmentStatus || 'Pending'}
                     onChange={handleInputChange}
                     options={[
-                      { value: 'approved', label: 'Approved' },
-                      { value: 'rejected', label: 'Rejected' },
                       { value: 'pending', label: 'Pending' },
-                      { value: 'cancelled', label: 'Cancelled' },
-                      { value: 'archived', label: 'Archived' },
+                      { value: 'verified', label: 'Verified' },
+                      { value: 'payment_pending', label: 'Payment Pending' },
+                      { value: 'approved', label: 'Approved' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'rejected', label: 'Rejected' },
                     ]}
                   />
                 </div>
