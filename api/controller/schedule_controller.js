@@ -1,5 +1,6 @@
 import * as ScheduleModel from '../model/schedule_model.js';
 import { PrismaClient } from '@prisma/client';
+import { verifyJWT } from '../utils/jwt.js';
 const prisma = new PrismaClient();
 
 /**
@@ -143,6 +144,149 @@ export const getSchedulesByTeacher = async (req, res) => {
       error: true,
       message: 'Failed to get schedules',
     });
+  }
+};
+
+/**
+ * Get schedules for the logged-in student
+ */
+export const getMySchedules = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = await verifyJWT(token);
+    if (!decoded.payload.data.id) {
+      return res.status(401).json({ error: true, message: 'Unauthorized' });
+    }
+
+    const schedules = await ScheduleModel.getSchedulesByStudent(
+      decoded.payload.data.id
+    );
+
+    // Transform to match frontend shape used elsewhere
+    const transformed = schedules.map((schedule) => ({
+      id: schedule.id,
+      courseId: schedule.course?.id || '',
+      courseName: schedule.course?.name || '',
+      academicPeriodId: schedule.period?.id || schedule.periodId,
+      academicPeriodName: schedule.period
+        ? `${schedule.period.periodName}${
+            schedule.period.batchName ? ` - ${schedule.period.batchName}` : ''
+          }`
+        : '',
+      teacherId: schedule.teacher?.id || schedule.teacherId,
+      teacherName: schedule.teacher
+        ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
+        : '',
+      location: schedule.location,
+      days: schedule.days,
+      time_start: schedule.time_start,
+      time_end: schedule.time_end,
+      periodStart: schedule.periodStart
+        ? schedule.periodStart.toISOString().split('T')[0]
+        : null,
+      periodEnd: schedule.periodEnd
+        ? schedule.periodEnd.toISOString().split('T')[0]
+        : null,
+      color: schedule.color || '#FFCF00',
+      notes: schedule.notes,
+      createdAt: schedule.createdAt,
+      updatedAt: schedule.updatedAt,
+    }));
+
+    return res.json(transformed);
+  } catch (err) {
+    console.error('Get my schedules error:', err);
+    return res
+      .status(500)
+      .json({ error: true, message: 'Failed to get schedules' });
+  }
+};
+
+/**
+ * Get students enrolled in a schedule (read-only)
+ * Admins/teachers can view any schedule's students.
+ * Students can only view if they are enrolled in the schedule.
+ */
+export const getScheduleStudents = async (req, res) => {
+  try {
+    const scheduleId = parseInt(req.params.id, 10);
+    if (!scheduleId) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'Invalid schedule id' });
+    }
+
+    const token = req.headers.authorization?.split(' ')[1];
+    const decoded = await verifyJWT(token);
+    const role = decoded?.payload?.data?.role;
+    const userId = decoded?.payload?.data?.id;
+
+    // Verify schedule exists
+    const schedule = await prisma.schedule.findFirst({
+      where: { id: scheduleId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!schedule) {
+      return res
+        .status(404)
+        .json({ error: true, message: 'Schedule not found' });
+    }
+
+    // If student, ensure they are enrolled in this schedule
+    if (role === 'student') {
+      const isEnrolled = await prisma.user_schedule.findFirst({
+        where: {
+          scheduleId,
+          userId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!isEnrolled) {
+        return res
+          .status(403)
+          .json({ error: true, message: 'User is unauthorized' });
+      }
+    }
+
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: {
+        scheduleId,
+        deletedAt: null,
+        user: { deletedAt: null, role: 'student' },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            userId: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            email: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const students = userSchedules
+      .map((us) => us.user)
+      .filter(Boolean)
+      .map((s) => ({
+        ...s,
+        name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+          s.lastName
+        }`.trim(),
+      }));
+
+    return res.json(students);
+  } catch (err) {
+    console.error('getScheduleStudents error:', err);
+    return res
+      .status(500)
+      .json({ error: true, message: 'Failed to fetch students' });
   }
 };
 

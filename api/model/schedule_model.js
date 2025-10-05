@@ -155,6 +155,70 @@ export const getSchedulesByTeacher = async (teacherId) => {
 };
 
 /**
+ * Get schedules for a specific student
+ * Includes schedules explicitly linked through user_schedule, and schedules
+ * for periods where the student is enrolled.
+ * @param {string} studentId - User ID of the student
+ * @returns {Promise<Array>} Array of schedules
+ */
+export const getSchedulesByStudent = async (studentId) => {
+  // Fetch schedules that are either explicitly assigned to the student
+  // via user_schedule, or belong to an academic period the student is enrolled in.
+  return prisma.schedule.findMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        {
+          userSchedules: {
+            some: {
+              userId: studentId,
+              deletedAt: null,
+            },
+          },
+        },
+        {
+          period: {
+            enrollments: {
+              some: {
+                studentId,
+                deletedAt: null,
+              },
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      course: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      period: {
+        select: {
+          id: true,
+          periodName: true,
+          batchName: true,
+          startAt: true,
+          endAt: true,
+        },
+      },
+      teacher: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+};
+
+/**
  * Create a new schedule
  * @param {Object} data - Schedule data
  * @returns {Promise<Object>} Created schedule

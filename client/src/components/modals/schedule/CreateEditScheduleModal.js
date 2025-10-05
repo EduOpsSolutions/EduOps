@@ -306,6 +306,51 @@ function CreateEditScheduleModal({
     return `Every ${daysArray.join(', ')} until ${endDate}`;
   };
 
+  const calculateTotalHours = () => {
+    try {
+      const { periodStart, periodEnd, time_start, time_end, days } = formData;
+      if (!periodStart || !periodEnd || !time_start || !time_end || !days)
+        return '';
+
+      const [sh, sm] = String(time_start).split(':').map(Number);
+      const [eh, em] = String(time_end).split(':').map(Number);
+      const minutes = eh * 60 + em - (sh * 60 + sm);
+      if (minutes <= 0) return '';
+      const hoursPerSession = minutes / 60;
+
+      const dayMap = { SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5, S: 6 };
+      const selectedDays = new Set(
+        String(days)
+          .split(',')
+          .map((d) => d.trim())
+          .filter(Boolean)
+          .map((d) => dayMap[d])
+          .filter((n) => n !== undefined)
+      );
+      if (selectedDays.size === 0) return '';
+
+      const start = new Date(periodStart);
+      const end = new Date(periodEnd);
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        start > end
+      )
+        return '';
+
+      let count = 0;
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        if (selectedDays.has(d.getDay())) count++;
+      }
+
+      const total = count * hoursPerSession;
+      const fixed = total.toFixed(1);
+      return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
+    } catch (e) {
+      return '';
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -517,6 +562,11 @@ function CreateEditScheduleModal({
                       {formatRecurrenceDisplay() && (
                         <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
                           {formatRecurrenceDisplay()}
+                        </p>
+                      )}
+                      {calculateTotalHours() && (
+                        <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                          Estimated total hours: {calculateTotalHours()}
                         </p>
                       )}
                     </div>
