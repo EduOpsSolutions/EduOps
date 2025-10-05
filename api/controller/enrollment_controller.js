@@ -649,8 +649,15 @@ const updateEnrollmentStatus = async (req, res) => {
       error: false,
     });
   } catch (error) {
+    console.error('Error updating enrollment status:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        message: 'Enrollment request not found',
+        error: true,
+      });
+    }
     res.status(500).json({
-      message: 'Failed to update enrollment status',
+      message: 'An error occurred while updating enrollment status',
       error: true,
     });
   }
