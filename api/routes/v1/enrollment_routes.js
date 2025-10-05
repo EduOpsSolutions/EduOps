@@ -19,7 +19,13 @@ const router = express.Router();
 router.post("/enroll", validateEnrollment, createEnrollmentRequest);
 router.post("/track", trackEnrollment);
 router.patch("/payment-proof", updateEnrollmentPaymentProof);
-router.put("/enroll/:enrollmentId/status", updateEnrollmentStatus);
+router.put(
+  "/enroll/:enrollmentId/status",
+  verifyToken,
+  validateIsActiveUser,
+  validateUserIsAdmin,
+  updateEnrollmentStatus
+);
 
 // Admin routes
 router.get(
