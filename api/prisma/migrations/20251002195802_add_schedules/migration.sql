@@ -2,7 +2,7 @@
 ALTER TABLE `users` MODIFY `profilePicLink` LONGTEXT NULL;
 
 -- CreateTable
-CREATE TABLE `schedule` (
+CREATE TABLE IF NOT EXISTS `schedule` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `days` VARCHAR(191) NOT NULL,
     `time` VARCHAR(191) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE `schedule` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `user_schedule` (
+CREATE TABLE IF NOT EXISTS `user_schedule` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `userId` VARCHAR(191) NULL,
     `scheduleId` INTEGER NULL,
