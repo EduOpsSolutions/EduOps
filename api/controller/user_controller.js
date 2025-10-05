@@ -4,6 +4,8 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 const SALT = parseInt(process.env.BCRYPT_SALT);
 import { verifyJWT } from '../utils/jwt.js';
+import { uploadFile } from '../utils/fileStorage.js';
+import { getUserByEmail } from '../model/user_model.js';
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -613,6 +615,117 @@ const checkStudentScheduleConflicts = async (req, res) => {
   }
 };
 
+const updateProfilePicture = async (req, res) => {
+  try {
+    const profilePic = req.file;
+    console.log('uploaded file: ', req.file);
+
+    if (!profilePic) {
+      return res.status(400).json({
+        error: true,
+        message: 'No profile picture file provided',
+      });
+    }
+
+    // Extract user ID from JWT token
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = await verifyJWT(token);
+    console.log('decoded JWT:', decoded);
+
+    if (!decoded || !decoded.payload) {
+      return res.status(401).json({
+        error: true,
+        message: 'Invalid or expired token',
+      });
+    }
+
+    // Get user by email from JWT payload
+    const userResult = await getUserByEmail(decoded.payload.data.email);
+    if (userResult.error) {
+      return res.status(404).json({
+        error: true,
+        message: 'User not found',
+      });
+    }
+
+    const result = await uploadFile(profilePic, 'user-profile');
+    if (!result) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'Error uploading profile picture' });
+    }
+
+    // Use the user ID from the JWT token
+    const user = await prisma.users.update({
+      where: { id: userResult.data.id },
+      data: { profilePicLink: result.downloadURL },
+    });
+
+    res.json({
+      error: false,
+      message: 'Profile picture updated successfully',
+      data: {
+        id: user.id,
+        profilePicLink: user.profilePicLink,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: 'Error updating profile picture',
+      error_details: error.message,
+      error_info: error,
+    });
+  }
+};
+
+const removeProfilePicture = async (req, res) => {
+  try {
+    // Extract user ID from JWT token
+    const token = req.headers.authorization.split(' ')[1];
+    const decoded = await verifyJWT(token);
+    console.log('decoded JWT:', decoded);
+
+    if (!decoded || !decoded.payload) {
+      return res.status(401).json({
+        error: true,
+        message: 'Invalid or expired token',
+      });
+    }
+
+    // Get user by email from JWT payload
+    const userResult = await getUserByEmail(decoded.payload.data.email);
+    if (userResult.error) {
+      return res.status(404).json({
+        error: true,
+        message: 'User not found',
+      });
+    }
+
+    // Use the user ID from the JWT token to remove profile picture
+    const user = await prisma.users.update({
+      where: { id: userResult.data.id },
+      data: { profilePicLink: null },
+    });
+
+    res.json({
+      error: false,
+      message: 'Profile picture removed successfully',
+      data: {
+        id: user.id,
+        profilePicLink: user.profilePicLink,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: 'Error removing profile picture',
+      error_details: error.message,
+      error_info: error,
+    });
+  }
+};
+
 export {
   getAllUsers,
   getUserById,
@@ -626,4 +739,6 @@ export {
   inspectEmailExists,
   searchStudentsForCoursePeriod,
   checkStudentScheduleConflicts,
+  updateProfilePicture,
+  removeProfilePicture,
 };

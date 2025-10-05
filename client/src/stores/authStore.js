@@ -131,7 +131,7 @@ const useAuthStore = create(
       },
 
       // Logout action
-      logout: () => {
+      logout: (redirectToLogin = true) => {
         // Clear cookies and localStorage
         logoutUtil();
         removeTokenCookie('token');
@@ -145,6 +145,14 @@ const useAuthStore = create(
           isLoading: false,
           error: null,
         });
+
+        // Redirect to login page if requested
+        if (redirectToLogin && typeof window !== 'undefined') {
+          // Use setTimeout to ensure state is cleared before navigation
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
+        }
       },
 
       // Register action
