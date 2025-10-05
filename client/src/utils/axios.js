@@ -57,45 +57,41 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle authentication errors (401 Unauthorized, 403 Forbidden)
-    if (error.response) {
-      const { status, data } = error.response;
+    // Handle 401 unauthorized or 403 forbidden errors (expired/invalid token)
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403)
+    ) {
+      const errorMessage = error.response.data?.message || '';
 
-      // Check for authentication/authorization errors
-      const isAuthError = status === 401 || status === 403;
-      const hasAuthMessage =
-        data?.message &&
-        (data.message.includes('Please login again') ||
-          data.message.includes('Invalid or expired token') ||
-          data.message.includes('Session expired') ||
-          data.message.includes('Unauthorized') ||
-          data.message.includes('Invalid token'));
+      // Check if it's a token-related error
+      const isTokenError =
+        errorMessage.toLowerCase().includes('token') ||
+        errorMessage.toLowerCase().includes('unauthorized') ||
+        errorMessage.toLowerCase().includes('expired') ||
+        errorMessage.toLowerCase().includes('login');
 
-      if (isAuthError || hasAuthMessage) {
-        const { logout } = useAuthStore.getState();
-        logout(false);
+      // Only logout and show alert for token-related errors
+      // This prevents logout for other 403 errors (like insufficient permissions)
+      if (isTokenError || error.response.status === 401) {
+        const { logout, isAuthenticated } = useAuthStore.getState();
 
-        // Show user-friendly message
-        Swal.fire({
-          title: 'Session Expired',
-          text: 'Your session has expired. Please login again.',
-          icon: 'warning',
-          timer: 5000,
-          showConfirmButton: false,
-          allowOutsideClick: false,
-        }).then(() => {
-          // Navigate to login page
-          window.location.href = '/login';
-        });
-
-        // Don't return the error for auth failures to prevent further processing
-        return Promise.resolve({
-          data: { error: true, message: 'Session expired' },
-        });
+        // Only show alert and logout if user was authenticated
+        if (isAuthenticated) {
+          logout();
+          Swal.fire({
+            title: 'Session Expired',
+            text: 'Your session has expired. Please login again.',
+            icon: 'warning',
+            confirmButtonColor: '#DE0000',
+          }).then(() => {
+            // Redirect to login page
+            window.location.href = '/login';
+          });
+        }
       }
     }
-
-    // Return the error for non-auth related issues
+    // Return the error so it can be handled by the calling code
     return Promise.reject(error);
   }
 );

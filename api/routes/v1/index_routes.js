@@ -8,6 +8,7 @@ import { router as courses } from './course_routes.js';
 import { router as academicPeriods } from './academic_period_routes.js';
 import { router as academicPeriodCourses } from './academic_period_courses_routes.js';
 import { router as posts } from './post_routes.js';
+import { router as schedules } from './schedule_routes.js';
 
 const router = express.Router();
 router.get('/', function (req, res) {
@@ -25,5 +26,6 @@ router.use('/courses', courses);
 router.use('/academic-periods', academicPeriods);
 router.use('/academic-period-courses', academicPeriodCourses);
 router.use('/posts', posts);
+router.use('/schedules', schedules);
 
 export default router;

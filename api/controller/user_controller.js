@@ -46,6 +46,7 @@ const getAllUsers = async (req, res) => {
     const users = await prisma.users.findMany({
       select: {
         id: true,
+        userId: true,
         firstName: true,
         middleName: true,
         lastName: true,
@@ -107,11 +108,29 @@ const getUserById = async (req, res) => {
   }
 };
 
+// Helper function to generate unique userId
+const generateUserId = async (role) => {
+  const prefix = role === 'teacher' ? 'teacher' : 'student';
+  let counter = 1;
+  let userId;
+
+  do {
+    userId = `${prefix}${counter.toString().padStart(3, '0')}`;
+    const existingUser = await prisma.users.findUnique({
+      where: { userId },
+    });
+    if (!existingUser) break;
+    counter++;
+  } while (counter < 1000); // Prevent infinite loop
+
+  return userId;
+};
+
 // Create new student
 const createUser = async (req, res) => {
   try {
     const {
-      userId,
+      userId: providedUserId,
       firstName,
       middleName,
       lastName,
@@ -120,16 +139,24 @@ const createUser = async (req, res) => {
       birthyear,
       email,
       password,
+      role = 'student',
     } = req.body;
 
-    const isUserIdTaken = await prisma.users.findUnique({
-      where: { userId },
-    });
+    // Generate userId if not provided
+    let userId = providedUserId;
+    if (!userId) {
+      userId = await generateUserId(role);
+    } else {
+      // Check if provided userId is taken
+      const isUserIdTaken = await prisma.users.findUnique({
+        where: { userId },
+      });
 
-    if (isUserIdTaken) {
-      return res
-        .status(400)
-        .json({ error: true, message: 'User ID already taken' });
+      if (isUserIdTaken) {
+        return res
+          .status(400)
+          .json({ error: true, message: 'User ID already taken' });
+      }
     }
 
     const isEmailTaken = await prisma.users.findUnique({
@@ -153,12 +180,14 @@ const createUser = async (req, res) => {
         birthyear,
         email,
         password: bcrypt.hashSync(password, SALT),
+        role,
         status: 'active',
       },
     });
     res.status(201).json({
       error: false,
       message: 'User created successfully',
+      data: { userId: user.userId },
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });
@@ -386,6 +415,206 @@ const inspectEmailExists = async (req, res) => {
   }
 };
 
+// Search students with enrollment indicator for a course within an academic period
+const searchStudentsForCoursePeriod = async (req, res) => {
+  try {
+    const {
+      q,
+      periodId,
+      courseId,
+      take = 20,
+      page = 1,
+      enrolledOnly,
+    } = req.query;
+
+    if (!periodId || !courseId) {
+      return res
+        .status(400)
+        .json({ error: true, message: 'periodId and courseId are required' });
+    }
+
+    // If the request is specifically for enrolled students only, pull directly from user_schedule
+    if (String(enrolledOnly) === 'true') {
+      const enrolled = await prisma.user_schedule.findMany({
+        where: {
+          deletedAt: null,
+          schedule: {
+            deletedAt: null,
+            courseId,
+            periodId,
+          },
+          user: {
+            deletedAt: null,
+            role: 'student',
+            ...(q
+              ? {
+                  OR: [
+                    { userId: { contains: q } },
+                    { firstName: { contains: q } },
+                    { middleName: { contains: q } },
+                    { lastName: { contains: q } },
+                    { email: { contains: q } },
+                  ],
+                }
+              : {}),
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              userId: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              email: true,
+              status: true,
+            },
+          },
+        },
+        take: parseInt(take),
+        skip: (parseInt(page) - 1) * parseInt(take),
+      });
+
+      const data = enrolled
+        .map((e) => e.user)
+        .filter(Boolean)
+        .map((s) => ({
+          ...s,
+          name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+            s.lastName
+          }`.trim(),
+          enrolledInCourse: true,
+        }));
+
+      return res.json(data);
+    }
+
+    // Otherwise, search students and annotate whether enrolled
+    const whereClause = {
+      role: 'student',
+      deletedAt: null,
+      ...(q
+        ? {
+            OR: [
+              { userId: { contains: q } },
+              { firstName: { contains: q } },
+              { middleName: { contains: q } },
+              { lastName: { contains: q } },
+              { email: { contains: q } },
+            ],
+          }
+        : {}),
+    };
+
+    const students = await prisma.users.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        status: true,
+      },
+      take: parseInt(take),
+      skip: (parseInt(page) - 1) * parseInt(take),
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const studentIds = students.map((s) => s.id);
+
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: {
+        userId: { in: studentIds },
+        deletedAt: null,
+        schedule: {
+          deletedAt: null,
+          courseId,
+          periodId: periodId,
+        },
+      },
+      select: { userId: true },
+    });
+
+    const enrolledSet = new Set(userSchedules.map((us) => us.userId));
+
+    const data = students.map((s) => ({
+      ...s,
+      name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+        s.lastName
+      }`.trim(),
+      enrolledInCourse: enrolledSet.has(s.id),
+    }));
+
+    res.json(data);
+  } catch (error) {
+    console.error('searchStudentsForCoursePeriod error', error);
+    res.status(500).json({ error: true, message: 'Failed to search students' });
+  }
+};
+
+// Check schedule conflicts for a student within an academic period
+const checkStudentScheduleConflicts = async (req, res) => {
+  try {
+    const { studentId, periodId, days, time_start, time_end } = req.body;
+
+    if (!studentId || !periodId || !days || !time_start || !time_end) {
+      return res.status(400).json({
+        error: true,
+        message:
+          'studentId, periodId, days, time_start and time_end are required',
+      });
+    }
+
+    const daysArray = days.split(',').map((d) => d.trim());
+
+    // Get all schedules the student is already attached to within the period
+    const existing = await prisma.user_schedule.findMany({
+      where: {
+        userId: studentId,
+        deletedAt: null,
+        schedule: {
+          deletedAt: null,
+          periodId,
+        },
+      },
+      include: {
+        schedule: true,
+      },
+    });
+
+    const conflicts = existing.filter((us) => {
+      const s = us.schedule;
+      if (!s) return false;
+      const scheduleDays = (s.days || '').split(',').map((d) => d.trim());
+      const daysOverlap = daysArray.some((d) => scheduleDays.includes(d));
+      if (!daysOverlap) return false;
+
+      const timeOverlap =
+        time_start < (s.time_end || '') && time_end > (s.time_start || '');
+      return timeOverlap;
+    });
+
+    res.json({
+      hasConflicts: conflicts.length > 0,
+      conflicts: conflicts.map((c) => ({
+        scheduleId: c.scheduleId,
+        days: c.schedule?.days,
+        time_start: c.schedule?.time_start,
+        time_end: c.schedule?.time_end,
+        courseId: c.schedule?.courseId,
+      })),
+    });
+  } catch (error) {
+    console.error('checkStudentScheduleConflicts error', error);
+    res
+      .status(500)
+      .json({ error: true, message: 'Failed to check schedule conflicts' });
+  }
+};
+
 const updateProfilePicture = async (req, res) => {
   try {
     const profilePic = req.file;
@@ -508,6 +737,8 @@ export {
   changePassword,
   createStudentAccount,
   inspectEmailExists,
+  searchStudentsForCoursePeriod,
+  checkStudentScheduleConflicts,
   updateProfilePicture,
   removeProfilePicture,
 };
