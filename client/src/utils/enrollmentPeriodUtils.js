@@ -1,4 +1,4 @@
-import axiosInstance from "./axios";
+import axiosInstance from './axios';
 
 /**
  * Check if there are any ongoing enrollment periods
@@ -6,12 +6,12 @@ import axiosInstance from "./axios";
  */
 export const checkOngoingEnrollmentPeriod = async () => {
   try {
-    const response = await axiosInstance.get("/academic-periods");
+    const response = await axiosInstance.get('/academic-periods');
     const now = new Date();
 
     // Find ongoing periods
     const ongoingPeriods = response.data.filter((period) => {
-      if (period.status === "ended" || period.deletedAt) return false;
+      if (period.status === 'ended' || period.deletedAt) return false;
 
       const startDate = new Date(period.startAt);
       const endDate = new Date(period.endAt);
@@ -27,11 +27,11 @@ export const checkOngoingEnrollmentPeriod = async () => {
       error: null,
     };
   } catch (error) {
-    console.error("Failed to fetch enrollment periods:", error);
+    console.error('Failed to fetch enrollment periods:', error);
     return {
       hasOngoingPeriod: false,
       currentPeriod: null,
-      error: "Failed to check enrollment availability",
+      error: 'Failed to check enrollment availability',
     };
   }
 };
@@ -42,21 +42,21 @@ export const checkOngoingEnrollmentPeriod = async () => {
  * @returns {string} - Formatted date range
  */
 export const formatEnrollmentPeriodDates = (period) => {
-  if (!period) return "";
+  if (!period) return '';
 
   const startDate = new Date(period.startAt);
   const endDate = new Date(period.endAt);
 
   const options = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   };
 
   return `${startDate.toLocaleDateString(
-    "en-US",
+    'en-US',
     options
-  )} - ${endDate.toLocaleDateString("en-US", options)}`;
+  )} - ${endDate.toLocaleDateString('en-US', options)}`;
 };
 
 /**
@@ -71,28 +71,53 @@ export const getEnrollmentPeriodStatus = (period) => {
   const startDate = new Date(period.startAt);
   const endDate = new Date(period.endAt);
 
+  // Calculate actual period status based on dates
+  let periodStatus;
+  if (now < startDate) {
+    periodStatus = 'Upcoming';
+  } else if (now >= startDate && now <= endDate) {
+    periodStatus = 'Ongoing';
+  } else {
+    periodStatus = 'Ended';
+  }
+
+  // Determine enrollment status (database status field)
+  const enrollmentOpen =
+    period.status === 'ongoing' || period.status === 'upcoming';
+
+  // Display status combines both period and enrollment info
   let status, bgColor, textColor, borderColor;
 
-  if (period.status === "ended") {
-    status = "Ended";
-    bgColor = "bg-red-100";
-    textColor = "text-red-800";
-    borderColor = "border-red-200";
-  } else if (now < startDate) {
-    status = "Upcoming";
-    bgColor = "bg-blue-100";
-    textColor = "text-blue-800";
-    borderColor = "border-blue-200";
-  } else if (now >= startDate && now <= endDate) {
-    status = "Ongoing";
-    bgColor = "bg-green-100";
-    textColor = "text-green-800";
-    borderColor = "border-green-200";
+  if (periodStatus === 'Ended') {
+    status = 'Ended';
+    bgColor = 'bg-red-100';
+    textColor = 'text-red-800';
+    borderColor = 'border-red-200';
+  } else if (periodStatus === 'Ongoing') {
+    if (enrollmentOpen) {
+      status = 'Ongoing';
+      bgColor = 'bg-green-100';
+      textColor = 'text-green-800';
+      borderColor = 'border-green-200';
+    } else {
+      status = 'Ongoing (Enrollment Closed)';
+      bgColor = 'bg-yellow-100';
+      textColor = 'text-yellow-800';
+      borderColor = 'border-yellow-200';
+    }
   } else {
-    status = "Ended";
-    bgColor = "bg-red-100";
-    textColor = "text-red-800";
-    borderColor = "border-red-200";
+    // Upcoming
+    if (enrollmentOpen) {
+      status = 'Upcoming';
+      bgColor = 'bg-blue-100';
+      textColor = 'text-blue-800';
+      borderColor = 'border-blue-200';
+    } else {
+      status = 'Upcoming (Enrollment Closed)';
+      bgColor = 'bg-orange-100';
+      textColor = 'text-orange-800';
+      borderColor = 'border-orange-200';
+    }
   }
 
   return {
@@ -100,6 +125,8 @@ export const getEnrollmentPeriodStatus = (period) => {
     bgColor,
     textColor,
     borderColor,
-    isActive: status === "Ongoing",
+    isActive: periodStatus === 'Ongoing',
+    periodStatus, // The actual period status
+    enrollmentOpen, // Whether enrollment is open
   };
 };

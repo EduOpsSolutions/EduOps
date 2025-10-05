@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Navigate,
   Route,
@@ -58,9 +58,18 @@ import AdminGrades from './pages/admin/Grades';
 import DocumentRequests from './pages/admin/DocumentRequests';
 import ManageDocuments from './pages/admin/ManageDocuments';
 import Chatbot from './pages/admin/Chatbot';
+import AdminSchedule from './pages/admin/Schedule';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, validateToken } = useAuthStore();
+
+  // Validate token on app load
+  useEffect(() => {
+    if (isAuthenticated) {
+      validateToken();
+    }
+  }, [isAuthenticated, validateToken]);
+
   return (
     <div className="App">
       <Router>
@@ -136,11 +145,18 @@ function App() {
                 <Route path="ledger" element={<AdminLedger />} />
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
-                <Route path="document-validation" element={<DocumentValidation />} />
+                <Route
+                  path="document-validation"
+                  element={<DocumentValidation />}
+                />
                 <Route path="grades" element={<AdminGrades />} />
-                <Route path="document-requests" element={<DocumentRequests />} />
+                <Route
+                  path="document-requests"
+                  element={<DocumentRequests />}
+                />
                 <Route path="manage-documents" element={<ManageDocuments />} />
                 <Route path="chatbot" element={<Chatbot />} />
+                <Route path="schedule" element={<AdminSchedule />} />
               </Route>
             </>
           ) : (

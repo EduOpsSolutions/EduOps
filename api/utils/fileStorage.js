@@ -1,29 +1,52 @@
-import {
-  getStorage,
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-} from 'firebase/storage';
-
-import { initializeApp } from 'firebase/app';
+import admin from 'firebase-admin';
+import { randomUUID } from 'crypto';
 import { filePaths } from '../constants/file_paths.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_APIKEY,
-  authDomain: process.env.FIREBASE_AUTHDOMAIN,
-  projectId: process.env.FIREBASE_PROJECTID,
-  storageBucket: process.env.FIREBASE_STORAGEBUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGINGSENDERID,
-  appId: process.env.FIREBASE_APPID,
-  measurementId: process.env.FIREBASE_MEASUREMENTID,
-};
+// Initialize Firebase Admin SDK once
+if (!admin.apps.length) {
+  let credential;
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // JSON string for service account
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      credential = admin.credential.cert(serviceAccount);
+    } else if (process.env.FIREBASE_CREDENTIALS_PATH) {
+      // File path for service account JSON
+      const fs = await import('fs');
+      const path = process.env.FIREBASE_CREDENTIALS_PATH;
+      const raw = fs.readFileSync(path, 'utf-8');
+      const serviceAccount = JSON.parse(raw);
+      credential = admin.credential.cert(serviceAccount);
+    } else if (
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    ) {
+      // Default ADC flow (requires env var to be set in runtime environment)
+      credential = admin.credential.applicationDefault();
+    } else {
+      throw new Error(
+        'No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT (JSON) or FIREBASE_CREDENTIALS_PATH.'
+      );
+    }
+  } catch (e) {
+    console.error(
+      'Failed to initialize Firebase Admin credentials:',
+      e.message
+    );
+    throw e;
+  }
 
-const firebaseApp = initializeApp(firebaseConfig);
+  admin.initializeApp({
+    credential,
+    storageBucket: process.env.FIREBASE_STORAGEBUCKET,
+    projectId: process.env.FIREBASE_PROJECTID,
+  });
+}
 
-export const storage = getStorage(firebaseApp);
+const bucket = admin.storage().bucket(process.env.FIREBASE_STORAGEBUCKET);
 
 export const uploadFile = async (file, directory) => {
   try {
@@ -62,24 +85,28 @@ export const uploadFile = async (file, directory) => {
       default:
         file_dir = 'uncategorized';
     }
-    const storageRef = ref(storage, `${file_dir}/${filename}`);
-    const uploadTask = await uploadBytesResumable(storageRef, fileBuffer);
+    const objectPath = `${file_dir}/${filename}`;
+    const fileRef = bucket.file(objectPath);
 
-    // Get the download URL
-    const downloadURL = await getDownloadURL(storageRef);
+    const downloadToken = randomUUID();
+    await fileRef.save(fileBuffer, {
+      resumable: false,
+      metadata: {
+        contentType: file.mimetype,
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        },
+      },
+    });
+
+    const encodedPath = encodeURIComponent(objectPath);
+    const bucketName = process.env.FIREBASE_STORAGEBUCKET;
+    const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
     const db_file_record = await prisma.files.create({
       data: {
         url: downloadURL,
-        token: (() => {
-          try {
-            const urlObj = new URL(downloadURL);
-            return urlObj.searchParams.get('token');
-          } catch (e) {
-            console.error('Failed to parse token from downloadURL:', e);
-            return null;
-          }
-        })(),
+        token: downloadToken,
         fileName: filename,
         originalName: file.originalname,
         directory: file_dir,

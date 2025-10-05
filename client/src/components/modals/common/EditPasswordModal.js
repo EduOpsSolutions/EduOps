@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
-import { getCookieItem } from '../../../utils/jwt';
 import axiosInstance from '../../../utils/axios';
 import useAuthStore from '../../../stores/authStore';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 
-const EditPasswordModal = ({
-  edit_password_modal,
-  setEditPasswordModal
-}) => {
+const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -73,8 +69,8 @@ const EditPasswordModal = ({
       console.error('Something went wrong!', error);
       setError(
         error.response?.data?.message ||
-        error.message ||
-        'Something went wrong!'
+          error.message ||
+          'Something went wrong!'
       );
     } finally {
       setIsLoading(false);
@@ -97,7 +93,10 @@ const EditPasswordModal = ({
         confirmButtonColor: '#6b7280',
         cancelButtonColor: '#992525',
       }).then((result) => {
-        if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
+        if (
+          result.isDismissed ||
+          result.dismiss === Swal.DismissReason.cancel
+        ) {
           setCurrentPassword('');
           setNewPassword('');
           setConfirmNewPassword('');
@@ -158,7 +157,11 @@ const EditPasswordModal = ({
                   className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
-                  {showCurrentPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                  {showCurrentPassword ? (
+                    <BsEye size={18} />
+                  ) : (
+                    <BsEyeSlash size={18} />
+                  )}
                 </button>
               </div>
             </div>
@@ -186,7 +189,11 @@ const EditPasswordModal = ({
                   className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                 >
-                  {showNewPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                  {showNewPassword ? (
+                    <BsEye size={18} />
+                  ) : (
+                    <BsEyeSlash size={18} />
+                  )}
                 </button>
               </div>
             </div>
@@ -214,7 +221,11 @@ const EditPasswordModal = ({
                   className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                  {showConfirmPassword ? (
+                    <BsEye size={18} />
+                  ) : (
+                    <BsEyeSlash size={18} />
+                  )}
                 </button>
               </div>
             </div>

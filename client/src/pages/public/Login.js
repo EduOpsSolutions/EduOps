@@ -161,6 +161,7 @@ function Login() {
                   }}
                 />
                 <button
+                  type="button"
                   className="absolute top-1/2 right-3 transform -translate-y-1/2"
                   onClick={(e) => {
                     e.preventDefault();
@@ -220,9 +221,9 @@ function Login() {
             </form>
 
             {/* New Student and Enrollment Tracker Area */}
-            <div className="container flex items-center justify-center mt-20">
-              <div className="flex flex-col items-center justify-center w-1/3">
-                <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
+            <div className="container flex items-center justify-center mt-20 mr-8 lg:mr-0">
+              <div className="flex flex-col w-1/2 lg:w-1/3">
+                <p className="text-white-yellow-tone text-xs font-sans -mb-3 px-2">
                   New Student?
                 </p>
                 <SecondaryButton onClick={() => navigate('/sign-up')}>
@@ -230,8 +231,8 @@ function Login() {
                 </SecondaryButton>
               </div>
 
-              <div className="flex flex-col items-center justify-center w-1/3">
-                <p className="text-white-yellow-tone text-sm -mb-4 font-sans">
+              <div className="flex flex-col w-1/2 lg:w-1/3">
+                <p className="text-white-yellow-tone text-xs font-sans -mb-3 px-2">
                   Track your enrollment?
                 </p>
                 <SecondaryButton onClick={() => setTrackEnrollmentModal(true)}>

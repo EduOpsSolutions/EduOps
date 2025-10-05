@@ -1,14 +1,23 @@
-import Joi from "joi";
+import Joi from 'joi';
 
 // Define the validation schema
 const userSchema = Joi.object({
-  userId: Joi.string().min(1).max(100),
-  firstName: Joi.string().min(2).trim(),
-  lastName: Joi.string().min(2).trim(),
-  email: Joi.string().email(),
-  password: Joi.string().min(8).max(100),
-  role: Joi.string().valid("student", "teacher", "admin"),
-}).min(1); // Require at least one field to be present
+  userId: Joi.string().min(1).max(100).optional(),
+  firstName: Joi.string().min(2).trim().required(),
+  lastName: Joi.string().min(2).trim().required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).max(100).required(),
+  role: Joi.string().valid('student', 'teacher', 'admin').default('student'),
+  middleName: Joi.string().trim().optional(),
+  phoneNumber: Joi.string().optional(),
+  birthmonth: Joi.number().integer().min(1).max(12).optional(),
+  birthdate: Joi.number().integer().min(1).max(31).optional(),
+  birthyear: Joi.number()
+    .integer()
+    .min(1900)
+    .max(new Date().getFullYear())
+    .optional(),
+});
 
 // Middleware function
 const validateUpdateUser = (req, res, next) => {
@@ -20,7 +29,7 @@ const validateUpdateUser = (req, res, next) => {
   if (error) {
     return res.status(400).json({
       error: true,
-      message: "Validation error",
+      message: 'Validation error',
       errors: error.details.map((err) => ({
         field: err.path[0],
         message: err.message,
@@ -40,7 +49,7 @@ const validateCreateUser = (req, res, next) => {
   if (error) {
     return res.status(400).json({
       error: true,
-      message: "Validation error",
+      message: 'Validation error',
       errors: error.details.map((err) => ({
         field: err.path[0],
         message: err.message,

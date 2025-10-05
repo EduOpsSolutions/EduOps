@@ -12,6 +12,8 @@ import {
   inspectEmailExists,
   updateProfilePicture,
   removeProfilePicture,
+  searchStudentsForCoursePeriod,
+  checkStudentScheduleConflicts,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
@@ -39,10 +41,36 @@ router.put(
   validateUpdateUser,
   updateUser
 );
+router.get('/validate-token', verifyToken, getAllUsers);
 router.get('/', verifyToken, validateUserIsAdmin, getAllUsers);
+router.get(
+  '/search-students',
+  verifyToken,
+  (req, res, next) => {
+    // allow admin and teacher
+    const role = req.user?.data?.role;
+    if (role === 'admin' || role === 'teacher') return next();
+    return res
+      .status(403)
+      .json({ error: true, message: 'User is unauthorized' });
+  },
+  searchStudentsForCoursePeriod
+);
+router.post(
+  '/students/conflicts',
+  verifyToken,
+  (req, res, next) => {
+    const role = req.user?.data?.role;
+    if (role === 'admin' || role === 'teacher') return next();
+    return res
+      .status(403)
+      .json({ error: true, message: 'User is unauthorized' });
+  },
+  checkStudentScheduleConflicts
+);
 router.get('/:id', verifyToken, validateUserIsAdmin, getUserById);
 router.post(
-  '/create/',
+  '/create',
   verifyToken,
   validateUserIsAdmin,
   validateCreateUser,
