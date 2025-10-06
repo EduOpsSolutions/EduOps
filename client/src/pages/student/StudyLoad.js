@@ -5,7 +5,7 @@ import Spinner from '../../components/common/Spinner';
 import useAuthStore from '../../stores/authStore';
 
 function StudyLoad() {
-  const [searchParams, setSearchParams] = useState({ batch: '', year: '' });
+  const [searchParams, setSearchParams] = useState({ batch: '' });
   const [periods, setPeriods] = useState([]);
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState([]);
@@ -21,15 +21,7 @@ function StudyLoad() {
         const data = Array.isArray(resp.data) ? resp.data : [];
         if (!mounted) return;
         setPeriods(data.filter((p) => !p.deletedAt));
-        // Default year: current year if exists in periodName, else latest distinct periodName
-        const distinctYears = [
-          ...new Set(data.map((p) => p.periodName)),
-        ].filter(Boolean);
-        const currentYear = String(new Date().getFullYear());
-        const defaultYear = distinctYears.includes(currentYear)
-          ? currentYear
-          : distinctYears.sort().slice(-1)[0] || '';
-        setSearchParams((prev) => ({ ...prev, year: defaultYear }));
+        // No year selection anymore
       } catch (e) {
         setPeriods([]);
       } finally {
@@ -40,24 +32,14 @@ function StudyLoad() {
     };
   }, []);
 
-  const yearOptions = useMemo(() => {
-    const years = [...new Set(periods.map((p) => p.periodName))].filter(
-      Boolean
-    );
-    const opts = years.sort().map((y) => ({ value: y, label: y }));
-    return [{ value: '', label: '-- Select Year --' }, ...opts];
-  }, [periods]);
+  // no year options
 
   const batchOptions = useMemo(() => {
-    if (!searchParams.year) return [];
-    const batches = periods
-      .filter((p) => p.periodName === searchParams.year)
-      .map((p) => p.batchName)
-      .filter(Boolean);
+    const batches = periods.map((p) => p.batchName).filter(Boolean);
     const uniq = [...new Set(batches)];
     const opts = uniq.sort().map((b) => ({ value: b, label: b }));
     return [{ value: '', label: '-- Select Batch --' }, ...opts];
-  }, [periods, searchParams.year]);
+  }, [periods]);
 
   const searchLogic = {
     searchParams,
@@ -66,20 +48,13 @@ function StudyLoad() {
       setSearchParams((prev) => ({
         ...prev,
         [name]: value,
-        ...(name === 'year' ? { batch: '' } : {}),
       }));
     },
   };
 
   const searchFields = {
-    title: 'SELECT SCHOOL PERIOD',
+    title: 'SELECT BATCH',
     formFields: [
-      {
-        name: 'year',
-        label: 'Academic Period',
-        type: 'select',
-        options: yearOptions,
-      },
       { name: 'batch', label: 'Batch', type: 'select', options: batchOptions },
     ],
   };
@@ -89,12 +64,8 @@ function StudyLoad() {
       setSearching(true);
       setResults([]);
       setSelectedPeriod(null);
-      if (!searchParams.year || !searchParams.batch) return;
-      const period = periods.find(
-        (p) =>
-          p.periodName === searchParams.year &&
-          p.batchName === searchParams.batch
-      );
+      if (!searchParams.batch) return;
+      const period = periods.find((p) => p.batchName === searchParams.batch);
       if (!period) {
         setResults([]);
         setSelectedPeriod(null);
@@ -104,27 +75,20 @@ function StudyLoad() {
       // Fetch student schedules and filter by selected period
       const resp = await axiosInstance.get('/schedules/mine');
       const all = Array.isArray(resp.data) ? resp.data : [];
-      const inPeriod = all.filter(
-        (e) =>
-          e.academicPeriodId === period.id ||
-          (e.academicPeriodName &&
-            e.academicPeriodName.startsWith(period.periodName) &&
-            e.academicPeriodName.includes(searchParams.batch))
-      );
+      const inPeriod = all.filter((e) => e.academicPeriodId === period.id);
       setResults(inPeriod);
     } finally {
       setSearching(false);
     }
   };
 
-  // Auto-select first available batch when year changes and batch is empty
+  // Auto-select first available batch when list loads
   useEffect(() => {
-    if (!searchParams.year) return;
     const nonPlaceholder = batchOptions.filter((o) => o.value);
     if (!searchParams.batch && nonPlaceholder.length > 0) {
       setSearchParams((prev) => ({ ...prev, batch: nonPlaceholder[0].value }));
     }
-  }, [searchParams.year, searchParams.batch, batchOptions]);
+  }, [searchParams.batch, batchOptions]);
 
   const renderBody = () => {
     if (searching) {
@@ -247,7 +211,7 @@ function StudyLoad() {
             </p>
             {selectedPeriod && (
               <p className="text-sm text-gray-600">
-                {selectedPeriod.periodName} - {selectedPeriod.batchName}
+                {selectedPeriod.batchName}
               </p>
             )}
           </div>

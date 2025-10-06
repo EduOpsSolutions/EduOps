@@ -28,15 +28,10 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
-    const periodName = period.periodName?.toLowerCase() || '';
     const periodId = period.id?.toLowerCase() || '';
     const batchName = period.batchName?.toLowerCase() || '';
 
-    return (
-      periodName.includes(searchLower) ||
-      periodId.includes(searchLower) ||
-      batchName.includes(searchLower)
-    );
+    return periodId.includes(searchLower) || batchName.includes(searchLower);
   });
 
   // Get selected academic period details
@@ -60,9 +55,7 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
 
   const getDisplayName = (period) => {
     if (!period) return 'Select academic period...';
-    return `${period.periodName}${
-      period.batchName ? ` - ${period.batchName}` : ''
-    }`;
+    return `${period.batchName || 'Unnamed Batch'}`;
   };
 
   return (
@@ -130,8 +123,7 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
                   <div className="flex flex-col">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">
-                        {period.periodName}
-                        {period.batchName && ` - ${period.batchName}`}
+                        {period.batchName || 'Unnamed Batch'}
                       </span>
                       {period.status && (
                         <span
@@ -179,7 +171,6 @@ AcademicPeriodSelect.propTypes = {
   academicPeriods: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
-      periodName: PropTypes.string.isRequired,
       batchName: PropTypes.string,
       startAt: PropTypes.string.isRequired,
       endAt: PropTypes.string.isRequired,

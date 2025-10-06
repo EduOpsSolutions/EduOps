@@ -164,7 +164,7 @@ function PeriodDetailsTable({
 
       <div className="mt-4">
         <p className="text-lg sm:text-xl uppercase text-center mb-4">
-          {selectedPeriod.periodName} - {selectedPeriod.batchName} (
+          Batch {selectedPeriod.batchName} (
           {new Date(selectedPeriod.startAt).getFullYear()})
         </p>
 

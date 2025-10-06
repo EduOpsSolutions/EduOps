@@ -51,34 +51,25 @@ function EnrollmentPeriod() {
   const searchFormConfig = {
     title: 'SEARCH ENROLLMENT PERIOD',
     formFields: [
-      {
-        name: 'periodName',
-        label: 'Period',
-        placeholder: 'Search Period...',
-        type: 'text',
-        fullWidth: true,
-      },
+      // {
+      //   name: 'periodName',
+      //   label: 'Period',
+      //   placeholder: 'Search Period...',
+      //   type: 'text',
+      //   fullWidth: true,
+      // },
       {
         name: 'batch',
         label: 'Batch',
-        type: 'select',
-        options: [
-          { value: '', label: 'All Batches' },
-          { value: 'Batch 1', label: 'Batch 1' },
-          { value: 'Batch 2', label: 'Batch 2' },
-          { value: 'Batch 3', label: 'Batch 3' },
-        ],
+        placeholder: 'Search Batch...',
+        type: 'text',
       },
       {
         name: 'year',
         label: 'Year',
-        type: 'select',
-        options: [
-          { value: '', label: 'All Years' },
-          { value: '2024', label: '2024' },
-          { value: '2023', label: '2023' },
-          { value: '2022', label: '2022' },
-        ],
+        placeholder: 'Search Year...',
+        defaultValue: new Date().getFullYear(),
+        type: 'number',
       },
       {
         name: 'status',
@@ -95,7 +86,7 @@ function EnrollmentPeriod() {
   };
 
   const searchResultsColumns = [
-    { key: 'periodName', header: 'Period' },
+    // { key: 'periodName', header: 'Period' },
     { key: 'batchName', header: 'Batch' },
     { key: 'year', header: 'Year' },
     { key: 'status', header: 'Status' },

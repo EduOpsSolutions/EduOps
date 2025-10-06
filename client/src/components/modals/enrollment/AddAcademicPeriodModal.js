@@ -10,7 +10,6 @@ function AcademicPeriodModal({
 }) {
   const [formData, setFormData] = useState({
     batchName: '',
-    periodName: '',
     startAt: '',
     endAt: '',
   });
@@ -24,7 +23,6 @@ function AcademicPeriodModal({
       setShowDiscardModal(false);
       setFormData({
         batchName: '',
-        periodName: '',
         startAt: '',
         endAt: '',
       });
@@ -44,10 +42,6 @@ function AcademicPeriodModal({
   const validateForm = () => {
     if (!formData.batchName.trim()) {
       setError('Batch name is required');
-      return false;
-    }
-    if (!formData.periodName.trim()) {
-      setError('Period name is required');
       return false;
     }
     if (!formData.startAt) {
@@ -82,7 +76,6 @@ function AcademicPeriodModal({
 
       const payload = {
         batchName: formData.batchName.trim(),
-        periodName: formData.periodName.trim(),
         startAt: startDateTime.toISOString(),
         endAt: endDateTime.toISOString(),
       };
@@ -178,15 +171,7 @@ function AcademicPeriodModal({
               required
             />
 
-            {/* Period Name */}
-            <ModalTextField
-              label="Period Name"
-              name="periodName"
-              value={formData.periodName}
-              onChange={handleInputChange}
-              placeholder="Enter period name"
-              required
-            />
+            {/* Removed Period Name: using batch and dates only */}
 
             {/* Date Range */}
             <div className="flex flex-row justify-center items-center gap-4">

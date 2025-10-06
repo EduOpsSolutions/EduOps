@@ -162,7 +162,6 @@ model course_requisite {
 model academic_period {
   id            String    @id @default(cuid())
   batchName     String
-  periodName    String
   status        AcademicPeriodStatus @default(upcoming)
   startAt       DateTime
   endAt         DateTime

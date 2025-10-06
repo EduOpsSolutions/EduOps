@@ -46,7 +46,6 @@ export const transformScheduleToEvent = (scheduleFromDB) => {
     // Academic period date range - IMPORTANT for recurring logic
     periodStart: scheduleFromDB.period?.startAt,
     periodEnd: scheduleFromDB.period?.endAt,
-    periodName: scheduleFromDB.period?.periodName,
   };
 };
 
@@ -96,7 +95,6 @@ export const exampleAPIResponse = {
       },
       period: {
         id: 'period_456',
-        periodName: 'Fall 2025',
         batchName: 'Batch A',
         startAt: '2025-09-01T00:00:00.000Z',
         endAt: '2025-12-15T23:59:59.999Z',
@@ -120,7 +118,6 @@ export const exampleAPIResponse = {
       },
       period: {
         id: 'period_456',
-        periodName: 'Fall 2025',
         batchName: 'Batch A',
         startAt: '2025-09-01T00:00:00.000Z',
         endAt: '2025-12-15T23:59:59.999Z',
@@ -144,7 +141,6 @@ export const exampleAPIResponse = {
       },
       period: {
         id: 'period_456',
-        periodName: 'Fall 2025',
         batchName: 'Batch A',
         startAt: '2025-09-01T00:00:00.000Z',
         endAt: '2025-12-15T23:59:59.999Z',

@@ -109,13 +109,7 @@ router.delete('/:id', verifyToken, validateUserIsAdmin, deleteSchedule);
 router.post(
   '/:id/students',
   verifyToken,
-  (req, res, next) => {
-    const role = req.user?.data?.role;
-    if (role === 'admin') return next();
-    return res
-      .status(403)
-      .json({ error: true, message: 'User is unauthorized' });
-  },
+  validateUserIsAdmin,
   addStudentToSchedule
 );
 
@@ -127,13 +121,7 @@ router.post(
 router.post(
   '/:id/students:batch-delete',
   verifyToken,
-  (req, res, next) => {
-    const role = req.user?.data?.role;
-    if (role === 'admin') return next();
-    return res
-      .status(403)
-      .json({ error: true, message: 'User is unauthorized' });
-  },
+  validateUserIsAdmin,
   removeStudentsFromSchedule
 );
 

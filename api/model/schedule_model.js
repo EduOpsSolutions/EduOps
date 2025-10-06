@@ -32,7 +32,6 @@ export const getAllSchedules = async (options = {}) => {
         ? {
             select: {
               id: true,
-              periodName: true,
               batchName: true,
               startAt: true,
               endAt: true,
@@ -77,7 +76,6 @@ export const getScheduleById = async (id) => {
       period: {
         select: {
           id: true,
-          periodName: true,
           batchName: true,
           startAt: true,
           endAt: true,
@@ -146,7 +144,6 @@ export const getSchedulesByTeacher = async (teacherId) => {
       period: {
         select: {
           id: true,
-          periodName: true,
           batchName: true,
         },
       },
@@ -198,7 +195,6 @@ export const getSchedulesByStudent = async (studentId) => {
       period: {
         select: {
           id: true,
-          periodName: true,
           batchName: true,
           startAt: true,
           endAt: true,
@@ -253,7 +249,6 @@ export const createSchedule = async (data) => {
       period: {
         select: {
           id: true,
-          periodName: true,
           batchName: true,
         },
       },
@@ -316,7 +311,6 @@ export const updateSchedule = async (id, data) => {
       period: {
         select: {
           id: true,
-          periodName: true,
           batchName: true,
         },
       },

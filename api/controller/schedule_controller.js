@@ -22,9 +22,7 @@ export const getSchedules = async (req, res) => {
       courseName: schedule.course?.name || '',
       academicPeriodId: schedule.periodId,
       academicPeriodName: schedule.period
-        ? `${schedule.period.periodName}${
-            schedule.period.batchName ? ` - ${schedule.period.batchName}` : ''
-          }`
+        ? `${schedule.period.batchName || ''}`
         : '',
       teacherId: schedule.teacherId,
       teacherName: schedule.teacher
@@ -73,13 +71,11 @@ export const getSchedule = async (req, res) => {
     // Transform the data
     const transformedSchedule = {
       id: schedule.id,
-      courseId: schedule.course,
+      courseId: schedule.course?.id || schedule.courseId || '', //if given course with full schema then use id, use it, otherwise use courseId
       courseName: schedule.course?.name || '',
       academicPeriodId: schedule.periodId,
       academicPeriodName: schedule.period
-        ? `${schedule.period.periodName}${
-            schedule.period.batchName ? ` - ${schedule.period.batchName}` : ''
-          }`
+        ? `${schedule.period.batchName || ''}`
         : '',
       teacherId: schedule.teacherId,
       teacherName: schedule.teacher
@@ -169,9 +165,7 @@ export const getMySchedules = async (req, res) => {
       courseName: schedule.course?.name || '',
       academicPeriodId: schedule.period?.id || schedule.periodId,
       academicPeriodName: schedule.period
-        ? `${schedule.period.periodName}${
-            schedule.period.batchName ? ` - ${schedule.period.batchName}` : ''
-          }`
+        ? `${schedule.period.batchName || ''}`
         : '',
       teacherId: schedule.teacher?.id || schedule.teacherId,
       teacherName: schedule.teacher

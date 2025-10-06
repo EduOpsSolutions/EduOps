@@ -24,6 +24,7 @@ function CreateEditScheduleModal({
   isOpen,
   onClose,
   event,
+  aiPrefillData,
   selectedDate,
   onSave,
   onDelete,
@@ -82,6 +83,24 @@ function CreateEditScheduleModal({
         notes: event.notes || '',
         color: event.color || '#FFCF00',
       });
+    } else if (aiPrefillData) {
+      // AI-created schedule (prefill but treat as new)
+      setFormData({
+        courseId: aiPrefillData.courseId || '',
+        courseName: aiPrefillData.courseName || '',
+        academicPeriodId: aiPrefillData.academicPeriodId || '',
+        academicPeriodName: aiPrefillData.academicPeriodName || '',
+        location: aiPrefillData.location || '',
+        time_start: aiPrefillData.time_start || '',
+        time_end: aiPrefillData.time_end || '',
+        days: aiPrefillData.days || '',
+        periodStart: aiPrefillData.periodStart || '',
+        periodEnd: aiPrefillData.periodEnd || '',
+        teacherId: aiPrefillData.teacherId || '',
+        teacherName: aiPrefillData.teacherName || '',
+        notes: aiPrefillData.notes || '',
+        color: aiPrefillData.color || '#FFCF00',
+      });
     } else if (selectedDate) {
       // Creating new event with default time from selectedDate if available
       setFormData((prev) => ({
@@ -89,7 +108,7 @@ function CreateEditScheduleModal({
         periodStart: selectedDate.toISOString().split('T')[0],
       }));
     }
-  }, [event, selectedDate]);
+  }, [event, aiPrefillData, selectedDate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -126,9 +145,7 @@ function CreateEditScheduleModal({
     setFormData((prev) => ({
       ...prev,
       academicPeriodId: period.id,
-      academicPeriodName: `${period.periodName}${
-        period.batchName ? ` - ${period.batchName}` : ''
-      }`,
+      academicPeriodName: `${period.batchName || ''}`,
       // Automatically set schedule dates to match academic period dates
       periodStart: formatDate(period.startAt),
       periodEnd: formatDate(period.endAt),
@@ -748,6 +765,22 @@ function CreateEditScheduleModal({
 CreateEditScheduleModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  aiPrefillData: PropTypes.shape({
+    courseId: PropTypes.string,
+    courseName: PropTypes.string,
+    academicPeriodId: PropTypes.string,
+    academicPeriodName: PropTypes.string,
+    location: PropTypes.string,
+    time_start: PropTypes.string,
+    time_end: PropTypes.string,
+    days: PropTypes.string,
+    periodStart: PropTypes.string,
+    periodEnd: PropTypes.string,
+    teacherId: PropTypes.string,
+    teacherName: PropTypes.string,
+    notes: PropTypes.string,
+    color: PropTypes.string,
+  }),
   event: PropTypes.shape({
     title: PropTypes.string, // For backward compatibility
     courseId: PropTypes.string,
