@@ -298,7 +298,59 @@ function CreateEditScheduleModal({
       }
     }
 
-    onSave(formData);
+    // Confirmation dialog before saving
+    Swal.fire({
+      title: event ? 'Update Schedule?' : 'Create Schedule?',
+      text: 'Are you sure you want to save these changes? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, save it!',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6B7280',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        // Show loading
+        Swal.fire({
+          title: 'Saving...',
+          text: 'Please wait while we save the schedule.',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        try {
+          await onSave(formData);
+
+          // Success
+          Swal.fire({
+            title: 'Success!',
+            text: event ? 'Schedule updated successfully.' : 'Schedule created successfully.',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#992525',
+          }).then(() => {
+            // Reload page after success
+            window.location.reload();
+          });
+
+          // Close modal on success
+          onClose();
+        } catch (error) {
+          // Error
+          Swal.fire({
+            title: 'Error',
+            text: error.response?.data?.message || 'Failed to save schedule. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#ff0000',
+          });
+          // Don't close modal on error
+        }
+      }
+    });
   };
 
   const formatRecurrenceDisplay = () => {
@@ -725,37 +777,83 @@ function CreateEditScheduleModal({
             });
             return;
           }
-          axiosInstance
-            .post(`/schedules/${event.id}/students`, { userId: student.id })
-            .then((resp) => {
-              if (resp?.data?.alreadyLinked) {
-                Swal.fire({
-                  title: 'Already Added',
-                  text: `${student.name} is already linked to this schedule.`,
-                  icon: 'info',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#000000',
-                });
-              } else {
-                Swal.fire({
-                  title: 'Student Added to Schedule',
-                  text: `${student.name} added to schedule.`,
-                  icon: 'success',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#000000',
-                });
-              }
-              setStudentsRefreshTick((v) => v + 1);
-            })
-            .catch(() => {
+
+          // Format schedule details for confirmation
+          const dayMap = { M: 'Mon', T: 'Tue', W: 'Wed', TH: 'Thu', F: 'Fri', S: 'Sat', SU: 'Sun' };
+          const daysDisplay = formData.days
+            ? formData.days.split(',').map(d => dayMap[d.trim()] || d.trim()).join(', ')
+            : 'N/A';
+          const timeDisplay = formData.time_start && formData.time_end
+            ? `${formData.time_start} - ${formData.time_end}`
+            : 'N/A';
+          const dateRangeDisplay = formData.periodStart && formData.periodEnd
+            ? `${new Date(formData.periodStart).toLocaleDateString()} - ${new Date(formData.periodEnd).toLocaleDateString()}`
+            : 'N/A';
+
+          // Confirmation dialog
+          Swal.fire({
+            title: 'Add Student to Schedule?',
+            html: `
+              <div style="text-align: left; margin-top: 10px;">
+                <p><strong>Student:</strong> ${student.name}</p>
+                <p><strong>Course:</strong> ${formData.courseName || 'N/A'}</p>
+                <p><strong>Days:</strong> ${daysDisplay}</p>
+                <p><strong>Time:</strong> ${timeDisplay}</p>
+                <p><strong>Date Range:</strong> ${dateRangeDisplay}</p>
+              </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, add student',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#992525',
+            cancelButtonColor: '#6B7280',
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Show loading
               Swal.fire({
-                title: 'Failed to Add Student',
-                text: 'Please try again.',
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#992525',
+                title: 'Adding Student...',
+                text: 'Please wait while we add the student to the schedule.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                  Swal.showLoading();
+                },
               });
-            });
+
+              axiosInstance
+                .post(`/schedules/${event.id}/students`, { userId: student.id })
+                .then((resp) => {
+                  if (resp?.data?.alreadyLinked) {
+                    Swal.fire({
+                      title: 'Already Added',
+                      text: `${student.name} is already linked to this schedule.`,
+                      icon: 'info',
+                      confirmButtonText: 'OK',
+                      confirmButtonColor: '#992525',
+                    });
+                  } else {
+                    Swal.fire({
+                      title: 'Success!',
+                      text: `${student.name} has been added to the schedule.`,
+                      icon: 'success',
+                      confirmButtonText: 'OK',
+                      confirmButtonColor: '#992525',
+                    });
+                  }
+                  setStudentsRefreshTick((v) => v + 1);
+                })
+                .catch((error) => {
+                  Swal.fire({
+                    title: 'Failed to Add Student',
+                    text: error.response?.data?.message || 'Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#ff0000',
+                  });
+                });
+            }
+          });
         }}
       />
     </div>

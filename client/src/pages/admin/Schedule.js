@@ -219,42 +219,29 @@ function AdminSchedule() {
 
   // Handler for saving an event
   const handleSaveEvent = async (eventData) => {
-    try {
-      if (selectedEvent && !isAiCreatedSchedule) {
-        // Update existing event
-        const response = await axiosInstance.put(
-          `/schedules/${selectedEvent.id}`,
-          eventData
-        );
+    if (selectedEvent && !isAiCreatedSchedule) {
+      // Update existing event
+      const response = await axiosInstance.put(
+        `/schedules/${selectedEvent.id}`,
+        eventData
+      );
 
-        setSchedules((prev) =>
-          prev.map((schedule) =>
-            schedule.id === selectedEvent.id ? response.data : schedule
-          )
-        );
-      } else {
-        // Create new event (including AI-created)
-        const response = await axiosInstance.post('/schedules', eventData);
-        setSchedules((prev) => [...prev, response.data]);
-      }
-
-      setShowCreateEditModal(false);
-      setSelectedEvent(null);
-      setIsAiCreatedSchedule(false);
-      setSelectedDate(null);
-    } catch (error) {
-      console.error('Error saving schedule:', error);
-      Swal.fire({
-        title: 'Error',
-        text:
-          error.response?.data?.message ||
-          'Failed to save schedule. Please try again.',
-        icon: 'error',
-        confirmButtonText: 'Confirm',
-        confirmButtonColor: '#000000',
-        confirmButtonTextColor: 'white',
-      });
+      setSchedules((prev) =>
+        prev.map((schedule) =>
+          schedule.id === selectedEvent.id ? response.data : schedule
+        )
+      );
+    } else {
+      // Create new event (including AI-created)
+      const response = await axiosInstance.post('/schedules', eventData);
+      setSchedules((prev) => [...prev, response.data]);
     }
+
+    // Reset states on success
+    setShowCreateEditModal(false);
+    setSelectedEvent(null);
+    setIsAiCreatedSchedule(false);
+    setSelectedDate(null);
   };
 
   // Handler for deleting an event
