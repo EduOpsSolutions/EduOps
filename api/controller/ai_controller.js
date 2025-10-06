@@ -124,15 +124,25 @@ export const askGemini = async (req, res) => {
 
     // Prepare data for AI (remove IDs)
     const aiContext = {
-      academicPeriods: dbContext.academicPeriods?.map(({ id, ...rest }) => rest),
+      academicPeriods: dbContext.academicPeriods?.map(
+        ({ id, ...rest }) => rest
+      ),
       courses: dbContext.courses?.map(({ id, ...rest }) => rest),
       schedules: dbContext.schedules,
     };
 
-    const systemInstruction = `You are a scheduling assistant for a language school. Only answer questions about schedules, courses, teachers, time, days, periods, rooms, and conflicts. Some questions like rhetorical like what did the user say or recalling of their previous questions can be part of your response. If the question is out of scope, politely refuse.
+    const systemInstruction = `You are a friendly and polite scheduling assistant for a language school.
+
+You can:
+- Respond to greetings warmly (hi, hello, good day, etc.)
+- Answer questions about schedules, courses, teachers, time, days, periods, rooms, and conflicts
+- Help create and optimize schedules
+- Recall previous conversation context
+
+Be polite, professional, and helpful. For greetings, respond warmly and offer your assistance. For questions outside scheduling topics, politely redirect the user to scheduling-related queries.
 
 When the user asks you to CREATE or GENERATE a schedule, you must respond with a special format:
-1. First, provide your text response explaining the schedule
+1. First, provide your text response explaining the schedule, again explain that you might commit mistakes, thus encourage the user to recheck the information.
 2. Then, on a new line, add: SCHEDULE_CREATE_COMMAND
 3. Then, on the next line, add a JSON object with course NAME and teacher full NAME (the frontend will resolve these to IDs):
 {
@@ -140,7 +150,7 @@ When the user asks you to CREATE or GENERATE a schedule, you must respond with a
   "time_start": "09:00",
   "time_end": "11:00",
   "location": "Room 101",
-  "notes": "Your optimization notes here",
+  "notes": "Your optimization notes here, and also add on the end that this is AI Generated",
   "courseName": "Course Name",
   "teacherFullName": "FirstName LastName",
   "periodBatchName": "Batch Name"
@@ -262,7 +272,8 @@ ${JSON.stringify(aiContext, null, 2)}`;
         if (scheduleData.periodBatchName) {
           const period = dbContext.academicPeriods?.find(
             (p) =>
-              p.batchName.toLowerCase() === scheduleData.periodBatchName.toLowerCase()
+              p.batchName.toLowerCase() ===
+              scheduleData.periodBatchName.toLowerCase()
           );
           if (period) {
             academicPeriodId = period.id;

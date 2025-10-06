@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { RiRobot2Line } from 'react-icons/ri';
 import { Tooltip } from 'flowbite-react';
+import axiosInstance from '../../utils/axios';
 
 /**
  * Floating AI Chat Widget (frontend-only stub)
@@ -23,6 +24,7 @@ function AiChatWidget({
     },
   ]);
   const [input, setInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
   const panelRef = useRef(null);
 
@@ -144,9 +146,10 @@ function AiChatWidget({
 
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || isThinking) return;
     setMessages((m) => [...m, { role: 'user', text }]);
     setInput('');
+    setIsThinking(true);
 
     try {
       // Build history from messages (exclude current one)
@@ -165,22 +168,8 @@ function AiChatWidget({
         },
       };
 
-      const resp = await fetch(
-        `${process.env.REACT_APP_API_URL || ''}/ai/ask`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!resp.ok) {
-        const fallback = generateLocalReply(text);
-        setMessages((m) => [...m, { role: 'assistant', text: fallback }]);
-        return;
-      }
-
-      const data = await resp.json();
+      const response = await axiosInstance.post('/ai/ask', payload);
+      const data = response.data;
       let aiText = data?.text || generateLocalReply(text);
       console.log('datareceived from gemini', data);
 
@@ -199,6 +188,8 @@ function AiChatWidget({
     } catch (e) {
       const fallback = generateLocalReply(text);
       setMessages((m) => [...m, { role: 'assistant', text: fallback }]);
+    } finally {
+      setIsThinking(false);
     }
   };
 
@@ -264,6 +255,17 @@ function AiChatWidget({
                 </div>
               </div>
             ))}
+            {isThinking && (
+              <div className="text-sm text-gray-800">
+                <div className="bg-gray-100 inline-block px-3 py-2 rounded-lg">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="p-3 border-t flex items-center gap-2">
             <input
@@ -281,9 +283,10 @@ function AiChatWidget({
             />
             <button
               onClick={sendMessage}
-              className="px-4 py-2 bg-dark-red-2 hover:bg-dark-red-3 text-white rounded text-sm"
+              disabled={isThinking}
+              className="px-4 py-2 bg-dark-red-2 hover:bg-dark-red-3 text-white rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send
+              {isThinking ? 'Thinking...' : 'Send'}
             </button>
           </div>
         </div>
