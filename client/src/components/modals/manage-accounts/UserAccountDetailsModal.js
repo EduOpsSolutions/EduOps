@@ -321,7 +321,7 @@ const UserAccountDetailsModal = React.memo(({
             <div className="space-y-3">
               <div className="bg-gray-50 rounded p-3 border border-gray-200">
                 <label className="text-sm font-medium text-gray-600">User ID</label>
-                <p className="text-xs sm:text-sm font-mono break-all">{formData?.id}</p>
+                <p className="text-xs sm:text-sm font-mono break-all">{formData?.userId}</p>
               </div>
               <div className="bg-gray-50 rounded p-3 border border-gray-200">
                 <label className="text-sm font-medium text-gray-600">Created</label>
