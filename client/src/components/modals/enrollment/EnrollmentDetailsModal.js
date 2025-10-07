@@ -88,14 +88,14 @@ export default function EnrollmentDetailsModal({
       if (result.isConfirmed) {
         try {
           const response = await axiosInstance.post(
-            `/user/create-account`,
+            `/users/create-student-account`,
             {
               userId: formData.userId,
               firstName: formData.firstName,
               middleName: formData.middleName,
               lastName: formData.lastName,
-              email: formData.email,
-              password: formData.password,
+              email: formData.preferredEmail,
+              birthyear: formData.birthDate,
             },
             {
               headers: {
@@ -178,7 +178,7 @@ export default function EnrollmentDetailsModal({
       });
       return;
     }
-    
+
     handlePreviewFile(formData.paymentProofPath, 'Proof of Payment Preview');
   };
 

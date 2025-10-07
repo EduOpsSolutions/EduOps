@@ -1,29 +1,32 @@
-import {
-  getStorage,
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-} from 'firebase/storage';
-
-import { initializeApp } from 'firebase/app';
+import admin from 'firebase-admin';
 import { filePaths } from '../constants/file_paths.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_APIKEY,
-  authDomain: process.env.FIREBASE_AUTHDOMAIN,
-  projectId: process.env.FIREBASE_PROJECTID,
-  storageBucket: process.env.FIREBASE_STORAGEBUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGINGSENDERID,
-  appId: process.env.FIREBASE_APPID,
-  measurementId: process.env.FIREBASE_MEASUREMENTID,
-};
+// Initialize Firebase Admin SDK (only once)
+if (!admin.apps.length) {
+  let serviceAccount;
 
-const firebaseApp = initializeApp(firebaseConfig);
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Parse service account JSON from env
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    // Fallback to individual env variables
+    serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECTID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    };
+  }
 
-export const storage = getStorage(firebaseApp);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGEBUCKET,
+  });
+}
+
+export const storage = admin.storage().bucket();
 
 export const uploadFile = async (file, directory) => {
   try {
@@ -62,11 +65,24 @@ export const uploadFile = async (file, directory) => {
       default:
         file_dir = 'uncategorized';
     }
-    const storageRef = ref(storage, `${file_dir}/${filename}`);
-    const uploadTask = await uploadBytesResumable(storageRef, fileBuffer);
+    const file_path = `${file_dir}/${filename}`;
+    const fileUpload = storage.file(file_path);
+
+    // Upload with Admin SDK
+    await fileUpload.save(fileBuffer, {
+      metadata: {
+        contentType: file.mimetype,
+        metadata: {
+          originalName: file.originalname,
+        },
+      },
+    });
+
+    // Make file publicly accessible
+    await fileUpload.makePublic();
 
     // Get the download URL
-    const downloadURL = await getDownloadURL(storageRef);
+    const downloadURL = `https://storage.googleapis.com/${storage.name}/${file_path}`;
 
     const db_file_record = await prisma.files.create({
       data: {
