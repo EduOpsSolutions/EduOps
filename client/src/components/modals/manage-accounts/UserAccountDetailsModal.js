@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axiosInstance from '../../../utils/axios';
-import Swal from 'sweetalert2';
-import { getCookieItem } from '../../../utils/jwt';
-import ModalTextField from '../../form/ModalTextField';
-import ModalSelectField from '../../form/ModalSelectField';
-import ImageUploadField from '../../form/ImageUploadField';
-import ResetPasswordModal from '../common/ResetPasswordModal';
+import React, { useState, useEffect, useCallback } from "react";
+import axiosInstance from "../../../utils/axios";
+import Swal from "sweetalert2";
+import { getCookieItem } from "../../../utils/jwt";
+import ModalTextField from "../../form/ModalTextField";
+import ModalSelectField from "../../form/ModalSelectField";
+import ImageUploadField from "../../form/ImageUploadField";
+import ResetPasswordModal from "../common/ResetPasswordModal";
 
 const UserAccountDetailsModal = React.memo(
   ({ data, show, handleClose, handleSave, loadingSave }) => {
@@ -14,23 +14,33 @@ const UserAccountDetailsModal = React.memo(
     const [profileImagePreview, setProfileImagePreview] = useState(null);
     const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [initialData, setInitialData] = useState(null);
 
     useEffect(() => {
       if (show && data && !isInitialized) {
         setFormData(data);
         setProfileImagePreview(data?.profilePicLink || null);
         setProfileImage(null);
+        setInitialData({
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          middleName: data.middleName ?? null,
+          email: data.email || "",
+          status: data.status || "active",
+          profilePicLink: data.profilePicLink || null,
+        });
         setIsInitialized(true);
       }
       if (!show && isInitialized) {
         setIsInitialized(false);
+        setInitialData(null);
       }
     }, [show, data, isInitialized]);
 
     const handleInputChange = useCallback((e) => {
       const { name, value } = e.target;
-      if (name === 'status') {
-        if (value === 'deleted') {
+      if (name === "status") {
+        if (value === "deleted") {
           setFormData((prevData) => ({
             ...prevData,
             [name]: value,
@@ -39,7 +49,7 @@ const UserAccountDetailsModal = React.memo(
         } else {
           setFormData((prevData) => {
             const newData = { ...prevData, [name]: value };
-            if (prevData.status === 'deleted') {
+            if (prevData.status === "deleted") {
               delete newData.deletedAt;
             }
             return newData;
@@ -67,21 +77,23 @@ const UserAccountDetailsModal = React.memo(
 
         if (profileImage) {
           const imageFormData = new FormData();
-          imageFormData.append('profilePicture', profileImage);
-          imageFormData.append('userId', formData.id);
+          imageFormData.append("profilePic", profileImage);
 
           const uploadResponse = await axiosInstance.post(
-            `${process.env.REACT_APP_API_URL}/users/upload-profile-picture`,
+            `${process.env.REACT_APP_API_URL}/users/update-profile-picture`,
             imageFormData,
             {
               headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${getCookieItem('token')}`,
+                "Content-Type": "multipart/form-data",
+                Authorization: `Bearer ${getCookieItem("token")}`,
               },
             }
           );
 
-          updatedFormData.profilePicLink = uploadResponse.data.profilePicLink;
+          updatedFormData.profilePicLink =
+            uploadResponse?.data?.data?.profilePicLink ||
+            uploadResponse?.data?.profilePicLink ||
+            null;
         }
 
         if (profileImagePreview === null && !profileImage) {
@@ -89,14 +101,26 @@ const UserAccountDetailsModal = React.memo(
         }
 
         await handleSave(updatedFormData);
+        // refresh baseline so close confirmation doesn't appear after successful save
+        setInitialData({
+          firstName: updatedFormData.firstName || "",
+          lastName: updatedFormData.lastName || "",
+          middleName: updatedFormData.middleName ?? null,
+          email: updatedFormData.email || "",
+          status: updatedFormData.status || "active",
+          profilePicLink: updatedFormData.profilePicLink || null,
+        });
+        setFormData(updatedFormData);
+        setProfileImage(null);
+        setProfileImagePreview(updatedFormData.profilePicLink || null);
       } catch (error) {
-        console.error('Error saving user with image:', error);
+        console.error("Error saving user with image:", error);
         Swal.fire({
-          title: 'Error',
+          title: "Error",
           text:
-            error.response?.data?.message || 'Failed to save profile picture',
-          icon: 'error',
-          confirmButtonColor: '#dc2626',
+            error.response?.data?.message || "Failed to save profile picture",
+          icon: "error",
+          confirmButtonColor: "#dc2626",
         });
       }
     };
@@ -106,18 +130,28 @@ const UserAccountDetailsModal = React.memo(
     }, []);
 
     const hasChanges = () => {
-      if (!data || !formData) return false;
+      if (!initialData || !formData) return false;
+
+      const current = {
+        firstName: formData.firstName || "",
+        lastName: formData.lastName || "",
+        middleName: formData.middleName ?? null,
+        email: formData.email || "",
+        status: formData.status || "active",
+        profilePicLink: profileImagePreview || null,
+      };
 
       const fieldsChanged =
-        formData.firstName !== (data.firstName || '') ||
-        formData.lastName !== (data.lastName || '') ||
-        formData.middleName !== (data.middleName || '') ||
-        formData.email !== (data.email || '') ||
-        formData.status !== (data.status || 'active');
+        current.firstName !== initialData.firstName ||
+        current.lastName !== initialData.lastName ||
+        current.email !== initialData.email ||
+        current.status !== initialData.status ||
+        // handle null vs empty string for middleName
+        (current.middleName ?? null) !== (initialData.middleName ?? null);
 
       const imageChanged =
-        profileImage !== null ||
-        profileImagePreview !== (data?.profilePicLink || null);
+        current.profilePicLink !== (initialData.profilePicLink || null) ||
+        profileImage !== null;
 
       return fieldsChanged || imageChanged;
     };
@@ -125,14 +159,14 @@ const UserAccountDetailsModal = React.memo(
     const handleCloseWithConfirmation = () => {
       if (hasChanges()) {
         Swal.fire({
-          title: 'Unsaved Changes',
-          text: 'You have unsaved changes that will be lost. Do you want to continue?',
-          icon: 'warning',
+          title: "Unsaved Changes",
+          text: "You have unsaved changes that will be lost. Do you want to continue?",
+          icon: "warning",
           showCancelButton: true,
-          confirmButtonText: 'No, Keep Editing',
-          cancelButtonText: 'Yes, Discard Changes',
-          confirmButtonColor: '#6b7280',
-          cancelButtonColor: '#992525',
+          confirmButtonText: "No, Keep Editing",
+          cancelButtonText: "Yes, Discard Changes",
+          confirmButtonColor: "#6b7280",
+          cancelButtonColor: "#992525",
         }).then((result) => {
           if (
             result.isDismissed ||
@@ -147,41 +181,41 @@ const UserAccountDetailsModal = React.memo(
     };
 
     const formatDate = (dateString) => {
-      if (!dateString) return 'N/A';
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+      if (!dateString) return "N/A";
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     };
 
     const getStatusBadgeColor = (status) => {
       switch (status) {
-        case 'active':
-          return 'bg-green-100 text-green-800 border border-green-200';
-        case 'disabled':
-          return 'bg-gray-100 text-gray-800 border border-gray-200';
-        case 'deleted':
-          return 'bg-red-100 text-red-800 border border-red-200';
-        case 'suspended':
-          return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+        case "active":
+          return "bg-green-100 text-green-800 border border-green-200";
+        case "disabled":
+          return "bg-gray-100 text-gray-800 border border-gray-200";
+        case "deleted":
+          return "bg-red-100 text-red-800 border border-red-200";
+        case "suspended":
+          return "bg-yellow-100 text-yellow-800 border border-yellow-200";
         default:
-          return 'bg-gray-100 text-gray-800 border border-gray-200';
+          return "bg-gray-100 text-gray-800 border border-gray-200";
       }
     };
 
     const getRoleBadgeColor = (role) => {
       switch (role) {
-        case 'admin':
-          return 'bg-purple-100 text-purple-800 border border-purple-200';
-        case 'teacher':
-          return 'bg-blue-100 text-blue-800 border border-blue-200';
-        case 'student':
-          return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
+        case "admin":
+          return "bg-purple-100 text-purple-800 border border-purple-200";
+        case "teacher":
+          return "bg-blue-100 text-blue-800 border border-blue-200";
+        case "student":
+          return "bg-indigo-100 text-indigo-800 border border-indigo-200";
         default:
-          return 'bg-gray-100 text-gray-800 border border-gray-200';
+          return "bg-gray-100 text-gray-800 border border-gray-200";
       }
     };
 
@@ -233,7 +267,7 @@ const UserAccountDetailsModal = React.memo(
               <div className="flex-1 min-w-0 text-center sm:text-left">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
                   {formData?.firstName}
-                  {formData?.middleName ? ` ${formData.middleName}` : ''}{' '}
+                  {formData?.middleName ? ` ${formData.middleName}` : ""}{" "}
                   {formData?.lastName}
                 </h3>
                 <p className="text-sm sm:text-base text-gray-600 truncate">
@@ -271,7 +305,7 @@ const UserAccountDetailsModal = React.memo(
                     key="firstName"
                     label="First Name"
                     name="firstName"
-                    value={formData?.firstName || ''}
+                    value={formData?.firstName || ""}
                     onChange={handleInputChange}
                     required
                   />
@@ -279,7 +313,7 @@ const UserAccountDetailsModal = React.memo(
                     key="lastName"
                     label="Last Name"
                     name="lastName"
-                    value={formData?.lastName || ''}
+                    value={formData?.lastName || ""}
                     onChange={handleInputChange}
                     required
                   />
@@ -290,7 +324,7 @@ const UserAccountDetailsModal = React.memo(
                     key="middleName"
                     label="Middle Name"
                     name="middleName"
-                    value={formData?.middleName || ''}
+                    value={formData?.middleName || ""}
                     onChange={handleInputChange}
                   />
                   <ModalTextField
@@ -298,7 +332,7 @@ const UserAccountDetailsModal = React.memo(
                     label="Email Address"
                     name="email"
                     type="email"
-                    value={formData?.email || ''}
+                    value={formData?.email || ""}
                     onChange={handleInputChange}
                     required
                   />
@@ -308,13 +342,13 @@ const UserAccountDetailsModal = React.memo(
                   <ModalSelectField
                     label="Account Status"
                     name="status"
-                    value={formData?.status || 'active'}
+                    value={formData?.status || "active"}
                     onChange={handleInputChange}
                     options={[
-                      { value: 'active', label: 'Active' },
-                      { value: 'disabled', label: 'Inactive' },
-                      { value: 'suspended', label: 'Suspended' },
-                      { value: 'deleted', label: 'Deleted' },
+                      { value: "active", label: "Active" },
+                      { value: "disabled", label: "Inactive" },
+                      { value: "suspended", label: "Suspended" },
+                      { value: "deleted", label: "Deleted" },
                     ]}
                   />
                   <div>
@@ -389,7 +423,7 @@ const UserAccountDetailsModal = React.memo(
                   <span>Saving...</span>
                 </div>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </button>
           </div>
@@ -401,7 +435,7 @@ const UserAccountDetailsModal = React.memo(
             reset_password_modal={showResetPasswordModal}
             setResetPasswordModal={setShowResetPasswordModal}
             userId={formData?.id}
-            userName={formData?.firstName + ' ' + formData?.lastName}
+            userName={formData?.firstName + " " + formData?.lastName}
           />
         )}
       </div>
