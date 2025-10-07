@@ -1,15 +1,15 @@
-import React from 'react';
+import React from "react";
 
-const UsersTable = ({ 
-  data, 
-  loading, 
-  onUserClick, 
-  formatDate, 
-  getRoleDisplay, 
-  getStatusDisplay, 
-  getUserInitials, 
-  getRoleBadgeColor, 
-  getStatusBadgeColor 
+const UsersTable = ({
+  data,
+  loading,
+  onUserClick,
+  formatDate,
+  getRoleDisplay,
+  getStatusDisplay,
+  getUserInitials,
+  getRoleBadgeColor,
+  getStatusBadgeColor,
 }) => {
   if (loading) {
     return (
@@ -62,50 +62,88 @@ const UsersTable = ({
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-8 w-8 mr-3">
-                        <div className="h-8 w-8 rounded-full bg-dark-red-2 flex items-center justify-center ring-2 ring-gray-200">
-                          <span className="text-xs font-medium text-white">
-                            {getUserInitials(user.firstName, user.lastName)}
-                          </span>
-                        </div>
+                        {user.profilePicLink ? (
+                          <img
+                            src={user.profilePicLink}
+                            alt={`${user.firstName} ${user.lastName}`}
+                            className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-dark-red-2 flex items-center justify-center ring-2 ring-gray-200">
+                            <span className="text-xs font-medium text-white">
+                              {getUserInitials(user.firstName, user.lastName)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <div className="font-medium truncate max-w-32 md:max-w-none" title={`${user.firstName}${user.middleName ? ` ${user.middleName}` : ''} ${user.lastName}`}>
-                          {user.firstName}{user.middleName ? ` ${user.middleName}` : ''} {user.lastName}
+                        <div
+                          className="font-medium truncate max-w-32 md:max-w-none"
+                          title={`${user.firstName}${
+                            user.middleName ? ` ${user.middleName}` : ""
+                          } ${user.lastName}`}
+                        >
+                          {user.firstName}
+                          {user.middleName ? ` ${user.middleName}` : ""}{" "}
+                          {user.lastName}
                         </div>
-                        <div className="text-xs text-gray-500 font-mono truncate max-w-32 md:max-w-none" title={user.userId}>
+                        <div
+                          className="text-xs text-gray-500 font-mono truncate max-w-32 md:max-w-none"
+                          title={user.userId}
+                        >
                           ID: {user.userId}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                    <div className="truncate max-w-32 md:max-w-none" title={user.email}>
+                    <div
+                      className="truncate max-w-32 md:max-w-none"
+                      title={user.email}
+                    >
                       {user.email}
                     </div>
                   </td>
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(user.role)}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(
+                        user.role
+                      )}`}
+                    >
                       {getRoleDisplay(user.role)}
                     </span>
                   </td>
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(user.status)}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(
+                        user.status
+                      )}`}
+                    >
                       {getStatusDisplay(user.status)}
                     </span>
                   </td>
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                    <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={formatDate(user.createdAt)}>
+                    <div
+                      className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                      title={formatDate(user.createdAt)}
+                    >
                       {formatDate(user.createdAt)}
                     </div>
                   </td>
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                    <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={formatDate(user.updatedAt)}>
+                    <div
+                      className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                      title={formatDate(user.updatedAt)}
+                    >
                       {formatDate(user.updatedAt)}
                     </div>
                   </td>
                   <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                    <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={formatDate(user.deletedAt)}>
-                      {user.deletedAt ? formatDate(user.deletedAt) : 'N/A'}
+                    <div
+                      className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                      title={formatDate(user.deletedAt)}
+                    >
+                      {user.deletedAt ? formatDate(user.deletedAt) : "N/A"}
                     </div>
                   </td>
                 </tr>
@@ -128,4 +166,4 @@ const UsersTable = ({
   );
 };
 
-export default UsersTable; 
+export default UsersTable;
