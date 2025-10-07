@@ -49,15 +49,8 @@ function EnrollmentPeriod() {
   }, [selectedPeriod]);
 
   const searchFormConfig = {
-    title: 'SEARCH ENROLLMENT PERIOD',
+    title: 'SEARCH ENROLLMENT BATCH',
     formFields: [
-      {
-        name: 'periodName',
-        label: 'Period',
-        placeholder: 'Search Period...',
-        type: 'text',
-        fullWidth: true,
-      },
       {
         name: 'batch',
         label: 'Batch',
@@ -95,10 +88,9 @@ function EnrollmentPeriod() {
   };
 
   const searchResultsColumns = [
-    { key: 'periodName', header: 'Period' },
-    { key: 'batchName', header: 'Batch' },
-    { key: 'year', header: 'Year' },
-    { key: 'status', header: 'Status' },
+    { key: 'batchName', header: 'Batch', className: 'text-center flex-1' },
+    { key: 'year', header: 'Year', className: 'text-center flex-1' },
+    { key: 'status', header: 'Status', className: 'text-center flex-1' },
   ];
 
   const paginationConfig = {
@@ -185,7 +177,7 @@ function EnrollmentPeriod() {
               })
             }
           >
-            Create Period
+            Create Batch
           </ThinRedButton>
         }
       />

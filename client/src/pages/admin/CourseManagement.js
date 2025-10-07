@@ -109,15 +109,6 @@ function CourseManagement() {
                             Course Name
                           </th>
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            # of Students
-                          </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            Schedule
-                          </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            Adviser
-                          </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Price
                           </th>
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
@@ -140,21 +131,6 @@ function CourseManagement() {
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div className="truncate max-w-24 sm:max-w-32 md:max-w-none" title={course.name}>
                                 {course.name}
-                              </div>
-                            </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.maxNumber || 'N/A'}>
-                                {course.maxNumber || 'N/A'}
-                              </div>
-                            </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-28 md:max-w-none" title={course.schedule ? `${course.schedule.days}, ${course.schedule.time}` : 'N/A'}>
-                                {course.schedule ? `${course.schedule.days}, ${course.schedule.time}` : 'N/A'}
-                              </div>
-                            </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.adviser ? `${course.adviser.firstName} ${course.adviser.middleName ? course.adviser.middleName + ' ' : ''}${course.adviser.lastName}` : 'N/A'}>
-                                {course.adviser ? `${course.adviser.firstName} ${course.adviser.middleName ? course.adviser.middleName + ' ' : ''}${course.adviser.lastName}` : 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">

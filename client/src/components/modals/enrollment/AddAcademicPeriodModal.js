@@ -10,7 +10,6 @@ function AcademicPeriodModal({
 }) {
   const [formData, setFormData] = useState({
     batchName: '',
-    periodName: '',
     startAt: '',
     endAt: '',
   });
@@ -24,7 +23,6 @@ function AcademicPeriodModal({
       setShowDiscardModal(false);
       setFormData({
         batchName: '',
-        periodName: '',
         startAt: '',
         endAt: '',
       });
@@ -44,10 +42,6 @@ function AcademicPeriodModal({
   const validateForm = () => {
     if (!formData.batchName.trim()) {
       setError('Batch name is required');
-      return false;
-    }
-    if (!formData.periodName.trim()) {
-      setError('Period name is required');
       return false;
     }
     if (!formData.startAt) {
@@ -82,7 +76,6 @@ function AcademicPeriodModal({
 
       const payload = {
         batchName: formData.batchName.trim(),
-        periodName: formData.periodName.trim(),
         startAt: startDateTime.toISOString(),
         endAt: endDateTime.toISOString(),
       };
@@ -138,7 +131,7 @@ function AcademicPeriodModal({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-2xl mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
-            <h2 className="text-2xl font-bold">Period Creation</h2>
+            <h2 className="text-2xl font-bold">Create Batch</h2>
             <button
               className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
               onClick={handleClose}
@@ -175,16 +168,6 @@ function AcademicPeriodModal({
               value={formData.batchName}
               onChange={handleInputChange}
               placeholder="Enter batch name"
-              required
-            />
-
-            {/* Period Name */}
-            <ModalTextField
-              label="Period Name"
-              name="periodName"
-              value={formData.periodName}
-              onChange={handleInputChange}
-              placeholder="Enter period name"
               required
             />
 
