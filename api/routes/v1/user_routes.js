@@ -76,14 +76,14 @@ router.post(
   validateCreateUser,
   createUser
 );
-router.delete('/remove-profile-picture', verifyToken, removeProfilePicture);
-router.delete('/:id', verifyToken, validateUserIsAdmin, deleteUser);
 router.post(
   '/create-student-account',
   verifyToken,
   validateUserIsAdmin,
   createStudentAccount
 );
+router.delete('/remove-profile-picture', verifyToken, removeProfilePicture);
+router.delete('/:id', verifyToken, validateUserIsAdmin, deleteUser);
 router.post(
   '/update-profile-picture',
   verifyToken,

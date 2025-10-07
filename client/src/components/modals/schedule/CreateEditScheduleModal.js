@@ -24,6 +24,7 @@ function CreateEditScheduleModal({
   isOpen,
   onClose,
   event,
+  aiPrefillData,
   selectedDate,
   onSave,
   onDelete,
@@ -82,6 +83,24 @@ function CreateEditScheduleModal({
         notes: event.notes || '',
         color: event.color || '#FFCF00',
       });
+    } else if (aiPrefillData) {
+      // AI-created schedule (prefill but treat as new)
+      setFormData({
+        courseId: aiPrefillData.courseId || '',
+        courseName: aiPrefillData.courseName || '',
+        academicPeriodId: aiPrefillData.academicPeriodId || '',
+        academicPeriodName: aiPrefillData.academicPeriodName || '',
+        location: aiPrefillData.location || '',
+        time_start: aiPrefillData.time_start || '',
+        time_end: aiPrefillData.time_end || '',
+        days: aiPrefillData.days || '',
+        periodStart: aiPrefillData.periodStart || '',
+        periodEnd: aiPrefillData.periodEnd || '',
+        teacherId: aiPrefillData.teacherId || '',
+        teacherName: aiPrefillData.teacherName || '',
+        notes: aiPrefillData.notes || '',
+        color: aiPrefillData.color || '#FFCF00',
+      });
     } else if (selectedDate) {
       // Creating new event with default time from selectedDate if available
       setFormData((prev) => ({
@@ -89,7 +108,7 @@ function CreateEditScheduleModal({
         periodStart: selectedDate.toISOString().split('T')[0],
       }));
     }
-  }, [event, selectedDate]);
+  }, [event, aiPrefillData, selectedDate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -126,9 +145,7 @@ function CreateEditScheduleModal({
     setFormData((prev) => ({
       ...prev,
       academicPeriodId: period.id,
-      academicPeriodName: `${period.periodName}${
-        period.batchName ? ` - ${period.batchName}` : ''
-      }`,
+      academicPeriodName: `${period.batchName || ''}`,
       // Automatically set schedule dates to match academic period dates
       periodStart: formatDate(period.startAt),
       periodEnd: formatDate(period.endAt),
@@ -281,7 +298,59 @@ function CreateEditScheduleModal({
       }
     }
 
-    onSave(formData);
+    // Confirmation dialog before saving
+    Swal.fire({
+      title: event ? 'Update Schedule?' : 'Create Schedule?',
+      text: 'Are you sure you want to save these changes? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, save it!',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6B7280',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        // Show loading
+        Swal.fire({
+          title: 'Saving...',
+          text: 'Please wait while we save the schedule.',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        try {
+          await onSave(formData);
+
+          // Success
+          Swal.fire({
+            title: 'Success!',
+            text: event ? 'Schedule updated successfully.' : 'Schedule created successfully.',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#992525',
+          }).then(() => {
+            // Reload page after success
+            window.location.reload();
+          });
+
+          // Close modal on success
+          onClose();
+        } catch (error) {
+          // Error
+          Swal.fire({
+            title: 'Error',
+            text: error.response?.data?.message || 'Failed to save schedule. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#ff0000',
+          });
+          // Don't close modal on error
+        }
+      }
+    });
   };
 
   const formatRecurrenceDisplay = () => {
@@ -304,6 +373,51 @@ function CreateEditScheduleModal({
       year: 'numeric',
     });
     return `Every ${daysArray.join(', ')} until ${endDate}`;
+  };
+
+  const calculateTotalHours = () => {
+    try {
+      const { periodStart, periodEnd, time_start, time_end, days } = formData;
+      if (!periodStart || !periodEnd || !time_start || !time_end || !days)
+        return '';
+
+      const [sh, sm] = String(time_start).split(':').map(Number);
+      const [eh, em] = String(time_end).split(':').map(Number);
+      const minutes = eh * 60 + em - (sh * 60 + sm);
+      if (minutes <= 0) return '';
+      const hoursPerSession = minutes / 60;
+
+      const dayMap = { SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5, S: 6 };
+      const selectedDays = new Set(
+        String(days)
+          .split(',')
+          .map((d) => d.trim())
+          .filter(Boolean)
+          .map((d) => dayMap[d])
+          .filter((n) => n !== undefined)
+      );
+      if (selectedDays.size === 0) return '';
+
+      const start = new Date(periodStart);
+      const end = new Date(periodEnd);
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        start > end
+      )
+        return '';
+
+      let count = 0;
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        if (selectedDays.has(d.getDay())) count++;
+      }
+
+      const total = count * hoursPerSession;
+      const fixed = total.toFixed(1);
+      return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
+    } catch (e) {
+      return '';
+    }
   };
 
   if (!isOpen) return null;
@@ -519,6 +633,11 @@ function CreateEditScheduleModal({
                           {formatRecurrenceDisplay()}
                         </p>
                       )}
+                      {calculateTotalHours() && (
+                        <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">
+                          Estimated total hours: {calculateTotalHours()}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -658,37 +777,83 @@ function CreateEditScheduleModal({
             });
             return;
           }
-          axiosInstance
-            .post(`/schedules/${event.id}/students`, { userId: student.id })
-            .then((resp) => {
-              if (resp?.data?.alreadyLinked) {
-                Swal.fire({
-                  title: 'Already Added',
-                  text: `${student.name} is already linked to this schedule.`,
-                  icon: 'info',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#000000',
-                });
-              } else {
-                Swal.fire({
-                  title: 'Student Added to Schedule',
-                  text: `${student.name} added to schedule.`,
-                  icon: 'success',
-                  confirmButtonText: 'OK',
-                  confirmButtonColor: '#000000',
-                });
-              }
-              setStudentsRefreshTick((v) => v + 1);
-            })
-            .catch(() => {
+
+          // Format schedule details for confirmation
+          const dayMap = { M: 'Mon', T: 'Tue', W: 'Wed', TH: 'Thu', F: 'Fri', S: 'Sat', SU: 'Sun' };
+          const daysDisplay = formData.days
+            ? formData.days.split(',').map(d => dayMap[d.trim()] || d.trim()).join(', ')
+            : 'N/A';
+          const timeDisplay = formData.time_start && formData.time_end
+            ? `${formData.time_start} - ${formData.time_end}`
+            : 'N/A';
+          const dateRangeDisplay = formData.periodStart && formData.periodEnd
+            ? `${new Date(formData.periodStart).toLocaleDateString()} - ${new Date(formData.periodEnd).toLocaleDateString()}`
+            : 'N/A';
+
+          // Confirmation dialog
+          Swal.fire({
+            title: 'Add Student to Schedule?',
+            html: `
+              <div style="text-align: left; margin-top: 10px;">
+                <p><strong>Student:</strong> ${student.name}</p>
+                <p><strong>Course:</strong> ${formData.courseName || 'N/A'}</p>
+                <p><strong>Days:</strong> ${daysDisplay}</p>
+                <p><strong>Time:</strong> ${timeDisplay}</p>
+                <p><strong>Date Range:</strong> ${dateRangeDisplay}</p>
+              </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, add student',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#992525',
+            cancelButtonColor: '#6B7280',
+          }).then((result) => {
+            if (result.isConfirmed) {
+              // Show loading
               Swal.fire({
-                title: 'Failed to Add Student',
-                text: 'Please try again.',
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#992525',
+                title: 'Adding Student...',
+                text: 'Please wait while we add the student to the schedule.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                  Swal.showLoading();
+                },
               });
-            });
+
+              axiosInstance
+                .post(`/schedules/${event.id}/students`, { userId: student.id })
+                .then((resp) => {
+                  if (resp?.data?.alreadyLinked) {
+                    Swal.fire({
+                      title: 'Already Added',
+                      text: `${student.name} is already linked to this schedule.`,
+                      icon: 'info',
+                      confirmButtonText: 'OK',
+                      confirmButtonColor: '#992525',
+                    });
+                  } else {
+                    Swal.fire({
+                      title: 'Success!',
+                      text: `${student.name} has been added to the schedule.`,
+                      icon: 'success',
+                      confirmButtonText: 'OK',
+                      confirmButtonColor: '#992525',
+                    });
+                  }
+                  setStudentsRefreshTick((v) => v + 1);
+                })
+                .catch((error) => {
+                  Swal.fire({
+                    title: 'Failed to Add Student',
+                    text: error.response?.data?.message || 'Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#ff0000',
+                  });
+                });
+            }
+          });
         }}
       />
     </div>
@@ -698,6 +863,22 @@ function CreateEditScheduleModal({
 CreateEditScheduleModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  aiPrefillData: PropTypes.shape({
+    courseId: PropTypes.string,
+    courseName: PropTypes.string,
+    academicPeriodId: PropTypes.string,
+    academicPeriodName: PropTypes.string,
+    location: PropTypes.string,
+    time_start: PropTypes.string,
+    time_end: PropTypes.string,
+    days: PropTypes.string,
+    periodStart: PropTypes.string,
+    periodEnd: PropTypes.string,
+    teacherId: PropTypes.string,
+    teacherName: PropTypes.string,
+    notes: PropTypes.string,
+    color: PropTypes.string,
+  }),
   event: PropTypes.shape({
     title: PropTypes.string, // For backward compatibility
     courseId: PropTypes.string,

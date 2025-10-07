@@ -105,13 +105,6 @@ export const parseTime = (timeString) => {
  * @param {string} time24 - Time in 24-hour format (e.g., "14:00")
  * @returns {string} - Time in 12-hour format (e.g., "2:00 PM")
  */
-const convertTo12Hour = (time24) => {
-  const [hours, minutes] = time24.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12;
-  return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
-};
 
 /**
  * Get events for a specific time slot and date
@@ -137,12 +130,14 @@ export const getEventsForTimeSlot = (events, timeSlot, date) => {
       return false;
     }
 
-    // Convert event time from 24-hour format to 12-hour format for comparison
-    const eventTime12Hour = convertTo12Hour(event.time_start);
+    // Compare by 30-minute slot window: event time in [slotStart, slotStart+30)
+    const { hour, minute } = parseTime(timeSlot); // timeSlot is 12-hour string
+    const slotStartMinutes = hour * 60 + minute;
+    const slotEndMinutes = slotStartMinutes + 30;
 
-    // Check if the event's time matches this time slot
-    const timeMatches = eventTime12Hour === timeSlot;
+    const [eh, em] = String(event.time_start).split(':').map(Number);
+    const eventMinutes = eh * 60 + em;
 
-    return timeMatches;
+    return eventMinutes >= slotStartMinutes && eventMinutes < slotEndMinutes;
   });
 };

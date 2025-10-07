@@ -308,28 +308,45 @@ const changePassword = async (req, res) => {
 
 const createStudentAccount = async (req, res) => {
   try {
-    const {
-      userId,
-      firstName,
-      middleName,
-      lastName,
-      birthmonth,
-      birthdate,
-      birthyear,
-      email,
-      password,
-    } = req.body;
+    const { userId, firstName, middleName, lastName, birthdate, birthyear, email } =
+      req.body;
 
-    const isUserIdTaken = await prisma.users.findUnique({
-      where: { userId },
-    });
+    // Accept either birthdate or birthyear field
+    const birthdateValue = birthdate || birthyear;
 
-    if (isUserIdTaken) {
-      return res
-        .status(400)
-        .json({ error: true, message: 'User ID already taken' });
+    if (!birthdateValue) {
+      return res.status(400).json({
+        error: true,
+        message: 'Birth date is required',
+      });
     }
 
+    const birthYear = new Date(birthdateValue).getFullYear();
+    const birthMonth = new Date(birthdateValue).getMonth() + 1;
+    const birthDay = new Date(birthdateValue).getDate();
+
+    // Validate required fields
+    if (!email || !firstName || !lastName) {
+      return res.status(400).json({
+        error: true,
+        message: 'Email, first name, and last name are required',
+      });
+    }
+
+    // Check if userId is provided and taken
+    if (userId) {
+      const isUserIdTaken = await prisma.users.findUnique({
+        where: { userId },
+      });
+
+      if (isUserIdTaken) {
+        return res
+          .status(400)
+          .json({ error: true, message: 'User ID already taken' });
+      }
+    }
+
+    // Check if email is taken
     const isEmailTaken = await prisma.users.findUnique({
       where: { email },
     });
@@ -340,23 +357,35 @@ const createStudentAccount = async (req, res) => {
         .json({ error: true, message: 'Email already taken' });
     }
 
+    // Auto-generate password: 4 letters of last name + 4 letters of first name + birth year
+    const lastNamePart = lastName.substring(0, 4).toUpperCase();
+    const firstNamePart = firstName.substring(0, 4).toUpperCase();
+    const autoPassword = `${lastNamePart}${firstNamePart}${birthYear}`;
+
     const user = await prisma.users.create({
       data: {
-        userId,
+        userId: userId || `student_${Date.now()}`, // Generate userId if not provided
         firstName,
         middleName,
         lastName,
-        birthmonth,
-        birthdate,
-        birthyear,
+        birthmonth: birthMonth,
+        birthdate: birthDay,
+        birthyear: birthYear,
         email,
-        password: bcrypt.hashSync(password, SALT),
+        password: bcrypt.hashSync(autoPassword, SALT),
         status: 'active',
+        role: 'student',
+        changePassword: true, // Force password change on first login
       },
     });
     res.status(201).json({
       error: false,
       message: 'User created successfully',
+      data: {
+        id: user.id,
+        userId: user.userId,
+        email: user.email,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });

@@ -14,24 +14,20 @@ function WeekView({ weekDates, events = [], onTimeSlotClick }) {
     'Saturday',
   ];
 
-  const timeSlots = [
-    '6:00 AM',
-    '7:00 AM',
-    '8:00 AM',
-    '9:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '12:00 PM',
-    '1:00 PM',
-    '2:00 PM',
-    '3:00 PM',
-    '4:00 PM',
-    '5:00 PM',
-    '6:00 PM',
-    '7:00 PM',
-    '8:00 PM',
-    '9:00 PM',
-  ];
+  // Generate 30-minute time slots from 6:00 AM to 9:00 PM
+  const timeSlots = (() => {
+    const slots = [];
+    const startHour = 6;
+    const endHour = 21;
+    for (let h = startHour; h <= endHour; h++) {
+      for (const m of [0, 30]) {
+        const hour12 = ((h + 11) % 12) + 1;
+        const period = h >= 12 ? 'PM' : 'AM';
+        slots.push(`${hour12}:${m.toString().padStart(2, '0')} ${period}`);
+      }
+    }
+    return slots;
+  })();
 
   const isToday = (date) => {
     const today = new Date();

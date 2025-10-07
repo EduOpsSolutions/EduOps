@@ -171,6 +171,8 @@ function AcademicPeriodModal({
               required
             />
 
+            {/* Removed Period Name: using batch and dates only */}
+
             {/* Date Range */}
             <div className="flex flex-row justify-center items-center gap-4">
               <ModalTextField
