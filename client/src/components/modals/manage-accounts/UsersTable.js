@@ -72,8 +72,8 @@ const UsersTable = ({
                         <div className="font-medium truncate max-w-32 md:max-w-none" title={`${user.firstName}${user.middleName ? ` ${user.middleName}` : ''} ${user.lastName}`}>
                           {user.firstName}{user.middleName ? ` ${user.middleName}` : ''} {user.lastName}
                         </div>
-                        <div className="text-xs text-gray-500 font-mono truncate max-w-32 md:max-w-none" title={user.id}>
-                          ID: {user.id}
+                        <div className="text-xs text-gray-500 font-mono truncate max-w-32 md:max-w-none" title={user.userId}>
+                          ID: {user.userId}
                         </div>
                       </div>
                     </div>

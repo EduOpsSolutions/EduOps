@@ -5,8 +5,25 @@
   - Added the required column `visibility` to the `course` table without a default value. This is not possible if the table is not empty.
 
 */
--- AlterTable
-ALTER TABLE `course` DROP COLUMN `details`,
+-- Conditionally drop the `details` column if it exists (works across MySQL versions)
+SET @ddl := (
+  SELECT IF(
+    EXISTS(
+      SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'course'
+        AND COLUMN_NAME = 'details'
+    ),
+    'ALTER TABLE `course` DROP COLUMN `details`',
+    'SELECT 1'
+  )
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- AlterTable (add columns)
+ALTER TABLE `course`
     ADD COLUMN `description` VARCHAR(191) NULL,
     ADD COLUMN `logo` VARCHAR(191) NULL,
     ADD COLUMN `maxNumber` INTEGER NOT NULL DEFAULT 30,

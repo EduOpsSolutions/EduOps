@@ -12,7 +12,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/studyLoad`, label: 'Study Load' },
         ],
       },
-      grades: { path: `/${role}/grades`, label: 'Grades' },
+      grades: { path: `/${role}/gradxses`, label: 'Grades' },
       payment: {
         label: 'Payment',
         items: [

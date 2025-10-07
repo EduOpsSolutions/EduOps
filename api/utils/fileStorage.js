@@ -1,32 +1,52 @@
 import admin from 'firebase-admin';
+import { randomUUID } from 'crypto';
 import { filePaths } from '../constants/file_paths.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Initialize Firebase Admin SDK (only once)
+// Initialize Firebase Admin SDK once
 if (!admin.apps.length) {
-  let serviceAccount;
-
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    // Parse service account JSON from env
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  } else {
-    // Fallback to individual env variables
-    serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECTID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    };
+  let credential;
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // JSON string for service account
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      credential = admin.credential.cert(serviceAccount);
+    } else if (process.env.FIREBASE_CREDENTIALS_PATH) {
+      // File path for service account JSON
+      const fs = await import('fs');
+      const path = process.env.FIREBASE_CREDENTIALS_PATH;
+      const raw = fs.readFileSync(path, 'utf-8');
+      const serviceAccount = JSON.parse(raw);
+      credential = admin.credential.cert(serviceAccount);
+    } else if (
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    ) {
+      // Default ADC flow (requires env var to be set in runtime environment)
+      credential = admin.credential.applicationDefault();
+    } else {
+      throw new Error(
+        'No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT (JSON) or FIREBASE_CREDENTIALS_PATH.'
+      );
+    }
+  } catch (e) {
+    console.error(
+      'Failed to initialize Firebase Admin credentials:',
+      e.message
+    );
+    throw e;
   }
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential,
     storageBucket: process.env.FIREBASE_STORAGEBUCKET,
+    projectId: process.env.FIREBASE_PROJECTID,
   });
 }
 
-export const storage = admin.storage().bucket();
+const bucket = admin.storage().bucket(process.env.FIREBASE_STORAGEBUCKET);
 
 export const uploadFile = async (file, directory) => {
   try {
@@ -65,37 +85,28 @@ export const uploadFile = async (file, directory) => {
       default:
         file_dir = 'uncategorized';
     }
-    const file_path = `${file_dir}/${filename}`;
-    const fileUpload = storage.file(file_path);
+    const objectPath = `${file_dir}/${filename}`;
+    const fileRef = bucket.file(objectPath);
 
-    // Upload with Admin SDK
-    await fileUpload.save(fileBuffer, {
+    const downloadToken = randomUUID();
+    await fileRef.save(fileBuffer, {
+      resumable: false,
       metadata: {
         contentType: file.mimetype,
         metadata: {
-          originalName: file.originalname,
+          firebaseStorageDownloadTokens: downloadToken,
         },
       },
     });
 
-    // Make file publicly accessible
-    await fileUpload.makePublic();
-
-    // Get the download URL
-    const downloadURL = `https://storage.googleapis.com/${storage.name}/${file_path}`;
+    const encodedPath = encodeURIComponent(objectPath);
+    const bucketName = process.env.FIREBASE_STORAGEBUCKET;
+    const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
     const db_file_record = await prisma.files.create({
       data: {
         url: downloadURL,
-        token: (() => {
-          try {
-            const urlObj = new URL(downloadURL);
-            return urlObj.searchParams.get('token');
-          } catch (e) {
-            console.error('Failed to parse token from downloadURL:', e);
-            return null;
-          }
-        })(),
+        token: downloadToken,
         fileName: filename,
         originalName: file.originalname,
         directory: file_dir,

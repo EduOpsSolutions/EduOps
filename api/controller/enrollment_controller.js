@@ -532,7 +532,7 @@ const trackEnrollment = async (req, res) => {
       case 'VERIFIED':
         currentStep = 3;
         completedSteps = [1, 2];
-        remarkMsg = `Your form has been verified by the administrator. Please proceed to payment.${priceText}`;
+        remarkMsg = `Your form has been verified and please pay the Downpayment Fee: ₱3000 or ${priceText}`;
         break;
       case 'PAYMENT_PENDING':
         currentStep = 4;

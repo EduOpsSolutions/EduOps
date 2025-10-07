@@ -87,9 +87,7 @@ function EditCourseModal({
       setShowDiscardModal(false);
       setFormData({
         name: '',
-        maxNumber: 30,
         visibility: 'hidden',
-        description: '',
         price: '',
         scheduleDays: [],
         scheduleTime: '',

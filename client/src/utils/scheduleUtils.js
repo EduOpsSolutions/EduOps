@@ -105,7 +105,6 @@ export const parseTime = (timeString) => {
  * @param {string} time24 - Time in 24-hour format (e.g., "14:00")
  * @returns {string} - Time in 12-hour format (e.g., "2:00 PM")
  */
-// Removed: convertTo12Hour no longer needed when matching by slot ranges
 
 /**
  * Get events for a specific time slot and date

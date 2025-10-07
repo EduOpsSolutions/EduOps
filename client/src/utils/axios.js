@@ -5,11 +5,13 @@ import Swal from 'sweetalert2';
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:5555/api/v1',
+  baseURL: process.env.REACT_APP_API_URL || 'NOT SET',
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+console.log('AXIOS INSTANCE', process.env.REACT_APP_API_URL);
 
 // Add request interceptor to set Authorization header dynamically and check token validity
 axiosInstance.interceptors.request.use(

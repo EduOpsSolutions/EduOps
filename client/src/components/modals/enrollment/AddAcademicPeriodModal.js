@@ -131,7 +131,7 @@ function AcademicPeriodModal({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-2xl mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
-            <h2 className="text-2xl font-bold">Period Creation</h2>
+            <h2 className="text-2xl font-bold">Create Batch</h2>
             <button
               className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
               onClick={handleClose}
