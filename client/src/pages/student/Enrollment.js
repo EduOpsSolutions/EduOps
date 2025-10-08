@@ -8,6 +8,7 @@ function Enrollment() {
   const navigate = useNavigate();
   const {
     enrollmentId,
+    userId,
     enrollmentStatus,
     remarkMsg,
     currentStep,
@@ -326,8 +327,8 @@ function Enrollment() {
                             clipRule="evenodd"
                           />
                         </svg>
-                        Remember your{" "}
-                        <strong> Enrollee ID: {enrollmentId}</strong>
+                        Remember your&nbsp; 
+                        <strong>  Student ID: {userId}</strong>
                       </p>
                       <p className="flex items-center">
                         <svg
@@ -374,10 +375,7 @@ function Enrollment() {
                   >
                     <span>
                       {coursePrice
-                        ? `Pay ₱${parseFloat(coursePrice).toLocaleString (
-                            "en-PH",
-                            { maximumFractionDigits: 2 }
-                          )} Now`
+                        ? `Pay Now`
                         : "Proceed to Payment"}
                     </span>
                     <svg

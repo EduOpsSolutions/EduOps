@@ -12,7 +12,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/studyLoad`, label: 'Study Load' },
         ],
       },
-      grades: { path: `/${role}/grades`, label: 'Grades' },
+      grades: { path: `/${role}/gradxses`, label: 'Grades' },
       payment: {
         label: 'Payment',
         items: [
@@ -41,6 +41,7 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/coursemanagement`, label: 'Course Assignment' },
           { path: `/${role}/enrollmentperiod`, label: 'Enrollment Period' },
           { path: `/${role}/enrollmentrequests`, label: 'Enrollment Request' },
+          { path: `/${role}/schedule`, label: 'Schedule' },
         ],
       },
       grades: { path: `/${role}/grades`, label: 'Grades' },

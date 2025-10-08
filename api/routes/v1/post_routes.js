@@ -1,21 +1,24 @@
 import express from 'express';
 import {
-    getPosts,
-    createPost,
-    updatePost,
-    archivePost,
-    unarchivePost,
-    deletePost,
-    addFilesToPost,
-    deletePostFile,
+  getPosts,
+  createPost,
+  updatePost,
+  archivePost,
+  unarchivePost,
+  deletePost,
+  addFilesToPost,
+  deletePostFile,
 } from '../../controller/post_controller.js';
-import { verifyToken, validateIsActiveUser } from '../../middleware/authValidator.js';
+import {
+  verifyToken,
+  validateIsActiveUser,
+} from '../../middleware/authValidator.js';
 import { uploadMultiple } from '../../middleware/multerMiddleware.js';
 
 const router = express.Router();
 
 // Public routes (no auth required)
-router.get('/', getPosts); // Get all posts with optional filtering
+router.get('/', verifyToken, validateIsActiveUser, getPosts); // Get all posts with optional filtering
 
 // Protected routes (require authentication)
 router.use(verifyToken); // Apply authentication to all routes below
@@ -31,6 +34,5 @@ router.delete('/:id', deletePost); // Delete post (soft delete)
 // File management for posts
 router.post('/:id/files', uploadMultiple('files', 5), addFilesToPost); // Add files to existing post
 router.delete('/:postId/files/:fileId', deletePostFile); // Delete specific file from post
-
 
 export { router };

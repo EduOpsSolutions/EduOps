@@ -1,6 +1,3 @@
--- AlterTable
-ALTER TABLE `users` ADD COLUMN `changePassword` BOOLEAN NOT NULL DEFAULT true;
-
 -- CreateTable
 CREATE TABLE `posts` (
     `id` VARCHAR(191) NOT NULL,

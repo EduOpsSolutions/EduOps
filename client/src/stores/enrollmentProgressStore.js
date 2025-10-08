@@ -89,7 +89,7 @@ const useEnrollmentStore = create((set, get) => ({
     const statusUpdates = {
       2: {
         enrollmentStatus: 'Enrollment Form Verified',
-        remarkMsg: `Please pay the amount of ${coursePrice || 'TBA'} to proceed with your enrollment.`,
+        remarkMsg: `Please pay the Downpayment of ₱3000 or the full amount of ₱${coursePrice || 'TBA'} to proceed with your enrollment.`,
       },
       3: {
         enrollmentStatus: 'Payment Pending',

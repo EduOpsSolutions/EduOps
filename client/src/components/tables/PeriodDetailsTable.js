@@ -1,14 +1,141 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ThinRedButton from '../buttons/ThinRedButton';
+import CreateEditScheduleModal from '../modals/schedule/CreateEditScheduleModal';
+import axiosInstance from '../../utils/axios';
+import { useEnrollmentPeriodStore } from '../../stores/enrollmentPeriodStore';
 
 //Table after clicking a result from enrollment period
-function PeriodDetailsTable({ 
-  periodCourses, 
-  onDeleteCourse, 
+function PeriodDetailsTable({
+  periodCourses,
+  onDeleteCourse,
   selectedPeriod,
   onAddCourse,
-  onBack
+  onBack,
 }) {
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [isLoadingTeachers, setIsLoadingTeachers] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
+  const [academicPeriods, setAcademicPeriods] = useState([]);
+  const [isLoadingAcademicPeriods, setIsLoadingAcademicPeriods] =
+    useState(false);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      setIsLoadingTeachers(true);
+      try {
+        const resp = await axiosInstance.get(
+          '/users?role=teacher&status=active'
+        );
+        setTeachers(resp.data?.data || resp.data || []);
+      } catch (e) {
+        setTeachers([]);
+      } finally {
+        setIsLoadingTeachers(false);
+      }
+    };
+
+    const fetchCourses = async () => {
+      setIsLoadingCourses(true);
+      try {
+        const resp = await axiosInstance.get('/courses');
+        setCourses(Array.isArray(resp.data) ? resp.data : []);
+      } catch (e) {
+        setCourses([]);
+      } finally {
+        setIsLoadingCourses(false);
+      }
+    };
+
+    const fetchPeriods = async () => {
+      setIsLoadingAcademicPeriods(true);
+      try {
+        const resp = await axiosInstance.get('/academic-periods');
+        const visible = (resp.data || [])
+          .filter((p) => p && !p.deletedAt)
+          .sort((a, b) => new Date(b.startAt) - new Date(a.startAt));
+        setAcademicPeriods(visible);
+      } catch (e) {
+        setAcademicPeriods([]);
+      } finally {
+        setIsLoadingAcademicPeriods(false);
+      }
+    };
+
+    fetchTeachers();
+    fetchCourses();
+    fetchPeriods();
+  }, []);
+
+  const handleOpenManage = (s) => {
+    const toYmd = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val))
+        return val;
+      const d = new Date(val);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toISOString().split('T')[0];
+    };
+    const toHm = (val) => {
+      if (!val) return '';
+      if (typeof val === 'string' && /^\d{2}:\d{2}$/.test(val)) return val;
+      if (typeof val === 'string' && /^\d{2}:\d{2}:\d{2}/.test(val))
+        return val.slice(0, 5);
+      return String(val).slice(0, 5);
+    };
+    const event = {
+      id: s.id,
+      courseId: s.course?.id || '',
+      courseName: s.course?.name || '',
+      academicPeriodId: selectedPeriod?.id || '',
+      academicPeriodName: `${selectedPeriod?.periodName || ''}${
+        selectedPeriod?.batchName ? ` - ${selectedPeriod.batchName}` : ''
+      }`,
+      teacherId: s.teacher?.id || '',
+      teacherName: s.teacher
+        ? `${s.teacher.firstName} ${s.teacher.lastName}`
+        : '',
+      location: s.location || '',
+      time_start: toHm(s.time_start),
+      time_end: toHm(s.time_end),
+      days: s.days || '',
+      periodStart: toYmd(s.periodStart),
+      periodEnd: toYmd(s.periodEnd),
+      notes: s.notes || '',
+      color: s.color || '#FFCF00',
+    };
+    setSelectedEvent(event);
+    setShowScheduleModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowScheduleModal(false);
+    setSelectedEvent(null);
+  };
+
+  const handleSaveEvent = async (eventData) => {
+    try {
+      if (selectedEvent?.id) {
+        await axiosInstance.put(`/schedules/${selectedEvent.id}`, eventData);
+      } else {
+        await axiosInstance.post('/schedules', eventData);
+      }
+      const { fetchPeriodCourses } = useEnrollmentPeriodStore.getState();
+      await fetchPeriodCourses();
+      handleCloseModal();
+    } catch (e) {}
+  };
+
+  const handleDeleteEvent = async (event) => {
+    try {
+      await axiosInstance.delete(`/schedules/${event.id}`);
+      const { fetchPeriodCourses } = useEnrollmentPeriodStore.getState();
+      await fetchPeriodCourses();
+      handleCloseModal();
+    } catch (e) {}
+  };
   return (
     <div className="flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-5">
       <div className="flex justify-between items-center pb-4 border-b-2 border-dark-red-2">
@@ -34,10 +161,10 @@ function PeriodDetailsTable({
           </svg>
         </button>
       </div>
-      
+
       <div className="mt-4">
         <p className="text-lg sm:text-xl uppercase text-center mb-4">
-          {selectedPeriod.periodName} - {selectedPeriod.batchName} (
+          Batch {selectedPeriod.batchName} (
           {new Date(selectedPeriod.startAt).getFullYear()})
         </p>
 
@@ -49,7 +176,7 @@ function PeriodDetailsTable({
                   Course
                 </th>
                 <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
-                  Schedule
+                  Schedules
                 </th>
                 <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
                   No. of Students Enrolled
@@ -64,13 +191,47 @@ function PeriodDetailsTable({
                 periodCourses.map((course) => (
                   <tr
                     key={course.id}
-                    className="border-b border-[rgb(137,14,7,.49)] hover:bg-gray-50"
+                    className="border-b border-[rgb(137,14,7,.49)] hover:bg-gray-50 align-top"
                   >
                     <td className="py-2 sm:py-3 text-center text-sm sm:text-base">
                       {course.course}
                     </td>
-                    <td className="py-2 sm:py-3 text-center text-sm sm:text-base">
-                      {course.schedule}
+                    <td className="py-2 sm:py-3 text-left text-sm sm:text-base">
+                      {Array.isArray(course.schedules) &&
+                      course.schedules.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {course.schedules.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center justify-between gap-2 p-2 rounded border border-gray-200"
+                            >
+                              <div className="text-xs sm:text-sm">
+                                <div className="font-medium">
+                                  {s.days} • {s.time_start} - {s.time_end}
+                                </div>
+                                <div className="text-gray-500">
+                                  {s.teacher?.firstName && s.teacher?.lastName
+                                    ? `${s.teacher.firstName} ${s.teacher.lastName}`
+                                    : ''}
+                                  {s.location
+                                    ? (s.teacher ? ' • ' : '') + s.location
+                                    : ''}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenManage(s)}
+                                className="text-dark-red-2 hover:underline text-xs sm:text-sm whitespace-nowrap"
+                                title="Manage schedule"
+                              >
+                                Manage
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">No schedules</span>
+                      )}
                     </td>
                     <td className="py-2 sm:py-3 text-center text-sm sm:text-base">
                       {course.enrolledStudents}
@@ -102,10 +263,23 @@ function PeriodDetailsTable({
       </div>
 
       <div className="mt-4">
-        <ThinRedButton onClick={onBack}>
-          Back to Results
-        </ThinRedButton>
+        <ThinRedButton onClick={onBack}>Back to Results</ThinRedButton>
       </div>
+
+      <CreateEditScheduleModal
+        isOpen={showScheduleModal}
+        onClose={handleCloseModal}
+        event={selectedEvent}
+        selectedDate={null}
+        onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
+        teachers={teachers}
+        isLoadingTeachers={isLoadingTeachers}
+        courses={courses}
+        isLoadingCourses={isLoadingCourses}
+        academicPeriods={academicPeriods}
+        isLoadingAcademicPeriods={isLoadingAcademicPeriods}
+      />
     </div>
   );
 }

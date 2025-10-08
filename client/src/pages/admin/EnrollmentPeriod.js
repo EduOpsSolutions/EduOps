@@ -1,16 +1,19 @@
-import React, { useEffect } from "react";
-import ThinRedButton from "../../components/buttons/ThinRedButton";
-import AddCourseModal from "../../components/modals/enrollment/AddCourseModal";
-import AcademicPeriodModal from "../../components/modals/enrollment/AddAcademicPeriodModal";
-import PeriodDetailsTable from "../../components/tables/PeriodDetailsTable";
-import SearchForm from "../../components/common/SearchFormHorizontal";
-import SearchResults from "../../components/common/SearchResults";
-import { useEnrollmentPeriodSearchStore, useEnrollmentPeriodStore } from "../../stores/enrollmentPeriodStore";
+import React, { useEffect } from 'react';
+import ThinRedButton from '../../components/buttons/ThinRedButton';
+import AddCourseModal from '../../components/modals/enrollment/AddCourseModal';
+import AcademicPeriodModal from '../../components/modals/enrollment/AddAcademicPeriodModal';
+import PeriodDetailsTable from '../../components/tables/PeriodDetailsTable';
+import SearchForm from '../../components/common/SearchFormHorizontal';
+import SearchResults from '../../components/common/SearchResults';
+import {
+  useEnrollmentPeriodSearchStore,
+  useEnrollmentPeriodStore,
+} from '../../stores/enrollmentPeriodStore';
 
 function EnrollmentPeriod() {
   // Search store
   const searchStore = useEnrollmentPeriodSearchStore();
-  
+
   // Main store
   const {
     selectedPeriod,
@@ -24,76 +27,68 @@ function EnrollmentPeriod() {
     handlePeriodSelect,
     handleBackToResults,
     deleteCourse,
-    resetStore
+    resetStore,
   } = useEnrollmentPeriodStore();
 
   useEffect(() => {
     fetchPeriods();
     searchStore.initializeSearch();
-    
+
     return () => {
       resetStore();
       searchStore.resetSearch();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (selectedPeriod) {
       fetchPeriodCourses();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod]);
 
   const searchFormConfig = {
-    title: "SEARCH ENROLLMENT PERIOD",
+    title: 'SEARCH ENROLLMENT BATCH',
     formFields: [
+      // {
+      //   name: 'periodName',
+      //   label: 'Period',
+      //   placeholder: 'Search Period...',
+      //   type: 'text',
+      //   fullWidth: true,
+      // },
       {
-        name: "periodName",
-        label: "Period",
-        placeholder: "Search Period...",
-        type: "text",
-        fullWidth: true
+        name: 'batch',
+        label: 'Batch',
+        placeholder: 'Search Batch...',
+        type: 'text',
       },
       {
-        name: "batch",
-        label: "Batch",
-        type: "select",
-        options: [
-          { value: "", label: "All Batches" },
-          { value: "Batch 1", label: "Batch 1" },
-          { value: "Batch 2", label: "Batch 2" },
-          { value: "Batch 3", label: "Batch 3" }
-        ]
+        name: 'year',
+        label: 'Year',
+        placeholder: 'Search Year...',
+        defaultValue: new Date().getFullYear(),
+        type: 'number',
       },
       {
-        name: "year",
-        label: "Year",
-        type: "select",
+        name: 'status',
+        label: 'Status',
+        type: 'select',
         options: [
-          { value: "", label: "All Years" },
-          { value: "2024", label: "2024" },
-          { value: "2023", label: "2023" },
-          { value: "2022", label: "2022" }
-        ]
+          { value: '', label: 'All Statuses' },
+          { value: 'Ongoing', label: 'Ongoing' },
+          { value: 'Ended', label: 'Ended' },
+          { value: 'Upcoming', label: 'Upcoming' },
+        ],
       },
-      {
-        name: "status",
-        label: "Status",
-        type: "select",
-        options: [
-          { value: "", label: "All Statuses" },
-          { value: "Ongoing", label: "Ongoing" },
-          { value: "Ended", label: "Ended" },
-          { value: "Upcoming", label: "Upcoming" }
-        ]
-      }
-    ]
+    ],
   };
 
   const searchResultsColumns = [
-    { key: "periodName", header: "Period" },
-    { key: "batchName", header: "Batch" },
-    { key: "year", header: "Year" },
-    { key: "status", header: "Status" }
+    { key: 'batchName', header: 'Batch', className: 'text-center flex-1' },
+    { key: 'year', header: 'Year', className: 'text-center flex-1' },
+    { key: 'status', header: 'Status', className: 'text-center flex-1' },
   ];
 
   const paginationConfig = {
@@ -103,12 +98,12 @@ function EnrollmentPeriod() {
     itemsPerPage: searchStore.itemsPerPage,
     onItemsPerPageChange: searchStore.handleItemsPerPageChange,
     totalItems: searchStore.totalItems,
-    itemName: "periods",
-    showItemsPerPageSelector: true
+    itemName: 'periods',
+    showItemsPerPageSelector: true,
   };
 
   const handleSearch = () => searchStore.handleSearch();
-  
+
   const handlePeriodClick = (period) => {
     handlePeriodSelect(period);
   };
@@ -117,10 +112,14 @@ function EnrollmentPeriod() {
     switch (status) {
       case 'Ongoing':
         return 'bg-green-100 text-green-800 border border-green-200';
+      case 'Ongoing (Enrollment Closed)':
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
       case 'Ended':
         return 'bg-red-100 text-red-800 border border-red-200';
       case 'Upcoming':
         return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'Upcoming (Enrollment Closed)':
+        return 'bg-orange-100 text-orange-800 border border-orange-200';
       default:
         return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
@@ -144,7 +143,7 @@ function EnrollmentPeriod() {
       )}
 
       {/* Search Form */}
-      <SearchForm 
+      <SearchForm
         searchLogic={searchStore}
         fields={searchFormConfig}
         onSearch={handleSearch}
@@ -159,14 +158,24 @@ function EnrollmentPeriod() {
         pagination={paginationConfig}
         columnRenderers={{
           status: (status) => (
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(status)}`}>
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(
+                status
+              )}`}
+            >
               {status}
             </span>
-          )
+          ),
         }}
         actionButton={
-          <ThinRedButton onClick={() => useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: true })}>
-            Create Period
+          <ThinRedButton
+            onClick={() =>
+              useEnrollmentPeriodStore.setState({
+                addAcademicPeriodModal: true,
+              })
+            }
+          >
+            Create Batch
           </ThinRedButton>
         }
       />
@@ -177,7 +186,9 @@ function EnrollmentPeriod() {
           periodCourses={periodCourses}
           onDeleteCourse={deleteCourse}
           selectedPeriod={selectedPeriod}
-          onAddCourse={() => useEnrollmentPeriodStore.setState({ addCourseModal: true })}
+          onAddCourse={() =>
+            useEnrollmentPeriodStore.setState({ addCourseModal: true })
+          }
           onBack={handleBackToResults}
         />
       )}
@@ -185,13 +196,17 @@ function EnrollmentPeriod() {
       {/* Modals */}
       <AddCourseModal
         add_course_modal={addCourseModal}
-        setAddCourseModal={(show) => useEnrollmentPeriodStore.setState({ addCourseModal: show })}
+        setAddCourseModal={(show) =>
+          useEnrollmentPeriodStore.setState({ addCourseModal: show })
+        }
         selectedPeriod={selectedPeriod}
         fetchPeriodCourses={fetchPeriodCourses}
       />
       <AcademicPeriodModal
         addAcademicPeriodModal={addAcademicPeriodModal}
-        setAddAcademicPeriodModal={(show) => useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: show })}
+        setAddAcademicPeriodModal={(show) =>
+          useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: show })
+        }
         fetchPeriods={fetchPeriods}
       />
     </div>
