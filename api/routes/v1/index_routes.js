@@ -11,6 +11,7 @@ import { router as posts } from './post_routes.js';
 import { router as schedules } from './schedule_routes.js';
 import { router as ai } from './ai_routes.js';
 import payments from './payment_routes.js';
+import { router as reports } from './reports_routes.js';
 
 
 const router = express.Router();
@@ -32,5 +33,6 @@ router.use('/posts', posts);
 router.use('/schedules', schedules);
 router.use('/ai', ai);
 router.use('/payments', payments);
+router.use('/reports', reports);
 
 export default router;
