@@ -4,7 +4,8 @@ import {
   getEnrollmentRequests,
   trackEnrollment,
   updateEnrollmentPaymentProof,
-  updateEnrollmentStatus
+  updateEnrollmentStatus,
+  updateEnrollment
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
 import { verifyToken } from "../../utils/verifyToken.js";
@@ -27,6 +28,7 @@ router.put(
   updateEnrollmentStatus
 );
 
+
 // Admin routes
 router.get(
   "/requests",
@@ -34,6 +36,15 @@ router.get(
   validateIsActiveUser,
   validateUserIsAdmin,
   getEnrollmentRequests
+);
+
+// Update all fields of an enrollment (admin)
+router.put(
+  "/enroll/:enrollmentId",
+  verifyToken,
+  validateIsActiveUser,
+  validateUserIsAdmin,
+  updateEnrollment
 );
 
 export { router };
