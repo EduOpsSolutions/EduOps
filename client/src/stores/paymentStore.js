@@ -1,47 +1,83 @@
-import { create } from 'zustand';
-import axiosInstance from '../utils/axios';
-import Swal from 'sweetalert2';
-import { trackEnrollment } from '../utils/enrollmentApi';
+import { create } from "zustand";
+import axiosInstance from "../utils/axios";
+import Swal from "sweetalert2";
 
 const initialFormData = {
+  student_id: '',
   first_name: '',
   middle_name: '',
   last_name: '',
-  enrollment_id: '',
   email_address: '',
   phone_number: '',
   fee: '',
-  amount: ''
+  amount: '',
 };
-
-const feesOptions = [
-  { value: 'course_fee', label: 'Course Fee' },
-  { value: 'book_fee', label: 'Book Fee' },
-  { value: 'document_fee', label: 'Document Fee' }
-];
 
 const usePaymentStore = create((set, get) => ({
   formData: { ...initialFormData },
   loading: false,
   phoneError: '',
-  error: null,
-  feesOptions,
-  enrollmentData: null,
+  nameError: '',
+  studentData: null,
+  feesOptions: [
+    { value: 'down_payment', label: 'Down Payment' },
+    { value: 'tuition_fee', label: 'Tuition Fee' },
+    { value: 'document_fee', label: 'Document Fee' },
+    { value: 'book_fee', label: 'Book Fee' },
+  ],
 
   updateFormField: (name, value) => {
-    const { formData, fetchEnrollmentData } = get();
+    set((state) => ({
+      formData: { ...state.formData, [name]: value },
+    }));
+    
+    if (name === 'first_name' || name === 'last_name' || name === 'student_id') {
+      set({ nameError: '' });
+    }
+  },
 
-    if (name === 'phone_number') {
-      value = value.replace(/\D/g, '');
-      set({ phoneError: '' });
+  validateAndFetchStudentByID: async (studentId) => {
+    if (!studentId) {
+      set({ 
+        nameError: 'Student ID is required',
+        formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' }
+      });
+      return false;
     }
 
-    set({
-      formData: { ...formData, [name]: value }
-    });
+    try {
+      const response = await axiosInstance.get(`/users/get-student-by-id/${studentId}`);
+      const data = response.data;
 
-    if (name === 'enrollment_id' && value.trim()) {
-      fetchEnrollmentData(value.trim());
+      if (data.error || !data.success) {
+        set({ 
+          nameError: data.message || 'Student ID not found. Please verify the Student ID.',
+          formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' }
+        });
+        return false;
+      }
+
+      if (data.data) {
+        set((state) => ({
+          formData: {
+            ...state.formData,
+            first_name: data.data.firstName || '',
+            middle_name: data.data.middleName || '',
+            last_name: data.data.lastName || '',
+          },
+          nameError: '',
+          studentData: data.data, 
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Unable to find student. Please verify the Student ID.';
+      set({ 
+        nameError: errorMessage,
+        formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' }
+      });
+      return false;
     }
   },
 
@@ -49,14 +85,15 @@ const usePaymentStore = create((set, get) => ({
     set({
       formData: { ...initialFormData },
       phoneError: '',
-      error: null,
-      enrollmentData: null
+      nameError: '',
+      studentData: null,
     });
   },
 
   validateRequiredFields: () => {
     const { formData } = get();
-    return formData.first_name && formData.last_name && formData.email_address && formData.fee && formData.amount && formData.enrollment_id;
+    return formData.student_id && formData.first_name && formData.last_name && 
+           formData.email_address && formData.fee && formData.amount;
   },
 
   validatePhoneNumber: () => {
@@ -69,71 +106,49 @@ const usePaymentStore = create((set, get) => ({
     return true;
   },
 
-  fetchEnrollmentData: async (enrollmentId) => {
-    if (!enrollmentId) return;
-    
-    try {
-      const response = await trackEnrollment(enrollmentId);
-      if (response.success) {
-        set({ enrollmentData: response.data });
-      }
-    } catch (error) {
-      console.error('Error fetching enrollment data:', error);
-    }
-  },
-
   preparePaymentData: () => {
-    const { formData, enrollmentData } = get();
-    const selectedFee = feesOptions.find(option => option.value === formData.fee);
-    const feeLabel = selectedFee ? selectedFee.label : formData.fee;
-
-    let amount = parseFloat(formData.amount);
-    if (enrollmentData?.coursePrice && formData.fee === 'course_fee') {
-      amount = parseFloat(enrollmentData.coursePrice);
-    }
-
+    const { formData, studentData } = get();
     return {
+      userId: studentData?.id || null, 
       firstName: formData.first_name,
       middleName: formData.middle_name || null,
       lastName: formData.last_name,
-      email: formData.email_address.trim(),
+      email: formData.email_address,
       phoneNumber: formData.phone_number || null,
-      amount: amount,
-      enrollmentId: formData.enrollment_id?.trim() || '',
-      feeType: feeLabel
+      amount: parseFloat(formData.amount),
+      feeType: formData.fee,
     };
   },
 
-  showMissingFieldsError: async () => {
-    await Swal.fire({
-      title: 'Missing Information',
-      text: 'Please fill in all required fields (marked with *).',
-      icon: 'warning',
-      confirmButtonColor: '#890E07'
-    });
+  showDialog: async (config) => {
+    return await Swal.fire(config);
   },
 
-  showConfirmationDialog: async () => {
-    const { formData, enrollmentData } = get();
-    
-    let displayAmount = formData.amount;
-    let courseInfo = '';
-    
-    if (enrollmentData?.coursePrice && formData.fee === 'course_fee') {
-      displayAmount = enrollmentData.coursePrice;
-      courseInfo = `
-        <p style="font-size: 0.875rem; color: #059669; margin-top: 0.5rem;">
-          <strong>Course:</strong> ${enrollmentData.courseName || enrollmentData.coursesToEnroll || 'N/A'}
-        </p>
-      `;
+  handleSubmit: async () => {
+    const store = get();
+
+    // Validate required fields
+    if (!store.validateRequiredFields()) {
+      await store.showDialog({
+        icon: "warning",
+        title: "Missing Required Fields",
+        text: "Please fill in all required fields before submitting.",
+        confirmButtonColor: "#b71c1c",
+      });
+      return;
     }
-    
-    const result = await Swal.fire({
+
+    // Validate phone number
+    if (!store.validatePhoneNumber()) return;
+
+    // Show confirmation
+    const result = await store.showDialog({
       title: 'Confirm Payment',
       html: `
-        <p>Are you sure you want to pay the amount of <strong>₱${displayAmount}</strong>?</p>
-        ${courseInfo}
-        <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">A payment link will be sent to: <strong>${formData.email_address}</strong></p>
+        <p>Are you sure you want to pay <strong>₱${store.formData.amount}</strong>?</p>
+        <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">
+          Payment link will be sent to: <strong>${store.formData.email_address}</strong>
+        </p>
       `,
       icon: 'question',
       showCancelButton: true,
@@ -142,68 +157,44 @@ const usePaymentStore = create((set, get) => ({
       confirmButtonText: 'Yes, I\'m sure',
       cancelButtonText: 'Cancel'
     });
-    return result.isConfirmed;
-  },
 
-  showSuccessAndOpenPayment: async (responseData) => {
-    await Swal.fire({
-      title: 'Payment Link Created!',
-      html: `
-        <p><strong>Payment ID:</strong> ${responseData.paymentId}</p>
-        <p><strong>Amount:</strong> ₱${responseData.amount}</p>
-        <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.75rem;">A payment link has been sent to your email address or you can click Pay Now to proceed.</p>
-      `,
-      icon: 'success',
-      confirmButtonColor: '#890E07',
-      confirmButtonText: 'Pay Now'
-    });
-    window.open(responseData.checkoutUrl, '_blank');
-  },
+    if (!result.isConfirmed) return;
 
-  showErrorMessage: async (error) => {
-    let errorMessage = error.response?.data?.message || 'Failed to create payment link. Please try again.';
-
-    await Swal.fire({
-      title: 'Error',
-      text: errorMessage,
-      icon: 'error',
-      confirmButtonColor: '#890E07'
-    });
-  },
-
-  handleSubmit: async () => {
-    const state = get();
-
-    if (!state.validateRequiredFields()) {
-      await state.showMissingFieldsError();
-      return;
-    }
-
-    if (!state.validatePhoneNumber()) {
-      return;
-    }
-
-    const confirmed = await state.showConfirmationDialog();
-    if (!confirmed) return;
-
-    set({ loading: true, error: null });
+    set({ loading: true });
 
     try {
-      const paymentData = state.preparePaymentData();
+      const paymentData = store.preparePaymentData();
       const response = await axiosInstance.post('/payments', paymentData);
+      const { paymentId, amount, checkoutUrl } = response.data.data;
 
-      if (response.data.success) {
-        await state.showSuccessAndOpenPayment(response.data.data);
-        state.resetForm();
-      }
+      await store.showDialog({
+        title: 'Payment Link Created!',
+        html: `
+          <p><strong>Payment ID:</strong> ${paymentId}</p>
+          <p><strong>Amount:</strong> ₱${amount}</p>
+          <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.75rem;">
+            Payment link sent to your email or click Pay Now to proceed.
+          </p>
+        `,
+        icon: 'success',
+        confirmButtonColor: '#890E07',
+        confirmButtonText: 'Pay Now'
+      });
+
+      if (checkoutUrl) window.open(checkoutUrl, "_blank");
+      store.resetForm();
     } catch (error) {
-      console.error('Payment creation failed:', error);
-      await state.showErrorMessage(error);
-      set({ error: error.message || 'Payment creation failed' });
+      const errorMessage = error.response?.data?.message || "Something went wrong. Please try again.";
+      await store.showDialog({
+        icon: "error",
+        title: "Payment Failed",
+        text: errorMessage,
+        confirmButtonColor: "#b71c1c",
+      });
     } finally {
       set({ loading: false });
     }
-  }
+  },
 }));
 
 export default usePaymentStore;

@@ -40,6 +40,8 @@ model users {
   teacherSchedules schedule[] @relation("TeacherSchedules")
   studentSchedules user_schedule[] @relation("StudentSchedules")
   enrollments   student_enrollment[] @relation("StudentEnrollments")
+  payments      payments[]
+  adjustments   adjustments[]
 }
 
 model enrollment_request {
@@ -70,6 +72,9 @@ model enrollment_request {
   paymentProofPath  String? @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Relations
+  payments      payments[]
 }
 
 model course {
@@ -88,6 +93,8 @@ model course {
   courseRequisite course_requisite[]
   academicPeriods academic_period_courses[]
   schedules schedule[]
+  payments  payments[]
+  fees      fees[]
 }
 
 model schedule {
@@ -172,6 +179,7 @@ model academic_period {
   courses       academic_period_courses[]
   schedules     schedule[]
   enrollments   student_enrollment[] @relation("PeriodEnrollments")
+  payments      payments[]
 }
 
 model academic_period_courses{
@@ -277,4 +285,92 @@ enum PostStatus {
 enum FileStatus {
   visible
   deleted
+}
+
+model payments {
+  id              String   @id @default(cuid())
+  userId          String   
+  feeId           String?  
+  enrollmentRequestId String? 
+  courseId        String?  
+  academicPeriodId String? 
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("PHP")
+  status          PaymentStatus @default(pending)
+  paymentMethod   String?  
+  referenceNumber String?  
+  checkoutUrl     String?  @db.LongText // PayMongo checkout URL
+  paymongoId      String?  // PayMongo payment ID
+  paymongoResponse Json?   // PayMongo webhook response data
+  remarks         String?  @db.Text
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  user            users    @relation(fields: [userId], references: [id])
+  fee             fees?    @relation(fields: [feeId], references: [id])
+  enrollmentRequest enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
+  course          course?  @relation(fields: [courseId], references: [id], map: "payment_course_fkey")
+  academicPeriod  academic_period? @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
+  adjustments     adjustments[]
+}
+
+model fees {
+  id        String   @id @default(cuid())
+  courseId  String   
+  batchId   String  
+  price     Decimal  @db.Decimal(10, 2)
+  name      String   
+  type      FeeType  
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  course    course   @relation(fields: [courseId], references: [id])
+  payments  payments[]
+  adjustments adjustments[]
+}
+
+model adjustments {
+  id          String   @id @default(cuid())
+  userId      String   
+  paymentId   String?  
+  feeId       String   
+  amount      Decimal  @db.Decimal(10, 2) 
+  type        AdjustmentType
+  isRefunded  Boolean  @default(false)
+  reason      String?  @db.Text
+  referenceNumber String? // Reference for adjustment
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        users    @relation(fields: [userId], references: [id])
+  payment     payments? @relation(fields: [paymentId], references: [id])
+  fee         fees     @relation(fields: [feeId], references: [id])
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  expired
+  cancelled
+  refunded
+}
+
+enum FeeType {
+  down_payment  
+  tuition_fee  
+  document_fee
+  book_fee
+}
+
+enum AdjustmentType {
+  discount
+  refund
+  manual_charge
+  fee_waiver
 }

@@ -1,11 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 const SALT = parseInt(process.env.BCRYPT_SALT);
-import { verifyJWT } from '../utils/jwt.js';
-import { uploadFile } from '../utils/fileStorage.js';
-import { getUserByEmail } from '../model/user_model.js';
+import { verifyJWT } from "../utils/jwt.js";
+import { uploadFile } from "../utils/fileStorage.js";
+import { getUserByEmail } from "../model/user_model.js";
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -21,11 +21,11 @@ const getAllUsers = async (req, res) => {
     status,
   } = req.query;
   try {
-    console.log(await verifyJWT(req.headers.authorization.split(' ')[1]));
+    console.log(await verifyJWT(req.headers.authorization.split(" ")[1]));
     let whereClause = {};
     if (role) whereClause.role = role;
     if (status) whereClause.status = status;
-    if (showDeleted === 'true') {
+    if (showDeleted === "true") {
       // Show both deleted and non-deleted users
       whereClause.deletedAt = undefined;
     } else {
@@ -41,7 +41,7 @@ const getAllUsers = async (req, res) => {
       ];
     }
 
-    console.log('Where Clause', whereClause);
+    console.log("Where Clause", whereClause);
 
     const users = await prisma.users.findMany({
       select: {
@@ -56,6 +56,7 @@ const getAllUsers = async (req, res) => {
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
+        profilePicLink: true,
       },
       where: whereClause,
       take: take ? parseInt(take) : 30,
@@ -83,10 +84,10 @@ const getAllUsers = async (req, res) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error("Error fetching users:", error);
     res
       .status(500)
-      .json({ error: 'Error fetching users', details: error.message });
+      .json({ error: "Error fetching users", details: error.message });
   }
 };
 
@@ -99,23 +100,23 @@ const getUserById = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
+      return res.status(404).json({ error: "Student not found" });
     }
 
     res.json(student);
   } catch (error) {
-    res.status(500).json({ error: true, message: 'Error fetching student' });
+    res.status(500).json({ error: true, message: "Error fetching student" });
   }
 };
 
 // Helper function to generate unique userId
 const generateUserId = async (role) => {
-  const prefix = role === 'teacher' ? 'teacher' : 'student';
+  const prefix = role === "teacher" ? "teacher" : "student";
   let counter = 1;
   let userId;
 
   do {
-    userId = `${prefix}${counter.toString().padStart(3, '0')}`;
+    userId = `${prefix}${counter.toString().padStart(3, "0")}`;
     const existingUser = await prisma.users.findUnique({
       where: { userId },
     });
@@ -139,7 +140,7 @@ const createUser = async (req, res) => {
       birthyear,
       email,
       password,
-      role = 'student',
+      role = "student",
     } = req.body;
 
     // Generate userId if not provided
@@ -155,7 +156,7 @@ const createUser = async (req, res) => {
       if (isUserIdTaken) {
         return res
           .status(400)
-          .json({ error: true, message: 'User ID already taken' });
+          .json({ error: true, message: "User ID already taken" });
       }
     }
 
@@ -166,7 +167,7 @@ const createUser = async (req, res) => {
     if (isEmailTaken) {
       return res
         .status(400)
-        .json({ error: true, message: 'Email already taken' });
+        .json({ error: true, message: "Email already taken" });
     }
 
     const user = await prisma.users.create({
@@ -181,12 +182,12 @@ const createUser = async (req, res) => {
         email,
         password: bcrypt.hashSync(password, SALT),
         role,
-        status: 'active',
+        status: "active",
       },
     });
     res.status(201).json({
       error: false,
-      message: 'User created successfully',
+      message: "User created successfully",
       data: { userId: user.userId },
     });
   } catch (error) {
@@ -196,8 +197,10 @@ const createUser = async (req, res) => {
 
 // Update student
 const updateUser = async (req, res) => {
+  console.log("was here");
   try {
     const { id } = req.params;
+    console.log("id key", id);
     console.log(req.params);
 
     // Create an object with only the fields that are present in req.body
@@ -223,7 +226,7 @@ const updateUser = async (req, res) => {
 
     res.status(200).json({
       error: false,
-      message: 'User updated successfully',
+      message: "User updated successfully",
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });
@@ -240,24 +243,24 @@ const deleteUser = async (req, res) => {
       data: { deletedAt: new Date() },
     });
 
-    res.json({ error: false, message: 'User deleted successfully' });
+    res.json({ error: false, message: "User deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: true, message: 'Error deleting user' });
+    res.status(500).json({ error: true, message: "Error deleting user" });
   }
 };
 
 const deactivateUser = async (req, res) => {
   try {
     const { id } = req.query;
-    console.log('deactivate user', id);
+    console.log("deactivate user", id);
     await prisma.users.update({
       where: { id },
-      data: { status: 'disabled' },
+      data: { status: "disabled" },
     });
 
-    res.json({ error: false, message: 'User deactivated successfully' });
+    res.json({ error: false, message: "User deactivated successfully" });
   } catch (error) {
-    res.status(500).json({ error: true, message: 'Error deactivating user' });
+    res.status(500).json({ error: true, message: "Error deactivating user" });
   }
 };
 
@@ -266,14 +269,14 @@ const activateUser = async (req, res) => {
     const { id } = req.query;
     await prisma.users.update({
       where: { id },
-      data: { status: 'active', deletedAt: null },
+      data: { status: "active", deletedAt: null },
     });
 
-    res.json({ error: false, message: 'User activated successfully' });
+    res.json({ error: false, message: "User activated successfully" });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error activating user',
+      message: "Error activating user",
       error_details: error.message,
       error_info: error,
     });
@@ -282,24 +285,24 @@ const activateUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   const { password } = req.body;
-  const token = req.headers.authorization.split(' ')[1];
+  const token = req.headers.authorization.split(" ")[1];
   const decoded = await verifyJWT(token);
-  console.log('decoded', decoded);
+  console.log("decoded", decoded);
   const user = await getUserByEmail(decoded.email);
-  console.log('user', user);
+  console.log("user", user);
   if (user.error) {
-    return res.status(404).json({ error: true, message: 'User not found' });
+    return res.status(404).json({ error: true, message: "User not found" });
   }
   try {
     await prisma.users.update({
       where: { id: user.data.id },
       data: { password: bcrypt.hashSync(password, SALT) },
     });
-    res.json({ error: false, message: 'Password changed successfully' });
+    res.json({ error: false, message: "Password changed successfully" });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error changing password',
+      message: "Error changing password",
       error_message: error.message,
       error_info: error,
     });
@@ -308,8 +311,15 @@ const changePassword = async (req, res) => {
 
 const createStudentAccount = async (req, res) => {
   try {
-    const { userId, firstName, middleName, lastName, birthdate, birthyear, email } =
-      req.body;
+    const {
+      userId,
+      firstName,
+      middleName,
+      lastName,
+      birthdate,
+      birthyear,
+      email,
+    } = req.body;
 
     // Accept either birthdate or birthyear field
     const birthdateValue = birthdate || birthyear;
@@ -317,7 +327,7 @@ const createStudentAccount = async (req, res) => {
     if (!birthdateValue) {
       return res.status(400).json({
         error: true,
-        message: 'Birth date is required',
+        message: "Birth date is required",
       });
     }
 
@@ -329,7 +339,7 @@ const createStudentAccount = async (req, res) => {
     if (!email || !firstName || !lastName) {
       return res.status(400).json({
         error: true,
-        message: 'Email, first name, and last name are required',
+        message: "Email, first name, and last name are required",
       });
     }
 
@@ -342,7 +352,7 @@ const createStudentAccount = async (req, res) => {
       if (isUserIdTaken) {
         return res
           .status(400)
-          .json({ error: true, message: 'User ID already taken' });
+          .json({ error: true, message: "User ID already taken" });
       }
     }
 
@@ -354,7 +364,7 @@ const createStudentAccount = async (req, res) => {
     if (isEmailTaken) {
       return res
         .status(400)
-        .json({ error: true, message: 'Email already taken' });
+        .json({ error: true, message: "Email already taken" });
     }
 
     // Auto-generate password: 4 letters of last name + 4 letters of first name + birth year
@@ -373,14 +383,14 @@ const createStudentAccount = async (req, res) => {
         birthyear: birthYear,
         email,
         password: bcrypt.hashSync(autoPassword, SALT),
-        status: 'active',
-        role: 'student',
+        status: "active",
+        role: "student",
         changePassword: true, // Force password change on first login
       },
     });
     res.status(201).json({
       error: false,
-      message: 'User created successfully',
+      message: "User created successfully",
       data: {
         id: user.id,
         userId: user.userId,
@@ -399,7 +409,7 @@ const inspectEmailExists = async (req, res) => {
     if (!email && !altEmail) {
       return res
         .status(400)
-        .json({ error: true, message: 'Email or altEmail is required' });
+        .json({ error: true, message: "Email or altEmail is required" });
     }
     if (!altEmail) {
       user = await prisma.users.findFirst({
@@ -416,7 +426,7 @@ const inspectEmailExists = async (req, res) => {
     }
     res.json({
       error: false,
-      message: 'Email exists',
+      message: "Email exists",
       data: user ? true : false,
       user: user
         ? {
@@ -436,7 +446,7 @@ const inspectEmailExists = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: 'Failed to inspect user with email',
+      message: "Failed to inspect user with email",
       error: true,
       error_details: error,
       error_info: error,
@@ -459,11 +469,11 @@ const searchStudentsForCoursePeriod = async (req, res) => {
     if (!periodId || !courseId) {
       return res
         .status(400)
-        .json({ error: true, message: 'periodId and courseId are required' });
+        .json({ error: true, message: "periodId and courseId are required" });
     }
 
     // If the request is specifically for enrolled students only, pull directly from user_schedule
-    if (String(enrolledOnly) === 'true') {
+    if (String(enrolledOnly) === "true") {
       const enrolled = await prisma.user_schedule.findMany({
         where: {
           deletedAt: null,
@@ -474,7 +484,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
           },
           user: {
             deletedAt: null,
-            role: 'student',
+            role: "student",
             ...(q
               ? {
                   OR: [
@@ -510,7 +520,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
         .filter(Boolean)
         .map((s) => ({
           ...s,
-          name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+          name: `${s.firstName}${s.middleName ? " " + s.middleName : ""} ${
             s.lastName
           }`.trim(),
           enrolledInCourse: true,
@@ -521,7 +531,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
 
     // Otherwise, search students and annotate whether enrolled
     const whereClause = {
-      role: 'student',
+      role: "student",
       deletedAt: null,
       ...(q
         ? {
@@ -549,7 +559,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
       },
       take: parseInt(take),
       skip: (parseInt(page) - 1) * parseInt(take),
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     const studentIds = students.map((s) => s.id);
@@ -571,7 +581,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
 
     const data = students.map((s) => ({
       ...s,
-      name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+      name: `${s.firstName}${s.middleName ? " " + s.middleName : ""} ${
         s.lastName
       }`.trim(),
       enrolledInCourse: enrolledSet.has(s.id),
@@ -579,8 +589,8 @@ const searchStudentsForCoursePeriod = async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error('searchStudentsForCoursePeriod error', error);
-    res.status(500).json({ error: true, message: 'Failed to search students' });
+    console.error("searchStudentsForCoursePeriod error", error);
+    res.status(500).json({ error: true, message: "Failed to search students" });
   }
 };
 
@@ -593,11 +603,11 @@ const checkStudentScheduleConflicts = async (req, res) => {
       return res.status(400).json({
         error: true,
         message:
-          'studentId, periodId, days, time_start and time_end are required',
+          "studentId, periodId, days, time_start and time_end are required",
       });
     }
 
-    const daysArray = days.split(',').map((d) => d.trim());
+    const daysArray = days.split(",").map((d) => d.trim());
 
     // Get all schedules the student is already attached to within the period
     const existing = await prisma.user_schedule.findMany({
@@ -617,12 +627,12 @@ const checkStudentScheduleConflicts = async (req, res) => {
     const conflicts = existing.filter((us) => {
       const s = us.schedule;
       if (!s) return false;
-      const scheduleDays = (s.days || '').split(',').map((d) => d.trim());
+      const scheduleDays = (s.days || "").split(",").map((d) => d.trim());
       const daysOverlap = daysArray.some((d) => scheduleDays.includes(d));
       if (!daysOverlap) return false;
 
       const timeOverlap =
-        time_start < (s.time_end || '') && time_end > (s.time_start || '');
+        time_start < (s.time_end || "") && time_end > (s.time_start || "");
       return timeOverlap;
     });
 
@@ -637,34 +647,34 @@ const checkStudentScheduleConflicts = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('checkStudentScheduleConflicts error', error);
+    console.error("checkStudentScheduleConflicts error", error);
     res
       .status(500)
-      .json({ error: true, message: 'Failed to check schedule conflicts' });
+      .json({ error: true, message: "Failed to check schedule conflicts" });
   }
 };
 
 const updateProfilePicture = async (req, res) => {
   try {
     const profilePic = req.file;
-    console.log('uploaded file: ', req.file);
+    console.log("uploaded file: ", req.file);
 
     if (!profilePic) {
       return res.status(400).json({
         error: true,
-        message: 'No profile picture file provided',
+        message: "No profile picture file provided",
       });
     }
 
     // Extract user ID from JWT token
-    const token = req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(" ")[1];
     const decoded = await verifyJWT(token);
-    console.log('decoded JWT:', decoded);
+    console.log("decoded JWT:", decoded);
 
     if (!decoded || !decoded.payload) {
       return res.status(401).json({
         error: true,
-        message: 'Invalid or expired token',
+        message: "Invalid or expired token",
       });
     }
 
@@ -673,15 +683,15 @@ const updateProfilePicture = async (req, res) => {
     if (userResult.error) {
       return res.status(404).json({
         error: true,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
-    const result = await uploadFile(profilePic, 'user-profile');
+    const result = await uploadFile(profilePic, "user-profile");
     if (!result) {
       return res
         .status(400)
-        .json({ error: true, message: 'Error uploading profile picture' });
+        .json({ error: true, message: "Error uploading profile picture" });
     }
 
     // Use the user ID from the JWT token
@@ -692,7 +702,7 @@ const updateProfilePicture = async (req, res) => {
 
     res.json({
       error: false,
-      message: 'Profile picture updated successfully',
+      message: "Profile picture updated successfully",
       data: {
         id: user.id,
         profilePicLink: user.profilePicLink,
@@ -701,7 +711,7 @@ const updateProfilePicture = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error updating profile picture',
+      message: "Error updating profile picture",
       error_details: error.message,
       error_info: error,
     });
@@ -711,14 +721,14 @@ const updateProfilePicture = async (req, res) => {
 const removeProfilePicture = async (req, res) => {
   try {
     // Extract user ID from JWT token
-    const token = req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(" ")[1];
     const decoded = await verifyJWT(token);
-    console.log('decoded JWT:', decoded);
+    console.log("decoded JWT:", decoded);
 
     if (!decoded || !decoded.payload) {
       return res.status(401).json({
         error: true,
-        message: 'Invalid or expired token',
+        message: "Invalid or expired token",
       });
     }
 
@@ -727,7 +737,7 @@ const removeProfilePicture = async (req, res) => {
     if (userResult.error) {
       return res.status(404).json({
         error: true,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -739,7 +749,7 @@ const removeProfilePicture = async (req, res) => {
 
     res.json({
       error: false,
-      message: 'Profile picture removed successfully',
+      message: "Profile picture removed successfully",
       data: {
         id: user.id,
         profilePicLink: user.profilePicLink,
@@ -748,9 +758,63 @@ const removeProfilePicture = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error removing profile picture',
+      message: "Error removing profile picture",
       error_details: error.message,
       error_info: error,
+    });
+  }
+};
+
+// Get student by ID (userId)
+const getStudentById = async (req, res) => {
+  const { studentId } = req.params;
+
+  if (!studentId) {
+    return res.status(400).json({
+      error: true,
+      success: false,
+      message: "Student ID is required",
+    });
+  }
+
+  try {
+    const student = await prisma.users.findFirst({
+      where: {
+        userId: studentId,
+        role: "STUDENT",
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        error: true,
+        success: false,
+        message: "Student not found with the provided ID",
+      });
+    }
+
+    res.json({
+      error: false,
+      success: true,
+      data: student,
+      message: "Student found successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching student by ID:", error);
+    res.status(500).json({
+      error: true,
+      success: false,
+      message: "Server error while fetching student",
+      error_details: error.message,
     });
   }
 };
@@ -770,4 +834,5 @@ export {
   checkStudentScheduleConflicts,
   updateProfilePicture,
   removeProfilePicture,
+  getStudentById,
 };

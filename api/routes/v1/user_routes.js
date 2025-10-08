@@ -14,6 +14,7 @@ import {
   removeProfilePicture,
   searchStudentsForCoursePeriod,
   checkStudentScheduleConflicts,
+  getStudentById,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
@@ -90,5 +91,8 @@ router.post(
   uploadSingle('profilePic'),
   updateProfilePicture
 );
+
+// Public routes (no auth required for payment form)
+router.get('/get-student-by-id/:studentId', getStudentById);
 
 export { router };
