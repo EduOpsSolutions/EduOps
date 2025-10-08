@@ -4,9 +4,6 @@ import {
     getPaymentLink,
     archivePaymentLink,
     getPaymentMethods,
-    processWebhookEvent,
-    verifyWebhookSignature,
-    PAYMENT_STATUS,
 } from "../utils/paymongo.js";
 import { sendPaymentLinkEmail } from "../services/paymentEmailService.js";
 
@@ -14,6 +11,7 @@ const prisma = new PrismaClient();
 
 // Fee type name
 const FEE_TYPE_MAP = {
+    'down_payment': 'Down Payment',
     'tuition_fee': 'Tuition Fee',
     'document_fee': 'Document Fee',
     'book_fee': 'Book Fee',
@@ -75,18 +73,13 @@ export const createPayment = async (req, res) => {
         const payment = await prisma.payments.create({
             data: {
                 id: customPaymentId,
-                paymentId: paymentLinkResult.paymentLinkId,
+                paymongoId: paymentLinkResult.paymentLinkId,
                 userId: userId,
-                firstName,
-                middleName: middleName || null,
-                lastName,
-                email,
-                phoneNumber: phoneNumber || null,
-                feeType,
                 amount: paymentAmount,
                 checkoutUrl: paymentLinkResult.checkoutUrl,
                 paymongoResponse: paymentLinkResult.data,
                 status: "pending",
+                remarks: `EduOps ${feeType} payment`,
             },
         });
 
@@ -126,7 +119,7 @@ export const getPaymentDetails = async (req, res) => {
         }
 
         // Sync status with PayMongo
-        const paymongoResult = await getPaymentLink(payment.paymentId);
+        const paymongoResult = await getPaymentLink(payment.paymongoId);
         if (paymongoResult.success) {
             const paymongoStatus = paymongoResult.data.data.attributes.status;
             if (payment.status !== paymongoStatus) {
@@ -195,7 +188,6 @@ export const getPaymentsByUserId = async (req, res) => {
 };
 
 
-
 export const cancelPayment = async (req, res) => {
     try {
         const { paymentId } = req.params;
@@ -213,7 +205,7 @@ export const cancelPayment = async (req, res) => {
         }
 
         // Archive payment link in PayMongo
-        const archiveResult = await archivePaymentLink(payment.paymentId);
+        const archiveResult = await archivePaymentLink(payment.paymongoId);
         if (!archiveResult.success) {
             return sendError(res, "Failed to cancel payment", 400, archiveResult.error);
         }
@@ -231,57 +223,6 @@ export const cancelPayment = async (req, res) => {
     }
 };
 
-
-
-/* Handle PayMongo webhooks */
-export const handleWebhook = async (req, res) => {
-    try {
-        const signature = req.headers["paymongo-signature"];
-        const payload = JSON.stringify(req.body);
-
-        // Verify webhook signature if configured
-        if (process.env.PAYMONGO_WEBHOOK_SECRET && signature) {
-            const isValid = verifyWebhookSignature(payload, signature);
-            if (!isValid) {
-                return sendError(res, "Invalid webhook signature", 401);
-            }
-        }
-
-        const eventResult = processWebhookEvent(req.body);
-        if (!eventResult.success) {
-            return sendError(res, "Failed to process webhook event", 400);
-        }
-
-        const { eventType, eventData } = eventResult;
-
-        // Handle payment completion
-        if (eventType === "link.payment.paid") {
-            const paymentLinkId = eventData.attributes.id;
-            const payment = await prisma.payments.findFirst({
-                where: { paymentId: paymentLinkId },
-            });
-
-            if (payment) {
-                await prisma.payments.update({
-                    where: { id: payment.id },
-                    data: {
-                        status: "paid",
-                        paidAt: new Date(),
-                        paymongoResponse: eventData,
-                    },
-                });
-            }
-        }
-
-        return sendSuccess(res, null, "Webhook processed successfully");
-    } catch (error) {
-        console.error("Webhook handling error:", error);
-        return sendError(res, "Internal server error", 500, error.message);
-    }
-};
-
-
-
 export const getAvailablePaymentMethods = async (req, res) => {
     try {
         const result = await getPaymentMethods();
@@ -295,11 +236,80 @@ export const getAvailablePaymentMethods = async (req, res) => {
     }
 };
 
+
+/* Get all payments for admin management */
+export const getAllTransactions = async (req, res) => {
+    try {
+        const { page = 1, limit = 10, status, searchTerm } = req.query;
+
+        const whereClause = {};
+        
+        if (status) {
+            whereClause.status = status;
+        }
+        if (searchTerm) {
+            whereClause.OR = [
+                { 
+                    user: {
+                        firstName: { contains: searchTerm, mode: 'insensitive' }
+                    }
+                },
+                { 
+                    user: {
+                        lastName: { contains: searchTerm, mode: 'insensitive' }
+                    }
+                },
+                { 
+                    user: {
+                        userId: { contains: searchTerm }
+                    }
+                },
+                { remarks: { contains: searchTerm, mode: 'insensitive' } }
+            ];
+        }
+
+        const [payments, total] = await Promise.all([
+            prisma.payments.findMany({
+                where: whereClause,
+                orderBy: { createdAt: "desc" },
+                skip: (page - 1) * limit,
+                take: parseInt(limit),
+                include: {
+                    user: { 
+                        select: { 
+                            id: true, 
+                            userId: true, 
+                            firstName: true, 
+                            lastName: true, 
+                            email: true 
+                        } 
+                    },
+                },
+            }),
+            prisma.payments.count({ where: whereClause }),
+        ]);
+
+        return sendSuccess(res, {
+            payments,
+            total,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit),
+            },
+        });
+    } catch (error) {
+        console.error("Get all transactions error:", error);
+        return sendError(res, "Internal server error", 500, error.message);
+    }
+};
+
 export default {
     createPayment,
     getPaymentDetails,
     getPaymentsByUserId,
+    getAllTransactions,
     cancelPayment,
-    handleWebhook,
     getAvailablePaymentMethods,
 };

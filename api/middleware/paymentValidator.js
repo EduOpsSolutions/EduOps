@@ -25,7 +25,8 @@ const createPaymentSchema = Joi.object({
 const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).max(100).default(10).optional(),
-    status: Joi.string().valid('pending', 'paid', 'failed', 'expired', 'cancelled').optional()
+    status: Joi.string().valid('pending', 'paid', 'failed', 'expired', 'cancelled').optional(),
+    search: Joi.string().optional()
 });
 
 const createValidator = (schema, source = 'body', options = {}) => {

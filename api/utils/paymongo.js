@@ -1,5 +1,4 @@
 import axios from 'axios';
-import crypto from 'crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -137,71 +136,9 @@ export const getPaymentMethods = async () => {
     }
 };
 
-/**
- * Verify webhook signature (for webhook security)
- * @param {string} payload - Raw webhook payload
- * @param {string} signature - Webhook signature from headers
- * @returns {boolean} Whether signature is valid
- */
-export const verifyWebhookSignature = (payload, signature) => {
-    try {
-
-        if (!process.env.PAYMONGO_WEBHOOK_SECRET) {
-            console.log('Webhook secret not configured, skipping signature verification');
-            return true;
-        }
-
-        const expectedSignature = crypto
-            .createHmac('sha256', process.env.PAYMONGO_WEBHOOK_SECRET)
-            .update(payload)
-            .digest('hex');
-
-        return signature === expectedSignature;
-    } catch (error) {
-        console.error('Webhook signature verification error:', error);
-        return false;
-    }
-};
-
-/**
- * Process webhook event
- * @param {Object} event - Webhook event data
- * @returns {Object} Processed event information
- */
-export const processWebhookEvent = (event) => {
-    try {
-        const eventType = event.data.attributes.type;
-        const eventData = event.data.attributes.data;
-
-        return {
-            success: true,
-            eventType,
-            eventData,
-            timestamp: new Date().toISOString()
-        };
-    } catch (error) {
-        console.error('Webhook processing error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-};
-
-// Payment status constants
-export const PAYMENT_STATUS = {
-    PENDING: 'pending',
-    PAID: 'paid',
-    FAILED: 'failed',
-    EXPIRED: 'expired'
-};
-
 export default {
     createPaymentLink,
     getPaymentLink,
     archivePaymentLink,
     getPaymentMethods,
-    verifyWebhookSignature,
-    processWebhookEvent,
-    PAYMENT_STATUS
 };

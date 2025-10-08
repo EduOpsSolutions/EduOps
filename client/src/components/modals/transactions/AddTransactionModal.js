@@ -10,6 +10,9 @@ function AddTransactionModal({
   onSubmit, 
 }) {
   const [formData, setFormData] = useState({
+    studentId: "",
+    firstName: "",
+    lastName: "",
     purpose: "",
     paymentMethod: "",
     amountPaid: "",
@@ -25,6 +28,9 @@ function AddTransactionModal({
     if (!addTransactionModal) {
       setShowDiscardModal(false);
       setFormData({
+        studentId: "",
+        firstName: "",
+        lastName: "",
         purpose: "",
         paymentMethod: "",
         amountPaid: "",
@@ -32,8 +38,16 @@ function AddTransactionModal({
         remarks: "",
       });
       setError("");
+    } else if (selectedStudent) {
+      // Pre-fill student info if student is selected
+      setFormData(prev => ({
+        ...prev,
+        studentId: selectedStudent.studentId || "",
+        firstName: selectedStudent.firstName || "",
+        lastName: selectedStudent.lastName || "",
+      }));
     }
-  }, [addTransactionModal]);
+  }, [addTransactionModal, selectedStudent]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -90,12 +104,22 @@ function AddTransactionModal({
     { value: "Online Payment", label: "Online Payment" },
   ];
 
+  const feeTypeOptions = [
+    { value: "", label: "Select fee type" },
+    { value: "down_payment", label: "Down Payment" },
+    { value: "tuition_fee", label: "Tuition Fee" },
+    { value: "document_fee", label: "Document Fee" },
+    { value: "book_fee", label: "Book Fee" },
+  ];
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
-            <h2 className="text-2xl font-bold">Add Transaction</h2>
+            <h2 className="text-2xl font-bold">
+              {selectedStudent ? "Add Transaction" : "Add Transaction"}
+            </h2>
             <button
               className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
               onClick={handleClose}
@@ -139,13 +163,45 @@ function AddTransactionModal({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Purpose */}
-            <ModalTextField
-              label="Purpose"
+            {!selectedStudent && (
+              <>
+                <ModalTextField
+                  label="Student ID"
+                  name="studentId"
+                  value={formData.studentId}
+                  onChange={handleChange}
+                  placeholder="Enter student ID"
+                  required
+                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <ModalTextField
+                    label="First Name"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    placeholder="Enter first name"
+                    required
+                  />
+                  <ModalTextField
+                    label="Last Name"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    placeholder="Enter last name"
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Fee Type */}
+            <ModalSelectField
+              label="Fee Type"
               name="purpose"
               value={formData.purpose}
               onChange={handleChange}
-              placeholder="Enter transaction purpose"
+              options={feeTypeOptions}
               required
             />
 

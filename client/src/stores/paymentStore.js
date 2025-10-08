@@ -20,6 +20,7 @@ const usePaymentStore = create((set, get) => ({
   nameError: '',
   studentData: null,
   feesOptions: [
+    { value: 'down_payment', label: 'Down Payment' },
     { value: 'tuition_fee', label: 'Tuition Fee' },
     { value: 'document_fee', label: 'Document Fee' },
     { value: 'book_fee', label: 'Book Fee' },
@@ -65,7 +66,7 @@ const usePaymentStore = create((set, get) => ({
             last_name: data.data.lastName || '',
           },
           nameError: '',
-          studentData: data.data, // Store the student data for validation
+          studentData: data.data, 
         }));
       }
 
