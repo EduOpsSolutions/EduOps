@@ -1,27 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { Dropdown } from 'flowbite-react';
-import { Link } from 'react-router-dom';
-import useAuthStore from '../../stores/authStore';
-import useNavigationStore from '../../stores/navigationStore';
+import React, { useState, useEffect } from "react";
+import { Dropdown } from "flowbite-react";
+import { Link } from "react-router-dom";
+import useAuthStore from "../../stores/authStore";
+import useNavigationStore from "../../stores/navigationStore";
+import { getCachedProfileImage } from "../../utils/profileImageCache";
 
 const UserActionsDropdown = ({ role, isCompact = false }) => {
   const { logout, getUser } = useAuthStore();
   const { closeCompactMenu } = useNavigationStore();
   const user = getUser();
-  const userInitials = String(user?.firstName || '').slice(0, 2).toUpperCase();
+  const userInitials = String(user?.firstName || "")
+    .slice(0, 2)
+    .toUpperCase();
   const [profilePic, setProfilePic] = useState(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const avatarSize = isCompact ? "size-[40px]" : "size-[48px]";
   const textSize = isCompact ? "text-lg" : "text-xl";
 
-  // Load profile picture from localStorage or user data
+  // Load profile picture from cache
   useEffect(() => {
-    const cachedProfilePic = localStorage.getItem('profilePicLink');
-    if (cachedProfilePic && cachedProfilePic !== 'null' && cachedProfilePic !== 'undefined') {
-      setProfilePic(cachedProfilePic);
+    const cachedUrl = getCachedProfileImage();
+    if (cachedUrl) {
+      setProfilePic(cachedUrl);
+      setImageLoading(true);
+      setImageError(false);
     } else if (user?.profilePicLink) {
       setProfilePic(user.profilePicLink);
-      localStorage.setItem('profilePicLink', user.profilePicLink);
+      setImageLoading(true);
+      setImageError(false);
+    } else {
+      setProfilePic(null);
+      setImageLoading(false);
     }
   }, [user?.profilePicLink]);
 
@@ -31,19 +42,72 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
       className="w-fit font-semibold rounded-none bg-dark-red border-none"
       dismissOnClick={true}
       trigger="hover"
-      renderTrigger={() => (
-        profilePic ? (
-          <img
-            src={profilePic}
-            alt="Profile"
-            className={`${avatarSize} rounded-full object-cover cursor-pointer border-2`}
-          />
-        ) : (
-          <span className={`${avatarSize} flex justify-center items-center font-bold ${textSize} border-2 rounded-full cursor-pointer`}>
+      renderTrigger={() => {
+        if (imageLoading && !imageError && profilePic) {
+          return (
+            <>
+              <img
+                src={profilePic}
+                alt="Profile"
+                className={`${avatarSize} rounded-full object-cover cursor-pointer border-2`}
+                onLoad={() => setImageLoading(false)}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoading(false);
+                }}
+                style={{
+                  display: imageLoading && !imageError ? "none" : "block",
+                }}
+              />
+              {imageLoading && !imageError && (
+                <div
+                  className={`${avatarSize} flex justify-center items-center rounded-full cursor-pointer border-2 bg-gray-200 animate-pulse`}
+                >
+                  <svg
+                    className="w-5 h-5 text-red-800 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                </div>
+              )}
+            </>
+          );
+        }
+
+        if (profilePic && !imageError) {
+          return (
+            <img
+              src={profilePic}
+              alt="Profile"
+              className={`${avatarSize} rounded-full object-cover cursor-pointer border-2`}
+              onError={() => setImageError(true)}
+            />
+          );
+        }
+
+        return (
+          <span
+            className={`${avatarSize} flex justify-center items-center font-bold ${textSize} border-2 rounded-full cursor-pointer`}
+          >
             {userInitials}
           </span>
-        )
-      )}
+        );
+      }}
     >
       <Dropdown.Item
         as={Link}
@@ -115,4 +179,4 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
   );
 };
 
-export default UserActionsDropdown; 
+export default UserActionsDropdown;

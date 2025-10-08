@@ -1,8 +1,10 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import PostTagButton from '../../buttons/PostTagButton';
 import EmojiPicker from 'emoji-picker-react';
 import usePostsStore from '../../../stores/postsStore';
+import useAuthStore from '../../../stores/authStore';
+import { getCachedProfileImage } from '../../../utils/profileImageCache';
 
 const MODAL_THEME = {
     modal: {
@@ -178,6 +180,11 @@ const ActionButtons = ({ emojiPickerRef, textAreaRef }) => {
 function CreatePostModal(props) {
     const textAreaRef = useRef(null);
     const emojiPickerRef = useRef(null);
+    const [profilePic, setProfilePic] = useState(null);
+    const [imageLoading, setImageLoading] = useState(false);
+    const [imageError, setImageError] = useState(false);
+
+    const { user } = useAuthStore();
     const {
         formData,
         setTitle,
@@ -195,6 +202,24 @@ function CreatePostModal(props) {
     } = usePostsStore();
 
     const { sendOption, isSubmitting } = formData;
+    const userInitials = String(user?.firstName?.[0] + user?.lastName?.[0] || "").toUpperCase();
+
+    // Load profile picture from cache
+    useEffect(() => {
+        const cachedUrl = getCachedProfileImage();
+        if (cachedUrl) {
+            setProfilePic(cachedUrl);
+            setImageLoading(true);
+            setImageError(false);
+        } else if (user?.profilePicLink) {
+            setProfilePic(user.profilePicLink);
+            setImageLoading(true);
+            setImageError(false);
+        } else {
+            setProfilePic(null);
+            setImageLoading(false);
+        }
+    }, [user?.profilePicLink]);
 
     // Clear any existing errors when modal opens
     React.useEffect(() => {
@@ -250,10 +275,36 @@ function CreatePostModal(props) {
                     <Modal.Header className="z-10 transition ease-in-out duration-300">
                         <CloseButton onClick={handleClose} />
                     </Modal.Header>
-                    
-                    <p className="font-bold -mt-9 sm:-mt-10 ml-4 sm:ml-6 mb-3 sm:mb-4 text-center text-xl sm:text-2xl lg:text-3xl transition ease-in-out duration-300">
-                        Create Post
-                    </p>
+
+                    <div className="flex items-center gap-3 -mt-9 sm:-mt-10 ml-4 sm:ml-6 mb-3 sm:mb-4 px-2">
+                        {profilePic && !imageError ? (
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-german-red rounded-full relative overflow-hidden flex-shrink-0">
+                                {imageLoading && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200 rounded-full">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-german-red"></div>
+                                    </div>
+                                )}
+                                <img
+                                    src={profilePic}
+                                    alt="Profile"
+                                    className="size-full rounded-full object-cover"
+                                    onLoad={() => setImageLoading(false)}
+                                    onError={() => {
+                                        setImageError(true);
+                                        setImageLoading(false);
+                                    }}
+                                    style={{ display: imageLoading ? 'none' : 'block' }}
+                                />
+                            </div>
+                        ) : (
+                            <span className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-german-red rounded-full flex items-center justify-center text-white font-bold bg-german-red text-sm sm:text-base flex-shrink-0">
+                                {userInitials}
+                            </span>
+                        )}
+                        <p className="font-bold text-xl sm:text-2xl lg:text-3xl transition ease-in-out duration-300">
+                            Create Post
+                        </p>
+                    </div>
                     
                     {error && (
                         <div className="mx-4 sm:mx-6 mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">

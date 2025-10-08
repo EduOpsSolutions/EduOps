@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import axiosInstance from '../utils/axios';
 import { getCookieItem } from '../utils/jwt';
 import Swal from 'sweetalert2';
+import { fetchAndCacheProfileImage, clearProfileImageCache } from '../utils/profileImageCache';
 
 const useProfileStore = create((set, get) => ({
   profileImage: null,
@@ -90,8 +91,8 @@ const useProfileStore = create((set, get) => ({
         };
         setUser(updatedUser);
 
-        // Update localStorage with new profile picture
-        localStorage.setItem('profilePicLink', response.data.data.profilePicLink);
+        // Update cache with new profile picture URL
+        fetchAndCacheProfileImage(response.data.data.profilePicLink);
 
         set({
           profileImage: null,
@@ -143,8 +144,8 @@ const useProfileStore = create((set, get) => ({
       };
       setUser(updatedUser);
 
-      // Remove profile picture from localStorage
-      localStorage.removeItem('profilePicLink');
+      // Clear profile picture cache
+      clearProfileImageCache();
 
       // Clear local states
       set({

@@ -1,9 +1,10 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getCookieItem, setTokenCookie, removeTokenCookie } from '../utils/jwt';
-import { logout as logoutUtil } from '../utils/auth';
-import axios from '../utils/axios';
-import { decodeToken } from '../utils/jwt';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { getCookieItem, setTokenCookie, removeTokenCookie } from "../utils/jwt";
+import { logout as logoutUtil } from "../utils/auth";
+import axios from "../utils/axios";
+import { decodeToken } from "../utils/jwt";
+import { fetchAndCacheProfileImage, clearProfileImageCache } from "../utils/profileImageCache";
 
 // User interface based on the database schema and API responses
 // const userInterface = {
@@ -79,7 +80,7 @@ const useAuthStore = create(
               password,
             }
           );
-          console.log('Login response:', response);
+          console.log("Login response:", response);
 
           if (response?.status === 200) {
             const { token: tokenData } = response.data;
@@ -99,20 +100,20 @@ const useAuthStore = create(
             // Get the updated state after setting
             const decodedToken = await decodeToken(token);
             set({ user: decodedToken.data });
-            console.log('Current user from store:', get().user);
+            console.log("Current user from store:", get().user);
 
-            // Cache profile picture in localStorage
+            // Cache profile picture URL in localStorage
             if (decodedToken.data?.profilePicLink) {
-              localStorage.setItem('profilePicLink', decodedToken.data.profilePicLink);
+              fetchAndCacheProfileImage(decodedToken.data.profilePicLink);
             }
 
             return { success: true };
           } else {
-            throw new Error(response.data.message || 'Login failed');
+            throw new Error(response.data.message || "Login failed");
           }
         } catch (error) {
           const errorMessage =
-            error.response?.data?.message || error.message || 'Login failed';
+            error.response?.data?.message || error.message || "Login failed";
           set({
             isLoading: false,
             error: errorMessage,
@@ -131,7 +132,7 @@ const useAuthStore = create(
       // Get user action
       getUser: () => {
         const user = get().user;
-        console.log('Current user from store:', user);
+        console.log("Current user from store:", user);
         return user;
       },
 
@@ -139,11 +140,11 @@ const useAuthStore = create(
       logout: (redirectToLogin = true) => {
         // Clear cookies and localStorage
         logoutUtil();
-        removeTokenCookie('token');
-        removeTokenCookie('user');
+        removeTokenCookie("token");
+        removeTokenCookie("user");
 
-        // Clear profile picture from localStorage
-        localStorage.removeItem('profilePicLink');
+        // Clear profile picture cache
+        clearProfileImageCache();
 
         // Clear store state
         set({
@@ -155,10 +156,10 @@ const useAuthStore = create(
         });
 
         // Redirect to login page if requested
-        if (redirectToLogin && typeof window !== 'undefined') {
+        if (redirectToLogin && typeof window !== "undefined") {
           // Use setTimeout to ensure state is cleared before navigation
           setTimeout(() => {
-            window.location.href = '/login';
+            window.location.href = "/login";
           }, 100);
         }
       },
@@ -175,15 +176,15 @@ const useAuthStore = create(
 
           if (response.status === 201 || response.status === 200) {
             set({ isLoading: false });
-            return { success: true, message: 'Registration successful' };
+            return { success: true, message: "Registration successful" };
           } else {
-            throw new Error(response.data.message || 'Registration failed');
+            throw new Error(response.data.message || "Registration failed");
           }
         } catch (error) {
           const errorMessage =
             error.response?.data?.message ||
             error.message ||
-            'Registration failed';
+            "Registration failed";
           set({
             isLoading: false,
             error: errorMessage,
@@ -210,20 +211,20 @@ const useAuthStore = create(
               error: null,
             });
 
-            // Update profile picture in localStorage if changed
+            // Update profile picture cache if changed
             if (updatedUser?.profilePicLink) {
-              localStorage.setItem('profilePicLink', updatedUser.profilePicLink);
+              fetchAndCacheProfileImage(updatedUser.profilePicLink);
             }
 
             return { success: true, user: updatedUser };
           } else {
-            throw new Error(response.data.message || 'Profile update failed');
+            throw new Error(response.data.message || "Profile update failed");
           }
         } catch (error) {
           const errorMessage =
             error.response?.data?.message ||
             error.message ||
-            'Profile update failed';
+            "Profile update failed";
           set({
             isLoading: false,
             error: errorMessage,
@@ -247,15 +248,15 @@ const useAuthStore = create(
 
           if (response.status === 200) {
             set({ isLoading: false });
-            return { success: true, message: 'Password changed successfully' };
+            return { success: true, message: "Password changed successfully" };
           } else {
-            throw new Error(response.data.message || 'Password change failed');
+            throw new Error(response.data.message || "Password change failed");
           }
         } catch (error) {
           const errorMessage =
             error.response?.data?.message ||
             error.message ||
-            'Password change failed';
+            "Password change failed";
           set({
             isLoading: false,
             error: errorMessage,
@@ -276,17 +277,17 @@ const useAuthStore = create(
 
           if (response.status === 200) {
             set({ isLoading: false });
-            return { success: true, message: 'Password reset email sent' };
+            return { success: true, message: "Password reset email sent" };
           } else {
             throw new Error(
-              response.data.message || 'Failed to send reset email'
+              response.data.message || "Failed to send reset email"
             );
           }
         } catch (error) {
           const errorMessage =
             error.response?.data?.message ||
             error.message ||
-            'Failed to send reset email';
+            "Failed to send reset email";
           set({
             isLoading: false,
             error: errorMessage,
@@ -310,15 +311,15 @@ const useAuthStore = create(
 
           if (response.status === 200) {
             set({ isLoading: false });
-            return { success: true, message: 'Password reset successful' };
+            return { success: true, message: "Password reset successful" };
           } else {
-            throw new Error(response.data.message || 'Password reset failed');
+            throw new Error(response.data.message || "Password reset failed");
           }
         } catch (error) {
           const errorMessage =
             error.response?.data?.message ||
             error.message ||
-            'Password reset failed';
+            "Password reset failed";
           set({
             isLoading: false,
             error: errorMessage,
@@ -345,12 +346,12 @@ const useAuthStore = create(
 
             return { success: true, token: newToken };
           } else {
-            throw new Error('Token refresh failed');
+            throw new Error("Token refresh failed");
           }
         } catch (error) {
           // If refresh fails, logout the user
           get().logout();
-          throw new Error('Token refresh failed');
+          throw new Error("Token refresh failed");
         }
       },
 
@@ -371,8 +372,8 @@ const useAuthStore = create(
 
       // Check authentication status
       checkAuth: () => {
-        const token = getCookieItem('token');
-        const user = getCookieItem('user');
+        const token = getCookieItem("token");
+        const user = getCookieItem("user");
 
         if (token && user) {
           try {
@@ -384,7 +385,7 @@ const useAuthStore = create(
             });
             return true;
           } catch (error) {
-            console.error('Error parsing user data:', error);
+            console.error("Error parsing user data:", error);
             get().logout();
             return false;
           }
@@ -400,7 +401,7 @@ const useAuthStore = create(
 
       // Validate token by making an API call
       validateToken: async () => {
-        const token = getCookieItem('token');
+        const token = getCookieItem("token");
 
         if (!token) {
           get().logout();
@@ -424,8 +425,8 @@ const useAuthStore = create(
             error.response &&
             (error.response.status === 401 || error.response.status === 403)
           ) {
-            console.log('error', error);
-            console.log('Token validation failed, logging out...');
+            console.log("error", error);
+            console.log("Token validation failed, logging out...");
             get().logout();
             return false;
           }
@@ -437,7 +438,7 @@ const useAuthStore = create(
       // Get user full name
       getUserFullName: () => {
         const { user } = get();
-        if (!user) return '';
+        if (!user) return "";
 
         const { firstName, middleName, lastName } = user;
         const nameParts = [firstName];
@@ -445,7 +446,7 @@ const useAuthStore = create(
         if (middleName) nameParts.push(middleName);
         if (lastName) nameParts.push(lastName);
 
-        return nameParts.join(' ');
+        return nameParts.join(" ");
       },
 
       // Check if user has specific role
@@ -462,17 +463,17 @@ const useAuthStore = create(
 
       // Check if user is admin
       isAdmin: () => {
-        return get().hasRole('admin');
+        return get().hasRole("admin");
       },
 
       // Check if user is teacher
       isTeacher: () => {
-        return get().hasRole('teacher');
+        return get().hasRole("teacher");
       },
 
       // Check if user is student
       isStudent: () => {
-        return get().hasRole('student');
+        return get().hasRole("student");
       },
 
       getBirthday: () => {
@@ -482,15 +483,15 @@ const useAuthStore = create(
           user.birthyear,
           user.birthmonth - 1,
           user.birthdate
-        ).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
+        ).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
         });
       },
     }),
     {
-      name: 'eduops-auth-storage', // unique name for localStorage key
+      name: "eduops-auth-storage", // unique name for localStorage key
       partialize: (state) => ({
         // Only persist these fields
         user: state.user,
