@@ -90,6 +90,9 @@ const useProfileStore = create((set, get) => ({
         };
         setUser(updatedUser);
 
+        // Update localStorage with new profile picture
+        localStorage.setItem('profilePicLink', response.data.data.profilePicLink);
+
         set({
           profileImage: null,
           profileImagePreview: null,
@@ -139,6 +142,9 @@ const useProfileStore = create((set, get) => ({
         profilePicLink: response.data.data.profilePicLink,
       };
       setUser(updatedUser);
+
+      // Remove profile picture from localStorage
+      localStorage.removeItem('profilePicLink');
 
       // Clear local states
       set({

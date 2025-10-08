@@ -101,6 +101,11 @@ const useAuthStore = create(
             set({ user: decodedToken.data });
             console.log('Current user from store:', get().user);
 
+            // Cache profile picture in localStorage
+            if (decodedToken.data?.profilePicLink) {
+              localStorage.setItem('profilePicLink', decodedToken.data.profilePicLink);
+            }
+
             return { success: true };
           } else {
             throw new Error(response.data.message || 'Login failed');
@@ -136,6 +141,9 @@ const useAuthStore = create(
         logoutUtil();
         removeTokenCookie('token');
         removeTokenCookie('user');
+
+        // Clear profile picture from localStorage
+        localStorage.removeItem('profilePicLink');
 
         // Clear store state
         set({
@@ -201,6 +209,12 @@ const useAuthStore = create(
               isLoading: false,
               error: null,
             });
+
+            // Update profile picture in localStorage if changed
+            if (updatedUser?.profilePicLink) {
+              localStorage.setItem('profilePicLink', updatedUser.profilePicLink);
+            }
+
             return { success: true, user: updatedUser };
           } else {
             throw new Error(response.data.message || 'Profile update failed');

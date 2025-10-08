@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dropdown } from 'flowbite-react';
 import { Link } from 'react-router-dom';
 import useAuthStore from '../../stores/authStore';
@@ -7,10 +7,23 @@ import useNavigationStore from '../../stores/navigationStore';
 const UserActionsDropdown = ({ role, isCompact = false }) => {
   const { logout, getUser } = useAuthStore();
   const { closeCompactMenu } = useNavigationStore();
-  const userInitials = String(getUser().firstName).slice(0, 2).toUpperCase();
+  const user = getUser();
+  const userInitials = String(user?.firstName || '').slice(0, 2).toUpperCase();
+  const [profilePic, setProfilePic] = useState(null);
 
   const avatarSize = isCompact ? "size-[40px]" : "size-[48px]";
   const textSize = isCompact ? "text-lg" : "text-xl";
+
+  // Load profile picture from localStorage or user data
+  useEffect(() => {
+    const cachedProfilePic = localStorage.getItem('profilePicLink');
+    if (cachedProfilePic && cachedProfilePic !== 'null' && cachedProfilePic !== 'undefined') {
+      setProfilePic(cachedProfilePic);
+    } else if (user?.profilePicLink) {
+      setProfilePic(user.profilePicLink);
+      localStorage.setItem('profilePicLink', user.profilePicLink);
+    }
+  }, [user?.profilePicLink]);
 
   return (
     <Dropdown
@@ -19,9 +32,17 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
       dismissOnClick={true}
       trigger="hover"
       renderTrigger={() => (
-        <span className={`${avatarSize} flex justify-center items-center font-bold ${textSize} border-2 rounded-full cursor-pointer`}>
-          {userInitials}
-        </span>
+        profilePic ? (
+          <img
+            src={profilePic}
+            alt="Profile"
+            className={`${avatarSize} rounded-full object-cover cursor-pointer border-2`}
+          />
+        ) : (
+          <span className={`${avatarSize} flex justify-center items-center font-bold ${textSize} border-2 rounded-full cursor-pointer`}>
+            {userInitials}
+          </span>
+        )
       )}
     >
       <Dropdown.Item
