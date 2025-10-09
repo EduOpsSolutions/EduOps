@@ -65,6 +65,22 @@ const useTransactionStore = create((set, get) => ({
     }
   },
 
+  // Auto-refresh function for webhook updates
+  refreshTransactions: async () => {
+    try {
+      const response = await axiosInstance.get("/payments/admin/allTransactions");
+      const transactions = response.data.data?.payments || [];
+      
+      set({ transactions });
+      
+      const searchStore = useTransactionSearchStore.getState();
+      searchStore.setData(transactions);
+      
+    } catch (error) {
+      console.error("Failed to refresh transactions: ", error);
+    }
+  },
+
   setSelectedTransaction: (transaction) => set({ selectedTransaction: transaction }),
   
   clearSelectedTransaction: () => set({ selectedTransaction: null }),
@@ -104,7 +120,28 @@ const useTransactionStore = create((set, get) => ({
 
   // Handle modal submit (placeholder for now)
   handleModalSubmit: async (data) => {
-    console.log('Modal submit:', data);
+    try {
+      const response = await axiosInstance.post('/payments/manual', {
+        studentId: data.studentId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        purpose: data.purpose,
+        paymentMethod: data.paymentMethod,
+        amountPaid: data.amountPaid,
+        referenceNumber: data.referenceNumber,
+        remarks: data.remarks
+      });
+      
+      if (response.data.success) {
+        // Refresh transactions to show the new manual transaction
+        const store = get();
+        store.refreshTransactions();
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Failed to create manual transaction:', error);
+      throw error;
+    }
   },
 
   // Open checkout URL
@@ -114,20 +151,65 @@ const useTransactionStore = create((set, get) => ({
     }
   },
 
+  // Sync all PayMongo payments status
+  syncAllPayMongoPayments: async () => {
+    try {
+      set({ loading: true });
+      
+      const { transactions } = get();
+      // Find all transactions with PayMongo IDs
+      const paymongoTransactions = transactions.filter(transaction => 
+        transaction.paymongoId && (transaction.status === 'paid' || transaction.status === 'pending')
+      );
+      
+      console.log(`Syncing ${paymongoTransactions.length} PayMongo payments...`);
+      
+      // Refresh status for each PayMongo payment
+      const syncPromises = paymongoTransactions.map(transaction =>
+        axiosInstance.get(`/payments/${transaction.id}/status`).catch(error => {
+          console.error(`Failed to sync payment ${transaction.id}:`, error);
+          return null;
+        })
+      );
+      
+      await Promise.all(syncPromises);
+      
+      // Refresh the entire transactions list
+      const store = get();
+      await store.refreshTransactions();
+      
+      set({ loading: false });
+      
+      return { success: true, syncedCount: paymongoTransactions.length };
+    } catch (error) {
+      console.error('Error syncing PayMongo payments:', error);
+      set({ loading: false, error: 'Failed to sync PayMongo payments' });
+      return { success: false, error: error.message };
+    }
+  },
+
   // Refresh payment status
   refreshPaymentStatus: async (paymentId) => {
     try {
       const response = await axiosInstance.get(`/payments/${paymentId}/status`);
       if (response.data.success) {
         const { selectedTransaction } = get();
+        
+        // Update the selected transaction in the modal
         if (selectedTransaction && selectedTransaction.id === paymentId) {
           set({
             selectedTransaction: {
               ...selectedTransaction,
-              status: response.data.data.status
+              status: response.data.data.status,
+              ...response.data.data
             }
           });
         }
+        
+        // Refresh the entire transactions list to update the table
+        const store = get();
+        await store.refreshTransactions();
+        
         return response.data.data;
       }
     } catch (error) {
