@@ -8,15 +8,30 @@ const prisma = new PrismaClient();
 export const getPosts = async (req, res) => {
     try {
         const { tag, status, userId, isArchived } = req.query;
-        const whereClause = {
-            deletedAt: null
-        };
-        
+        const userRole = req.user?.data?.role;
+        const whereClause = { deletedAt: null };
+
+        // Role-based filtering
+        if (userRole === 'admin') {
+        } else if (userRole === 'teacher') {
+            whereClause.OR = [
+                { tag: 'global' },
+                { tag: 'teacher' }
+            ];
+        } else if (userRole === 'student') {
+            whereClause.OR = [
+                { tag: 'global' },
+                { tag: 'student' }
+            ];
+        } else {
+            whereClause.tag = 'global';
+        }
+
         if (tag) whereClause.tag = tag;
         if (status) whereClause.status = status;
         if (userId) whereClause.userId = userId;
         if (isArchived !== undefined) whereClause.isArchived = isArchived === 'true';
-        
+
         const posts = await prisma.posts.findMany({
             where: whereClause,
             include: {

@@ -12,27 +12,71 @@ import {
 import {
   verifyToken,
   validateIsActiveUser,
+  validateUserIsAdmin,
 } from '../../middleware/authValidator.js';
 import { uploadMultiple } from '../../middleware/multerMiddleware.js';
 
 const router = express.Router();
 
-// Public routes (no auth required)
-router.get('/', verifyToken, validateIsActiveUser, getPosts); // Get all posts with optional filtering
 
-// Protected routes (require authentication)
-router.use(verifyToken); // Apply authentication to all routes below
-router.use(validateIsActiveUser); // Ensure user account is active
+// All users (students, teachers, admins) can view posts if active
+router.get('/', 
+  verifyToken, 
+  validateIsActiveUser, 
+  getPosts
+);
 
-// Post management
-router.post('/create', uploadMultiple('files', 5), createPost); // Create post with up to 5 files
-router.put('/:id', updatePost); // Update post
-router.patch('/:id/archive', archivePost); // Archive post
-router.patch('/:id/unarchive', unarchivePost); // Unarchive post
-router.delete('/:id', deletePost); // Delete post (soft delete)
+// Admin-only post management
+router.post('/create', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  uploadMultiple('files', 5), 
+  createPost
+);
 
-// File management for posts
-router.post('/:id/files', uploadMultiple('files', 5), addFilesToPost); // Add files to existing post
-router.delete('/:postId/files/:fileId', deletePostFile); // Delete specific file from post
+router.put('/:id', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  updatePost
+);
+
+router.patch('/:id/archive', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  archivePost
+);
+
+router.patch('/:id/unarchive', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  unarchivePost
+);
+
+router.delete('/:id', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  deletePost
+);
+
+// File management for posts (admin only)
+router.post('/:id/files', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  uploadMultiple('files', 5), 
+  addFilesToPost
+);
+
+router.delete('/:postId/files/:fileId', 
+  verifyToken, 
+  validateIsActiveUser, 
+  validateUserIsAdmin, 
+  deletePostFile
+);
 
 export { router };
