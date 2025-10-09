@@ -81,7 +81,7 @@ const validateCreateDocumentRequest = [
     
     body('phone')
         .optional()
-        .isMobilePhone()
+        .isMobilePhone('any')
         .withMessage('Valid phone number is required'),
     
     body('mode')
