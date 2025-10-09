@@ -9,9 +9,9 @@ import { router as academicPeriods } from './academic_period_routes.js';
 import { router as academicPeriodCourses } from './academic_period_courses_routes.js';
 import { router as posts } from './post_routes.js';
 import { router as schedules } from './schedule_routes.js';
+import { router as documents } from './document_routes.js';
 import { router as ai } from './ai_routes.js';
 import payments from './payment_routes.js';
-
 
 const router = express.Router();
 router.get('/', function (req, res) {
@@ -32,5 +32,6 @@ router.use('/posts', posts);
 router.use('/schedules', schedules);
 router.use('/ai', ai);
 router.use('/payments', payments);
+router.use('/documents', documents);
 
 export default router;
