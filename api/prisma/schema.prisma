@@ -36,12 +36,14 @@ model users {
   resetTokenExpiry DateTime?
   changePassword   Boolean   @default(true)
 
-  posts            posts[]
-  teacherSchedules schedule[]           @relation("TeacherSchedules")
-  studentSchedules user_schedule[]      @relation("StudentSchedules")
-  enrollments      student_enrollment[] @relation("StudentEnrollments")
-  payments         payments[]
-  adjustments      adjustments[]
+  posts               posts[]
+  teacherSchedules    schedule[]            @relation("TeacherSchedules")
+  studentSchedules    user_schedule[]       @relation("StudentSchedules")
+  enrollments         student_enrollment[]  @relation("StudentEnrollments")
+  payments            payments[]
+  adjustments         adjustments[]
+  documentRequests    document_request[]    @relation("UserDocumentRequests")
+  documentValidations document_validation[] @relation("UserDocumentValidations")
 }
 
 model enrollment_request {
@@ -373,4 +375,84 @@ enum AdjustmentType {
   refund
   manual_charge
   fee_waiver
+}
+
+model document_template {
+  id           String            @id @default(cuid())
+  documentName String
+  description  String?           @db.Text
+  privacy      DocumentPrivacy   @default(public)
+  requestBasis Boolean           @default(false)
+  downloadable Boolean           @default(true)
+  price        DocumentPriceType @default(free)
+  amount       Decimal?          @db.Decimal(10, 2)
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
+
+  // Relations
+  requests    document_request[]
+  validations document_validation[]
+}
+
+model document_request {
+  id              String                @id @default(cuid())
+  documentId      String
+  userId          String?
+  email           String
+  firstName       String?
+  lastName        String?
+  phone           String?
+  mode            DeliveryMode?         @default(pickup)
+  address         String?
+  city            String?
+  purpose         String?               @db.Text
+  additionalNotes String?               @db.Text
+  status          DocumentRequestStatus @default(in_process)
+  remarks         String?               @db.Text
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  // Relations
+  document document_template @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     users?            @relation("UserDocumentRequests", fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model document_validation {
+  id            String   @id @default(cuid())
+  documentId    String?
+  userId        String?
+  documentName  String?
+  fileSignature String   @unique
+  isValid       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  document document_template? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  user     users?             @relation("UserDocumentValidations", fields: [userId], references: [id], onDelete: SetNull)
+}
+
+enum DocumentPrivacy {
+  public
+  student_only
+  teacher_only
+}
+
+enum DocumentPriceType {
+  free
+  paid
+}
+
+enum DeliveryMode {
+  pickup
+  delivery
+}
+
+enum DocumentRequestStatus {
+  in_process
+  in_transit
+  delivered
+  failed
+  fulfilled
 }
