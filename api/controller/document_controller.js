@@ -83,8 +83,7 @@ export const createDocumentTemplate = async (req, res) => {
       downloadable: downloadable === 'true' || downloadable === true,
       price: price || 'free',
       amount: price === 'paid' ? amount : null,
-      uploadFile: uploadFileUrl,  // Changed variable name to avoid confusion
-      createdBy: userId
+      uploadFile: uploadFileUrl  // Changed variable name to avoid confusion
     };
 
     const document = await DocumentModel.createDocumentTemplate(documentData);
