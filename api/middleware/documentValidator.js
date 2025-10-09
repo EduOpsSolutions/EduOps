@@ -28,8 +28,8 @@ const validateCreateDocumentTemplate = [
     
     body('privacy')
         .optional()
-        .isIn(['public', 'student_only', 'teacher_only', "Student's Only", "Teacher's Only", 'Public'])
-        .withMessage('Invalid privacy setting'),
+        .isIn(['public', 'student_only', 'teacher_only'])
+        .withMessage('Invalid privacy setting. Allowed values: public, student_only, teacher_only'),
     
     body('requestBasis')
         .optional()
@@ -81,7 +81,7 @@ const validateCreateDocumentRequest = [
     
     body('phone')
         .optional()
-        .isMobilePhone()
+        .isMobilePhone('any')
         .withMessage('Valid phone number is required'),
     
     body('mode')
