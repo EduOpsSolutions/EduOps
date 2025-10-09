@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -154,12 +160,10 @@ model course_requisite {
   ruleName  String
   type      RequisiteType
   courseId  String
+  course    course        @relation(fields: [courseId], references: [id])
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   deletedAt DateTime?
-  course    course        @relation(fields: [courseId], references: [id])
-
-  @@index([courseId], map: "course_requisite_courseId_fkey")
 }
 
 model academic_period {
@@ -182,14 +186,11 @@ model academic_period_courses {
   id               String          @id @default(cuid())
   courseId         String
   academicperiodId String
+  course           course          @relation(fields: [courseId], references: [id])
+  academicPeriods  academic_period @relation(fields: [academicperiodId], references: [id])
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   deletedAt        DateTime?
-  academicPeriods  academic_period @relation(fields: [academicperiodId], references: [id])
-  course           course          @relation(fields: [courseId], references: [id])
-
-  @@index([academicperiodId], map: "academic_period_courses_academicperiodId_fkey")
-  @@index([courseId], map: "academic_period_courses_courseId_fkey")
 }
 
 model module {
@@ -211,40 +212,6 @@ model logs {
   sourceId           Int?
   createdAt          DateTime @default(now())
 }
-
-// model posts {
-//   id         String       @id @default(cuid())
-//   title      String
-//   content    String       @db.Text
-//   tag        PostTag      @default(global)
-//   status     PostStatus   @default(visible)
-//   postedBy   String
-//   department String?
-//   userId     String
-//   createdAt  DateTime     @default(now())
-//   updatedAt  DateTime     @updatedAt
-//   deletedAt  DateTime?
-//   isArchived Boolean      @default(false)
-//   files      post_files[]
-//   users      users        @relation(fields: [userId], references: [id])
-
-//   @@index([userId], map: "posts_userId_fkey")
-// }
-
-// model post_files {
-//   id        String     @id @default(cuid())
-//   url       String
-//   fileName  String?
-//   fileType  String?
-//   fileSize  Int?
-//   postId    String     @map("post_id")
-//   status    FileStatus @default(visible)
-//   createdAt DateTime   @default(now())
-//   updatedAt DateTime   @updatedAt
-//   post      posts      @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-//   @@index([postId], map: "post_files_post_id_fkey")
-// }
 
 enum Visibility {
   hidden
