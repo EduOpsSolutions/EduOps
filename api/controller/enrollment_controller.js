@@ -666,4 +666,90 @@ const updateEnrollmentStatus = async (req, res) => {
   }
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof, updateEnrollmentStatus };
+// Update all fields of an enrollment request
+const updateEnrollment = async (req, res) => {
+  const { enrollmentId } = req.params;
+  // Accept all possible fields for update
+  const {
+    firstName,
+    middleName,
+    lastName,
+    birthDate,
+    civilStatus,
+    address,
+    referredBy,
+    contactNumber,
+    altContactNumber,
+    preferredEmail,
+    altEmail,
+    motherName,
+    motherContact,
+    fatherName,
+    fatherContact,
+    guardianName,
+    guardianContact,
+    coursesToEnroll,
+    validIdPath,
+    idPhotoPath,
+    paymentProofPath,
+    enrollmentStatus
+  } = req.body;
+
+  // Build update data object only with provided fields
+  const updateData = {};
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (middleName !== undefined) updateData.middleName = middleName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (birthDate !== undefined) updateData.birthDate = new Date(birthDate);
+  if (civilStatus !== undefined) updateData.civilStatus = civilStatus;
+  if (address !== undefined) updateData.address = address;
+  if (referredBy !== undefined) updateData.referredBy = referredBy;
+  if (contactNumber !== undefined) updateData.contactNumber = contactNumber;
+  if (altContactNumber !== undefined) updateData.altContactNumber = altContactNumber;
+  if (preferredEmail !== undefined) updateData.preferredEmail = preferredEmail;
+  if (altEmail !== undefined) updateData.altEmail = altEmail;
+  if (motherName !== undefined) updateData.motherName = motherName;
+  if (motherContact !== undefined) updateData.motherContact = motherContact;
+  if (fatherName !== undefined) updateData.fatherName = fatherName;
+  if (fatherContact !== undefined) updateData.fatherContact = fatherContact;
+  if (guardianName !== undefined) updateData.guardianName = guardianName;
+  if (guardianContact !== undefined) updateData.guardianContact = guardianContact;
+  if (coursesToEnroll !== undefined) updateData.coursesToEnroll = coursesToEnroll;
+  if (validIdPath !== undefined) updateData.validIdPath = validIdPath;
+  if (idPhotoPath !== undefined) updateData.idPhotoPath = idPhotoPath;
+  if (paymentProofPath !== undefined) updateData.paymentProofPath = paymentProofPath;
+  if (enrollmentStatus !== undefined) updateData.enrollmentStatus = enrollmentStatus;
+
+  try {
+    const updated = await prisma.enrollment_request.update({
+      where: { enrollmentId },
+      data: updateData,
+    });
+    res.status(200).json({
+      message: 'Enrollment updated successfully',
+      data: updated,
+      error: false,
+    });
+  } catch (error) {
+    console.error('Error updating enrollment:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        message: 'Enrollment request not found',
+        error: true,
+      });
+    }
+    res.status(500).json({
+      message: 'An error occurred while updating enrollment',
+      error: true,
+    });
+  }
+};
+
+export { 
+  createEnrollmentRequest, 
+  getEnrollmentRequests, 
+  trackEnrollment, 
+  updateEnrollmentPaymentProof, 
+  updateEnrollmentStatus, 
+  updateEnrollment
+ };
