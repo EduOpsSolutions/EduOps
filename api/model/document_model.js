@@ -312,6 +312,100 @@ class DocumentModel {
       orderBy: { createdAt: 'desc' }
     });
   }
+
+  // Role-based document access
+  static async getDocumentsByRole(userRole, includeHidden = false) {
+    const privacyFilter = {
+      admin: {}, // Admins can see all
+      teacher: {
+        privacy: {
+          in: ['public', 'teacher']
+        }
+      },
+      student: {
+        privacy: {
+          in: ['public', 'student']
+        }
+      }
+    };
+
+    const baseWhere = {
+      deletedAt: null,
+      ...privacyFilter[userRole] || privacyFilter.student
+    };
+
+    if (!includeHidden) {
+      baseWhere.isHidden = false;
+    }
+
+    return await prisma.document_templates.findMany({
+      where: baseWhere,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  // Enhanced search with role-based filtering
+  static async searchDocumentTemplatesWithRole(filters = {}, userRole) {
+    const privacyFilter = {
+      admin: {}, // Admins can see all
+      teacher: {
+        privacy: {
+          in: ['public', 'teacher']
+        }
+      },
+      student: {
+        privacy: {
+          in: ['public', 'student']
+        }
+      }
+    };
+
+    const where = {
+      deletedAt: null,
+      ...privacyFilter[userRole] || privacyFilter.student,
+      ...(filters.includeHidden && userRole === 'admin' ? {} : { isHidden: false }),
+      ...(filters.documentName && {
+        OR: [
+          { documentName: { contains: filters.documentName, mode: 'insensitive' } },
+          { description: { contains: filters.documentName, mode: 'insensitive' } }
+        ]
+      }),
+      ...(filters.privacy && { privacy: filters.privacy }),
+      ...(filters.price && { price: filters.price })
+    };
+
+    return await prisma.document_templates.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  // Audit logging
+  static async logDocumentOperation(operation, documentId, userId, details = {}) {
+    try {
+      // You can implement this with a separate audit_logs table
+      console.log(`Document Operation Log:`, {
+        operation,
+        documentId,
+        userId,
+        timestamp: new Date(),
+        details
+      });
+      
+      // Optional: Save to database audit table
+      // await prisma.audit_logs.create({
+      //   data: {
+      //     operation,
+      //     entityType: 'document',
+      //     entityId: documentId,
+      //     userId,
+      //     details: JSON.stringify(details),
+      //   }
+      // });
+    } catch (error) {
+      console.error('Failed to log document operation:', error);
+    }
+  }
 }
 
 export default DocumentModel;

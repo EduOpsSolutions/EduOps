@@ -1,137 +1,138 @@
 import express from 'express';
-import multer from '../../middleware/multerMiddleware.js';
-import * as documentController from '../../controller/document_controller.js';
 import {
-    validateCreateDocumentTemplate,
-    validateUpdateDocumentTemplate,
-    validateCreateDocumentRequest,
-    validateUpdateDocumentRequestStatus,
-    validateCreateDocumentValidation,
-    validateVerifySignature,
-    validateSearchDocumentTemplates,
-    validateSearchDocumentRequests,
-    validateSearchDocumentValidations,
-    validateFilename,
-    requireRole
+  // Document Templates
+  createDocumentTemplate,
+  getAllDocumentTemplates,
+  getDocumentTemplateById,
+  updateDocumentTemplate,
+  deleteDocumentTemplate,
+  toggleDocumentVisibility,
+  searchDocumentTemplates,
+  
+  // Document Requests
+  createDocumentRequest,
+  getAllDocumentRequests,
+  getDocumentRequestById,
+  updateDocumentRequestStatus,
+  searchDocumentRequests,
+  
+  // Document Validations
+  createDocumentValidation,
+  getAllDocumentValidations,
+  getDocumentValidationBySignature,
+  searchDocumentValidations
+} from '../../controller/document_controller.js';
+
+import {
+  verifyToken,
+  validateIsActiveUser,
+  validateUserIsAdmin,
+  validateUserRole
+} from '../../middleware/authValidator.js';
+
+import {
+  validateCreateDocumentTemplate,
+  validateUpdateDocumentTemplate,
+  validateCreateDocumentRequest,
+  validateUpdateDocumentRequestStatus,  
+  validateCreateDocumentValidation
 } from '../../middleware/documentValidator.js';
+
+import { uploadSingle } from '../../middleware/multerMiddleware.js';
 
 const router = express.Router();
 
-// DOCUMENT TEMPLATES
+// Apply authentication middleware to all routes
+router.use(verifyToken);
+router.use(validateIsActiveUser);
 
-// Get all document templates (public endpoint for students/teachers)
-router.get('/templates', documentController.getAllDocumentTemplates);
+// Document Templates Routes (Admin access required for CUD operations)
 
-// Search document templates
-router.get('/templates/search', documentController.searchDocumentTemplates);
+// GET /api/v1/documents/templates - All authenticated users can view (filtered by role)
+router.get('/templates', getAllDocumentTemplates);
 
-// Create new document template (admin only)
+// GET /api/v1/documents/templates/search - All authenticated users can search (filtered by role)
+router.get('/templates/search', searchDocumentTemplates);
+
+// GET /api/v1/documents/templates/:id - All authenticated users can view specific document (filtered by role)
+router.get('/templates/:id', getDocumentTemplateById);
+
+// POST /api/v1/documents/templates - Admin only
 router.post('/templates', 
-    multer.single('uploadFile'), 
-    documentController.createDocumentTemplate
+  validateUserIsAdmin, 
+  uploadSingle('file'), 
+  validateCreateDocumentTemplate, 
+  createDocumentTemplate
 );
 
-// Update document template (admin only)
+// PUT /api/v1/documents/templates/:id - Admin only
 router.put('/templates/:id', 
-    multer.single('uploadFile'), 
-    documentController.updateDocumentTemplate
+  validateUserIsAdmin, 
+  uploadSingle('file'), 
+  validateUpdateDocumentTemplate, 
+  updateDocumentTemplate
 );
 
-// Delete document template (admin only)
+// DELETE /api/v1/documents/templates/:id - Admin only
 router.delete('/templates/:id', 
-    documentController.deleteDocumentTemplate
+  validateUserIsAdmin, 
+  deleteDocumentTemplate
 );
 
-// Toggle document template visibility (admin only)
-router.patch('/templates/:id/toggle', 
-    documentController.toggleDocumentTemplate
+// PATCH /api/v1/documents/templates/:id/visibility - Admin only
+router.patch('/templates/:id/visibility', 
+  validateUserIsAdmin, 
+  toggleDocumentVisibility
 );
 
-// DOCUMENT REQUESTS
+// Document Requests Routes
 
-// Get all document requests (admin only)
-router.get('/requests', 
-    documentController.getAllDocumentRequests
-);
+// GET /api/v1/documents/requests - Role-based access (admins see all, students see own)
+router.get('/requests', getAllDocumentRequests);
 
-// Search document requests (admin only)
-router.get('/requests/search', 
-    documentController.searchDocumentRequests
-);
+// GET /api/v1/documents/requests/search - Role-based access
+router.get('/requests/search', searchDocumentRequests);
 
-// Create document request (student/teacher)
+// GET /api/v1/documents/requests/:id - Role-based access
+router.get('/requests/:id', getDocumentRequestById);
+
+// POST /api/v1/documents/requests - Students and teachers only
 router.post('/requests', 
-    documentController.createDocumentRequest
+  validateUserRole(['student', 'teacher']), 
+  validateCreateDocumentRequest, 
+  createDocumentRequest
 );
 
-// Get current user's document requests (student only)
-router.get('/requests/student', 
-    documentController.getStudentDocumentRequests
-);
-
-// Get specific student's document requests (admin only)
-router.get('/requests/student/:studentId', 
-    documentController.getStudentDocumentRequests
-);
-
-// Update document request status (admin only)
+// PATCH /api/v1/documents/requests/:id/status - Admin only
 router.patch('/requests/:id/status', 
-    documentController.updateDocumentRequestStatus
+  validateUserIsAdmin, 
+  validateUpdateDocumentRequestStatus,  // Changed from validateUpdateRequestStatus
+  updateDocumentRequestStatus
 );
 
-// DOCUMENT VALIDATION
+// Document Validation Routes (Admin access for management, public for verification)
 
-// Get all document validations (admin only)
+// GET /api/v1/documents/validations - Admin only
 router.get('/validations', 
-    requireRole(['admin']), 
-    documentController.getAllDocumentValidations
+  validateUserIsAdmin, 
+  getAllDocumentValidations
 );
 
-// Search document validations
+// GET /api/v1/documents/validations/search - Admin only
 router.get('/validations/search', 
-    validateSearchDocumentValidations, 
-    documentController.searchDocumentValidations
+  validateUserIsAdmin, 
+  searchDocumentValidations
 );
 
-// Create document validation with signature (admin/teacher)
+// GET /api/v1/documents/validate/:signature - Public endpoint (limited info for non-admins)
+router.get('/validate/:signature', getDocumentValidationBySignature);
+
+// POST /api/v1/documents/validations - Admin only
 router.post('/validations', 
-    requireRole(['admin', 'teacher']), 
-    multer.single('file'), 
-    validateCreateDocumentValidation, 
-    documentController.createDocumentValidation
+  validateUserIsAdmin, 
+  uploadSingle('file'), 
+  validateCreateDocumentValidation, 
+  createDocumentValidation
 );
 
-// Verify document signature (public endpoint)
-router.get('/verify/:signature', 
-    validateVerifySignature, 
-    documentController.verifyDocumentSignature
-);
-
-// FILE OPERATIONS
-
-// Upload document file
-router.post('/upload', 
-    multer.single('file'), 
-    documentController.uploadDocument
-);
-
-// List uploaded files
-router.get('/files', 
-    requireRole(['admin', 'teacher']), 
-    documentController.listUploadedFiles
-);
-
-// Download document file
-router.get('/files/:filename', 
-    validateFilename, 
-    documentController.downloadDocumentFile
-);
-
-// Delete document file
-router.delete('/files/:filename', 
-    requireRole(['admin']), 
-    validateFilename, 
-    documentController.deleteDocumentFile
-);
-
-export { router };
+export default router;

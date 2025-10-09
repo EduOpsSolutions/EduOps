@@ -9,7 +9,7 @@ import { router as academicPeriods } from './academic_period_routes.js';
 import { router as academicPeriodCourses } from './academic_period_courses_routes.js';
 import { router as posts } from './post_routes.js';
 import { router as schedules } from './schedule_routes.js';
-import { router as documents } from './document_routes.js';
+import documents from './document_routes.js';
 import { router as ai } from './ai_routes.js';
 import payments from './payment_routes.js';
 

@@ -130,6 +130,82 @@ const validatePassword = (req, res, next) => {
   next();
 };
 
+// Document management role-based access functions
+const validateUserRole = (allowedRoles) => {
+  return (req, res, next) => {
+    const userRole = req.user?.data?.role;
+
+    if (!userRole) {
+      return res.status(401).json({
+        error: true,
+        message: 'User role not found',
+      });
+    }
+
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        error: true,
+        message: `Access denied. Required roles: ${allowedRoles.join(', ')}`,
+      });
+    }
+
+    next();
+  };
+};
+
+const validateDocumentAccess = (operation = 'read') => {
+  return async (req, res, next) => {
+    try {
+      const userRole = req.user?.data?.role;
+      const documentId = req.params.id || req.body.documentId;
+
+      if (!documentId) {
+        return res.status(400).json({
+          error: true,
+          message: 'Document ID is required',
+        });
+      }
+
+      const { default: DocumentModel } = await import(
+        '../model/document_model.js'
+      );
+      const document = await DocumentModel.getDocumentTemplateById(documentId);
+
+      if (!document) {
+        return res.status(404).json({
+          error: true,
+          message: 'Document not found',
+        });
+      }
+
+      const accessRules = {
+        admin: ['public', 'student', 'teacher', 'admin'],
+        teacher: ['public', 'teacher'],
+        student: ['public', 'student'],
+      };
+
+      const userAccess = accessRules[userRole] || accessRules.student;
+
+      if (!userAccess.includes(document.privacy.toLowerCase())) {
+        return res.status(403).json({
+          error: true,
+          message:
+            'Access denied. Insufficient permissions to access this document.',
+        });
+      }
+
+      req.document = document;
+      next();
+    } catch (error) {
+      console.error('Document access validation error:', error);
+      res.status(500).json({
+        error: true,
+        message: 'Failed to validate document access',
+      });
+    }
+  };
+};
+
 export {
   validateLogin,
   validateUserIsAdmin,
@@ -138,4 +214,6 @@ export {
   verifyToken,
   validateIsActiveUser,
   validatePassword,
+  validateUserRole,
+  validateDocumentAccess,
 };
