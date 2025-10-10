@@ -6,15 +6,15 @@ import {
   getPaymentMethods,
   getPaymentDetails,
   extractPayMongoDetails,
-} from "./paymongo.service.js";
+} from "./paymongo_service.js";
 import {
   FEE_TYPE_MAP,
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-} from "./payment.constants.js";
-import { sendPaymentLinkEmail } from "./paymentEmailService.js";
+} from "./payment_constants.js";
+import { sendPaymentLinkEmail } from "../services/paymentEmailService.js";
 
 const prisma = new PrismaClient();
 

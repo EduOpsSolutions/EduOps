@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
@@ -6,6 +7,7 @@ import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
 
 function PaymentForm() {
+  const navigate = useNavigate();
   const {
     formData,
     loading,
@@ -13,8 +15,12 @@ function PaymentForm() {
     nameError,
     feesOptions,
     updateFormField,
-    handleSubmit,
     validateAndFetchStudentByID,
+    validateRequiredFields,
+    validatePhoneNumber,
+    preparePaymentData,
+    showDialog,
+    resetForm
   } = usePaymentStore();
 
   const handleInputChange = (e) => {
@@ -31,7 +37,66 @@ function PaymentForm() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    await handleSubmit();
+    
+    // Validate required fields
+    if (!validateRequiredFields()) {
+      await showDialog({
+        icon: "warning",
+        title: "Missing Required Fields",
+        text: "Please fill in all required fields before submitting.",
+        confirmButtonColor: "#b71c1c",
+      });
+      return;
+    }
+
+    // Validate phone number
+    if (!validatePhoneNumber()) return;
+
+    // Show confirmation
+    const result = await showDialog({
+      title: 'Proceed to Payment',
+      html: `
+        <p>Are you ready to proceed with the payment?</p>
+        <p><strong>Amount:</strong> ₱${formData.amount}</p>
+        <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">
+          You will be redirected to select your preferred payment method.
+        </p>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#890E07',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Continue',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Prepare payment data for the enhanced payment page
+    const paymentData = preparePaymentData();
+    const description = `EduOps ${paymentData.feeType.replace('_', ' ')} Payment`;
+    const checkoutID = `${Date.now()}-${paymentData.userId || 'Guest'}`;
+
+    // Store data and redirect to enhanced payment page
+    localStorage.setItem("totalPayment", paymentData.amount.toString());
+    localStorage.setItem("checkoutID", checkoutID);
+    
+    // Navigate to the enhanced payment page
+    navigate("/payment", {
+      state: {
+        amount: paymentData.amount,
+        description: description,
+        checkoutID: checkoutID,
+        studentInfo: {
+          firstName: paymentData.firstName,
+          lastName: paymentData.lastName,
+          email: paymentData.email,
+          phone: paymentData.phoneNumber
+        }
+      }
+    });
+
+    resetForm();
   };
 
   return (

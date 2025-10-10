@@ -6,7 +6,7 @@ import {
   createPayMongoAuthHeaders,
   PAYMONGO_METHOD_MAP,
   PAYMONGO_EVENTS 
-} from './payment.constants.js';
+} from './payment_constants.js';
 
 const prisma = new PrismaClient();
 

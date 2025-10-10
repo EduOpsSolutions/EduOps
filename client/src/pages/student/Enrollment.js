@@ -369,7 +369,20 @@ function Enrollment() {
               {shouldShowPaymentButton && (
                   <button
                     onClick={() => {
-                      navigate("/paymentForm");
+                      // Redirect to enhanced payment page with course payment data
+                      navigate("/payment", {
+                        state: {
+                          amount: coursePrice || 0,
+                          description: `Enrollment Payment - ${courseName || 'Course'}`,
+                          checkoutID: `ENR-${Date.now()}-${userId || 'Guest'}`,
+                          studentInfo: {
+                            firstName: fullName?.split(' ')[0] || '',
+                            lastName: fullName?.split(' ').slice(1).join(' ') || '',
+                            email: '', // You may need to get this from user context
+                            phone: ''  // You may need to get this from user context
+                          }
+                        }
+                      });
                     }}
                     className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
                   >

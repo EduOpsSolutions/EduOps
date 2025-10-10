@@ -9,15 +9,15 @@ import {
   forceSyncPaymentStatus,
   sendSuccess,
   sendError,
-} from "./payment.service.js";
+} from "./payment_service.js";
 import {
   verifyWebhookSignature,
   processWebhookEvent,
-} from "./paymongo.service.js";
+} from "./paymongo_service.js";
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-} from "./payment.constants.js";
+} from "./payment_constants.js";
 
 /**
  * Payment Controller
