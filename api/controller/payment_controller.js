@@ -251,7 +251,6 @@ const handleWebhook = async (req, res) => {
 
 // Export individual functions for named imports
 export {
-  createPayment,
   createManualTransaction,
   getPaymentDetails,
   getPaymentsByUserId,
