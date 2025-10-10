@@ -633,6 +633,66 @@ export const sendSuccess = (
 };
 
 /**
+ * Send payment link via email
+ * @param {Object} paymentData - Payment information
+ * @returns {Promise<Object>} Email send result
+ */
+export const sendPaymentLinkViaEmail = async (paymentData) => {
+  const {
+    email,
+    firstName,
+    lastName,
+    amount,
+    description,
+    feeType,
+    userId
+  } = paymentData;
+
+  try {
+    // Generate checkout ID
+    const checkoutID = `EMAIL-${Date.now()}-${userId || 'Guest'}`;
+    
+    // Create payment link URL (pointing to your payment page)
+    const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const checkoutUrl = `${baseUrl}/payment?amount=${amount}&description=${encodeURIComponent(description)}&checkoutID=${checkoutID}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}`;
+
+    // Prepare user and payment details for email
+    const user = { firstName, lastName };
+    const paymentDetails = {
+      amount: parseFloat(amount),
+      description,
+      remarks: feeType ? `Fee Type: ${feeType.replace('_', ' ')}` : '',
+    };
+
+    // Send email
+    const emailSent = await sendPaymentLinkEmail(
+      email,
+      checkoutUrl,
+      paymentDetails,
+      user
+    );
+
+    if (emailSent) {
+      return {
+        success: true,
+        message: "Payment link sent to your email successfully!",
+        checkoutID,
+        checkoutUrl
+      };
+    } else {
+      throw new Error("Failed to send email");
+    }
+  } catch (error) {
+    console.error("Error sending payment link via email:", error);
+    return {
+      success: false,
+      message: "Failed to send payment link via email",
+      error: error.message
+    };
+  }
+};
+
+/**
  * Send error response
  * @param {Object} res - Express response object
  * @param {string} message - Error message

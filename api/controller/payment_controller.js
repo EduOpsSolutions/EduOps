@@ -6,6 +6,7 @@ import {
   cancelPayment,
   getAvailablePaymentMethods,
   forceSyncPaymentStatus,
+  sendPaymentLinkViaEmail,
   sendSuccess,
   sendError,
 } from "../services/payment_service.js";
@@ -16,7 +17,11 @@ import {
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
+  PAYMENT_INCLUDES,
 } from "../constants/payment_constants.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 /**
  * Payment Controller
@@ -247,6 +252,66 @@ const handleWebhook = async (req, res) => {
   }
 };
 
+/**
+ * Send payment link via email
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ */
+const sendPaymentLinkEmail = async (req, res) => {
+  try {
+    const result = await sendPaymentLinkViaEmail(req.body);
+    
+    if (result.success) {
+      return sendSuccess(res, { 
+        checkoutID: result.checkoutID,
+        checkoutUrl: result.checkoutUrl 
+      }, result.message, 200);
+    } else {
+      return sendError(res, result.message, 500, result.error);
+    }
+  } catch (error) {
+    console.error("Send payment link email error:", error);
+    return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
+  }
+};
+
+/**
+ * Check payment status by payment intent ID
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ */
+const checkPaymentStatus = async (req, res) => {
+  try {
+    const { paymentIntentId } = req.params;
+    
+    // Find payment by PayMongo payment intent ID
+    const payment = await prisma.payments.findFirst({
+      where: {
+        OR: [
+          { paymongoId: paymentIntentId },
+          { paymongoResponse: { contains: paymentIntentId } }
+        ]
+      },
+      include: PAYMENT_INCLUDES.WITH_USER
+    });
+
+    if (!payment) {
+      return sendError(res, "Payment not found", 404);
+    }
+
+    return sendSuccess(res, {
+      status: payment.status,
+      amount: payment.amount,
+      transactionId: payment.id,
+      description: payment.remarks || "Payment",
+      paidAt: payment.paidAt
+    });
+  } catch (error) {
+    console.error("Check payment status error:", error);
+    return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500);
+  }
+};
+
 // ==================== Export Controller Functions ====================
 
 // Export individual functions for named imports
@@ -261,6 +326,8 @@ export {
   forceSyncPaymentStatusController,
   bulkSyncPendingPaymentsController,
   cleanupOrphanedPaymentsController,
+  sendPaymentLinkEmail,
+  checkPaymentStatus,
   handleWebhook,
 };
 
@@ -276,5 +343,7 @@ export default {
   forceSyncPaymentStatus: forceSyncPaymentStatusController,
   bulkSyncPendingPayments: bulkSyncPendingPaymentsController,
   cleanupOrphanedPayments: cleanupOrphanedPaymentsController,
+  sendPaymentLinkEmail,
+  checkPaymentStatus,
   handleWebhook,
 };

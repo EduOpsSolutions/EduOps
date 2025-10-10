@@ -23,12 +23,26 @@ const {
     forceSyncPaymentStatus,
     bulkSyncPendingPayments,
     cleanupOrphanedPayments,
+    sendPaymentLinkEmail,
+    checkPaymentStatus,
     handleWebhook
 } = paymentController;
 
 const router = express.Router();
 
 // ==================== Public Endpoints ====================
+
+/**
+ * POST /api/v1/payments/send-email
+ * Send payment link via email (Public endpoint - no auth required)
+ */
+router.post('/send-email', sendPaymentLinkEmail);
+
+/**
+ * GET /api/v1/payments/check-status/:paymentIntentId
+ * Check payment status by payment intent ID (Public endpoint - no auth required)
+ */
+router.get('/check-status/:paymentIntentId', checkPaymentStatus);
 
 /**
  * POST /api/v1/payments/webhook

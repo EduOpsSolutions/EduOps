@@ -5,6 +5,8 @@ import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
 import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
+import { sendPaymentLinkEmail } from "../../utils/paymentApi";
+import Swal from "sweetalert2";
 
 function PaymentForm() {
   const navigate = useNavigate();
@@ -22,6 +24,23 @@ function PaymentForm() {
     showDialog,
     resetForm
   } = usePaymentStore();
+
+  // Helper function to get proper fee type label
+  const getFeeTypeLabel = (feeType) => {
+    const feeTypeMap = {
+      'down_payment': 'Down Payment',
+      'tuition_fee': 'Tuition Fee',
+      'document_fee': 'Document Fee',
+      'book_fee': 'Book Fee',
+    };
+    
+    // Handle undefined or null feeType
+    if (!feeType) {
+      return 'Payment';
+    }
+    
+    return feeTypeMap[feeType] || feeType.replace('_', ' ');
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -52,29 +71,120 @@ function PaymentForm() {
     // Validate phone number
     if (!validatePhoneNumber()) return;
 
-    // Show confirmation
-    const result = await showDialog({
-      title: 'Proceed to Payment',
+    // Get fee label for display
+    const feeLabel = getFeeTypeLabel(formData.fee);
+
+    // Step 1: Show confirmation dialog
+    const confirmResult = await Swal.fire({
+      title: 'Confirm Payment',
       html: `
-        <p>Are you ready to proceed with the payment?</p>
-        <p><strong>Amount:</strong> ₱${formData.amount}</p>
-        <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">
-          You will be redirected to select your preferred payment method.
-        </p>
+        <div style="text-align: center;">
+          <p style="margin-bottom: 15px; font-size: 1.1rem; color: #333;">Are you sure you want to pay <strong>₱${formData.amount}</strong> for <strong>${feeLabel}</strong>?</p>
+          <p style="margin: 0; font-size: 0.9rem; color: #6B7280;">
+            Payment link will be sent to: <strong>${formData.email_address}</strong>
+          </p>
+        </div>
       `,
       icon: 'question',
       showCancelButton: true,
+      confirmButtonText: 'Yes, I\'m sure',
+      cancelButtonText: 'Cancel',
       confirmButtonColor: '#890E07',
       cancelButtonColor: '#6B7280',
-      confirmButtonText: 'Continue',
-      cancelButtonText: 'Cancel'
+      reverseButtons: true
     });
 
-    if (!result.isConfirmed) return;
+    if (!confirmResult.isConfirmed) {
+      return; // User cancelled
+    }
 
+    // Step 2: Send email and show success dialog with options
+    try {
+      const paymentData = preparePaymentData();
+      const feeLabel = getFeeTypeLabel(paymentData.feeType);
+      const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
+
+      // Prepare data for email
+      const emailData = {
+        email: paymentData.email,
+        firstName: paymentData.firstName,
+        lastName: paymentData.lastName,
+        amount: paymentData.amount,
+        description: description,
+        feeType: paymentData.feeType,
+        userId: paymentData.userId
+      };
+
+      // Show loading while sending email
+      Swal.fire({
+        title: 'Processing...',
+        text: 'Sending payment link to your email...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Send email
+      const result = await sendPaymentLinkEmail(emailData);
+
+      if (result.success) {
+        // Step 3: Show success dialog with Pay Now option
+        const successResult = await Swal.fire({
+          title: 'Email Sent Successfully!',
+          html: `
+            <div style="text-align: center;">
+              <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+                <p style="margin: 0; color: #155724; font-weight: 500;">
+                  <i class="fas fa-envelope mr-2"></i>
+                  A payment link has been sent to <strong>${paymentData.email}</strong>
+                </p>
+              </div>
+              <p style="margin: 15px 0; color: #6B7280;">
+                You can complete your payment using the link in your email, or click "Pay Now" to proceed immediately.
+              </p>
+            </div>
+          `,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: '<i class="fas fa-credit-card mr-2"></i>Pay Now',
+          cancelButtonText: '<i class="fas fa-times mr-2"></i>Close',
+          confirmButtonColor: '#890E07',
+          cancelButtonColor: '#6B7280',
+          reverseButtons: true
+        });
+
+        if (successResult.isConfirmed) {
+          // User chose to pay now - redirect to payment page
+          handlePayNow();
+        }
+        
+        resetForm();
+      } else {
+        await Swal.fire({
+          title: 'Error',
+          text: result.error || 'Failed to send payment link. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#890E07'
+        });
+      }
+    } catch (error) {
+      console.error('Error sending payment link:', error);
+      await Swal.fire({
+        title: 'Error',
+        text: 'An unexpected error occurred. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#890E07'
+      });
+    }
+  };
+
+  // Handle Pay Now option
+  const handlePayNow = () => {
     // Prepare payment data for the enhanced payment page
     const paymentData = preparePaymentData();
-    const description = `EduOps ${paymentData.feeType.replace('_', ' ')} Payment`;
+    const feeLabel = getFeeTypeLabel(paymentData.feeType);
+    const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
     const checkoutID = `${Date.now()}-${paymentData.userId || 'Guest'}`;
 
     // Store data and redirect to enhanced payment page

@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom";
 import UserNavbar from "../../components/navbars/UserNav";
 import useEnrollmentStore from "../../stores/enrollmentProgressStore";
 import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
+import useAuthStore from "../../stores/authStore";
+import Swal from "sweetalert2";
 
 function Enrollment() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const {
     enrollmentId,
     userId,
@@ -70,6 +73,70 @@ function Enrollment() {
         </p>
       </div>
     );
+  };
+
+  // Handle payment options (Pay Now with auto email sending)
+  const handlePaymentOptions = async () => {
+    await Swal.fire({
+      title: 'Proceed to Payment',
+      html: `
+        <div style="text-align: center;">
+          <p style="margin-bottom: 20px;">Are you ready to proceed with the enrollment payment?</p>
+          <p><strong>Course:</strong> ${courseName || 'Course'}</p>
+          <p><strong>Amount:</strong> ₱${coursePrice || 0}</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 0.875rem; color: #6B7280;">
+              <i class="fas fa-envelope mr-1"></i>
+              A payment link will be automatically sent to <strong>${user?.email || 'your email'}</strong> for your records.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button id="payNowBtn" style="
+              background-color: #890E07; 
+              color: white; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 5px; 
+              cursor: pointer;
+              font-weight: bold;
+              font-size: 16px;
+            ">
+              <i class="fas fa-credit-card mr-2"></i>Pay Now
+            </button>
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showConfirmButton: false,
+      showCancelButton: true,
+      cancelButtonColor: '#6B7280',
+      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      didOpen: () => {
+        const payNowBtn = document.getElementById('payNowBtn');
+        
+        payNowBtn.addEventListener('click', () => {
+          Swal.close();
+          handlePayNow();
+        });
+      }
+    });
+  };
+
+  // Handle Pay Now option
+  const handlePayNow = () => {
+    navigate("/payment", {
+      state: {
+        amount: coursePrice || 0,
+        description: `Enrollment Payment - ${courseName || 'Course'}`,
+        checkoutID: `ENR-${Date.now()}-${userId || 'Guest'}`,
+        studentInfo: {
+          firstName: fullName?.split(' ')[0] || '',
+          lastName: fullName?.split(' ').slice(1).join(' ') || '',
+          email: user?.email || '',
+          phone: user?.phoneNumber || ''
+        }
+      }
+    });
   };
 
   // Payment proof status logic
@@ -368,22 +435,7 @@ function Enrollment() {
             <div className="flex justify-center my-6">
               {shouldShowPaymentButton && (
                   <button
-                    onClick={() => {
-                      // Redirect to enhanced payment page with course payment data
-                      navigate("/payment", {
-                        state: {
-                          amount: coursePrice || 0,
-                          description: `Enrollment Payment - ${courseName || 'Course'}`,
-                          checkoutID: `ENR-${Date.now()}-${userId || 'Guest'}`,
-                          studentInfo: {
-                            firstName: fullName?.split(' ')[0] || '',
-                            lastName: fullName?.split(' ').slice(1).join(' ') || '',
-                            email: '', // You may need to get this from user context
-                            phone: ''  // You may need to get this from user context
-                          }
-                        }
-                      });
-                    }}
+                    onClick={handlePaymentOptions}
                     className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
                   >
                     <span>
