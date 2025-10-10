@@ -24,122 +24,6 @@ const createAuthHeaders = (usePublicKey = false) => {
 };
 
 /**
- * Create a Payment Link for checkout
- * @param {Object} paymentData - Payment information
- * @param {number} paymentData.amount - Amount in PHP (will be converted to centavos)
- * @param {string} paymentData.description - Payment description
- * @param {string} paymentData.remarks - Additional remarks
- * @returns {Promise<Object>} Payment link response
- */
-export const createPaymentLink = async (paymentData) => {
-    try {
-        const { amount, description, remarks } = paymentData;
-        const amountInCentavos = Math.round(amount * 100);
-
-        const data = {
-            data: {
-                attributes: {
-                    amount: amountInCentavos,
-                    currency: 'PHP',
-                    description: description || 'EduOps Payment',
-                    remarks: remarks || 'Payment for EduOps services'
-                }
-            }
-        };
-
-        const response = await axios.post(
-            `${PAYMONGO_BASE_URL}/links`,
-            data,
-            { headers: createAuthHeaders() }
-        );
-
-        return {
-            success: true,
-            data: response.data,
-            checkoutUrl: response.data.data.attributes.checkout_url,
-            paymentLinkId: response.data.data.id
-        };
-    } catch (error) {
-        console.error('PayMongo Payment Link Error:', error.response?.data || error.message);
-        return {
-            success: false,
-            error: error.response?.data || error.message
-        };
-    }
-};
-
-/**
- * Retrieve payment link details
- * @param {string} paymentLinkId - Payment link ID
- * @returns {Promise<Object>} Payment link details
- */
-export const getPaymentLink = async (paymentLinkId) => {
-    try {
-        const response = await axios.get(
-            `${PAYMONGO_BASE_URL}/links/${paymentLinkId}`,
-            { headers: createAuthHeaders() }
-        );
-
-        return {
-            success: true,
-            data: response.data
-        };
-    } catch (error) {
-        console.error('PayMongo Get Payment Link Error:', error.response?.data || error.message);
-        return {
-            success: false,
-            error: error.response?.data || error.message
-        };
-    }
-};
-
-/* Archive (disable) a payment link */
-export const archivePaymentLink = async (paymentLinkId) => {
-    try {
-        const response = await axios.post(
-            `${PAYMONGO_BASE_URL}/links/${paymentLinkId}/archive`,
-            {},
-            { headers: createAuthHeaders() }
-        );
-
-        return {
-            success: true,
-            data: response.data
-        };
-    } catch (error) {
-        console.error('PayMongo Archive Payment Link Error:', error.response?.data || error.message);
-        return {
-            success: false,
-            error: error.response?.data || error.message
-        };
-    }
-};
-
-/**
- * Get list of available payment methods for the merchant
- * @returns {Promise<Object>} Available payment methods
- */
-export const getPaymentMethods = async () => {
-    try {
-        const response = await axios.get(
-            `${PAYMONGO_BASE_URL}/merchants/capabilities/payment_methods`,
-            { headers: createAuthHeaders() }
-        );
-
-        return {
-            success: true,
-            data: response.data
-        };
-    } catch (error) {
-        console.error('PayMongo Get Payment Methods Error:', error.response?.data || error.message);
-        return {
-            success: false,
-            error: error.response?.data || error.message
-        };
-    }
-};
-
-/**
  * Create a Payment Intent for card payments
  * @param {Object} intentData - Payment intent information
  * @param {number} intentData.amount - Amount in PHP (will be converted to centavos)
@@ -147,8 +31,6 @@ export const getPaymentMethods = async () => {
  * @param {string} intentData.statement_descriptor - Statement descriptor for card payments
  * @param {Array} intentData.payment_method_allowed - Allowed payment methods
  * @param {Object} intentData.payment_method_options - Payment method options
- * @param {Object} intentData.payment_method_data - Payment method data for direct processing
- * @param {boolean} intentData.confirm - Whether to confirm the payment intent immediately
  * @param {string} intentData.return_url - Return URL for payment methods that require redirect (like Maya)
  * @returns {Promise<Object>} Payment intent response
  */
@@ -160,8 +42,6 @@ export const createPaymentIntent = async (intentData) => {
             statement_descriptor,
             payment_method_allowed,
             payment_method_options,
-            payment_method_data,
-            confirm,
             return_url
         } = intentData;
         const amountInCentavos = Math.round(amount * 100);
@@ -184,15 +64,6 @@ export const createPaymentIntent = async (intentData) => {
         // Add return_url if provided (required for Maya payments)
         if (return_url) {
             data.data.attributes.return_url = return_url;
-        }
-
-        // Add payment method data and confirm if provided
-        if (payment_method_data) {
-            data.data.attributes.payment_method_data = payment_method_data;
-        }
-
-        if (confirm !== undefined) {
-            data.data.attributes.confirm = confirm;
         }
 
         const response = await axios.post(
@@ -308,63 +179,10 @@ export const attachPaymentMethodToIntent = async (paymentIntentId, paymentMethod
     }
 };
 
-/**
- * Create a Source for e-wallet payments (GCash, GrabPay, Maya)
- * @param {Object} sourceData - Source information
- * @param {number} sourceData.amount - Amount in PHP (will be converted to centavos)
- * @param {string} sourceData.type - Payment type (gcash, grab_pay, paymaya)
- * @param {Object} sourceData.billing - Billing information
- * @param {Object} sourceData.redirect - Redirect URLs
- * @returns {Promise<Object>} Source response
- */
-export const createSource = async (sourceData) => {
-    try {
-        const { amount, type, billing, redirect } = sourceData;
-        const amountInCentavos = Math.round(amount * 100);
 
-        const data = {
-            data: {
-                attributes: {
-                    amount: amountInCentavos,
-                    redirect: redirect || {
-                        success: `${process.env.CLIENT_URL}/payment`,
-                        failed: `${process.env.CLIENT_URL}/payment`
-                    },
-                    billing,
-                    source_type: type, // Changed from 'type' to 'source_type'
-                    currency: 'PHP'
-                }
-            }
-        };
-
-        const response = await axios.post(
-            `${PAYMONGO_BASE_URL}/sources`,
-            data,
-            { headers: createAuthHeaders(true) } // Use public key
-        );
-
-        return {
-            success: true,
-            data: response.data,
-            sourceId: response.data.data.id,
-            checkoutUrl: response.data.data.attributes.redirect.checkout_url
-        };
-    } catch (error) {
-        console.error('PayMongo Source Error:', error.response?.data || error.message);
-        return {
-            success: false,
-            error: error.response?.data || error.message
-        };
-    }
-};
 
 export default {
-    createPaymentLink,
-    getPaymentLink,
-    archivePaymentLink,
-    getPaymentMethods,
     createPaymentIntent,
     createPaymentMethod,
-    attachPaymentMethodToIntent,
-    createSource
+    attachPaymentMethodToIntent
 };

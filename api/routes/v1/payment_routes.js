@@ -1,12 +1,11 @@
 import express from 'express';
-import paymentController from './payment_controller.js';
+import paymentController from '../../controller/payment_controller.js';
 import {
-    validateCreatePayment,
     validateCreateManualTransaction,
     validatePagination,
     validatePaymentId,
     validateUserId
-} from './payment_validator.js';
+} from '../../middleware/paymentValidator.js';
 
 /**
  * Payment Routes
@@ -14,7 +13,6 @@ import {
  */
 
 const {
-    createPayment,
     createManualTransaction,
     getPaymentDetails,
     getPaymentsByUserId,
@@ -31,12 +29,6 @@ const {
 const router = express.Router();
 
 // ==================== Public Endpoints ====================
-
-/**
- * POST /api/v1/payments
- * Create payment link (Public endpoint - no auth required)
- */
-router.post('/', validateCreatePayment, createPayment);
 
 /**
  * POST /api/v1/payments/webhook
@@ -118,7 +110,7 @@ router.get('/user/:userId', validateUserId, validatePagination, getPaymentsByUse
  */
 router.post('/create-intent', async (req, res) => {
     try {
-        const { createPaymentIntent } = await import('../utils/paymongo.js');
+        const { createPaymentIntent } = await import('../../utils/paymongo.js');
         const { 
             amount, 
             description, 
@@ -161,7 +153,7 @@ router.post('/create-intent', async (req, res) => {
  */
 router.post('/create-method', async (req, res) => {
     try {
-        const { createPaymentMethod } = await import('../utils/paymongo.js');
+        const { createPaymentMethod } = await import('../../utils/paymongo.js');
         const { details, billing, type } = req.body;
         
         const paymentMethodData = { 
@@ -191,7 +183,7 @@ router.post('/create-method', async (req, res) => {
  */
 router.post('/attach-method', async (req, res) => {
     try {
-        const { attachPaymentMethodToIntent } = await import('../utils/paymongo.js');
+        const { attachPaymentMethodToIntent } = await import('../../utils/paymongo.js');
         const { paymentIntentId, paymentMethodId, clientKey, return_url } = req.body;
         
         const result = await attachPaymentMethodToIntent(paymentIntentId, paymentMethodId, clientKey, return_url);
@@ -211,87 +203,9 @@ router.post('/attach-method', async (req, res) => {
     }
 });
 
-/**
- * POST /api/v1/payments/create-source
- * Create PayMongo Source for e-wallets (GCash, Maya)
- */
-router.post('/create-source', async (req, res) => {
-    try {
-        const { createSource } = await import('../utils/paymongo.js');
-        const { amount, type, billing, redirect } = req.body;
-        
-        const sourceData = { amount, type, billing, redirect };
-        const source = await createSource(sourceData);
-        
-        res.json({
-            success: true,
-            data: source
-        });
-    } catch (error) {
-        console.error('Error creating source:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Failed to create source'
-        });
-    }
-});
 
-/**
- * GET /api/v1/payments/check-source-status/:sourceId
- * Check PayMongo Source status for e-wallets
- */
-router.get('/check-source-status/:sourceId', async (req, res) => {
-    try {
-        const { retrieveSource } = await import('../utils/paymongo.js');
-        const { sourceId } = req.params;
-        
-        const source = await retrieveSource(sourceId);
-        
-        res.json({
-            success: true,
-            data: source
-        });
-    } catch (error) {
-        console.error('Error checking source status:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Failed to check source status'
-        });
-    }
-});
 
-/**
- * POST /api/v1/payments/check-source-status
- * Check PayMongo Source status for e-wallets (POST version for request body)
- */
-router.post('/check-source-status', async (req, res) => {
-    try {
-        const { retrieveSource } = await import('../utils/paymongo.js');
-        const { sourceId } = req.body;
-        
-        const source = await retrieveSource(sourceId);
-        
-        res.json({
-            success: true,
-            data: source
-        });
-    } catch (error) {
-        console.error('Error checking source status:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Failed to check source status'
-        });
-    }
-});
 
-// ==================== Enhanced Payment Methods (Credit Card, GCash, Maya) ====================
-
-import {
-    createPaymentIntent,
-    createPaymentMethod,
-    attachPaymentMethodToIntent,
-    createSource
-} from '../utils/paymongo.js';
 
 // Response helpers
 const sendSuccess = (res, data, message = "Operation successful", statusCode = 200) => {
@@ -408,50 +322,6 @@ router.post('/attach-method', async (req, res) => {
     }
 });
 
-/**
- * Create Payment Intent with Payment Method directly (for PayMaya)
- * POST /api/v1/payments/create-intent-with-method
- */
-router.post('/create-intent-with-method', async (req, res) => {
-    try {
-        const { 
-            amount, 
-            description, 
-            payment_method_allowed, 
-            payment_method_options,
-            payment_method_data,
-            confirm,
-            return_url
-        } = req.body;
 
-        if (!amount || amount <= 0) {
-            return sendError(res, "Valid amount is required", 400);
-        }
-
-        if (!payment_method_data || !payment_method_data.type) {
-            return sendError(res, "Payment method data with type is required", 400);
-        }
-
-        // Create payment intent with payment method data
-        const result = await createPaymentIntent({
-            amount: parseFloat(amount),
-            description: description || "EduOps Payment",
-            payment_method_allowed: payment_method_allowed || [payment_method_data.type],
-            payment_method_options: payment_method_options,
-            payment_method_data: payment_method_data,
-            confirm: confirm || false,
-            return_url: return_url
-        });
-
-        if (!result.success) {
-            return sendError(res, "Failed to create payment intent with method", 400, result.error);
-        }
-
-        return sendSuccess(res, result.data, "Payment intent with method created successfully");
-    } catch (error) {
-        console.error("Create payment intent with method error:", error);
-        return sendError(res, "Internal server error", 500, error.message);
-    }
-});
 
 export default router;

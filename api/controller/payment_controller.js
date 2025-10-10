@@ -1,5 +1,4 @@
 import {
-  createOnlinePayment,
   createManualPayment,
   getPaymentWithSync,
   getPaymentsByUser,
@@ -9,15 +8,15 @@ import {
   forceSyncPaymentStatus,
   sendSuccess,
   sendError,
-} from "./payment_service.js";
+} from "../services/payment_service.js";
 import {
   verifyWebhookSignature,
   processWebhookEvent,
-} from "./paymongo_service.js";
+} from "../services/paymongo_service.js";
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-} from "./payment_constants.js";
+} from "../constants/payment_constants.js";
 
 /**
  * Payment Controller
@@ -31,16 +30,6 @@ import {
  * @param {Object} req - Express request
  * @param {Object} res - Express response
  */
-const createPayment = async (req, res) => {
-  try {
-    const result = await createOnlinePayment(req.body);
-    return sendSuccess(res, result, SUCCESS_MESSAGES.PAYMENT_CREATED, 201);
-  } catch (error) {
-    console.error("Create payment error:", error);
-    return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
-  }
-};
-
 /**
  * Create manual transaction (Physical Payment)
  * @param {Object} req - Express request
@@ -278,7 +267,6 @@ export {
 
 // Export default object for backward compatibility
 export default {
-  createPayment,
   createManualTransaction,
   getPaymentDetails,
   getPaymentsByUserId,

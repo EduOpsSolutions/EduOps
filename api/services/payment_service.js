@@ -1,25 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  createPaymentLink,
-  getPaymentLink,
-  archivePaymentLink,
-  getPaymentMethods,
-  getPaymentDetails,
-  extractPayMongoDetails,
-} from "./paymongo_service.js";
-import {
   FEE_TYPE_MAP,
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-} from "./payment_constants.js";
-import { sendPaymentLinkEmail } from "../services/paymentEmailService.js";
+} from "../constants/payment_constants.js";
+import { sendPaymentLinkEmail } from "./paymentEmailService.js";
 
 const prisma = new PrismaClient();
 
 /**
- * Payment Service
+ * PayMongo hosted page
  * Core business logic for payment operations
  */
 
@@ -195,78 +187,6 @@ const mapPayMongoStatusToPrisma = (paymongoStatus) => {
 };
 
 // ==================== Core Payment Operations ====================
-
-/**
- * Create online payment with PayMongo
- * @param {Object} paymentData - Payment data
- * @returns {Promise<Object>} Payment creation result
- */
-export const createOnlinePayment = async (paymentData) => {
-  const {
-    userId,
-    firstName,
-    middleName,
-    lastName,
-    email,
-    phoneNumber,
-    feeType,
-    amount,
-  } = paymentData;
-
-  const feeName = FEE_TYPE_MAP[feeType] || feeType;
-  const paymentAmount = parseFloat(amount);
-  const fullName = middleName
-    ? `${firstName} ${middleName} ${lastName}`
-    : `${firstName} ${lastName}`;
-  const paymentDescription = `${feeName} - Payment for ${fullName}`;
-
-  // Create payment link
-  const paymentLinkResult = await createPaymentLink({
-    amount: paymentAmount,
-    description: paymentDescription,
-    remarks: `EduOps ${feeType} payment`,
-  });
-
-  if (!paymentLinkResult.success) {
-    throw new Error(paymentLinkResult.error || ERROR_MESSAGES.PAYMONGO_ERROR);
-  }
-
-  // Save payment record
-  const customPaymentId = await generatePaymentId();
-  const payment = await prisma.payments.create({
-    data: {
-      id: customPaymentId,
-      paymongoId: paymentLinkResult.paymentLinkId,
-      userId: userId,
-      amount: paymentAmount,
-      checkoutUrl: paymentLinkResult.checkoutUrl,
-      paymongoResponse: JSON.stringify(paymentLinkResult.data),
-      status: PAYMENT_STATUS.PENDING,
-      paymentMethod: "Online Payment",
-      feeType: feeType,
-      remarks: `EduOps ${feeType} payment - ${paymentDescription}`,
-    },
-  });
-
-  // Send payment link email
-  await sendPaymentLinkEmail(
-    email,
-    payment.checkoutUrl,
-    {
-      amount: paymentAmount,
-      description: paymentDescription,
-      remarks: `EduOps ${feeType} payment`,
-    },
-    { firstName, lastName, email }
-  );
-
-  return {
-    paymentId: payment.id,
-    checkoutUrl: payment.checkoutUrl,
-    amount: payment.amount,
-    status: payment.status,
-  };
-};
 
 /**
  * Create manual payment (Physical Payment)
