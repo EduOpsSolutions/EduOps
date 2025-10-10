@@ -246,46 +246,9 @@ export const getPaymentWithSync = async (paymentId) => {
     throw new Error(ERROR_MESSAGES.PAYMENT_NOT_FOUND);
   }
 
-  // Sync status with PayMongo if it's an online payment
-  if (payment.paymongoId) {
-    try {
-      console.log(`Syncing payment ${paymentId} with PayMongo ID: ${payment.paymongoId}`);
-      
-      const paymongoResult = await getPaymentLink(payment.paymongoId);
-      if (paymongoResult.success) {
-        const paymongoStatus = paymongoResult.data.data.attributes.status;
-        const mappedStatus = mapPayMongoStatusToPrisma(paymongoStatus);
-        console.log(`PayMongo link status: ${paymongoStatus}, Mapped to: ${mappedStatus}, Current DB status: ${payment.status}`);
-        
-        if (payment.status !== mappedStatus) {
-          console.log(`Updating payment ${paymentId} status from ${payment.status} to ${mappedStatus}`);
-          
-          await prisma.payments.update({
-            where: { id: payment.id },
-            data: {
-              status: mappedStatus,
-              paidAt: mappedStatus === "paid" ? new Date() : null,
-            },
-          });
-          payment.status = mappedStatus;
-          if (mappedStatus === "paid") {
-            payment.paidAt = new Date();
-          }
-          
-          console.log(`Successfully updated payment ${paymentId} to status: ${mappedStatus}`);
-        } else {
-          console.log(`Payment ${paymentId} status unchanged: ${mappedStatus}`);
-        }
-      } else {
-        console.error(`Failed to get PayMongo link details:`, paymongoResult.error);
-      }
-    } catch (error) {
-      console.error(`Error syncing payment ${paymentId} with PayMongo:`, error.message);
-      // Continue without throwing - return the payment even if sync fails
-    }
-  } else {
-    console.log(`Payment ${paymentId} has no PayMongo ID, skipping sync`);
-  }
+  // Sync status with PayMongo if it's an online payment (PIPM only)
+  // Legacy Payment Link sync removed. If payment.paymongoId exists, but is not a PIPM, skip sync.
+  // You may add PIPM sync logic here if needed in the future.
 
   return payment;
 };
@@ -347,41 +310,10 @@ export const getAllTransactions = async (options = {}) => {
     prisma.payments.count({ where: whereClause }),
   ]);
 
-  // Auto-sync PayMongo payments status (for payments that might have changed)
-  // Only sync payments that are older than 2 minutes to give PayMongo time to process new payments
-  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-  const paymongoPayments = payments.filter(p => 
-    p.paymongoId && 
-    (p.status === 'paid' || p.status === 'pending') &&
-    new Date(p.createdAt) < twoMinutesAgo  // Only sync payments older than 2 minutes
-  );
-  
-  if (paymongoPayments.length > 0) {
-    console.log(`Auto-syncing ${paymongoPayments.length} PayMongo payment statuses...`);
-    
-    // Sync each PayMongo payment in parallel (but limit to avoid rate limits)
-    const syncPromises = paymongoPayments.slice(0, 10).map(async (payment) => {
-      try {
-        const syncedPayment = await getPaymentWithSync(payment.id);
-        // Update the payment object in our list if status changed
-        const index = payments.findIndex(p => p.id === payment.id);
-        if (index !== -1 && syncedPayment.status !== payment.status) {
-          payments[index].status = syncedPayment.status;
-          payments[index].paidAt = syncedPayment.paidAt;
-          console.log(`Updated payment ${payment.id} status from ${payment.status} to ${syncedPayment.status}`);
-        }
-      } catch (error) {
-        console.warn(`Failed to sync payment ${payment.id}:`, error.message);
-      }
-    });
-    
-    await Promise.all(syncPromises);
-  }
-
-  // Transform the data for frontend consumption
+  // Auto-sync and Payment Link details removed. Only transform for frontend.
   const transformedPayments = payments.map((payment) => {
-    const paymongoDetails = extractPayMongoDetails(payment.paymongoResponse);
-    return transformPaymentForFrontend(payment, paymongoDetails);
+    // No more extractPayMongoDetails; just pass null or minimal info for paymongoDetails
+    return transformPaymentForFrontend(payment, null);
   });
 
   return {

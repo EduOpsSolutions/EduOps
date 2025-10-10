@@ -18,6 +18,7 @@ import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import PaymentForm from './pages/public/PaymentForm';
 import PaymentPage from './pages/payment/PaymentPage';
+import PaymentCompleteSwal from './components/payments/PaymentCompleteSwal';
 import Profile from './pages/public/Profile';
 import RedirectPage from './pages/public/RedirectPage';
 import SignUp from './pages/public/SignUp';
@@ -81,6 +82,7 @@ function App() {
           <Route path="signUp" element={<SignUp />} />
           <Route path="paymentForm" element={<PaymentForm />} />
           <Route path="payment" element={<PaymentPage />} />
+          <Route path="payment-complete" element={<PaymentCompleteSwal />} />
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
