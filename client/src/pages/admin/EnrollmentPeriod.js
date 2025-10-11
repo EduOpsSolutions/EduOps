@@ -72,8 +72,8 @@ function EnrollmentPeriod() {
         type: 'number',
       },
       {
-        name: 'status',
-        label: 'Status',
+        name: 'batchStatus',
+        label: 'Batch Status',
         type: 'select',
         options: [
           { value: '', label: 'All Statuses' },
@@ -88,7 +88,8 @@ function EnrollmentPeriod() {
   const searchResultsColumns = [
     { key: 'batchName', header: 'Batch', className: 'text-center flex-1' },
     { key: 'year', header: 'Year', className: 'text-center flex-1' },
-    { key: 'status', header: 'Status', className: 'text-center flex-1' },
+    { key: 'batchStatus', header: 'Batch Status', className: 'text-center flex-1' },
+    { key: 'enrollmentStatus', header: 'Enrollment Status', className: 'text-center flex-1' },
   ];
 
   const paginationConfig = {
@@ -108,8 +109,8 @@ function EnrollmentPeriod() {
     handlePeriodSelect(period);
   };
 
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
+  const getBatchStatusBadgeColor = (batchStatus) => {
+    switch (batchStatus) {
       case 'Ongoing':
         return 'bg-green-100 text-green-800 border border-green-200';
       case 'Ongoing (Enrollment Closed)':
@@ -124,6 +125,21 @@ function EnrollmentPeriod() {
         return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
   };
+
+  const getEnrollmentStatusBadgeColor = (enrollmentStatus) => {
+    switch (enrollmentStatus) {
+      case 'Open':
+        return 'bg-green-100 text-green-800 border border-green-200';
+      case 'Closed':
+        return 'bg-red-100 text-red-800 border border-red-200';
+      case 'Upcoming':
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 'Ended':
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
+    }
+  }
 
   return (
     <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 px-4 sm:py-6 sm:px-6 lg:px-20">
@@ -157,13 +173,22 @@ function EnrollmentPeriod() {
         onItemClick={handlePeriodClick}
         pagination={paginationConfig}
         columnRenderers={{
-          status: (status) => (
+          batchStatus: (batchStatus) => (
             <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                status
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBatchStatusBadgeColor(
+                batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1)
               )}`}
             >
-              {status}
+              {batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1)}
+            </span>
+          ),
+          enrollmentStatus: (enrollmentStatus) => (
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEnrollmentStatusBadgeColor(
+                enrollmentStatus.charAt(0).toUpperCase() + enrollmentStatus.slice(1)
+              )}`}
+            >
+              {enrollmentStatus.charAt(0).toUpperCase() + enrollmentStatus.slice(1)}
             </span>
           ),
         }}

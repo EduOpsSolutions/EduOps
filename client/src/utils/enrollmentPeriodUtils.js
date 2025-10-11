@@ -9,13 +9,14 @@ export const checkOngoingEnrollmentPeriod = async () => {
     const response = await axiosInstance.get('/academic-periods');
     const now = new Date();
 
-    // Find ongoing periods
+    // Only consider periods where isEnrollmentClosed is false
     const ongoingPeriods = response.data.filter((period) => {
-      if (period.status === 'ended' || period.deletedAt) return false;
-
-      const startDate = new Date(period.startAt);
-      const endDate = new Date(period.endAt);
-      return now >= startDate && now <= endDate;
+      if (period.isEnrollmentClosed || period.deletedAt) return false;
+      if (!period.enrollmentOpenAt || !period.enrollmentCloseAt) return false;
+      const openDate = new Date(period.enrollmentOpenAt);
+      const closeDate = new Date(period.enrollmentCloseAt);
+      if (isNaN(openDate.getTime()) || isNaN(closeDate.getTime())) return false;
+      return now >= openDate && now <= closeDate;
     });
 
     const hasOngoingPeriod = ongoingPeriods.length > 0;
