@@ -1,15 +1,12 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
 import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
-import { sendPaymentLinkEmail } from "../../utils/paymentApi";
 import Swal from "sweetalert2";
 
 function PaymentForm() {
-  const navigate = useNavigate();
   const {
     formData,
     loading,
@@ -22,10 +19,10 @@ function PaymentForm() {
     validatePhoneNumber,
     preparePaymentData,
     showDialog,
-    resetForm
+    resetForm,
+    sendPaymentLinkEmail
   } = usePaymentStore();
 
-  // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
     const feeTypeMap = {
       'down_payment': 'Down Payment',
@@ -34,7 +31,6 @@ function PaymentForm() {
       'book_fee': 'Book Fee',
     };
     
-    // Handle undefined or null feeType
     if (!feeType) {
       return 'Payment';
     }
@@ -57,7 +53,6 @@ function PaymentForm() {
   const onSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!validateRequiredFields()) {
       await showDialog({
         icon: "warning",
@@ -68,13 +63,9 @@ function PaymentForm() {
       return;
     }
 
-    // Validate phone number
     if (!validatePhoneNumber()) return;
 
-    // Get fee label for display
     const feeLabel = getFeeTypeLabel(formData.fee);
-
-    // Step 1: Show confirmation dialog
     const confirmResult = await Swal.fire({
       title: 'Confirm Payment',
       html: `
@@ -95,16 +86,15 @@ function PaymentForm() {
     });
 
     if (!confirmResult.isConfirmed) {
-      return; // User cancelled
+      return;
     }
 
-    // Step 2: Send email and show success dialog with options
+
     try {
       const paymentData = preparePaymentData();
       const feeLabel = getFeeTypeLabel(paymentData.feeType);
       const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
 
-      // Prepare data for email
       const emailData = {
         email: paymentData.email,
         firstName: paymentData.firstName,
@@ -115,7 +105,6 @@ function PaymentForm() {
         userId: paymentData.userId
       };
 
-      // Show loading while sending email
       Swal.fire({
         title: 'Processing...',
         text: 'Sending payment link to your email...',
@@ -125,11 +114,9 @@ function PaymentForm() {
         }
       });
 
-      // Send email
       const result = await sendPaymentLinkEmail(emailData);
 
       if (result.success) {
-        // Step 3: Show success dialog with Pay Now option
         const successResult = await Swal.fire({
           title: 'Email Sent Successfully!',
           html: `
@@ -155,8 +142,9 @@ function PaymentForm() {
         });
 
         if (successResult.isConfirmed) {
-          // User chose to pay now - redirect to payment page
-          handlePayNow();
+          if (result.data && result.data.data && result.data.data.checkoutUrl) {
+            window.location.href = result.data.data.checkoutUrl;
+          }
         }
         
         resetForm();
@@ -169,7 +157,6 @@ function PaymentForm() {
         });
       }
     } catch (error) {
-      console.error('Error sending payment link:', error);
       await Swal.fire({
         title: 'Error',
         text: 'An unexpected error occurred. Please try again.',
@@ -179,35 +166,6 @@ function PaymentForm() {
     }
   };
 
-  // Handle Pay Now option
-  const handlePayNow = () => {
-    // Prepare payment data for the enhanced payment page
-    const paymentData = preparePaymentData();
-    const feeLabel = getFeeTypeLabel(paymentData.feeType);
-    const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
-    const checkoutID = `${Date.now()}-${paymentData.userId || 'Guest'}`;
-
-    // Store data and redirect to enhanced payment page
-    localStorage.setItem("totalPayment", paymentData.amount.toString());
-    localStorage.setItem("checkoutID", checkoutID);
-    
-    // Navigate to the enhanced payment page
-    navigate("/payment", {
-      state: {
-        amount: paymentData.amount,
-        description: description,
-        checkoutID: checkoutID,
-        studentInfo: {
-          firstName: paymentData.firstName,
-          lastName: paymentData.lastName,
-          email: paymentData.email,
-          phone: paymentData.phoneNumber
-        }
-      }
-    });
-
-    resetForm();
-  };
 
   return (
     <div className="bg_custom bg-white-yellow-tone">
@@ -215,7 +173,6 @@ function PaymentForm() {
 
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-3xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
-          {/* Header */}
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-3xl font-bold">Payment Form</h1>
             <p className="italic mt-2 font-semibold">
@@ -225,7 +182,6 @@ function PaymentForm() {
           </div>
 
           <form onSubmit={onSubmit}>
-            {/* Personal Information */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <LabelledInputField
                 name="student_id"
@@ -287,14 +243,12 @@ function PaymentForm() {
               </div>
             </div>
 
-            {/* Name Validation Error */}
             {nameError && (
               <div className="mb-6 -mt-2">
                 <p className="text-red-500 text-sm">{nameError}</p>
               </div>
             )}
 
-            {/* Contact Information */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <LabelledInputField
                 name="email_address"
@@ -328,7 +282,6 @@ function PaymentForm() {
               </div>
             </div>
 
-            {/* Payment Details */}
             <hr className="my-6 border-dark-red" />
             <p className="mb-5 font-semibold">Payment Details</p>
 
@@ -358,7 +311,6 @@ function PaymentForm() {
               />
             </div>
 
-            {/* Submit Button */}
             <div className="flex justify-center">
               <SmallButton type="submit" disabled={loading || nameError}>
                 {loading ? (
