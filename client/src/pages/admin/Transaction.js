@@ -31,13 +31,13 @@ function Transaction() {
     resetStore
   } = useTransactionStore();
 
-  // Auto-refresh every 3 seconds for live status updates
+  // Auto-refresh every 15 seconds for more frequent status updates
   useEffect(() => {
     fetchTransactions();
 
     const interval = setInterval(() => {
       refreshTransactions();
-    }, 3000); // Refresh every 3 seconds for near real-time updates
+    }, 5000); // Refresh every 5 seconds (increased frequency)
 
     return () => clearInterval(interval);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

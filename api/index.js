@@ -3,7 +3,6 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import indexRouter from './routes/v1/index_routes.js';
-import { startScheduler } from './services/scheduler_service.js';
 
 const app = express();
 
@@ -30,9 +29,6 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5555;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  
-  // Start background job scheduler
-  startScheduler();
 });
 
 app.use((req, res) => {

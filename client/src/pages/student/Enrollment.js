@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import UserNavbar from "../../components/navbars/UserNav";
 import useEnrollmentStore from "../../stores/enrollmentProgressStore";
 import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
+import useAuthStore from "../../stores/authStore";
 import Swal from "sweetalert2";
 
 function Enrollment() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const {
     enrollmentId,
-    studentId,
+    userId,
     enrollmentStatus,
     remarkMsg,
     currentStep,
@@ -73,36 +75,68 @@ function Enrollment() {
     );
   };
 
-  // Handle Pay Now - redirect to payment form to create PayMongo link
-  const handlePayNow = () => {
-    navigate("/paymentForm");
+  // Handle payment options (Pay Now with auto email sending)
+  const handlePaymentOptions = async () => {
+    await Swal.fire({
+      title: 'Proceed to Payment',
+      html: `
+        <div style="text-align: center;">
+          <p style="margin-bottom: 20px;">Are you ready to proceed with the enrollment payment?</p>
+          <p><strong>Course:</strong> ${courseName || 'Course'}</p>
+          <p><strong>Amount:</strong> ₱${coursePrice || 0}</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 0.875rem; color: #6B7280;">
+              <i class="fas fa-envelope mr-1"></i>
+              A payment link will be automatically sent to <strong>${user?.email || 'your email'}</strong> for your records.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button id="payNowBtn" style="
+              background-color: #890E07; 
+              color: white; 
+              border: none; 
+              padding: 12px 24px; 
+              border-radius: 5px; 
+              cursor: pointer;
+              font-weight: bold;
+              font-size: 16px;
+            ">
+              <i class="fas fa-credit-card mr-2"></i>Pay Now
+            </button>
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showConfirmButton: false,
+      showCancelButton: true,
+      cancelButtonColor: '#6B7280',
+      cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancel',
+      didOpen: () => {
+        const payNowBtn = document.getElementById('payNowBtn');
+        
+        payNowBtn.addEventListener('click', () => {
+          Swal.close();
+          handlePayNow();
+        });
+      }
+    });
   };
 
-  // Copy Student ID to clipboard
-  const copyToClipboard = async (studentId) => {
-    try {
-      await navigator.clipboard.writeText(studentId);
-      Swal.fire({
-        icon: 'success',
-        title: 'Copied!',
-        text: 'Student ID copied to clipboard',
-        timer: 1500,
-        showConfirmButton: false,
-        toast: true,
-        position: 'top-end'
-      });
-    } catch (err) {
-      console.error('Failed to copy:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Copy Failed',
-        text: 'Please copy manually',
-        timer: 2000,
-        showConfirmButton: false,
-        toast: true,
-        position: 'top-end'
-      });
-    }
+  // Handle Pay Now option
+  const handlePayNow = () => {
+    navigate("/payment", {
+      state: {
+        amount: coursePrice || 0,
+        description: `Enrollment Payment - ${courseName || 'Course'}`,
+        checkoutID: `ENR-${Date.now()}-${userId || 'Guest'}`,
+        studentInfo: {
+          firstName: fullName?.split(' ')[0] || '',
+          lastName: fullName?.split(' ').slice(1).join(' ') || '',
+          email: user?.email || '',
+          phone: user?.phoneNumber || ''
+        }
+      }
+    });
   };
 
   // Payment proof status logic
@@ -348,43 +382,6 @@ function Enrollment() {
                     </h3>
 
                     <div className="space-y-2 text-sm text-blue-700">
-                      <div className="flex items-center">
-                        <svg
-                          className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <span>Student ID:&nbsp;</span>
-                        <strong className="mr-2">{studentId || 'Pending...'}</strong>
-                        {studentId && (
-                          <button
-                            onClick={() => copyToClipboard(studentId)}
-                            className="inline-flex items-center px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition-colors duration-150"
-                            title="Copy Student ID"
-                          >
-                            <svg
-                              className="w-3 h-3 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                            Copy
-                          </button>
-                        )}
-                      </div>
                       <p className="flex items-center">
                         <svg
                           className="h-4 w-4 mr-2 text-blue-500"
@@ -397,7 +394,8 @@ function Enrollment() {
                             clipRule="evenodd"
                           />
                         </svg>
-                        Use this Student ID in the payment form
+                        Remember your&nbsp; 
+                        <strong>  Student ID: {userId}</strong>
                       </p>
                       <p className="flex items-center">
                         <svg
@@ -437,7 +435,7 @@ function Enrollment() {
             <div className="flex justify-center my-6">
               {shouldShowPaymentButton && (
                   <button
-                    onClick={handlePayNow}
+                    onClick={handlePaymentOptions}
                     className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
                   >
                     <span>

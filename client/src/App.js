@@ -17,6 +17,8 @@ import Terms from './pages/legal/Terms';
 import Login from './pages/public/Login';
 import NotFound from './pages/public/NotFound';
 import PaymentForm from './pages/public/PaymentForm';
+import PaymentPage from './pages/payment/PaymentPage';
+import PaymentComplete from './pages/payment/PaymentComplete';
 import Profile from './pages/public/Profile';
 import RedirectPage from './pages/public/RedirectPage';
 import SignUp from './pages/public/SignUp';
@@ -79,6 +81,8 @@ function App() {
           <Route path="assets" element={<Assets />} />
           <Route path="signUp" element={<SignUp />} />
           <Route path="paymentForm" element={<PaymentForm />} />
+          <Route path="payment" element={<PaymentPage />} />
+          <Route path="payment-complete" element={<PaymentComplete />} />
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />

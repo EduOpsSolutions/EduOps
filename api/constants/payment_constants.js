@@ -29,7 +29,10 @@ export const createPayMongoAuthHeaders = () => {
 export const PAYMONGO_METHOD_MAP = {
   'card': 'Credit/Debit Card',
   'gcash': 'GCash',
+  'grab_pay': 'GrabPay',
   'paymaya': 'PayMaya',
+  'bank_transfer': 'Bank Transfer',
+  'over_the_counter': 'Over the Counter',
   'online_banking': 'Online Banking'
 };
 
@@ -54,14 +57,14 @@ export const PAYMENT_STATUS = {
 // Database query includes for consistent data fetching
 export const PAYMENT_INCLUDES = {
   WITH_USER: {
-    users: {
+    user: {
       select: {
         id: true,
-        student_id: true,
-        first_name: true,
-        last_name: true,
+        userId: true,
+        firstName: true,
+        lastName: true,
         email: true,
-        phone_number: true
+        phoneNumber: true
       }
     }
   },
@@ -86,35 +89,24 @@ export const ERROR_MESSAGES = {
   USER_NOT_FOUND: 'User not found',
   PAYMENT_CANNOT_BE_CANCELLED: 'Payment cannot be cancelled',
   PAYMONGO_ERROR: 'PayMongo service error',
-  INVALID_PAYMENT_DATA: 'Invalid payment data provided',
-  INTERNAL_SERVER_ERROR: 'Internal server error'
+  INVALID_PAYMENT_DATA: 'Invalid payment data provided'
 };
 
 // Success messages
 export const SUCCESS_MESSAGES = {
   PAYMENT_CREATED: 'Payment created successfully',
   PAYMENT_CANCELLED: 'Payment cancelled successfully',
-  PAYMENT_SYNCED: 'Payment status synced successfully',
-  MANUAL_TRANSACTION_CREATED: 'Manual transaction created successfully'
+  PAYMENT_SYNCED: 'Payment status synced successfully'
 };
 
 // PayMongo webhook event types
-// NOTE: PayMongo Links only support link.payment.paid, NOT link.payment.failed
-// For failed payments with Links, manual expiration checker is implemented
 export const PAYMONGO_EVENTS = {
+  SOURCE_CHARGEABLE: 'source.chargeable',
   PAYMENT_PAID: 'payment.paid',
-  PAYMENT_FAILED: 'payment.failed', 
-  PAYMENT_REFUNDED: 'payment.refunded',
-  PAYMENT_REFUND_UPDATED: 'payment.refund.updated',
-  PAYMENT_CANCELLED: 'payment.cancelled',
-  PAYMENT_CANCELED: 'payment.canceled',
-  LINK_PAYMENT_PAID: 'link.payment.paid', 
-  LINK_PAYMENT_EXPIRED: 'link.payment.expired', 
+  PAYMENT_FAILED: 'payment.failed',
+  LINK_PAYMENT_PAID: 'link.payment.paid',
   LINK_UPDATED: 'link.updated',
-  LINK_STATUS_UPDATED: 'link.status.updated',
-  LINK_ARCHIVED: 'link.archived',
-  LINK_CANCELLED: 'link.cancelled',
-  LINK_CANCELED: 'link.canceled'
+  LINK_STATUS_UPDATED: 'link.status.updated'
 };
 
 export default {
