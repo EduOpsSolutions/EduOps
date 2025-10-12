@@ -113,24 +113,38 @@ function Reports() {
           label: "Enrollment Request Status",
           type: "select",
           options: [
-            "pending",
-            "verified",
-            "payment_pending",
-            "approved",
-            "completed",
-            "rejected",
+            { value: null, label: "All" },
+            { value: "pending", label: "Pending" },
+            { value: "verified", label: "Verified" },
+            { value: "payment_pending", label: "Payment Pending" },
+            { value: "approved", label: "Approved" },
+            { value: "completed", label: "Completed" },
+            { value: "rejected", label: "Rejected" },
           ],
         },
         {
           name: "studentEnrollmentStatus",
           label: "Student Enrollment Status",
           type: "select",
-          options: ["enrolled", "completed", "dropped", "withdrawn"],
+          options: [
+            { value: null, label: "All" },
+            { value: "enrolled", label: "Enrolled" },
+            { value: "completed", label: "Completed" },
+            { value: "dropped", label: "Dropped" },
+            { value: "withdrawn", label: "Withdrawn" },
+          ],
         },
         {
           name: "accountStatus",
-          label: "Account Status (e.g., active, disabled)",
-          type: "text",
+          label: "Account Status",
+          type: "select",
+          options: [
+            { value: null, label: "All" },
+            { value: "active", label: "Active" },
+            { value: "disabled", label: "Disabled" },
+            { value: "inactive", label: "Inactive" },
+            { value: "suspended", label: "Suspended" },
+          ],
         },
       ],
     },
@@ -747,8 +761,8 @@ function Reports() {
           >
             <option value="">Select {param.label}</option>
             {param.options.map((option) => (
-              <option key={option} value={option}>
-                {option}
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>

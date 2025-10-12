@@ -59,13 +59,16 @@ const getNavigationConfig = (role) => {
         items: [
           { path: `/${role}/manage-documents`, label: "Manage Documents" },
           { path: `/${role}/document-requests`, label: "Document Requests" },
-          { path: `/${role}/reports`, label: "Reports" },
           { path: `/${role}/chatbot`, label: "Chatbot" },
           {
             path: `/${role}/document-validation`,
             label: "Document Validation",
           },
         ],
+      },
+      reports: {
+        label: "Reports",
+        items: [{ path: `/${role}/reports`, label: "Reports" }],
       },
       accounts: {
         label: "Accounts",
