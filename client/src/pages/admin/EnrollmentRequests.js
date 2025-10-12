@@ -69,9 +69,11 @@ function EnrollmentRequests() {
       const now = new Date();
       
       const ongoingPeriods = response.data.filter(period => {
-        const startDate = new Date(period.startAt);
-        const endDate = new Date(period.endAt);
-        return period.status !== 'ended' && now >= startDate && now <= endDate;
+        const now = new Date();
+        const startDate = new Date(period.enrollmentOpenAt);
+        const endDate = new Date(period.enrollmentCloseAt);
+        return !period.isEnrollmentClosed && now >= startDate && now <= endDate;
+        //return period.status !== 'ended' && now >= startDate && now <= endDate;
       });
       
       const allPeriods = response.data
@@ -112,9 +114,9 @@ function EnrollmentRequests() {
       const response = await axiosInstance.get('/academic-periods');
       const ongoingPeriods = response.data.filter(period => {
         const now = new Date();
-        const startDate = new Date(period.startAt);
-        const endDate = new Date(period.endAt);
-        return period.status !== 'ended' && now >= startDate && now <= endDate;
+        const enrollmentOpen = new Date(period.enrollmentOpenAt);
+        const enrollmentClose = new Date(period.enrollmentCloseAt);
+        return !period.isEnrollmentClosed && now >= enrollmentOpen && now <= enrollmentClose;
       });
 
       if (ongoingPeriods.length === 0) {
@@ -133,7 +135,7 @@ function EnrollmentRequests() {
         title: 'End Enrollment Period?',
         html: `
           <p>Are you sure you want to end enrollment for:</p>
-          <p><strong>${selectedPeriod.periodName} - ${selectedPeriod.batchName}</strong></p>
+          <p><strong>${selectedPeriod.batchName}</strong></p>
           <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">This action will prevent new enrollees.</p>
         `,
         icon: 'warning',
@@ -198,36 +200,54 @@ function EnrollmentRequests() {
           {/* Current Enrollment Period Info */}
           {currentPeriodInfo && (
             <div className="mb-6 md:mb-8">
-              <div className={`p-4 rounded-lg border-2 ${
-                currentPeriodInfo.calculatedStatus === 'Ongoing' 
-                  ? 'bg-green-50 border-green-200' 
-                  : currentPeriodInfo.calculatedStatus === 'Ended'
-                  ? 'bg-red-50 border-red-200'
-                  : 'bg-blue-50 border-blue-200'
-              }`}>
+              <div className={`p-4 rounded-lg border-2 ${(() => {
+                switch ((currentPeriodInfo.enrollmentStatus || '').toLowerCase()) {
+                  case 'open':
+                    return 'bg-green-50 border-green-200';
+                  case 'closed':
+                    return 'bg-red-50 border-red-200';
+                  case 'upcoming':
+                    return 'bg-blue-50 border-blue-200';
+                  case 'ended':
+                    return 'bg-gray-50 border-gray-200';
+                  default:
+                    return 'bg-gray-50 border-gray-200';
+                }
+              })()}`}>
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div className="text-center sm:text-left">
                     <h2 className="text-lg md:text-xl font-semibold text-gray-800">
                       Current Enrollment Period
                     </h2>
                     <p className="text-sm md:text-base text-gray-600">
-                      <strong>{currentPeriodInfo.periodName}</strong> - {currentPeriodInfo.batchName}
+                      <strong>{currentPeriodInfo.batchName}</strong>
                     </p>
                     <p className="text-xs md:text-sm text-gray-500">
-                      {new Date(currentPeriodInfo.startAt).toLocaleDateString()} - {new Date(currentPeriodInfo.endAt).toLocaleDateString()}
+                      {new Date(currentPeriodInfo.enrollmentOpenAt).toLocaleDateString()} - {new Date(currentPeriodInfo.enrollmentCloseAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="text-center">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      currentPeriodInfo.calculatedStatus === 'Ongoing' 
-                        ? 'bg-green-100 text-green-800 border border-green-200' 
-                        : currentPeriodInfo.calculatedStatus === 'Ended'
-                        ? 'bg-red-100 text-red-800 border border-red-200'
-                        : 'bg-blue-100 text-blue-800 border border-blue-200'
-                    }`}>
-                      {currentPeriodInfo.calculatedStatus}
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${(() => {
+                        switch ((currentPeriodInfo.enrollmentStatus || '').toLowerCase()) {
+                          case 'open':
+                            return 'bg-green-100 text-green-800 border border-green-200';
+                          case 'closed':
+                            return 'bg-red-100 text-red-800 border border-red-200';
+                          case 'upcoming':
+                            return 'bg-blue-100 text-blue-800 border border-blue-200';
+                          case 'ended':
+                            return 'bg-gray-100 text-gray-800 border border-gray-200';
+                          default:
+                            return 'bg-gray-100 text-gray-800 border border-gray-200';
+                        }
+                      })()}`}
+                    >
+                      {currentPeriodInfo.enrollmentStatus
+                        ? currentPeriodInfo.enrollmentStatus.charAt(0).toUpperCase() + currentPeriodInfo.enrollmentStatus.slice(1)
+                        : 'N/A'}
                     </span>
-                    {currentPeriodInfo.calculatedStatus === 'Ended' && (
+                    {(currentPeriodInfo.enrollmentStatus === 'closed' || currentPeriodInfo.enrollmentStatus === 'ended') && (
                       <p className="text-xs text-red-600 mt-1">
                         No new enrollments accepted
                       </p>
@@ -239,7 +259,11 @@ function EnrollmentRequests() {
           )}
 
           {/* No Active Periods Warning */}
-          {currentPeriodInfo && activePeriods.length === 0 && currentPeriodInfo.calculatedStatus === 'Ended' && (
+          {currentPeriodInfo && activePeriods.length === 0 &&
+            ((currentPeriodInfo.enrollmentStatus &&
+              (currentPeriodInfo.enrollmentStatus.toLowerCase() === 'ended' ||
+               currentPeriodInfo.enrollmentStatus.toLowerCase() === 'closed')) ||
+              currentPeriodInfo.isEnrollmentClosed) && (
             <div className="mb-6 md:mb-8">
               <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -296,14 +320,19 @@ function EnrollmentRequests() {
               </div>
 
               <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
-                {activePeriods.length === 1 ? (
+                {activePeriods.length === 1 &&
+                  !activePeriods[0].isEnrollmentClosed &&
+                  new Date(activePeriods[0].enrollmentOpenAt) <= new Date() &&
+                  new Date(activePeriods[0].enrollmentCloseAt) >= new Date() ? (
                   <ThinRedButton onClick={handleEndEnrollment}>
                     End Enrollment
                   </ThinRedButton>
                 ) : (
                   <div className="text-sm text-gray-500 py-2 px-4 bg-gray-100 rounded-lg">
-                    {currentPeriodInfo?.calculatedStatus === 'Ended' 
-                      ? 'Enrollment Already Ended' 
+                    {currentPeriodInfo?.enrollmentStatus &&
+                      (currentPeriodInfo.enrollmentStatus.toLowerCase() === 'ended' ||
+                        currentPeriodInfo.enrollmentStatus.toLowerCase() === 'closed')
+                      ? 'Enrollment Already Ended'
                       : 'No Active Enrollment Period'}
                   </div>
                 )}
