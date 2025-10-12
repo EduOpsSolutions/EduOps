@@ -7,15 +7,50 @@ import {
     deleteAcademicPeriod,
     endEnrollment,
 } from '../../controller/academic_period_controller.js';
+import {
+    verifyToken,
+    validateIsActiveUser,
+    validateUserIsAdmin
+} from '../../middleware/authValidator.js';
 
 const router = express.Router();
 
-router.get('/', getAcademicPeriods);
-router.get('/:id', getAcademicPeriod);
-router.post('/create', createAcademicPeriod);
-router.put('/:id', updateAcademicPeriod);
-router.patch('/:id/end-enrollment', endEnrollment);
-router.delete('/delete/:id', deleteAcademicPeriod);
+// Anyone logged in and active can view periods
+router.get('/', 
+    // verifyToken, 
+    // validateIsActiveUser, 
+    getAcademicPeriods
+);
+router.get('/:id', 
+    verifyToken, 
+    validateIsActiveUser, 
+    getAcademicPeriod
+);
 
+// Only admins can create, update, delete, or end enrollment
+router.post('/create', 
+    verifyToken, 
+    validateIsActiveUser, 
+    validateUserIsAdmin, 
+    createAcademicPeriod
+);
+router.put('/:id', 
+    verifyToken, 
+    validateIsActiveUser, 
+    validateUserIsAdmin, 
+    updateAcademicPeriod
+);
+router.patch('/:id/end-enrollment', 
+    verifyToken, 
+    validateIsActiveUser, 
+    validateUserIsAdmin, 
+    endEnrollment
+);
+router.delete('/delete/:id', 
+    verifyToken, 
+    validateIsActiveUser, 
+    validateUserIsAdmin, 
+    deleteAcademicPeriod
+);
 
 export { router };
