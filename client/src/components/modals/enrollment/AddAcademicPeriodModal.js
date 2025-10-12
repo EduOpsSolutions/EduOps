@@ -25,6 +25,8 @@ function AcademicPeriodModal({
         batchName: '',
         startAt: '',
         endAt: '',
+        enrollmentOpenAt: '',
+        enrollmentCloseAt: '',
       });
       setError('');
     }
@@ -52,8 +54,20 @@ function AcademicPeriodModal({
       setError('End date is required');
       return false;
     }
+    if (!formData.enrollmentOpenAt) {
+      setError('Enrollment open date is required');
+      return false;
+    }
+    if (!formData.enrollmentCloseAt) {
+      setError('Enrollment close date is required');
+      return false;
+    }
     if (new Date(formData.startAt) >= new Date(formData.endAt)) {
       setError('End date must be after start date');
+      return false;
+    }
+    if (new Date(formData.enrollmentOpenAt) >= new Date(formData.enrollmentCloseAt)) {
+      setError('Enrollment close date must be after enrollment open date');
       return false;
     }
     return true;
@@ -68,9 +82,32 @@ function AcademicPeriodModal({
       setLoading(true);
       setError('');
 
+      // Check for overlapping enrollment window before submitting
+      const enrollmentOpenDateTime = new Date(formData.enrollmentOpenAt);
+      enrollmentOpenDateTime.setHours(0, 0, 0, 0);
+      const enrollmentCloseDateTime = new Date(formData.enrollmentCloseAt);
+      enrollmentCloseDateTime.setHours(23, 59, 59, 999);
+
+      // Fetch all periods to check for overlap
+      const periodsResp = await axiosInstance.get('/academic-periods');
+      const overlapping = periodsResp.data.find(period => {
+        if (period.deletedAt || period.isEnrollmentClosed) return false;
+        const existingOpen = new Date(period.enrollmentOpenAt);
+        const existingClose = new Date(period.enrollmentCloseAt);
+        // Overlap: new.open <= existing.close && new.close >= existing.open
+        return (
+          enrollmentOpenDateTime <= existingClose &&
+          enrollmentCloseDateTime >= existingOpen
+        );
+      });
+      if (overlapping) {
+        setError('There is already an ongoing or overlapping enrollment window. Only one open enrollment period is allowed at a time.');
+        setLoading(false);
+        return;
+      }
+
       const startDateTime = new Date(formData.startAt);
       startDateTime.setHours(0, 0, 0, 0);
-
       const endDateTime = new Date(formData.endAt);
       endDateTime.setHours(23, 59, 59, 999);
 
@@ -78,6 +115,8 @@ function AcademicPeriodModal({
         batchName: formData.batchName.trim(),
         startAt: startDateTime.toISOString(),
         endAt: endDateTime.toISOString(),
+        enrollmentOpenAt: enrollmentOpenDateTime.toISOString(),
+        enrollmentCloseAt: enrollmentCloseDateTime.toISOString(),
       };
 
       console.log('Payload for creating academic period:', payload);
@@ -190,6 +229,28 @@ function AcademicPeriodModal({
                 name="endAt"
                 type="date"
                 value={formData.endAt}
+                onChange={handleInputChange}
+                required
+                className="w-1/2"
+              />
+            </div>
+
+            <div className="flex flex-row justify-center items-center gap-4">
+              <ModalTextField
+                label="Enrollment Open Date"
+                name="enrollmentOpenAt"
+                type="date"
+                value={formData.enrollmentOpenAt}
+                onChange={handleInputChange}
+                required
+                className="w-1/2"
+              />
+
+              <ModalTextField
+                label="Enrollment Close Date"
+                name="enrollmentCloseAt"
+                type="date"
+                value={formData.enrollmentCloseAt}
                 onChange={handleInputChange}
                 required
                 className="w-1/2"

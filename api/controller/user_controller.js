@@ -388,6 +388,15 @@ const createStudentAccount = async (req, res) => {
         changePassword: true, // Force password change on first login
       },
     });
+    
+    // Link the created user to the specific enrollment request using enrollmentId
+    if (req.body.enrollmentId) {
+      await prisma.enrollment_request.update({
+        where: { enrollmentId: req.body.enrollmentId },
+        data: { studentId: user.userId }
+      });
+    }
+
     res.status(201).json({
       error: false,
       message: "User created successfully",

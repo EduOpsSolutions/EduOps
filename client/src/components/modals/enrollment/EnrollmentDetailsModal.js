@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
 import { getCookieItem } from "../../../utils/jwt";
@@ -20,14 +20,30 @@ export default function EnrollmentDetailsModal({
   const [previewFile, setPreviewFile] = useState({ url: null, title: "" });
   const [emailCheckLoading, setEmailCheckLoading] = useState(true);
   const [emailExists, setEmailExists] = useState(false);
+  const debounceRef = useRef();
 
+  // Set form data only when modal is opened or new data is passed
+  useEffect(() => {
+    if (show && data) {
+      setFormData(data);
+    }
+  }, [data, show]);
+
+  // Debounce email existence check only when email fields change
   useEffect(() => {
     setEmailCheckLoading(true);
-    setFormData(data);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (formData?.preferredEmail || formData?.altEmail) {
-      checkEmailExists(formData?.preferredEmail, formData?.altEmail);
+      debounceRef.current = setTimeout(() => {
+        checkEmailExists(formData?.preferredEmail, formData?.altEmail);
+      }, 500);
+    } else {
+      setEmailCheckLoading(false);
     }
-  }, [data, formData?.preferredEmail, formData?.altEmail]);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [formData?.preferredEmail, formData?.altEmail]);
 
   const checkEmailExists = async (email, altEmail) => {
     try {
@@ -96,6 +112,7 @@ export default function EnrollmentDetailsModal({
               lastName: formData.lastName,
               email: formData.preferredEmail,
               birthyear: formData.birthDate,
+              enrollmentId: formData.enrollmentId,
             },
             {
               headers: {
@@ -185,16 +202,16 @@ export default function EnrollmentDetailsModal({
   const handleFormSave = async () => {
     setLoading(true);
     try {
+      // Send all form data to the new backend endpoint
       await axiosInstance.put(
-        `/enrollment/enroll/${formData.enrollmentId}/status`,
-        { enrollmentStatus: formData.enrollmentStatus },
+        `/enrollment/enroll/${formData.enrollmentId}`,
+        formData,
         {
           headers: {
             Authorization: `Bearer ${getCookieItem("token")}`,
           },
         }
       );
-
       await handleSave(formData);
     } catch (error) {
       console.error("Error saving form data:", error);
@@ -253,7 +270,7 @@ export default function EnrollmentDetailsModal({
                   {formData?.lastName}
                 </h3>
                 <p className="text-sm sm:text-base text-gray-600 truncate">
-                  {formData?.email}
+                  {formData?.preferredEmail || formData?.altEmail || "N/A"}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   {/* <span
@@ -328,7 +345,7 @@ export default function EnrollmentDetailsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <ModalTextField
                     label="Preferred Email Address"
-                    name="email"
+                    name="preferredEmail"
                     type="email"
                     value={formData?.preferredEmail || ""}
                     onChange={handleInputChange}
