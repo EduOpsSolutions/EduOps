@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { MdClose } from 'react-icons/md';
 import useAuthStore from '../../../stores/authStore';
+import { convertTo12Hour } from '../../../utils/scheduleUtils';
 
 /**
  * Date Select Modal - Shows all events for a selected day
@@ -115,7 +116,7 @@ function DateSelectModal({
                               {displayTitle}
                             </p>
                             <p className="text-xs text-gray-700">
-                              {event.time_start} - {event.time_end}
+                              {convertTo12Hour(event.time_start)} - {convertTo12Hour(event.time_end)}
                             </p>
                           </div>
                         );

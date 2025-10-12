@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import {
   MdClose,
@@ -15,6 +15,7 @@ import AcademicPeriodSelect from "../../inputs/AcademicPeriodSelect";
 import Swal from "sweetalert2";
 import ViewStudentsModal from "./ViewStudentsModal";
 import axiosInstance from "../../../utils/axios";
+import { convertTo12Hour } from "../../../utils/scheduleUtils";
 
 /**
  * Create/Edit Schedule Modal
@@ -63,6 +64,32 @@ function CreateEditScheduleModal({
     "#4A4A4A", // Gray
     "#9013FE", // Violet
   ];
+
+  const periodStartRef = useRef(null);
+  const periodEndRef = useRef(null);
+
+  // Format date to "Oct 22, 2025" format
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString + "T00:00:00"); // Add time to avoid timezone issues
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Set initial formatted display
+  useEffect(() => {
+    if (periodStartRef.current && formData.periodStart) {
+      periodStartRef.current.type = "text";
+      periodStartRef.current.value = formatDateDisplay(formData.periodStart);
+    }
+    if (periodEndRef.current && formData.periodEnd) {
+      periodEndRef.current.type = "text";
+      periodEndRef.current.value = formatDateDisplay(formData.periodEnd);
+    }
+  }, [formData.periodStart, formData.periodEnd]);
 
   useEffect(() => {
     if (event) {
@@ -643,6 +670,11 @@ function CreateEditScheduleModal({
                           onChange={handleChange}
                           min="06:00"
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                          style={{
+                            WebkitAppearance: "menulist-button",
+                            MozAppearance: "menulist-button",
+                            textTransform: "uppercase",
+                          }}
                           required
                         />
                       </div>
@@ -656,6 +688,11 @@ function CreateEditScheduleModal({
                           value={formData.time_end}
                           onChange={handleChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                          style={{
+                            WebkitAppearance: "menulist-button",
+                            MozAppearance: "menulist-button",
+                            textTransform: "uppercase",
+                          }}
                           required
                         />
                       </div>
@@ -710,11 +747,24 @@ function CreateEditScheduleModal({
                             Start Date<span className="text-red-500">*</span>
                           </label>
                           <input
+                            ref={periodStartRef}
                             type="date"
                             name="periodStart"
                             value={formData.periodStart}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                            onFocus={(e) => {
+                              e.target.type = "date";
+                              e.target.value = formData.periodStart;
+                            }}
+                            onBlur={(e) => {
+                              if (formData.periodStart) {
+                                e.target.type = "text";
+                                e.target.value = formatDateDisplay(
+                                  formData.periodStart
+                                );
+                              }
+                            }}
                             required
                           />
                         </div>
@@ -723,11 +773,24 @@ function CreateEditScheduleModal({
                             End Date<span className="text-red-500">*</span>
                           </label>
                           <input
+                            ref={periodEndRef}
                             type="date"
                             name="periodEnd"
                             value={formData.periodEnd}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                            onFocus={(e) => {
+                              e.target.type = "date";
+                              e.target.value = formData.periodEnd;
+                            }}
+                            onBlur={(e) => {
+                              if (formData.periodEnd) {
+                                e.target.type = "text";
+                                e.target.value = formatDateDisplay(
+                                  formData.periodEnd
+                                );
+                              }
+                            }}
                             required
                           />
                         </div>
@@ -900,7 +963,9 @@ function CreateEditScheduleModal({
             : "N/A";
           const timeDisplay =
             formData.time_start && formData.time_end
-              ? `${formData.time_start} - ${formData.time_end}`
+              ? `${convertTo12Hour(formData.time_start)} - ${convertTo12Hour(
+                  formData.time_end
+                )}`
               : "N/A";
           const dateRangeDisplay =
             formData.periodStart && formData.periodEnd
