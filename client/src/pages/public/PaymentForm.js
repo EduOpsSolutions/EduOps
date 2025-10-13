@@ -155,8 +155,30 @@ function PaymentForm() {
         });
 
         if (successResult.isConfirmed) {
-          // User chose to pay now - redirect to payment page
-          handlePayNow();
+          // User chose to pay now - redirect to custom payment page
+          const paymentData = preparePaymentData();
+          const feeLabel = getFeeTypeLabel(paymentData.feeType);
+          const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
+          const paymentID = `PAY-${Date.now().toString().slice(-6)}`;
+
+          // Store data and redirect to custom payment page
+          localStorage.setItem("totalPayment", paymentData.amount.toString());
+          localStorage.setItem("paymentID", paymentID);
+          
+          // Navigate to the custom payment page
+          navigate("/payment", {
+            state: {
+              amount: paymentData.amount,
+              description: description,
+              paymentID: paymentID,
+              studentInfo: {
+                firstName: paymentData.firstName,
+                lastName: paymentData.lastName,
+                email: paymentData.email,
+                phone: paymentData.phoneNumber
+              }
+            }
+          });
         }
         
         resetForm();
@@ -179,35 +201,6 @@ function PaymentForm() {
     }
   };
 
-  // Handle Pay Now option
-  const handlePayNow = () => {
-    // Prepare payment data for the enhanced payment page
-    const paymentData = preparePaymentData();
-    const feeLabel = getFeeTypeLabel(paymentData.feeType);
-    const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
-    const checkoutID = `${Date.now()}-${paymentData.userId || 'Guest'}`;
-
-    // Store data and redirect to enhanced payment page
-    localStorage.setItem("totalPayment", paymentData.amount.toString());
-    localStorage.setItem("checkoutID", checkoutID);
-    
-    // Navigate to the enhanced payment page
-    navigate("/payment", {
-      state: {
-        amount: paymentData.amount,
-        description: description,
-        checkoutID: checkoutID,
-        studentInfo: {
-          firstName: paymentData.firstName,
-          lastName: paymentData.lastName,
-          email: paymentData.email,
-          phone: paymentData.phoneNumber
-        }
-      }
-    });
-
-    resetForm();
-  };
 
   return (
     <div className="bg_custom bg-white-yellow-tone">

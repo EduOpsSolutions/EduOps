@@ -31,13 +31,13 @@ function Transaction() {
     resetStore
   } = useTransactionStore();
 
-  // Auto-refresh every 15 seconds for more frequent status updates
+  // Auto-refresh every 3 seconds for live status updates
   useEffect(() => {
     fetchTransactions();
 
     const interval = setInterval(() => {
       refreshTransactions();
-    }, 5000); // Refresh every 5 seconds (increased frequency)
+    }, 3000); // Refresh every 3 seconds for near real-time updates
 
     return () => clearInterval(interval);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -291,7 +291,6 @@ function Transaction() {
           onClose={closeTransactionDetailModal}
           transaction={selectedTransaction}
           onOpenCheckout={openCheckoutUrl}
-          onRefreshStatus={refreshPaymentStatus}
         />
 
         <AddTransactionModal

@@ -23,6 +23,8 @@ import Profile from './pages/public/Profile';
 import RedirectPage from './pages/public/RedirectPage';
 import SignUp from './pages/public/SignUp';
 import ResetPassword from './pages/public/ResetPassword';
+import Swal from 'sweetalert2';
+import axiosInstance from './utils/axios';
 
 /* Student Pages */
 import StudentLayout from './components/layout/StudentLayout';
@@ -71,6 +73,8 @@ function App() {
       validateToken();
     }
   }, [isAuthenticated, validateToken]);
+
+  // Removed global post-redirect and focus handlers to prevent premature Swal
 
   return (
     <div className="App">

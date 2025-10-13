@@ -341,11 +341,7 @@ export const cancelPayment = async (paymentId) => {
     throw new Error(ERROR_MESSAGES.PAYMENT_CANNOT_BE_CANCELLED);
   }
 
-  // Archive payment link in PayMongo
-  const archiveResult = await archivePaymentLink(payment.paymongoId);
-  if (!archiveResult.success) {
-    throw new Error(archiveResult.error || ERROR_MESSAGES.PAYMONGO_ERROR);
-  }
+  // Note: PayMongo link archiving removed - payment cancellation handled locally
 
   // Update payment status
   await prisma.payments.update({
@@ -361,11 +357,14 @@ export const cancelPayment = async (paymentId) => {
  * @returns {Promise<Object>} Available payment methods
  */
 export const getAvailablePaymentMethods = async () => {
-  const result = await getPaymentMethods();
-  if (!result.success) {
-    throw new Error(result.error || ERROR_MESSAGES.PAYMONGO_ERROR);
-  }
-  return result.data;
+  // Return static payment methods for PIPM flow
+  return {
+    methods: [
+      { id: 'gcash', name: 'GCash', type: 'gcash' },
+      { id: 'paymaya', name: 'PayMaya', type: 'paymaya' },
+      { id: 'card', name: 'Credit/Debit Card', type: 'card' }
+    ]
+  };
 };
 
 /**
@@ -394,72 +393,13 @@ export const forceSyncPaymentStatus = async (paymentId) => {
 
   console.log(`Force syncing payment ${paymentId} with PayMongo ID: ${payment.paymongoId}`);
   
-  try {
-    const paymongoResult = await getPaymentLink(payment.paymongoId);
-    
-    if (!paymongoResult.success) {
-      // If PayMongo link is not accessible, mark as failed
-      console.log(`PayMongo link not accessible for payment ${paymentId}, marking as failed`);
-      
-      await prisma.payments.update({
-        where: { id: payment.id },
-        data: {
-          status: "failed",
-          paymongoResponse: JSON.stringify({
-            error: "PayMongo link not accessible during force sync",
-            syncAt: new Date(),
-            originalError: paymongoResult.error
-          })
-        },
-      });
-      
-      return {
-        paymentId: payment.id,
-        previousStatus: payment.status,
-        newStatus: "failed",
-        message: "Payment marked as failed - PayMongo link not accessible"
-      };
-    }
-
-    const paymongoStatus = paymongoResult.data.data.attributes.status;
-    const mappedStatus = mapPayMongoStatusToPrisma(paymongoStatus);
-    
-    console.log(`PayMongo link status: ${paymongoStatus}, Mapped to: ${mappedStatus}, Current DB status: ${payment.status}`);
-    
-    if (payment.status !== mappedStatus) {
-      console.log(`Force updating payment ${paymentId} status from ${payment.status} to ${mappedStatus}`);
-      
-      await prisma.payments.update({
-        where: { id: payment.id },
-        data: {
-          status: mappedStatus,
-          paidAt: mappedStatus === "paid" ? new Date() : null,
-          paymongoResponse: JSON.stringify({
-            ...paymongoResult.data,
-            forceSyncAt: new Date()
-          })
-        },
-      });
-      
-      console.log(`Successfully force updated payment ${paymentId} to status: ${mappedStatus}`);
-      
-      return {
-        paymentId: payment.id,
-        previousStatus: payment.status,
-        newStatus: mappedStatus,
-        message: "Payment status force updated successfully"
-      };
-    } else {
-      return {
-        paymentId: payment.id,
-        status: payment.status,
-        message: "Payment status already up to date"
-      };
-    }
-  } catch (error) {
-    console.error(`Error force syncing payment ${paymentId}:`, error);
-    throw new Error(`Failed to force sync payment: ${error.message}`);
-  }
+  // For PIPM flow, we don't sync with PayMongo links
+  // Return current status as-is
+  return {
+    paymentId: payment.id,
+    status: payment.status,
+    message: "Payment status retrieved (no PayMongo sync for PIPM flow)"
+  };
 };
 
 /**
@@ -541,59 +481,27 @@ export const cleanupOrphanedPayments = async () => {
     try {
       console.log(`Checking orphaned payment ${payment.id} with PayMongo ID: ${payment.paymongoId}`);
       
-      const paymongoResult = await getPaymentLink(payment.paymongoId);
+      // For PIPM flow, we don't check PayMongo links
+      // Just mark old pending payments as failed
+      console.log(`Marking old pending payment ${payment.id} as failed (PIPM flow)`);
       
-      if (!paymongoResult.success) {
-        // If PayMongo link doesn't exist or is not accessible, mark as failed
-        console.log(`PayMongo link not found for payment ${payment.id}, marking as failed`);
-        
-        await prisma.payments.update({
-          where: { id: payment.id },
-          data: {
-            status: "failed",
-            paymongoResponse: JSON.stringify({
-              error: "Payment link not found in PayMongo",
-              cleanupAt: new Date(),
-              originalError: paymongoResult.error
-            })
-          },
-        });
-        
-        updatedCount++;
-        results.push({
-          paymentId: payment.id,
-          action: 'marked_as_failed',
-          reason: 'PayMongo link not accessible'
-        });
-      } else {
-        // Check actual status from PayMongo
-        const paymongoStatus = paymongoResult.data.data.attributes.status;
-        const mappedStatus = mapPayMongoStatusToPrisma(paymongoStatus);
-        
-        if (payment.status !== mappedStatus) {
-          console.log(`Updating orphaned payment ${payment.id} status from ${payment.status} to ${mappedStatus}`);
-          
-          await prisma.payments.update({
-            where: { id: payment.id },
-            data: {
-              status: mappedStatus,
-              paidAt: mappedStatus === "paid" ? new Date() : null,
-              paymongoResponse: JSON.stringify({
-                ...paymongoResult.data,
-                cleanupAt: new Date()
-              })
-            },
-          });
-          
-          updatedCount++;
-          results.push({
-            paymentId: payment.id,
-            action: 'status_updated',
-            from: payment.status,
-            to: mappedStatus
-          });
-        }
-      }
+      await prisma.payments.update({
+        where: { id: payment.id },
+        data: {
+          status: "failed",
+          paymongoResponse: JSON.stringify({
+            error: "Payment expired in PIPM flow",
+            cleanupAt: new Date()
+          })
+        },
+      });
+      
+      updatedCount++;
+      results.push({
+        paymentId: payment.id,
+        action: 'marked_as_failed',
+        reason: 'Payment expired in PIPM flow'
+      });
     } catch (error) {
       console.error(`Error checking orphaned payment ${payment.id}:`, error);
       results.push({
@@ -649,12 +557,30 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
   } = paymentData;
 
   try {
-    // Generate checkout ID
+    // Generate custom payment ID
+    const customPaymentId = await generatePaymentId();
     const checkoutID = `EMAIL-${Date.now()}-${userId || 'Guest'}`;
+    
+    // Create pending payment record IMMEDIATELY when email is sent
+    // This ensures it shows up in Manage Transaction page right away
+    const payment = await prisma.payments.create({
+      data: {
+        id: customPaymentId,
+        userId: userId || null,
+        amount: parseFloat(amount),
+        status: PAYMENT_STATUS.PENDING,
+        paymentMethod: "Online Payment", // Will be updated to specific method (GCash/Maya/Card) by webhook
+        feeType: feeType || 'tuition_fee',
+        referenceNumber: checkoutID,
+        remarks: description || `Payment for ${firstName} ${lastName}`,
+      },
+    });
+
+    console.log(`✅ Created pending payment record: ${payment.id}`);
     
     // Create payment link URL (pointing to your payment page)
     const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    const checkoutUrl = `${baseUrl}/payment?amount=${amount}&description=${encodeURIComponent(description)}&checkoutID=${checkoutID}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}`;
+    const checkoutUrl = `${baseUrl}/payment?amount=${amount}&description=${encodeURIComponent(description)}&checkoutID=${checkoutID}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&paymentId=${payment.id}`;
 
     // Prepare user and payment details for email
     const user = { firstName, lastName };
@@ -677,9 +603,14 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         success: true,
         message: "Payment link sent to your email successfully!",
         checkoutID,
-        checkoutUrl
+        checkoutUrl,
+        paymentId: payment.id
       };
     } else {
+      // If email fails, delete the pending payment record
+      await prisma.payments.delete({
+        where: { id: payment.id }
+      });
       throw new Error("Failed to send email");
     }
   } catch (error) {

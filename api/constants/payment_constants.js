@@ -7,8 +7,8 @@
 export const PAYMONGO_CONFIG = {
   BASE_URL: 'https://api.paymongo.com/v1',
   ENDPOINTS: {
-    LINKS: '/links',
     PAYMENTS: '/payments',
+    PAYMENT_INTENTS: '/payment_intents',
     PAYMENT_METHODS: '/payment_methods',
   },
   WEBHOOK_SECRET: process.env.PAYMONGO_WEBHOOK_SECRET,
@@ -17,6 +17,11 @@ export const PAYMONGO_CONFIG = {
 
 // PayMongo authentication headers utility
 export const createPayMongoAuthHeaders = () => {
+  if (!PAYMONGO_CONFIG.SECRET_KEY) {
+    console.error('PayMongo SECRET_KEY is not set in environment variables');
+    throw new Error('PayMongo SECRET_KEY is not configured');
+  }
+  
   const encodedKey = Buffer.from(`${PAYMONGO_CONFIG.SECRET_KEY}:`).toString('base64');
   return {
     'Authorization': `Basic ${encodedKey}`,
@@ -62,6 +67,7 @@ export const PAYMENT_INCLUDES = {
         id: true,
         userId: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         email: true,
         phoneNumber: true
@@ -104,9 +110,18 @@ export const PAYMONGO_EVENTS = {
   SOURCE_CHARGEABLE: 'source.chargeable',
   PAYMENT_PAID: 'payment.paid',
   PAYMENT_FAILED: 'payment.failed',
+  PAYMENT_REFUNDED: 'payment.refunded',
+  PAYMENT_REFUND_UPDATED: 'payment.refund.updated',
+  PAYMENT_CANCELLED: 'payment.cancelled',
+  PAYMENT_CANCELED: 'payment.canceled',
   LINK_PAYMENT_PAID: 'link.payment.paid',
+  LINK_PAYMENT_FAILED: 'link.payment.failed',
+  LINK_PAYMENT_EXPIRED: 'link.payment.expired',
   LINK_UPDATED: 'link.updated',
-  LINK_STATUS_UPDATED: 'link.status.updated'
+  LINK_STATUS_UPDATED: 'link.status.updated',
+  LINK_ARCHIVED: 'link.archived',
+  LINK_CANCELLED: 'link.cancelled',
+  LINK_CANCELED: 'link.canceled'
 };
 
 export default {

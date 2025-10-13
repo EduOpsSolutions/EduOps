@@ -384,7 +384,6 @@ const createEnrollmentRequest = async (req, res) => {
 };
 
 // Get enrollment requests with filtering, pagination, and search
-// Get enrollment requests with filtering, pagination, and search
 const getEnrollmentRequests = async (req, res) => {
   const {
     id,
@@ -579,7 +578,8 @@ const trackEnrollment = async (req, res) => {
         coursesToEnroll: enrollmentRequest.coursesToEnroll,
         coursePrice: coursePrice,
         courseName: course?.name || enrollmentRequest.coursesToEnroll,
-        paymentProofPath: enrollmentRequest.paymentProofPath
+        paymentProofPath: enrollmentRequest.paymentProofPath,
+        studentId: enrollmentRequest.studentId 
       }
     });
 

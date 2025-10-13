@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import styles from "../../styles/Payment.module.css";
 import UserNavbar from "../../components/navbars/UserNav";
 import CreditCard from "../../components/payments/CreditCard";
 import GCash from "../../components/payments/GCash";
 import Maya from "../../components/payments/Maya";
+import { generatePaymentId } from "../../utils/paymentApi";
 import Swal from "sweetalert2";
 
 const PaymentPage = () => {
@@ -12,7 +12,7 @@ const PaymentPage = () => {
   const [paymentData, setPaymentData] = useState({
     amount: 0,
     description: "",
-    checkoutID: "",
+    paymentID: "",
     studentInfo: null
   });
   const navigate = useNavigate();
@@ -54,10 +54,10 @@ const PaymentPage = () => {
                        stateData?.description || 
                        "EduOps Payment";
     
-    const checkoutID = urlParams.get('checkoutID') || 
-                      stateData?.checkoutID || 
-                      localStorage.getItem("checkoutID") ||
-                      `${Date.now()}-EduOps`;
+    const paymentID = urlParams.get('paymentID') || 
+                      stateData?.paymentID || 
+                      localStorage.getItem("paymentID") ||
+                      generatePaymentId();
 
     const studentInfo = stateData?.studentInfo || 
                        JSON.parse(localStorage.getItem("studentInfo") || "null");
@@ -77,13 +77,13 @@ const PaymentPage = () => {
     setPaymentData({
       amount: parseFloat(amount),
       description,
-      checkoutID,
+      paymentID,
       studentInfo
     });
 
     // Store data in localStorage for persistence
     localStorage.setItem("totalPayment", amount);
-    localStorage.setItem("checkoutID", checkoutID);
+    localStorage.setItem("paymentID", paymentID);
     if (studentInfo) {
       localStorage.setItem("studentInfo", JSON.stringify(studentInfo));
     }
@@ -92,7 +92,7 @@ const PaymentPage = () => {
   const handlePaymentSuccess = async (paymentResult) => {
     // Clear stored payment data
     localStorage.removeItem("totalPayment");
-    localStorage.removeItem("checkoutID");
+    localStorage.removeItem("paymentID");
     localStorage.removeItem("cartItems");
 
     const result = await Swal.fire({
@@ -103,8 +103,8 @@ const PaymentPage = () => {
           <p class="mb-3">Your payment has been processed successfully!</p>
           <div class="bg-gray-50 p-3 rounded text-sm">
             <div class="flex justify-between mb-2">
-              <span class="font-medium">Transaction ID:</span>
-              <span>${paymentData.checkoutID}</span>
+              <span class="font-medium">Payment ID:</span>
+              <span>${paymentData.paymentID}</span>
             </div>
             <div class="flex justify-between mb-2">
               <span class="font-medium">Amount:</span>
@@ -115,17 +115,11 @@ const PaymentPage = () => {
               <span class="text-green-600 font-semibold">Completed</span>
             </div>
           </div>
-          <p class="mt-3 text-sm text-gray-600">
-            <i class="fas fa-info-circle mr-1"></i>
-            A confirmation email has been sent to your registered email address.
-          </p>
         </div>
       `,
-      showCancelButton: true,
+      showCancelButton: false,
       confirmButtonColor: "#890E07",
-      cancelButtonColor: "#6B7280",
-      confirmButtonText: '<i class="fas fa-home mr-2"></i>Go to Dashboard',
-      cancelButtonText: '<i class="fas fa-receipt mr-2"></i>View Payments',
+      confirmButtonText: '<i class="fas fa-home mr-2"></i>Go back home',
       customClass: {
         popup: 'swal-wide'
       }
@@ -133,8 +127,6 @@ const PaymentPage = () => {
 
     if (result.isConfirmed) {
       navigate("/");
-    } else if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
-      navigate("/student/payments");
     }
   };
 
@@ -167,9 +159,9 @@ const PaymentPage = () => {
       `,
       showCancelButton: true,
       confirmButtonColor: "#890E07",
-      cancelButtonColor: "#DC2626",
+      cancelButtonColor: "#6B7280",
       confirmButtonText: '<i class="fas fa-redo mr-2"></i>Try Again',
-      cancelButtonText: '<i class="fas fa-phone mr-2"></i>Contact Support',
+      cancelButtonText: 'Cancel',
       customClass: {
         popup: 'swal-wide'
       }
@@ -178,9 +170,6 @@ const PaymentPage = () => {
     if (result.isConfirmed) {
       // Retry payment - user can try again with same form
       window.location.reload();
-    } else if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
-      // Contact support
-      window.open('mailto:support@eduops.com?subject=Payment Issue&body=Transaction ID: ' + paymentData.checkoutID);
     }
   };
 
@@ -193,20 +182,17 @@ const PaymentPage = () => {
     return (
       <PaymentComponent
         amount={paymentData.amount}
-        description={`${paymentData.description} - ${paymentData.checkoutID}`}
+        description={paymentData.description}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
       />
     );
   };
 
-  const handleBackClick = () => {
-    navigate(-1);
-  };
 
   if (!paymentData.amount) {
     return (
-      <div className="bg-white-yellow-tone min-h-screen">
+      <div className="bg_custom bg-white-yellow-tone">
         <UserNavbar role="public" />
         <div className="flex justify-center items-center min-h-screen">
           <div className="text-center">
@@ -219,98 +205,110 @@ const PaymentPage = () => {
   }
 
   return (
-    <div className="bg-white-yellow-tone min-h-screen">
+    <div className="bg_custom bg-white-yellow-tone">
       <UserNavbar role="public" />
-      
-      <div className="container mx-auto px-4 py-8">
-        <main className="main">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              Complete Your Payment
-            </h1>
-            <p className="text-gray-600">
+
+      <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+        <div className="w-full max-w-5xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden shadow-lg">
+          {/* Header */}
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">Complete Your Payment</h1>
+            <p className="text-gray-600 mt-2">
               Choose your preferred payment method to proceed
             </p>
           </div>
 
-          <section className={styles.payment}>
-            <div className={styles.paymentHeader}>
-              <h2 className="text-2xl font-semibold">Select Payment Option</h2>
-              <button
-                onClick={handleBackClick}
-                className="text-sm"
-              >
-                ← Back
-              </button>
+          {/* Payment Summary Card */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold text-blue-800 mb-4">Payment Summary</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Payment ID:</span>
+                <span className="text-gray-900 font-mono bg-white px-3 py-1 rounded border border-blue-200">{paymentData.paymentID}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Description:</span>
+                <span className="text-gray-900 text-right">{paymentData.description}</span>
+              </div>
+              
+              {paymentData.studentInfo && (
+                <div className="pt-3 border-t border-blue-200">
+                  <p className="text-gray-700 font-medium mb-2">Student Information:</p>
+                  <p className="text-sm text-gray-800">
+                    <strong>{paymentData.studentInfo.firstName} {paymentData.studentInfo.lastName}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600">{paymentData.studentInfo.email}</p>
+                </div>
+              )}
+              
+              <div className="pt-3 border-t border-blue-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-gray-800">Total Amount:</span>
+                  <span className="text-2xl font-bold text-dark-red">₱{paymentData.amount.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
+          </div>
 
-            {/* Payment Method Selection */}
+          {/* Payment Method Selection */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">Select Payment Method</h2>
             <form
               onChange={(event) => {
                 setPaymentOption(parseInt(event.target.value));
               }}
-              className={styles.paymentSelection}
+              className="space-y-3"
             >
               {paymentMethods.map((method) => (
-                <label key={method.id} className={styles.option}>
+                <label 
+                  key={method.id} 
+                  className="flex items-start p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-dark-red hover:bg-gray-50 transition-all duration-200"
+                >
                   <input
-                    className={styles.radio}
+                    className="mt-1 mr-3 w-4 h-4 text-dark-red focus:ring-dark-red"
                     name="paymentOption"
                     type="radio"
                     value={method.id}
                     defaultChecked={method.id === 0}
                   />
-                  <span className={styles.optionDetails}>
-                    <span className={styles.optionText}>{method.name}</span>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {method.description}
-                    </p>
-                  </span>
+                  <div className="flex-1">
+                    <span className="text-lg font-semibold text-gray-800">{method.name}</span>
+                    <p className="text-sm text-gray-600 mt-1">{method.description}</p>
+                  </div>
                 </label>
               ))}
             </form>
+          </div>
 
-            {/* Payment Form Container */}
-            <div className={styles.paymentFormsContainer}>
-              <div className={styles.paymentInfo}>
-                <h2 className="text-xl font-semibold mb-4">Payment Summary</h2>
-                <div className="bg-white p-4 rounded-lg border">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Order ID:</span>
-                      <span className="text-gray-600">{paymentData.checkoutID}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Description:</span>
-                      <span className="text-gray-600">{paymentData.description}</span>
-                    </div>
-                    <hr className="my-2" />
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total Amount:</span>
-                      <span className="text-dark-red">₱{paymentData.amount.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  {paymentData.studentInfo && (
-                    <div className="mt-4 pt-4 border-t">
-                      <h3 className="font-medium mb-2">Student Information:</h3>
-                      <p className="text-sm text-gray-600">
-                        {paymentData.studentInfo.firstName} {paymentData.studentInfo.lastName}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {paymentData.studentInfo.email}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className={styles.paymentForm}>
-                {displayPaymentForm(paymentOption)}
+          {/* Payment Form */}
+          <div className="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+            {displayPaymentForm(paymentOption)}
+          </div>
+
+          {/* Security Notice */}
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-green-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-800">Secure Payment</p>
+                <p className="text-xs text-green-700 mt-1">Your payment information is encrypted and secure. We never store your card details.</p>
               </div>
             </div>
-          </section>
-        </main>
+          </div>
+
+          {/* Powered by PayMongo */}
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-500 flex items-center justify-center">
+              <span>Powered by</span>
+              <span className="ml-1 font-semibold text-gray-700">PayMongo</span>
+              <svg className="w-4 h-4 ml-1 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

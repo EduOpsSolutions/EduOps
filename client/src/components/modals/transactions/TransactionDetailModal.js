@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 
 function TransactionDetailModal({
   isOpen,
   onClose,
   transaction,
   onOpenCheckout,
-  onRefreshStatus,
 }) {
+  const [isOpening, setIsOpening] = useState(false);
+
   if (!isOpen || !transaction) return null;
 
   const getStatusBadgeColor = (status) => {
@@ -38,13 +39,14 @@ function TransactionDetailModal({
 
   const handleCheckoutClick = () => {
     if (transaction.checkoutUrl) {
+      setIsOpening(true);
       onOpenCheckout(transaction.checkoutUrl);
+      // Reset after a short delay
+      setTimeout(() => setIsOpening(false), 2000);
     }
   };
 
-  const handleRefreshClick = () => {
-    onRefreshStatus(transaction.id);
-  };
+  // Removed refresh status for consistency across modals
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -125,14 +127,14 @@ function TransactionDetailModal({
             <span className="text-gray-900">{transaction.paymentMethod}</span>
           </div>
 
-          {/* OR/Reference Number */}
-          {transaction.referenceNumber && (
+          {/* OR/Reference Number (use PayMongo Payment ID for OR) */}
+          {(transaction?.paymongoDetails?.paymongoId || transaction?.paymongoDetails?.referenceNumber || transaction?.referenceNumber) && (
             <div className="flex flex-col sm:flex-row sm:items-center">
               <label className="font-semibold text-gray-700 w-32 mb-1 sm:mb-0">
                 OR/Reference:
               </label>
               <span className="text-gray-900 font-mono">
-                {transaction.referenceNumber}
+                {transaction?.paymongoDetails?.paymongoId || transaction?.paymongoDetails?.referenceNumber || transaction?.referenceNumber}
               </span>
             </div>
           )}
@@ -157,6 +159,18 @@ function TransactionDetailModal({
               {formatDateTime(transaction.createdAt)}
             </span>
           </div>
+
+          {/* Paid At */}
+          {transaction.status === "paid" && transaction.paidAt && (
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <label className="font-semibold text-gray-700 w-32 mb-1 sm:mb-0">
+                Paid At:
+              </label>
+              <span className="text-gray-900">
+                {formatDateTime(transaction.paidAt)}
+              </span>
+            </div>
+          )}
 
           {/* PayMongo Information Section */}
           {transaction.paymongoDetails && (
@@ -291,44 +305,56 @@ function TransactionDetailModal({
               {transaction.checkoutUrl && transaction.status === "pending" && (
                 <button
                   onClick={handleCheckoutClick}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
+                  disabled={isOpening}
+                  className={`${
+                    isOpening
+                      ? 'bg-blue-400 cursor-wait'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center`}
                 >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
-                  Open Checkout
+                  {isOpening ? (
+                    <>
+                      <svg
+                        className="animate-spin w-4 h-4 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Opening Payment...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                      Open Checkout
+                    </>
+                  )}
                 </button>
               )}
-
-              <button
-                onClick={handleRefreshClick}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                Refresh Status
-              </button>
             </div>
           </div>
 

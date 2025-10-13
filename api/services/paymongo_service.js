@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 /**
  * PayMongo Service
- * Webhook processing for PayMongo payments
+ * Webhook processing and API calls for PayMongo payments
  */
 
 // ==================== PayMongo Webhook Processing ====================
@@ -151,13 +151,31 @@ export const processWebhookEvent = async (event) => {
         status: "paid",
         paidAt: new Date(),
         paymentMethod: linkPaymentMethod,
-        referenceNumber: eventData.attributes.reference_number,
+        referenceNumber: eventData.attributes.reference_number, // Update with PayMongo's reference
+        paymongoId: eventData.id, // Store PayMongo ID for future reference
         paymongoResponse: JSON.stringify(event),
       };
 
+      // Try to find by paymongoId first, then by any pending payment from last 24h
       paymentRecord = await prisma.payments.findFirst({
-        where: { paymongoId: eventData.id },
+        where: {
+          paymongoId: eventData.id
+        },
       });
+
+      // If not found, look for recent pending payment (since we create pending payments with EMAIL-xxx ref)
+      if (!paymentRecord) {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        paymentRecord = await prisma.payments.findFirst({
+          where: {
+            status: 'pending',
+            paymentMethod: 'Online Payment',
+            createdAt: { gte: yesterday }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        console.log(`Found pending payment by recent lookup: ${paymentRecord?.id}`);
+      }
       break;
 
     case PAYMONGO_EVENTS.PAYMENT_PAID:
@@ -167,20 +185,31 @@ export const processWebhookEvent = async (event) => {
         status: "paid",
         paidAt: new Date(),
         paymentMethod: directPaymentMethod,
-        referenceNumber: eventData.attributes.reference_number,
+        referenceNumber: eventData.attributes.reference_number, // Update with PayMongo's reference
+        paymongoId: eventData.id, // Store PayMongo ID for future reference
         paymongoResponse: JSON.stringify(event),
       };
 
+      // Try to find by paymongoId first
       paymentRecord = await prisma.payments.findFirst({
         where: {
-          OR: [
-            { paymongoId: eventData.id },
-            {
-              referenceNumber: eventData.attributes.external_reference_number,
-            },
-          ],
+          paymongoId: eventData.id
         },
       });
+
+      // If not found, look for recent pending payment
+      if (!paymentRecord) {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        paymentRecord = await prisma.payments.findFirst({
+          where: {
+            status: 'pending',
+            paymentMethod: 'Online Payment',
+            createdAt: { gte: yesterday }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        console.log(`Found pending payment by recent lookup: ${paymentRecord?.id}`);
+      }
       break;
 
     case PAYMONGO_EVENTS.PAYMENT_FAILED:
@@ -188,23 +217,38 @@ export const processWebhookEvent = async (event) => {
       console.log(`Processing payment failed event: ${eventType}`);
       updateData = {
         status: "failed",
+        referenceNumber: eventData.attributes.reference_number, // Update with PayMongo's reference if available
+        paymongoId: eventData.id, // Store PayMongo ID for future reference
         paymongoResponse: JSON.stringify(event),
       };
 
+      // Try to find by paymongoId first
       paymentRecord = await prisma.payments.findFirst({
         where: {
-          OR: [
-            { paymongoId: eventData.id },
-            { referenceNumber: eventData.attributes.reference_number },
-          ],
+          paymongoId: eventData.id
         },
       });
+
+      // If not found, look for recent pending payment
+      if (!paymentRecord) {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        paymentRecord = await prisma.payments.findFirst({
+          where: {
+            status: 'pending',
+            paymentMethod: 'Online Payment',
+            createdAt: { gte: yesterday }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        console.log(`Found pending payment for failed event: ${paymentRecord?.id}`);
+      }
       break;
 
     case PAYMONGO_EVENTS.LINK_PAYMENT_EXPIRED:
       console.log(`Processing link.payment.expired event`);
       updateData = {
         status: "failed", // Mark expired test payments as failed
+        paymongoId: eventData.id, // Store PayMongo ID for future reference
         paymongoResponse: JSON.stringify(event),
       };
 
@@ -228,6 +272,7 @@ export const processWebhookEvent = async (event) => {
       if (linkStatus === 'failed' || linkStatus === 'expired' || linkStatus === 'unpaid') {
         updateData = {
           status: "failed",
+          paymongoId: eventData.id, // Store PayMongo ID for future reference
           paymongoResponse: JSON.stringify(event),
         };
 
@@ -266,20 +311,28 @@ export const processWebhookEvent = async (event) => {
     case PAYMONGO_EVENTS.PAYMENT_REFUNDED:
     case PAYMONGO_EVENTS.PAYMENT_REFUND_UPDATED:
       console.log(`Processing ${eventType} event`);
+      console.log('Refund event data:', JSON.stringify(eventData.attributes, null, 2));
+      
+      // For refund events, eventData.id is the refund ID (rfnd_xxx)
+      // The payment ID is in eventData.attributes.payment_id
+      const refundedPaymentId = eventData.attributes.payment_id;
+      console.log(`Looking for payment with PayMongo ID: ${refundedPaymentId}`);
+      
       updateData = {
         status: "refunded",
         paymongoResponse: JSON.stringify(event),
-        paidAt: null, // Clear paidAt for refunded payments
+        // Don't clear paidAt - keep it for reference of when it was originally paid
       };
 
       paymentRecord = await prisma.payments.findFirst({
         where: {
-          OR: [
-            { paymongoId: eventData.id },
-            { referenceNumber: eventData.attributes.reference_number },
-          ],
+          paymongoId: refundedPaymentId // Use payment_id from refund attributes
         },
       });
+      
+      if (!paymentRecord) {
+        console.log(`⚠️ Payment not found for refund. Refund ID: ${eventData.id}, Payment ID: ${refundedPaymentId}`);
+      }
       break;
 
     default:
@@ -321,4 +374,173 @@ export const processWebhookEvent = async (event) => {
     handled: true,
     message: "Event processed successfully",
   };
+};
+
+// ==================== PayMongo API Functions ====================
+
+/**
+ * Create Payment Intent via PayMongo API
+ * @param {Object} paymentData - Payment data
+ * @returns {Promise<Object>} PayMongo response
+ */
+export const createPaymentIntent = async (paymentData) => {
+  try {
+    const { amount, currency = 'PHP', description, payment_method_allowed = ['card', 'gcash', 'paymaya'], payment_method_options } = paymentData;
+    
+    const requestBody = {
+      data: {
+        attributes: {
+          amount: Math.round(amount * 100), // Convert to centavos
+          currency,
+          description,
+          payment_method_allowed
+        }
+      }
+    };
+
+    // Add payment method options for cards (3D Secure)
+    if (payment_method_options) {
+      requestBody.data.attributes.payment_method_options = payment_method_options;
+    }
+    
+    const response = await axios.post(
+      `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_INTENTS}`,
+      requestBody,
+      {
+        headers: createPayMongoAuthHeaders()
+      }
+    );
+
+    console.log('PayMongo Payment Intent created:', response.data);
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Error creating PayMongo Payment Intent:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data || error.message
+    };
+  }
+};
+
+/**
+ * Create Payment Method via PayMongo API
+ * @param {Object} paymentMethodData - Payment method data
+ * @returns {Promise<Object>} PayMongo response
+ */
+export const createPaymentMethod = async (paymentMethodData) => {
+  try {
+    const { type, details, billing } = paymentMethodData;
+    
+    console.log('Creating PayMongo Payment Method with data:', {
+      type,
+      details,
+      billing,
+      url: `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_METHODS}`
+    });
+    
+    const requestBody = {
+      data: {
+        attributes: {
+          type,
+          details,
+          billing
+        }
+      }
+    };
+    
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('Headers:', createPayMongoAuthHeaders());
+    
+    const response = await axios.post(
+      `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_METHODS}`,
+      requestBody,
+      {
+        headers: createPayMongoAuthHeaders()
+      }
+    );
+
+    console.log('PayMongo Payment Method created:', response.data);
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Error creating PayMongo Payment Method:');
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    console.error('Error message:', error.message);
+    return {
+      success: false,
+      error: error.response?.data || error.message
+    };
+  }
+};
+
+/**
+ * Attach Payment Method to Payment Intent via PayMongo API
+ * @param {Object} attachData - Attachment data
+ * @returns {Promise<Object>} PayMongo response
+ */
+export const attachPaymentMethod = async (attachData) => {
+  try {
+    const { payment_intent_id, payment_method_id, return_url } = attachData;
+    
+    const response = await axios.post(
+      `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_INTENTS}/${payment_intent_id}/attach`,
+      {
+        data: {
+          attributes: {
+            payment_method: payment_method_id,
+            return_url
+          }
+        }
+      },
+      {
+        headers: createPayMongoAuthHeaders()
+      }
+    );
+
+    console.log('PayMongo Payment Method attached:', response.data);
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Error attaching PayMongo Payment Method:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data || error.message
+    };
+  }
+};
+
+/**
+ * Get Payment Intent status from PayMongo API
+ * @param {string} paymentIntentId - Payment Intent ID
+ * @returns {Promise<Object>} PayMongo response
+ */
+export const getPaymentIntent = async (paymentIntentId) => {
+  try {
+    const response = await axios.get(
+      `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_INTENTS}/${paymentIntentId}`,
+      {
+        headers: createPayMongoAuthHeaders()
+      }
+    );
+
+    console.log('PayMongo Payment Intent retrieved:', response.data);
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Error retrieving PayMongo Payment Intent:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data || error.message
+    };
+  }
 };

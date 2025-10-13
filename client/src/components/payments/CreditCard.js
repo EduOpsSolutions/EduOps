@@ -92,14 +92,13 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
       });
 
       const data = await response.json();
-      console.log('Payment Intent Response:', data); // Debug log
+      // Debug: Payment Intent Response
       
-      if (data.success && data.data.success) {
-        // Backend returns: { success: true, data: { success: true, data: paymongoResponse, clientKey, paymentIntentId } }
-        // We want the actual PayMongo payment intent data
-        return data.data.data.data; // This should be the PayMongo payment intent object
+      if (data.success && data.data && data.data.data) {
+        // Backend returns: { success: true, data: { data: <pi> } }
+        return data.data.data; // PayMongo payment intent object
       } else {
-        throw new Error(data.message || data.data.error || 'Failed to create payment intent');
+        throw new Error(data.message || data.error || 'Failed to create payment intent');
       }
     } catch (error) {
       console.error('Error creating payment intent:', error);
@@ -114,38 +113,44 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
     
     try {
       const expYear = parseInt(formData.year) > 2000 ? parseInt(formData.year) % 100 : parseInt(formData.year);
-      console.log('Card details being sent:', {
+      // Debug: Card details being sent
         card_number: formData.number.replace(/\s/g, ''),
         exp_month: parseInt(formData.month),
         exp_year: expYear,
         cvc: formData.code,
       }); // Debug log
       
-      const response = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/create-method`, {
+      const response = await fetch('https://api.paymongo.com/v1/payment_methods', {
         method: "POST",
         headers: {
+          'Authorization': `Basic ${btoa(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':')}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          details: {
-            card_number: formData.number.replace(/\s/g, ''),
-            exp_month: parseInt(formData.month),
-            exp_year: expYear,
-            cvc: formData.code,
-          },
-          billing: {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
+          data: {
+            attributes: {
+              type: 'card',
+              details: {
+                card_number: formData.number.replace(/\s/g, ''),
+                exp_month: parseInt(formData.month),
+                exp_year: expYear,
+                cvc: formData.code,
+              },
+              billing: {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+              }
+            }
           }
         }),
       });
 
       const data = await response.json();
-      console.log('Payment Method Response:', data); // Debug log
+      // Debug: Payment Method Response
       
-      if (data.success && data.data.success) {
-        return data.data.data; // Extract the actual PayMongo payment method data
+      if (data.data) {
+        return data.data; // Extract the actual PayMongo payment method data
       } else {
         // Handle PayMongo errors
         let errorMessage = 'Failed to create payment method';
@@ -154,11 +159,11 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
         } else if (data.message) {
           errorMessage = data.message;
         }
-        console.error('Payment Method Error Details:', data.data?.error || data);
+        // Debug: Payment Method Error Details
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Error creating payment method:', error);
+      // Debug: Error creating payment method
       setPaymentStatus("Error creating payment method");
       throw error;
     }
@@ -169,21 +174,14 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
     setPaymentStatus("Processing Payment");
     
     try {
-      console.log('Intent object:', intent); // Debug log
-      console.log('Method object:', method); // Debug log
+      // Debug: Intent and Method objects
       
-      // Handle different possible intent object structures
-      let clientKey;
-      if (intent && intent.attributes && intent.attributes.client_key) {
-        clientKey = intent.attributes.client_key;
-      } else if (intent && intent.client_key) {
-        clientKey = intent.client_key;
-      } else {
-        throw new Error('Client key not found in intent object');
-      }
+      // Intent is PayMongo object
+      const clientKey = intent?.attributes?.client_key;
+      if (!clientKey) throw new Error('Client key not found in intent object');
       
-      // Handle method object structure - it's wrapped in a data property
-      const methodId = method.data ? method.data.id : method.id;
+      // Method object is PayMongo data
+      const methodId = method?.id || method?.data?.id;
       
       const response = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
         method: "POST",
@@ -191,28 +189,19 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          paymentIntentId: intent.id,
-          paymentMethodId: methodId,
-          clientKey: clientKey
+          payment_intent_id: intent?.id,
+          payment_method_id: methodId,
+          client_key: clientKey
         }),
       });
 
       const data = await response.json();
-      console.log('Attach Method Response:', data); // Debug log
-      console.log('Full data structure:', JSON.stringify(data, null, 2)); // Deep debug log
+      // Debug: Attach Method Response
       
-      if (data.success) {
-        // Try different possible structures based on your backend response pattern
-        let paymentIntent;
-        if (data.data && data.data.data && data.data.data.data) {
-          paymentIntent = data.data.data.data; // For nested structure
-        } else if (data.data && data.data.data) {
-          paymentIntent = data.data.data; // Current attempt
-        } else if (data.data) {
-          paymentIntent = data.data; // Direct data
-        }
+      if (data.success && data.data && data.data.data) {
+        const paymentIntent = data.data.data;
         
-        console.log('Extracted payment intent:', paymentIntent); // Debug log
+        // Debug: Extracted payment intent
         
         if (!paymentIntent || !paymentIntent.attributes) {
           throw new Error('Invalid payment intent structure returned from attach method');
@@ -234,7 +223,7 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
         throw new Error(data.message || 'Failed to attach payment method');
       }
     } catch (error) {
-      console.error('Error attaching payment method:', error);
+      // Debug: Error attaching payment method
       setPaymentStatus("Error processing payment");
       onPaymentError && onPaymentError(error);
     }
@@ -249,7 +238,7 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
       const paymentMethod = await createPaymentMethod();
       await attachIntentMethod(paymentIntent, paymentMethod);
     } catch (error) {
-      console.error('Credit card payment error:', error);
+      // Debug: Credit card payment error
       setPaymentStatus("Payment failed. Please try again.");
       onPaymentError && onPaymentError(error);
     } finally {

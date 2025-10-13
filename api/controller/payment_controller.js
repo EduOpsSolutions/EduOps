@@ -6,6 +6,8 @@ import {
   cancelPayment,
   getAvailablePaymentMethods,
   forceSyncPaymentStatus,
+  bulkSyncPendingPayments,
+  cleanupOrphanedPayments,
   sendPaymentLinkViaEmail,
   sendSuccess,
   sendError,
@@ -13,6 +15,10 @@ import {
 import {
   verifyWebhookSignature,
   processWebhookEvent,
+  createPaymentIntent as createPayMongoPaymentIntent,
+  createPaymentMethod as createPayMongoPaymentMethod,
+  attachPaymentMethod as attachPayMongoPaymentMethod,
+  getPaymentIntent as getPayMongoPaymentIntent,
 } from "../services/paymongo_service.js";
 import {
   ERROR_MESSAGES,
@@ -30,16 +36,7 @@ const prisma = new PrismaClient();
 
 // ==================== Payment Operations ====================
 
-/**
- * Create online payment
- * @param {Object} req - Express request
- * @param {Object} res - Express response
- */
-/**
- * Create manual transaction (Physical Payment)
- * @param {Object} req - Express request
- * @param {Object} res - Express response
- */
+// Create manual transaction (Physical Payment)
 const createManualTransaction = async (req, res) => {
   try {
     const result = await createManualPayment(req.body);
@@ -276,6 +273,66 @@ const sendPaymentLinkEmail = async (req, res) => {
 };
 
 /**
+ * Create payment intent (PIPM flow)
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ */
+const createPaymentIntent = async (req, res) => {
+  try {
+    const result = await createPayMongoPaymentIntent(req.body);
+    
+    if (result.success) {
+      return sendSuccess(res, result.data, "Payment intent created successfully");
+    } else {
+      return sendError(res, result.message, 500, result.error);
+    }
+  } catch (error) {
+    console.error("Create payment intent error:", error);
+    return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
+  }
+};
+
+/**
+ * Create payment method (PIPM flow)
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ */
+const createPaymentMethod = async (req, res) => {
+  try {
+    const result = await createPayMongoPaymentMethod(req.body);
+    
+    if (result.success) {
+      return sendSuccess(res, result.data, "Payment method created successfully");
+    } else {
+      return sendError(res, result.message, 500, result.error);
+    }
+  } catch (error) {
+    console.error("Create payment method error:", error);
+    return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
+  }
+};
+
+/**
+ * Attach payment method to payment intent (PIPM flow)
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ */
+const attachPaymentMethod = async (req, res) => {
+  try {
+    const result = await attachPayMongoPaymentMethod(req.body);
+    
+    if (result.success) {
+      return sendSuccess(res, result.data, "Payment method attached successfully");
+    } else {
+      return sendError(res, result.message, 500, result.error);
+    }
+  } catch (error) {
+    console.error("Attach payment method error:", error);
+    return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
+  }
+};
+
+/**
  * Check payment status by payment intent ID
  * @param {Object} req - Express request
  * @param {Object} res - Express response
@@ -284,27 +341,98 @@ const checkPaymentStatus = async (req, res) => {
   try {
     const { paymentIntentId } = req.params;
     
+    console.log(`Checking payment status for intent: ${paymentIntentId}`);
+    
+    // First, get the latest status from PayMongo
+    const paymongoResult = await getPayMongoPaymentIntent(paymentIntentId);
+    
     // Find payment by PayMongo payment intent ID
-    const payment = await prisma.payments.findFirst({
+    let payment = await prisma.payments.findFirst({
       where: {
-        OR: [
-          { paymongoId: paymentIntentId },
-          { paymongoResponse: { contains: paymentIntentId } }
-        ]
+        paymongoId: paymentIntentId
       },
       include: PAYMENT_INCLUDES.WITH_USER
     });
 
+    // If not found by paymongoId, check all pending payments with status "Online Payment"
     if (!payment) {
-      return sendError(res, "Payment not found", 404);
+      console.log(`Payment not found by paymongoId, checking pending payments...`);
+      
+      // Get all pending payments from the last 24 hours
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const pendingPayments = await prisma.payments.findMany({
+        where: {
+          status: 'pending',
+          paymentMethod: 'Online Payment',
+          createdAt: {
+            gte: yesterday
+          }
+        },
+        include: PAYMENT_INCLUDES.WITH_USER
+      });
+
+      console.log(`Found ${pendingPayments.length} pending payments. Updating with paymongoId...`);
+      
+      // If there's exactly one pending payment in the last 24 hours, assume it's this one
+      // and update it with the paymongoId
+      if (pendingPayments.length === 1) {
+        payment = await prisma.payments.update({
+          where: { id: pendingPayments[0].id },
+          data: {
+            paymongoId: paymentIntentId,
+            status: 'paid',
+            paidAt: new Date()
+          },
+          include: PAYMENT_INCLUDES.WITH_USER
+        });
+        console.log(`✅ Updated pending payment ${payment.id} with paymongoId and status paid`);
+      } else if (pendingPayments.length > 1) {
+        // Multiple pending payments - use the most recent one
+        const mostRecent = pendingPayments.sort((a, b) => b.createdAt - a.createdAt)[0];
+        payment = await prisma.payments.update({
+          where: { id: mostRecent.id },
+          data: {
+            paymongoId: paymentIntentId,
+            status: 'paid',
+            paidAt: new Date()
+          },
+          include: PAYMENT_INCLUDES.WITH_USER
+        });
+        console.log(`✅ Updated most recent pending payment ${payment.id} with paymongoId and status paid`);
+      }
     }
 
+    if (!payment) {
+      console.log(`❌ No payment found for intent: ${paymentIntentId}`);
+      return sendError(res, "Payment not found. The payment may still be processing. Please wait for the webhook or contact support.", 404);
+    }
+
+    console.log(`Payment found: ${payment.id}, status: ${payment.status}`);
+
+    // Map our database status to PayMongo status format
+    const statusMap = {
+      'paid': 'succeeded',
+      'pending': 'awaiting_payment_method',
+      'failed': 'failed',
+      'cancelled': 'cancelled',
+      'refunded': 'refunded'
+    };
+
     return sendSuccess(res, {
-      status: payment.status,
+      status: statusMap[payment.status] || payment.status, // Return 'succeeded' for 'paid'
+      dbStatus: payment.status, // Also return the actual DB status
       amount: payment.amount,
-      transactionId: payment.id,
+      transactionId: payment.id, // Our internal transaction ID (PAY-XXXXXX)
+      paymongoPaymentId: payment.paymongoId, // PayMongo Payment ID (pay_xxxxx or pi_xxxxx)
+      referenceNumber: payment.referenceNumber, // PayMongo Reference Number (for receipts)
+      paymentMethod: payment.paymentMethod,
       description: payment.remarks || "Payment",
-      paidAt: payment.paidAt
+      paidAt: payment.paidAt,
+      user: payment.users ? {
+        firstName: payment.users.first_name,
+        lastName: payment.users.last_name,
+        email: payment.users.email
+      } : null
     });
   } catch (error) {
     console.error("Check payment status error:", error);
@@ -326,6 +454,9 @@ export {
   forceSyncPaymentStatusController,
   bulkSyncPendingPaymentsController,
   cleanupOrphanedPaymentsController,
+  createPaymentIntent,
+  createPaymentMethod,
+  attachPaymentMethod,
   sendPaymentLinkEmail,
   checkPaymentStatus,
   handleWebhook,
@@ -343,6 +474,9 @@ export default {
   forceSyncPaymentStatus: forceSyncPaymentStatusController,
   bulkSyncPendingPayments: bulkSyncPendingPaymentsController,
   cleanupOrphanedPayments: cleanupOrphanedPaymentsController,
+  createPaymentIntent,
+  createPaymentMethod,
+  attachPaymentMethod,
   sendPaymentLinkEmail,
   checkPaymentStatus,
   handleWebhook,

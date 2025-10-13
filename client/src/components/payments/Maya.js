@@ -44,22 +44,22 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
       });
 
       const intentData = await intentResponse.json();
-      console.log('Payment Intent response:', intentData);
+      // Debug: Payment Intent response
       
       if (!intentData.success) {
         throw new Error('Failed to create payment intent');
       }
 
-      // Extract payment intent data correctly based on actual response structure
-      // The backend returns both nested structure and direct properties
-      const paymentIntent = intentData.data.data || intentData.data; // Handle nested response
-      const clientKey = intentData.clientKey || intentData.data?.data?.attributes?.client_key || intentData.data?.attributes?.client_key;
+      // Extract payment intent data from backend response (PayMongo shape)
+      const paymentIntent = intentData?.data?.data;
+      const clientKey = paymentIntent?.attributes?.client_key;
       
-      // Alternative extraction method as suggested by PayMongo: extract Payment Intent ID from client key
-      const paymentIntentId = clientKey ? clientKey.split('_client')[0] : paymentIntent?.id;
+      // Extract Payment Intent ID (prefer direct id; fallback to split)
+      const paymentIntentId = paymentIntent?.id || (clientKey ? clientKey.split('_client')[0] : undefined);
+
+      // Client key is used only server-side via intent mapping; avoid storing locally
       
-      console.log('Payment Intent ID:', paymentIntentId);
-      console.log('Client Key:', clientKey);
+      // Debug IDs
       
       if (!paymentIntentId) {
         console.error('Full response:', intentData);
@@ -69,37 +69,42 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
       // Step 2: Create Payment Method (NO return_url here per latest PayMongo guidance)
       let paymentMethod;
       try {
-        // Create PayMaya payment method with empty details object
-        const methodResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/create-method`, {
+        // Create PayMaya payment method directly via PayMongo API (client-side per devs advice)
+        const methodResponse = await fetch('https://api.paymongo.com/v1/payment_methods', {
           method: 'POST',
           headers: {
+            'Authorization': `Basic ${btoa(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':')}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            type: 'paymaya', // Confirmed correct type by PayMongo
-            details: {}, // Empty details object for e-wallet per PayMongo guidance
-            billing: {
-              name: name,
-              email: email,
-              phone: phone,
+            data: {
+              attributes: {
+                type: 'paymaya', // Confirmed correct type by PayMongo
+                // Omit details entirely for e-wallets to avoid parameter_blank
+                billing: {
+                  name: name,
+                  email: email,
+                  phone: phone,
+                }
+              }
             }
-            // NO return_url here - it goes in attachment step per latest PayMongo guidance
           }),
         });
 
         const methodData = await methodResponse.json();
-        console.log('Payment Method response:', methodData);
+        // Debug: Payment Method response
         
-        if (!methodData.success) {
-          throw new Error('Failed to create PayMaya payment method');
+        if (!methodData.data) {
+          const errMsg = methodData?.errors?.map?.(e => e?.detail).join(', ') || 'Failed to create PayMaya payment method';
+          throw new Error(errMsg);
         }
 
-        paymentMethod = methodData.data.data || methodData.data;
+        paymentMethod = methodData.data;
       } catch (error) {
         throw new Error(`Payment method creation failed: ${error.message}`);
       }
       
-      console.log('Payment Method ID:', paymentMethod.id);
+      // Debug: Payment Method ID
 
       // Step 3: Attach Payment Method to Payment Intent (with return_url per latest PayMongo guidance)
       const attachResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
@@ -108,21 +113,21 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          paymentIntentId: paymentIntentId, // Use the correctly extracted ID
-          paymentMethodId: paymentMethod.id,
-          clientKey: clientKey,
-          return_url: `${window.location.origin}/payment-complete` // Return URL goes in attachment per latest PayMongo guidance
+          payment_intent_id: paymentIntentId,
+          payment_method_id: paymentMethod.id,
+          client_key: clientKey,
+          return_url: `${window.location.origin}/payment-complete` // Redirect to completion page
         }),
       });
 
       const attachData = await attachResponse.json();
-      console.log('Attach Payment Method response:', attachData);
+      // Debug: Attach response
       
       if (!attachData.success) {
         throw new Error('Failed to attach payment method');
       }
 
-      const attachedIntent = attachData.data.data || attachData.data;
+      const attachedIntent = attachData?.data?.data || attachData?.data;
       const status = attachedIntent.attributes.status;
 
       if (status === 'awaiting_next_action') {
