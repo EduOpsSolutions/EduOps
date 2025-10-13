@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { PrismaClient } from '@prisma/client';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -8,7 +8,7 @@ Database Schema:
 - schedule: id, days, time, time_start, time_end, location, notes, color, periodStart, periodEnd, courseId, periodId, teacherId
 - course: id, name, description, maxNumber, visibility, price
 - users: id, userId, firstName, lastName, email, role (student/teacher/admin)
-- academic_period: id, batchName, status (upcoming/ongoing/ended), startAt, endAt
+- academic_period: id, batchName, startAt, endAt, enrollmentOpenAt, enrollmentCloseAt, isEnrollmentClosed
 - user_schedule: links students to their schedules
 - student_enrollment: studentId, periodId, status (enrolled/completed/dropped/withdrawn)
 
@@ -22,17 +22,22 @@ async function getSchedulingContext() {
     const context = {};
 
     // Get active academic periods (with IDs for resolution)
+    const now = new Date();
     const activePeriods = await prisma.academic_period.findMany({
       where: {
         deletedAt: null,
-        status: { in: ['ongoing', 'upcoming'] },
+        OR: [
+          { startAt: { gte: now } }, // upcoming periods
+          { endAt: { gte: now } }, // ongoing periods (not ended yet)
+        ],
       },
       select: {
         id: true,
         batchName: true,
-        status: true,
         startAt: true,
         endAt: true,
+        enrollmentOpenAt: true,
+        enrollmentCloseAt: true,
       },
       take: 5,
     });
@@ -42,7 +47,7 @@ async function getSchedulingContext() {
     const courses = await prisma.course.findMany({
       where: {
         deletedAt: null,
-        visibility: 'visible',
+        visibility: "visible",
       },
       select: {
         id: true,
@@ -75,7 +80,7 @@ async function getSchedulingContext() {
           select: { firstName: true, lastName: true },
         },
         period: {
-          select: { batchName: true, status: true },
+          select: { batchName: true, startAt: true, endAt: true },
         },
       },
       take: 30,
@@ -84,7 +89,7 @@ async function getSchedulingContext() {
 
     return context;
   } catch (error) {
-    console.error('Error fetching scheduling context:', error);
+    console.error("Error fetching scheduling context:", error);
     return {};
   }
 }
@@ -99,24 +104,24 @@ const geminiConfig = {
 };
 
 const geminiModel = googleAI.getGenerativeModel({
-  model: 'gemini-2.0-flash-exp',
+  model: "gemini-2.0-flash-exp",
   generationConfig: geminiConfig,
 });
 
 export const askGemini = async (req, res) => {
   try {
-    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
     if (!apiKey) {
       return res
         .status(500)
-        .json({ error: true, message: 'GEMINI_API_KEY is missing' });
+        .json({ error: true, message: "GEMINI_API_KEY is missing" });
     }
 
     const { prompt, context, history } = req.body || {};
-    if (!prompt || typeof prompt !== 'string') {
+    if (!prompt || typeof prompt !== "string") {
       return res
         .status(400)
-        .json({ error: true, message: 'prompt is required' });
+        .json({ error: true, message: "prompt is required" });
     }
 
     // Fetch database context
@@ -153,16 +158,23 @@ When the user asks you to CREATE or GENERATE a schedule, you must respond with a
   "notes": "Your optimization notes here, and also add on the end that this is AI Generated",
   "courseName": "Course Name",
   "teacherFullName": "FirstName LastName",
-  "periodBatchName": "Batch Name"
+  "periodBatchName": "Batch Name",
+  "requestedPeriodStart": "2025-10-15",
+  "requestedPeriodEnd": "2025-11-15"
 }
 
-IMPORTANT: Use day codes: M, T, W, TH, F, S, SU (not Mon, Tue, etc.)
+IMPORTANT:
+- Use day codes: M, T, W, TH, F, S, SU (not Mon, Tue, etc.)
+- Use 24-hour time format for time_start and time_end (e.g., "14:00" for 2 PM)
+- If the user specifies custom start/end dates different from the academic period dates, include them in requestedPeriodStart and requestedPeriodEnd in YYYY-MM-DD format
+- periodBatchName should match one of the academic periods from the database exactly
 
 Example response when creating a schedule:
-"I recommend this optimized schedule for the English course with minimal conflicts.
+"I recommend this optimized schedule for the {coursename} course with minimal conflicts. Please double check for any mistakes."
+"Here is the recommended schedule based on your request."
 
 SCHEDULE_CREATE_COMMAND
-{"days":"M,W,F","time_start":"09:00","time_end":"11:00","location":"Room 101","notes":"Optimized to avoid teacher conflicts","courseName":"English A1","teacherFullName":"John Doe","periodBatchName":"Batch 2025-1"}"
+{"days":"M,W,F","time_start":"09:00","time_end":"11:00","location":"Room 101","notes":"Optimized to avoid teacher conflicts, AI Generated","courseName":"English A1","teacherFullName":"John Doe","periodBatchName":"Batch 2025-1","requestedPeriodStart":"2025-10-15","requestedPeriodEnd":"2025-11-15"}"
 
 ${SCHEMA_CONTEXT}
 
@@ -171,18 +183,18 @@ ${JSON.stringify(aiContext, null, 2)}`;
 
     const contextualNotes = context
       ? `\n\nAdditional Context: ${JSON.stringify(context).slice(0, 4000)}`
-      : '';
+      : "";
 
     // Build conversation history
     const contents = [];
 
     // Add system instruction as first user message
     contents.push({
-      role: 'user',
+      role: "user",
       parts: [{ text: systemInstruction + contextualNotes }],
     });
     contents.push({
-      role: 'model',
+      role: "model",
       parts: [
         { text: "Understood. I'm ready to help with scheduling questions." },
       ],
@@ -191,10 +203,10 @@ ${JSON.stringify(aiContext, null, 2)}`;
     // Add chat history if provided
     if (Array.isArray(history) && history.length > 0) {
       history.forEach((msg) => {
-        if (msg.role === 'user' || msg.role === 'model') {
+        if (msg.role === "user" || msg.role === "model") {
           contents.push({
             role: msg.role,
-            parts: [{ text: msg.content || msg.text || '' }],
+            parts: [{ text: msg.content || msg.text || "" }],
           });
         }
       });
@@ -202,13 +214,13 @@ ${JSON.stringify(aiContext, null, 2)}`;
 
     // Add current prompt
     contents.push({
-      role: 'user',
+      role: "user",
       parts: [{ text: prompt }],
     });
 
     const model = geminiModel;
     const result = await model.generateContent({ contents });
-    const text = result?.response?.text?.() || '';
+    const text = result?.response?.text?.() || "";
 
     // Check if AI wants to create a schedule
     const scheduleCommandMatch = text.match(
@@ -219,30 +231,44 @@ ${JSON.stringify(aiContext, null, 2)}`;
       try {
         const scheduleData = JSON.parse(scheduleCommandMatch[1]);
         const responseText = text
-          .replace(/SCHEDULE_CREATE_COMMAND\s*\{[\s\S]*?\}/, '')
+          .replace(/SCHEDULE_CREATE_COMMAND\s*\{[\s\S]*?\}/, "")
           .trim();
 
         // Resolve course ID
-        let courseId = '';
-        let courseName = scheduleData.courseName || '';
+        let courseId = "";
+        let courseName = scheduleData.courseName || "";
         if (courseName) {
-          const course = dbContext.courses?.find(
+          // Try exact match first
+          let course = dbContext.courses?.find(
             (c) => c.name.toLowerCase() === courseName.toLowerCase()
           );
-          courseId = course?.id || '';
+
+          // If no exact match, try fuzzy match (contains)
+          if (!course) {
+            course = dbContext.courses?.find(
+              (c) =>
+                c.name.toLowerCase().includes(courseName.toLowerCase()) ||
+                courseName.toLowerCase().includes(c.name.toLowerCase())
+            );
+          }
+
+          if (course) {
+            courseId = course.id;
+            courseName = course.name; // Use actual course name from DB
+          }
         }
 
         // Resolve teacher ID
-        let teacherId = '';
-        let teacherName = scheduleData.teacherFullName || '';
+        let teacherId = "";
+        let teacherName = scheduleData.teacherFullName || "";
         if (teacherName) {
-          const nameParts = teacherName.split(' ');
-          const firstName = nameParts[0] || '';
-          const lastName = nameParts.slice(1).join(' ') || '';
+          const nameParts = teacherName.split(" ");
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
 
           const teacher = await prisma.users.findFirst({
             where: {
-              role: 'teacher',
+              role: "teacher",
               deletedAt: null,
               OR: [
                 {
@@ -264,10 +290,10 @@ ${JSON.stringify(aiContext, null, 2)}`;
         }
 
         // Resolve academic period ID
-        let academicPeriodId = '';
-        let academicPeriodName = '';
-        let periodStart = '';
-        let periodEnd = '';
+        let academicPeriodId = "";
+        let academicPeriodName = "";
+        let periodStart = "";
+        let periodEnd = "";
 
         if (scheduleData.periodBatchName) {
           const period = dbContext.academicPeriods?.find(
@@ -278,15 +304,27 @@ ${JSON.stringify(aiContext, null, 2)}`;
           if (period) {
             academicPeriodId = period.id;
             academicPeriodName = period.batchName;
-            // Format dates to YYYY-MM-DD
-            periodStart = new Date(period.startAt).toISOString().split('T')[0];
-            periodEnd = new Date(period.endAt).toISOString().split('T')[0];
+
+            // Use requested dates if provided by AI, otherwise use full period dates
+            if (
+              scheduleData.requestedPeriodStart &&
+              scheduleData.requestedPeriodEnd
+            ) {
+              periodStart = scheduleData.requestedPeriodStart;
+              periodEnd = scheduleData.requestedPeriodEnd;
+            } else {
+              // Format dates to YYYY-MM-DD
+              periodStart = new Date(period.startAt)
+                .toISOString()
+                .split("T")[0];
+              periodEnd = new Date(period.endAt).toISOString().split("T")[0];
+            }
           }
         }
 
         return res.json({
           text: responseText,
-          action: 'create_schedule',
+          action: "create_schedule",
           scheduleData: {
             courseId,
             courseName,
@@ -294,27 +332,27 @@ ${JSON.stringify(aiContext, null, 2)}`;
             academicPeriodName,
             teacherId,
             teacherName,
-            days: scheduleData.days || '',
-            time_start: scheduleData.time_start || '',
-            time_end: scheduleData.time_end || '',
-            location: scheduleData.location || '',
-            notes: scheduleData.notes || '',
+            days: scheduleData.days || "",
+            time_start: scheduleData.time_start || "",
+            time_end: scheduleData.time_end || "",
+            location: scheduleData.location || "",
+            notes: scheduleData.notes || "",
             periodStart,
             periodEnd,
-            color: '#FFCF00',
+            color: "#FFCF00",
           },
         });
       } catch (parseError) {
-        console.error('Failed to parse schedule command:', parseError);
+        console.error("Failed to parse schedule command:", parseError);
       }
     }
 
     return res.json({ text });
   } catch (err) {
-    console.error('askGemini error:', err);
+    console.error("askGemini error:", err);
     return res.status(500).json({
       error: true,
-      message: 'Failed to contact Gemini',
+      message: "Failed to contact Gemini",
       details: err.message,
     });
   }

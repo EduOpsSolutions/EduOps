@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import PropTypes from 'prop-types';
-import { MdSearch, MdExpandMore } from 'react-icons/md';
+import React, { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
+import { MdSearch, MdExpandMore } from "react-icons/md";
 
 /**
  * Searchable Academic Period Select Component
@@ -8,7 +8,7 @@ import { MdSearch, MdExpandMore } from 'react-icons/md';
  */
 function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -19,8 +19,8 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Filter academic periods based on search term
@@ -28,8 +28,8 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
-    const periodId = period.id?.toLowerCase() || '';
-    const batchName = period.batchName?.toLowerCase() || '';
+    const periodId = period.id?.toLowerCase() || "";
+    const batchName = period.batchName?.toLowerCase() || "";
 
     return periodId.includes(searchLower) || batchName.includes(searchLower);
   });
@@ -40,22 +40,22 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
   const handleSelect = (period) => {
     onChange(period);
     setIsOpen(false);
-    setSearchTerm('');
+    setSearchTerm("");
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
+    if (!dateString) return "";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const getDisplayName = (period) => {
-    if (!period) return 'Select academic period...';
-    return `${period.batchName || 'Unnamed Batch'}`;
+    if (!period) return "Select academic period...";
+    return `${period.batchName || "Unnamed Batch"}`;
   };
 
   return (
@@ -66,12 +66,12 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-3 py-2 border border-gray-300 rounded bg-white text-left flex items-center justify-between hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-dark-red-2"
       >
-        <span className={selectedPeriod ? 'text-gray-900' : 'text-gray-400'}>
+        <span className={selectedPeriod ? "text-gray-900" : "text-gray-400"}>
           {getDisplayName(selectedPeriod)}
         </span>
         <MdExpandMore
           className={`text-gray-400 transition-transform ${
-            isOpen ? 'transform rotate-180' : ''
+            isOpen ? "transform rotate-180" : ""
           }`}
           size={20}
         />
@@ -116,32 +116,48 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
                   onClick={() => handleSelect(period)}
                   className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
                     selectedPeriod?.id === period.id
-                      ? 'bg-dark-red-2 bg-opacity-10 text-dark-red-2 font-medium'
-                      : 'text-gray-700'
+                      ? "bg-dark-red-2 bg-opacity-10 text-dark-red-2 font-medium"
+                      : "text-gray-700"
                   }`}
                 >
                   <div className="flex flex-col">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">
-                        {period.batchName || 'Unnamed Batch'}
+                        {period.batchName || "Unnamed Batch"}
                       </span>
-                      {period.status && (
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
-                            period.status === 'Ongoing'
-                              ? 'bg-green-100 text-green-700'
-                              : period.status.startsWith('Ongoing')
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : period.status === 'Upcoming'
-                              ? 'bg-blue-100 text-blue-700'
-                              : period.status.startsWith('Upcoming')
-                              ? 'bg-orange-100 text-orange-700'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {period.status}
-                        </span>
-                      )}
+                      <div className="flex gap-1">
+                        {period.batchStatus && (
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+                              period.batchStatus === "ongoing"
+                                ? "bg-green-100 text-green-700"
+                                : period.batchStatus === "upcoming"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {period.batchStatus.charAt(0).toUpperCase() +
+                              period.batchStatus.slice(1)}
+                          </span>
+                        )}
+                        {period.enrollmentStatus && (
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+                              period.enrollmentStatus === "open"
+                                ? "bg-green-100 text-green-700"
+                                : period.enrollmentStatus === "upcoming"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : period.enrollmentStatus === "closed"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            Enrollment:{" "}
+                            {period.enrollmentStatus.charAt(0).toUpperCase() +
+                              period.enrollmentStatus.slice(1)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-sm text-gray-500">
@@ -150,7 +166,7 @@ function AcademicPeriodSelect({ value, onChange, academicPeriods, isLoading }) {
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-gray-500">
-                        {formatDate(period.startAt)} -{' '}
+                        {formatDate(period.startAt)} -{" "}
                         {formatDate(period.endAt)}
                       </span>
                     </div>
@@ -174,7 +190,16 @@ AcademicPeriodSelect.propTypes = {
       batchName: PropTypes.string,
       startAt: PropTypes.string.isRequired,
       endAt: PropTypes.string.isRequired,
-      status: PropTypes.string,
+      batchStatus: PropTypes.oneOf(["upcoming", "ongoing", "ended"]),
+      enrollmentStatus: PropTypes.oneOf([
+        "upcoming",
+        "open",
+        "ended",
+        "closed",
+      ]),
+      isEnrollmentClosed: PropTypes.bool,
+      enrollmentOpenAt: PropTypes.string,
+      enrollmentCloseAt: PropTypes.string,
     })
   ).isRequired,
   isLoading: PropTypes.bool,

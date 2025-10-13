@@ -101,10 +101,31 @@ export const parseTime = (timeString) => {
 };
 
 /**
- * Convert 24-hour time format to 12-hour format for comparison
- * @param {string} time24 - Time in 24-hour format (e.g., "14:00")
+ * Convert 24-hour time format to 12-hour format with AM/PM
+ * @param {string} time24 - Time in 24-hour format (e.g., "14:00" or "14:00:00")
  * @returns {string} - Time in 12-hour format (e.g., "2:00 PM")
  */
+export const convertTo12Hour = (time24) => {
+  if (!time24) return '';
+
+  // Handle both "HH:MM" and "HH:MM:SS" formats
+  const timeMatch = time24.match(/(\d+):(\d+)/);
+  if (!timeMatch) return time24; // Return as-is if format doesn't match
+
+  let hour = parseInt(timeMatch[1], 10);
+  const minute = timeMatch[2];
+
+  const period = hour >= 12 ? 'PM' : 'AM';
+
+  // Convert to 12-hour format
+  if (hour === 0) {
+    hour = 12; // Midnight
+  } else if (hour > 12) {
+    hour -= 12;
+  }
+
+  return `${hour}:${minute} ${period}`;
+};
 
 /**
  * Get events for a specific time slot and date
@@ -135,7 +156,12 @@ export const getEventsForTimeSlot = (events, timeSlot, date) => {
     const slotStartMinutes = hour * 60 + minute;
     const slotEndMinutes = slotStartMinutes + 30;
 
-    const [eh, em] = String(event.time_start).split(':').map(Number);
+    // Parse event time (could be 24-hour format from backend like "14:00")
+    const timeMatch = String(event.time_start).match(/(\d+):(\d+)/);
+    if (!timeMatch) return false;
+
+    const eh = parseInt(timeMatch[1], 10);
+    const em = parseInt(timeMatch[2], 10);
     const eventMinutes = eh * 60 + em;
 
     return eventMinutes >= slotStartMinutes && eventMinutes < slotEndMinutes;
