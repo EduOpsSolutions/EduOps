@@ -1,6 +1,6 @@
-import * as ScheduleModel from '../model/schedule_model.js';
-import { PrismaClient } from '@prisma/client';
-import { verifyJWT } from '../utils/jwt.js';
+import * as ScheduleModel from "../model/schedule_model.js";
+import { PrismaClient } from "@prisma/client";
+import { verifyJWT } from "../utils/jwt.js";
 const prisma = new PrismaClient();
 
 /**
@@ -18,27 +18,27 @@ export const getSchedules = async (req, res) => {
     // Transform the data to match frontend expectations
     const transformedSchedules = schedules.map((schedule) => ({
       id: schedule.id,
-      courseId: schedule.course?.id || '',
-      courseName: schedule.course?.name || '',
+      courseId: schedule.course?.id || "",
+      courseName: schedule.course?.name || "",
       academicPeriodId: schedule.periodId,
       academicPeriodName: schedule.period
-        ? `${schedule.period.batchName || ''}`
-        : '',
+        ? `${schedule.period.batchName || ""}`
+        : "",
       teacherId: schedule.teacherId,
       teacherName: schedule.teacher
         ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
-        : '',
+        : "",
       location: schedule.location,
       days: schedule.days,
       time_start: schedule.time_start,
       time_end: schedule.time_end,
       periodStart: schedule.periodStart
-        ? schedule.periodStart.toISOString().split('T')[0]
+        ? schedule.periodStart.toISOString().split("T")[0]
         : null,
       periodEnd: schedule.periodEnd
-        ? schedule.periodEnd.toISOString().split('T')[0]
+        ? schedule.periodEnd.toISOString().split("T")[0]
         : null,
-      color: schedule.color || '#FFCF00',
+      color: schedule.color || "#FFCF00",
       notes: schedule.notes,
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
@@ -46,10 +46,10 @@ export const getSchedules = async (req, res) => {
 
     res.json(transformedSchedules);
   } catch (err) {
-    console.error('Get schedules error:', err);
+    console.error("Get schedules error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to get schedules',
+      message: "Failed to get schedules",
     });
   }
 };
@@ -64,34 +64,34 @@ export const getSchedule = async (req, res) => {
     if (!schedule) {
       return res.status(404).json({
         error: true,
-        message: 'Schedule not found',
+        message: "Schedule not found",
       });
     }
 
     // Transform the data
     const transformedSchedule = {
       id: schedule.id,
-      courseId: schedule.course?.id || schedule.courseId || '', //if given course with full schema then use id, use it, otherwise use courseId
-      courseName: schedule.course?.name || '',
+      courseId: schedule.course?.id || schedule.courseId || "", //if given course with full schema then use id, use it, otherwise use courseId
+      courseName: schedule.course?.name || "",
       academicPeriodId: schedule.periodId,
       academicPeriodName: schedule.period
-        ? `${schedule.period.batchName || ''}`
-        : '',
+        ? `${schedule.period.batchName || ""}`
+        : "",
       teacherId: schedule.teacherId,
       teacherName: schedule.teacher
         ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
-        : '',
+        : "",
       location: schedule.location,
       days: schedule.days,
       time_start: schedule.time_start,
       time_end: schedule.time_end,
       periodStart: schedule.periodStart
-        ? schedule.periodStart.toISOString().split('T')[0]
+        ? schedule.periodStart.toISOString().split("T")[0]
         : null,
       periodEnd: schedule.periodEnd
-        ? schedule.periodEnd.toISOString().split('T')[0]
+        ? schedule.periodEnd.toISOString().split("T")[0]
         : null,
-      color: schedule.color || '#FFCF00',
+      color: schedule.color || "#FFCF00",
       notes: schedule.notes,
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
@@ -99,10 +99,10 @@ export const getSchedule = async (req, res) => {
 
     res.json(transformedSchedule);
   } catch (err) {
-    console.error('Get schedule error:', err);
+    console.error("Get schedule error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to get schedule',
+      message: "Failed to get schedule",
     });
   }
 };
@@ -117,10 +117,10 @@ export const getSchedulesByPeriod = async (req, res) => {
     );
     res.json(schedules);
   } catch (err) {
-    console.error('Get schedules by period error:', err);
+    console.error("Get schedules by period error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to get schedules',
+      message: "Failed to get schedules",
     });
   }
 };
@@ -135,10 +135,10 @@ export const getSchedulesByTeacher = async (req, res) => {
     );
     res.json(schedules);
   } catch (err) {
-    console.error('Get schedules by teacher error:', err);
+    console.error("Get schedules by teacher error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to get schedules',
+      message: "Failed to get schedules",
     });
   }
 };
@@ -148,10 +148,10 @@ export const getSchedulesByTeacher = async (req, res) => {
  */
 export const getMySchedules = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(" ")[1];
     const decoded = await verifyJWT(token);
     if (!decoded.payload.data.id) {
-      return res.status(401).json({ error: true, message: 'Unauthorized' });
+      return res.status(401).json({ error: true, message: "Unauthorized" });
     }
 
     const schedules = await ScheduleModel.getSchedulesByStudent(
@@ -161,27 +161,27 @@ export const getMySchedules = async (req, res) => {
     // Transform to match frontend shape used elsewhere
     const transformed = schedules.map((schedule) => ({
       id: schedule.id,
-      courseId: schedule.course?.id || '',
-      courseName: schedule.course?.name || '',
+      courseId: schedule.course?.id || "",
+      courseName: schedule.course?.name || "",
       academicPeriodId: schedule.period?.id || schedule.periodId,
       academicPeriodName: schedule.period
-        ? `${schedule.period.batchName || ''}`
-        : '',
+        ? `${schedule.period.batchName || ""}`
+        : "",
       teacherId: schedule.teacher?.id || schedule.teacherId,
       teacherName: schedule.teacher
         ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
-        : '',
+        : "",
       location: schedule.location,
       days: schedule.days,
       time_start: schedule.time_start,
       time_end: schedule.time_end,
       periodStart: schedule.periodStart
-        ? schedule.periodStart.toISOString().split('T')[0]
+        ? schedule.periodStart.toISOString().split("T")[0]
         : null,
       periodEnd: schedule.periodEnd
-        ? schedule.periodEnd.toISOString().split('T')[0]
+        ? schedule.periodEnd.toISOString().split("T")[0]
         : null,
-      color: schedule.color || '#FFCF00',
+      color: schedule.color || "#FFCF00",
       notes: schedule.notes,
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
@@ -189,10 +189,10 @@ export const getMySchedules = async (req, res) => {
 
     return res.json(transformed);
   } catch (err) {
-    console.error('Get my schedules error:', err);
+    console.error("Get my schedules error:", err);
     return res
       .status(500)
-      .json({ error: true, message: 'Failed to get schedules' });
+      .json({ error: true, message: "Failed to get schedules" });
   }
 };
 
@@ -207,10 +207,10 @@ export const getScheduleStudents = async (req, res) => {
     if (!scheduleId) {
       return res
         .status(400)
-        .json({ error: true, message: 'Invalid schedule id' });
+        .json({ error: true, message: "Invalid schedule id" });
     }
 
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.split(" ")[1];
     const decoded = await verifyJWT(token);
     const role = decoded?.payload?.data?.role;
     const userId = decoded?.payload?.data?.id;
@@ -223,11 +223,11 @@ export const getScheduleStudents = async (req, res) => {
     if (!schedule) {
       return res
         .status(404)
-        .json({ error: true, message: 'Schedule not found' });
+        .json({ error: true, message: "Schedule not found" });
     }
 
     // If student, ensure they are enrolled in this schedule
-    if (role === 'student') {
+    if (role === "student") {
       const isEnrolled = await prisma.user_schedule.findFirst({
         where: {
           scheduleId,
@@ -239,7 +239,7 @@ export const getScheduleStudents = async (req, res) => {
       if (!isEnrolled) {
         return res
           .status(403)
-          .json({ error: true, message: 'User is unauthorized' });
+          .json({ error: true, message: "User is unauthorized" });
       }
     }
 
@@ -247,7 +247,7 @@ export const getScheduleStudents = async (req, res) => {
       where: {
         scheduleId,
         deletedAt: null,
-        user: { deletedAt: null, role: 'student' },
+        user: { deletedAt: null, role: "student" },
       },
       include: {
         user: {
@@ -262,7 +262,7 @@ export const getScheduleStudents = async (req, res) => {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     const students = userSchedules
@@ -270,17 +270,17 @@ export const getScheduleStudents = async (req, res) => {
       .filter(Boolean)
       .map((s) => ({
         ...s,
-        name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+        name: `${s.firstName}${s.middleName ? " " + s.middleName : ""} ${
           s.lastName
         }`.trim(),
       }));
 
     return res.json(students);
   } catch (err) {
-    console.error('getScheduleStudents error:', err);
+    console.error("getScheduleStudents error:", err);
     return res
       .status(500)
-      .json({ error: true, message: 'Failed to fetch students' });
+      .json({ error: true, message: "Failed to fetch students" });
   }
 };
 
@@ -296,7 +296,7 @@ export const createSchedule = async (req, res) => {
     if (conflicts.length > 0) {
       return res.status(409).json({
         error: true,
-        message: 'Schedule conflict detected',
+        message: "Schedule conflict detected",
         conflicts: conflicts.map((c) => ({
           id: c.id,
           courseName: c.course?.name,
@@ -327,32 +327,32 @@ export const createSchedule = async (req, res) => {
     const transformedSchedule = {
       id: schedule.id,
       course: schedule.courseId,
-      courseName: schedule.course?.name || '',
+      courseName: schedule.course?.name || "",
       academicPeriodId: schedule.periodId,
       teacherId: schedule.teacherId,
       teacherName: schedule.teacher
         ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
-        : '',
+        : "",
       location: schedule.location,
       days: schedule.days,
       time_start: schedule.time_start,
       time_end: schedule.time_end,
       periodStart: schedule.periodStart
-        ? schedule.periodStart.toISOString().split('T')[0]
+        ? schedule.periodStart.toISOString().split("T")[0]
         : null,
       periodEnd: schedule.periodEnd
-        ? schedule.periodEnd.toISOString().split('T')[0]
+        ? schedule.periodEnd.toISOString().split("T")[0]
         : null,
-      color: schedule.color || '#FFCF00',
+      color: schedule.color || "#FFCF00",
       notes: schedule.notes,
     };
 
     res.status(201).json(transformedSchedule);
   } catch (err) {
-    console.error('Create schedule error:', err);
+    console.error("Create schedule error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to create schedule',
+      message: "Failed to create schedule",
       details: err.message,
     });
   }
@@ -370,7 +370,7 @@ export const updateSchedule = async (req, res) => {
     if (!existingSchedule) {
       return res.status(404).json({
         error: true,
-        message: 'Schedule not found',
+        message: "Schedule not found",
       });
     }
 
@@ -387,7 +387,7 @@ export const updateSchedule = async (req, res) => {
       if (conflicts.length > 0) {
         return res.status(409).json({
           error: true,
-          message: 'Schedule conflict detected',
+          message: "Schedule conflict detected",
           conflicts: conflicts.map((c) => ({
             id: c.id,
             courseName: c.course?.name,
@@ -408,32 +408,32 @@ export const updateSchedule = async (req, res) => {
     const transformedSchedule = {
       id: schedule.id,
       course: schedule.courseId,
-      courseName: schedule.course?.name || '',
+      courseName: schedule.course?.name || "",
       academicPeriodId: schedule.periodId,
       teacherId: schedule.teacherId,
       teacherName: schedule.teacher
         ? `${schedule.teacher.firstName} ${schedule.teacher.lastName}`
-        : '',
+        : "",
       location: schedule.location,
       days: schedule.days,
       time_start: schedule.time_start,
       time_end: schedule.time_end,
       periodStart: schedule.periodStart
-        ? schedule.periodStart.toISOString().split('T')[0]
+        ? schedule.periodStart.toISOString().split("T")[0]
         : null,
       periodEnd: schedule.periodEnd
-        ? schedule.periodEnd.toISOString().split('T')[0]
+        ? schedule.periodEnd.toISOString().split("T")[0]
         : null,
-      color: schedule.color || '#FFCF00',
+      color: schedule.color || "#FFCF00",
       notes: schedule.notes,
     };
 
     res.json(transformedSchedule);
   } catch (err) {
-    console.error('Update schedule error:', err);
+    console.error("Update schedule error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to update schedule',
+      message: "Failed to update schedule",
       details: err.message,
     });
   }
@@ -450,7 +450,7 @@ export const deleteSchedule = async (req, res) => {
     if (!schedule) {
       return res.status(404).json({
         error: true,
-        message: 'Schedule not found',
+        message: "Schedule not found",
       });
     }
 
@@ -458,13 +458,13 @@ export const deleteSchedule = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Schedule deleted successfully',
+      message: "Schedule deleted successfully",
     });
   } catch (err) {
-    console.error('Delete schedule error:', err);
+    console.error("Delete schedule error:", err);
     res.status(500).json({
       error: true,
-      message: 'Failed to delete schedule',
+      message: "Failed to delete schedule",
     });
   }
 };
@@ -480,7 +480,7 @@ export const addStudentToSchedule = async (req, res) => {
     if (!scheduleId || !userId) {
       return res.status(400).json({
         error: true,
-        message: 'scheduleId (param) and userId (body) are required',
+        message: "scheduleId (param) and userId (body) are required",
       });
     }
 
@@ -492,18 +492,18 @@ export const addStudentToSchedule = async (req, res) => {
     if (!schedule) {
       return res
         .status(404)
-        .json({ error: true, message: 'Schedule not found' });
+        .json({ error: true, message: "Schedule not found" });
     }
 
     // Ensure user exists and is a student
     const user = await prisma.users.findFirst({
-      where: { id: userId, role: 'student', deletedAt: null },
+      where: { id: userId, role: "student", deletedAt: null },
       select: { id: true },
     });
     if (!user) {
       return res
         .status(404)
-        .json({ error: true, message: 'Student not found' });
+        .json({ error: true, message: "Student not found" });
     }
 
     // Check if link exists (not deleted)
@@ -534,10 +534,10 @@ export const addStudentToSchedule = async (req, res) => {
     });
     return res.status(201).json({ success: true, created: true });
   } catch (err) {
-    console.error('addStudentToSchedule error:', err);
+    console.error("addStudentToSchedule error:", err);
     return res
       .status(500)
-      .json({ error: true, message: 'Failed to add student to schedule' });
+      .json({ error: true, message: "Failed to add student to schedule" });
   }
 };
 
@@ -552,7 +552,7 @@ export const removeStudentsFromSchedule = async (req, res) => {
     if (!scheduleId || !Array.isArray(userIds) || userIds.length === 0) {
       return res.status(400).json({
         error: true,
-        message: 'scheduleId (param) and userIds[] (body) are required',
+        message: "scheduleId (param) and userIds[] (body) are required",
       });
     }
 
@@ -564,7 +564,7 @@ export const removeStudentsFromSchedule = async (req, res) => {
     if (!schedule) {
       return res
         .status(404)
-        .json({ error: true, message: 'Schedule not found' });
+        .json({ error: true, message: "Schedule not found" });
     }
 
     // Soft delete links
@@ -579,10 +579,10 @@ export const removeStudentsFromSchedule = async (req, res) => {
 
     return res.json({ success: true, count: result.count });
   } catch (err) {
-    console.error('removeStudentsFromSchedule error:', err);
+    console.error("removeStudentsFromSchedule error:", err);
     return res.status(500).json({
       error: true,
-      message: 'Failed to remove students from schedule',
+      message: "Failed to remove students from schedule",
     });
   }
 };
