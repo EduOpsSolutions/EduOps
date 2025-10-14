@@ -246,15 +246,15 @@ async function seedStudents() {
     // Use upsert to avoid duplicates
     for (const student of students) {
       await prisma.users.upsert({
-        where: { email: student.email },
+        where: { userId: student.userId },
         update: {
-          userId: student.userId,
           firstName: student.firstName,
           middleName: student.middleName,
           lastName: student.lastName,
           birthmonth: student.birthmonth,
           birthdate: student.birthdate,
           birthyear: student.birthyear,
+          email: student.email,
           password: student.password,
           status: student.status,
           firstLogin: student.firstLogin,
@@ -265,9 +265,9 @@ async function seedStudents() {
 
     console.log('✅ Successfully seeded 50 student accounts!');
     console.log('📋 Default password for all students: Password123');
-    console.log('📧 Sample emails:');
+    console.log('📧 Sample student credentials:');
     students.slice(0, 5).forEach((student) => {
-      console.log(`   - ${student.email}`);
+      console.log(`   - User ID: ${student.userId} | Email: ${student.email}`);
     });
     console.log('... and 45 more');
   } catch (error) {

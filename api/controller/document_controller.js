@@ -10,17 +10,17 @@ import { filePaths } from '../constants/file_paths.js';
 const checkDocumentAccess = (userRole, documentPrivacy, operation = 'read') => {
   const accessRules = {
     admin: {
-      read: ['public', 'student', 'teacher', 'admin'],
-      write: ['public', 'student', 'teacher', 'admin'],
+      read: ['public', 'student_only', 'teacher_only'],
+      write: ['public', 'student_only', 'teacher_only'],
       manage: true
     },
     teacher: {
-      read: ['public', 'teacher'],
-      write: ['teacher'],
+      read: ['public', 'teacher_only'],
+      write: ['teacher_only'],
       manage: false
     },
     student: {
-      read: ['public', 'student'],
+      read: ['public', 'student_only'],
       write: [],
       manage: false
     }
@@ -265,7 +265,7 @@ export const deleteDocumentTemplate = async (req, res) => {
 export const toggleDocumentVisibility = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isHidden } = req.body;
+    const { isActive } = req.body;
     const userRole = req.user.data.role;
 
     // Only admins can toggle document visibility
@@ -284,12 +284,12 @@ export const toggleDocumentVisibility = async (req, res) => {
       });
     }
 
-    const updatedDocument = await DocumentModel.hideDocumentTemplate(id, isHidden);
+    const updatedDocument = await DocumentModel.hideDocumentTemplate(id, !isActive);
 
     res.json({
       error: false,
       data: updatedDocument,
-      message: `Document ${isHidden ? 'hidden' : 'shown'} successfully`
+      message: `Document ${isActive ? 'activated' : 'deactivated'} successfully`
     });
 
   } catch (error) {
@@ -348,18 +348,19 @@ export const createDocumentRequest = async (req, res) => {
       });
     }
 
+    // Get user details to populate firstName and lastName
+    const user = await DocumentModel.getUserById(userId);
+    
     const requestData = {
-      studentId: userId, // Using userId as studentId for now
+      studentId: userId,
       documentId,
       email,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
       phone,
       mode: mode || 'pickup',
-      paymentMethod,
       address: mode === 'delivery' ? address : null,
       city: mode === 'delivery' ? city : null,
-      state: mode === 'delivery' ? state : null,
-      zipCode: mode === 'delivery' ? zipCode : null,
-      country: mode === 'delivery' ? country : null,
       purpose,
       additionalNotes
     };
@@ -433,11 +434,11 @@ export const getDocumentRequestById = async (req, res) => {
     }
 
     // Check access permissions
-    if (userRole === 'student' && request.studentId !== userId) {
+    if (userRole === 'student' && request.userId !== userId) {
       return res.status(403).json({
         error: true,
         message: 'Access denied. You can only view your own requests.'
-      });
+      });  
     }
 
     if (userRole === 'teacher' && !checkDocumentAccess(userRole, request.document.privacy, 'read')) {
@@ -674,7 +675,7 @@ export const searchDocumentRequests = async (req, res) => {
       );
     } else {
       // Students can only search their own requests
-      filters.studentId = userId;
+      filters.userId = userId;
       requests = await DocumentModel.searchDocumentRequests(filters);
     }
 
