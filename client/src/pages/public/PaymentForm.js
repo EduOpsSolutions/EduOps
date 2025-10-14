@@ -5,7 +5,6 @@ import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
 import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
-import { sendPaymentLinkEmail } from "../../utils/paymentApi";
 import Swal from "sweetalert2";
 
 function PaymentForm() {
@@ -22,7 +21,8 @@ function PaymentForm() {
     validatePhoneNumber,
     preparePaymentData,
     showDialog,
-    resetForm
+    resetForm,
+    sendPaymentLinkEmail
   } = usePaymentStore();
 
   // Helper function to get proper fee type label
@@ -34,7 +34,6 @@ function PaymentForm() {
       'book_fee': 'Book Fee',
     };
     
-    // Handle undefined or null feeType
     if (!feeType) {
       return 'Payment';
     }
@@ -57,7 +56,6 @@ function PaymentForm() {
   const onSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!validateRequiredFields()) {
       await showDialog({
         icon: "warning",
@@ -68,13 +66,11 @@ function PaymentForm() {
       return;
     }
 
-    // Validate phone number
     if (!validatePhoneNumber()) return;
 
-    // Get fee label for display
     const feeLabel = getFeeTypeLabel(formData.fee);
 
-    // Step 1: Show confirmation dialog
+
     const confirmResult = await Swal.fire({
       title: 'Confirm Payment',
       html: `
@@ -95,16 +91,13 @@ function PaymentForm() {
     });
 
     if (!confirmResult.isConfirmed) {
-      return; // User cancelled
+      return; 
     }
 
-    // Step 2: Send email and show success dialog with options
     try {
       const paymentData = preparePaymentData();
       const feeLabel = getFeeTypeLabel(paymentData.feeType);
       const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
-
-      // Prepare data for email
       const emailData = {
         email: paymentData.email,
         firstName: paymentData.firstName,
@@ -115,7 +108,6 @@ function PaymentForm() {
         userId: paymentData.userId
       };
 
-      // Show loading while sending email
       Swal.fire({
         title: 'Processing...',
         text: 'Sending payment link to your email...',
@@ -125,11 +117,9 @@ function PaymentForm() {
         }
       });
 
-      // Send email
       const result = await sendPaymentLinkEmail(emailData);
 
       if (result.success) {
-        // Step 3: Show success dialog with Pay Now option
         const successResult = await Swal.fire({
           title: 'Email Sent Successfully!',
           html: `
@@ -155,22 +145,17 @@ function PaymentForm() {
         });
 
         if (successResult.isConfirmed) {
-          // User chose to pay now - redirect to custom payment page
           const paymentData = preparePaymentData();
           const feeLabel = getFeeTypeLabel(paymentData.feeType);
           const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
-          const paymentID = `PAY-${Date.now().toString().slice(-6)}`;
 
-          // Store data and redirect to custom payment page
           localStorage.setItem("totalPayment", paymentData.amount.toString());
-          localStorage.setItem("paymentID", paymentID);
           
           // Navigate to the custom payment page
           navigate("/payment", {
             state: {
               amount: paymentData.amount,
               description: description,
-              paymentID: paymentID,
               studentInfo: {
                 firstName: paymentData.firstName,
                 lastName: paymentData.lastName,

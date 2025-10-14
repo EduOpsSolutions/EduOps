@@ -1,34 +1,6 @@
 import Joi from 'joi';
 
-/**
- * Payment Validators
- * Consolidated input validation for payment operations
- */
-
-// ==================== Validation Schemas ====================
-
-const createPaymentSchema = Joi.object({
-    userId: Joi.string().min(1).max(100).required().messages({
-        'any.required': 'User ID is required',
-        'string.empty': 'User ID cannot be empty',
-        'string.min': 'User ID must be at least 1 character long'
-    }),
-    email: Joi.string().email().required().messages({
-        'any.required': 'Email address is required',
-        'string.email': 'Please provide a valid email address'
-    }),
-    phoneNumber: Joi.string().max(20).allow('', null).optional(),
-    feeType: Joi.string().min(1).max(100).required().messages({
-        'any.required': 'Fee type is required',
-        'string.empty': 'Fee type cannot be empty'
-    }),
-    amount: Joi.number().min(1).max(100000).precision(2).required().messages({
-        'any.required': 'Amount is required',
-        'number.min': 'Amount must be at least 1 PHP',
-        'number.max': 'Amount cannot exceed 100,000 PHP'
-    })
-}).unknown(true);
-
+// Validation Schemas 
 const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).max(100).default(10).optional(),
@@ -49,9 +21,9 @@ const createManualTransactionSchema = Joi.object({
         'string.empty': 'Fee type cannot be empty'
     }),
     paymentMethod: Joi.string().min(1).max(50).optional(),
-    amountPaid: Joi.number().min(1).max(100000).precision(2).required().messages({
+    amountPaid: Joi.number().min(50).max(100000).precision(2).required().messages({
         'any.required': 'Amount paid is required',
-        'number.min': 'Amount must be at least 1 PHP',
+        'number.min': 'Amount must be at least 50 PHP',
         'number.max': 'Amount cannot exceed 100,000 PHP'
     }),
     referenceNumber: Joi.string().max(100).required().messages({
@@ -60,10 +32,7 @@ const createManualTransactionSchema = Joi.object({
     remarks: Joi.string().max(500).allow('', null).optional()
 });
 
-// ==================== Validator Factory ====================
-
 /**
- * Create a validator middleware function
  * @param {Object} schema - Joi validation schema
  * @param {string} source - Request property to validate ('body', 'query', 'params')
  * @param {Object} options - Joi validation options
@@ -96,7 +65,6 @@ const createValidator = (schema, source = 'body', options = {}) => {
 };
 
 /**
- * Create parameter validator
  * @param {string} paramName - Parameter name to validate
  * @param {Object} schema - Joi schema for the parameter
  * @param {string} errorMessage - Error message for validation failure
@@ -113,13 +81,7 @@ const validateParam = (paramName, schema, errorMessage) => (req, res, next) => {
     next();
 };
 
-// ==================== Exported Validators ====================
-
-export const validateCreatePayment = createValidator(createPaymentSchema, 'body', {
-    stripUnknown: false,
-    allowUnknown: true
-});
-
+// Exported Validators 
 export const validateCreateManualTransaction = createValidator(createManualTransactionSchema, 'body', {
     stripUnknown: false,
     allowUnknown: true
@@ -133,32 +95,9 @@ export const validatePaymentId = validateParam(
     'Valid payment ID is required'
 );
 
-export const validateUserId = validateParam(
-    'userId', 
-    Joi.string().required().min(1), 
-    'Valid user ID is required'
-);
-
-export const validateEmail = validateParam(
-    'email', 
-    Joi.string().email().required(), 
-    'Valid email address is required'
-);
-
-export const validateEnrollmentId = validateParam(
-    'enrollmentId', 
-    Joi.string().required().min(1), 
-    'Valid enrollment ID is required'
-);
-
-// ==================== Default Export for Backward Compatibility ====================
-
+// Default Export for Backward Compatibility 
 export default {
-    validateCreatePayment,
     validateCreateManualTransaction,
     validatePagination,
-    validatePaymentId,
-    validateUserId,
-    validateEmail,
-    validateEnrollmentId
+    validatePaymentId
 };

@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  FEE_TYPE_MAP,
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
   ERROR_MESSAGES,
@@ -10,153 +9,36 @@ import { sendPaymentLinkEmail } from "./paymentEmailService.js";
 
 const prisma = new PrismaClient();
 
-/**
- * PayMongo hosted page
- * Core business logic for payment operations
- */
-
-// ==================== Helper Functions ====================
+//Core business logic for payment operations
 
 /**
- * Generate unique payment ID
- * @returns {Promise<string>} Unique 7-character payment ID
+ * Generate unique payment ID in format: PAY-YYYYMMDD-XXXXX
+ * @returns {Promise<string>} Unique payment ID
  */
-const generatePaymentId = async () => {
+export const generatePaymentId = async () => {
+
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const date = new Date();
+  const dateStr = date.getFullYear() + 
+                  String(date.getMonth() + 1).padStart(2, '0') + 
+                  String(date.getDate()).padStart(2, '0');
+
   let paymentId;
 
   do {
-    paymentId = Array.from({ length: 7 }, () =>
+    const suffix = Array.from({ length: 5 }, () =>
       chars.charAt(Math.floor(Math.random() * chars.length))
     ).join("");
-
+    paymentId = `PAY-${dateStr}-${suffix}`;
     const existing = await prisma.payments.findUnique({
-      where: { id: paymentId },
+      where: { transactionId: paymentId },
     });
-
     if (!existing) break;
   } while (true);
 
   return paymentId;
 };
 
-/**
- * Extract fee type from remarks (fallback for old payments)
- * @param {string} remarks - Payment remarks
- * @returns {string|null} Extracted fee type
- */
-const extractFeeTypeFromRemarks = (remarks) => {
-  if (!remarks) return null;
-
-  const feeTypeMap = {
-    down_payment: "down_payment",
-    tuition_fee: "tuition_fee",
-    document_fee: "document_fee",
-    book_fee: "book_fee",
-  };
-
-  const lowerRemarks = remarks.toLowerCase();
-  for (const [key, value] of Object.entries(feeTypeMap)) {
-    if (lowerRemarks.includes(key)) {
-      return value;
-    }
-  }
-  return null;
-};
-
-/**
- * Transform payment data for frontend consumption
- * @param {Object} payment - Payment record
- * @param {Object} paymongoDetails - PayMongo details
- * @returns {Object} Transformed payment data
- */
-const transformPaymentForFrontend = (payment, paymongoDetails = null) => {
-  const fullName = payment.user
-    ? `${payment.user.firstName || ""}${
-        payment.user.middleName ? ` ${payment.user.middleName}` : ""
-      } ${payment.user.lastName || ""}`.trim()
-    : "Unknown Student";
-
-  // Determine payment method with priority order:
-  // 1. Use existing paymentMethod if already set from PayMongo webhook
-  // 2. For online payments with PayMongo data: "Online Payment"
-  // 3. For manual transactions without PayMongo data: "Physical Payment"
-  let paymentMethod = payment.paymentMethod;
-  if (!paymentMethod) {
-    paymentMethod =
-      payment.checkoutUrl && payment.paymongoId
-        ? "Online Payment"
-        : "Physical Payment";
-  }
-
-  return {
-    ...payment,
-    paymentMethod: paymentMethod,
-    // Use direct feeType field, fallback to extracting from remarks
-    feeType:
-      payment.feeType ||
-      extractFeeTypeFromRemarks(payment.remarks) ||
-      "unknown",
-    // Map user data to top level for frontend compatibility
-    studentId: payment.user?.userId || "N/A", // This is the actual Student ID (e.g., "2024-00001")
-    studentName: fullName, // Combined first, middle, and last name
-    userId: payment.user?.userId || "N/A", // Same as studentId - this is the unique student identifier
-    firstName: payment.user?.firstName || "Unknown",
-    lastName: payment.user?.lastName || "User",
-    email: payment.user?.email || "N/A",
-    phoneNumber: payment.user?.phoneNumber || "N/A",
-    // Add PayMongo details
-    paymongoDetails: paymongoDetails,
-  };
-};
-
-/**
- * Build where clause for payment queries
- * @param {Object} filters - Query filters
- * @returns {Object} Prisma where clause
- */
-const buildPaymentWhereClause = (filters) => {
-  const whereClause = {};
-  
-  if (filters.userId) {
-    whereClause.userId = filters.userId;
-  }
-  
-  if (filters.status) {
-    whereClause.status = filters.status;
-  }
-  
-  if (filters.searchTerm) {
-    whereClause.OR = [
-      {
-        user: {
-          firstName: { contains: filters.searchTerm, mode: "insensitive" },
-        },
-      },
-      {
-        user: {
-          lastName: { contains: filters.searchTerm, mode: "insensitive" },
-        },
-      },
-      {
-        user: {
-          userId: { contains: filters.searchTerm },
-        },
-      },
-      { remarks: { contains: filters.searchTerm, mode: "insensitive" } },
-    ];
-  }
-  
-  return whereClause;
-};
-
-/**
- * Calculate pagination metadata
- * @param {number} page - Current page
- * @param {number} limit - Items per page
- * @param {number} total - Total items
- * @returns {Object} Pagination metadata
- */
 const calculatePagination = (page, limit, total) => {
   return {
     page: parseInt(page),
@@ -175,19 +57,76 @@ const mapPayMongoStatusToPrisma = (paymongoStatus) => {
   const statusMap = {
     'paid': 'paid',
     'pending': 'pending', 
-    'unpaid': 'failed', // PayMongo 'unpaid' maps to our 'failed' for better clarity
+    'unpaid': 'failed', 
     'failed': 'failed',
-    'expired': 'failed', // Map expired to failed for consistency
+    'expired': 'failed', 
     'cancelled': 'cancelled',
     'canceled': 'cancelled',
     'refunded': 'refunded'
   };
   
-  return statusMap[paymongoStatus] || 'pending'; // Default to pending if unknown status
+  return statusMap[paymongoStatus] || 'pending'; 
 };
 
-// ==================== Core Payment Operations ====================
+/**
+ * Shape a payment record for the frontend list/table
+ * @param {Object} payment
+ * @param {Object} _options (reserved)
+ * @returns {Object}
+ */
+const transformPaymentForFrontend = (payment, _options) => {
+  if (!payment.user && payment.userId) {
+    console.log(`Payment ${payment.id} has userId ${payment.userId} but no user relation loaded`);
+  }
+  
+  return {
+    id: payment.id,
+    transactionId: payment.transactionId || payment.id,
+    referenceNumber: payment.referenceNumber || null,
+    amount: payment.amount,
+    status: payment.status,
+    paymentMethod: payment.paymentMethod,
+    feeType: payment.feeType || null,
+    remarks: payment.remarks || null,
+    paidAt: payment.paidAt || null,
+    createdAt: payment.createdAt,
+    updatedAt: payment.updatedAt,
+    userId: payment.user ? payment.user.userId : null, 
+    studentId: payment.user ? payment.user.userId : null, 
+    firstName: payment.user ? payment.user.firstName : null,
+    lastName: payment.user ? payment.user.lastName : null,
+    email: payment.user ? payment.user.email : null,
+  };
+};
 
+/**
+ * Build Prisma where clause for payments queries
+ * @param {Object} filters
+ * @param {string} [filters.userId]
+ * @param {string} [filters.status]
+ * @param {string} [filters.searchTerm]
+ * @returns {Object} Prisma where clause
+ */
+const buildPaymentWhereClause = (filters = {}) => {
+  const { userId, status, searchTerm } = filters;
+  const where = {};
+
+  if (userId) where.userId = userId;
+  if (status) where.status = status;
+
+  if (searchTerm && String(searchTerm).trim().length > 0) {
+    where.OR = [
+      { transactionId: { contains: searchTerm, mode: 'insensitive' } },
+      { referenceNumber: { contains: searchTerm, mode: 'insensitive' } },
+      { paymentMethod: { contains: searchTerm, mode: 'insensitive' } },
+      { remarks: { contains: searchTerm, mode: 'insensitive' } },
+    ];
+  }
+
+  return where;
+};
+
+// Core Payment Operations 
 /**
  * Create manual payment (Physical Payment)
  * @param {Object} transactionData - Transaction data
@@ -205,13 +144,12 @@ export const createManualPayment = async (transactionData) => {
     remarks,
   } = transactionData;
 
-  // Generate custom payment ID
-  const customPaymentId = await generatePaymentId();
+  const customTransactionId = await generatePaymentId();
 
   // Create payment record for manual transaction
   const payment = await prisma.payments.create({
     data: {
-      id: customPaymentId,
+      transactionId: customTransactionId,
       userId: studentId,
       amount: parseFloat(amountPaid),
       status: PAYMENT_STATUS.PAID,
@@ -225,6 +163,7 @@ export const createManualPayment = async (transactionData) => {
 
   return {
     paymentId: payment.id,
+    transactionId: payment.transactionId,
     amount: payment.amount,
     status: payment.status,
     paymentMethod: payment.paymentMethod,
@@ -246,19 +185,9 @@ export const getPaymentWithSync = async (paymentId) => {
     throw new Error(ERROR_MESSAGES.PAYMENT_NOT_FOUND);
   }
 
-  // Sync status with PayMongo if it's an online payment (PIPM only)
-  // Legacy Payment Link sync removed. If payment.paymongoId exists, but is not a PIPM, skip sync.
-  // You may add PIPM sync logic here if needed in the future.
-
   return payment;
 };
 
-/**
- * Get payments by user with pagination
- * @param {string} userId - User ID
- * @param {Object} options - Query options
- * @returns {Promise<Object>} Paginated payments
- */
 export const getPaymentsByUser = async (userId, options = {}) => {
   const { page = 1, limit = 10, status } = options;
 
@@ -305,14 +234,12 @@ export const getAllTransactions = async (options = {}) => {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: parseInt(limit),
-      include: PAYMENT_INCLUDES.WITH_USER_FULL,
+      include: PAYMENT_INCLUDES.WITH_USER,
     }),
     prisma.payments.count({ where: whereClause }),
   ]);
 
-  // Auto-sync and Payment Link details removed. Only transform for frontend.
   const transformedPayments = payments.map((payment) => {
-    // No more extractPayMongoDetails; just pass null or minimal info for paymongoDetails
     return transformPaymentForFrontend(payment, null);
   });
 
@@ -324,51 +251,21 @@ export const getAllTransactions = async (options = {}) => {
 };
 
 /**
- * Cancel payment
- * @param {string} paymentId - Payment ID
- * @returns {Promise<Object>} Cancellation result
- */
-export const cancelPayment = async (paymentId) => {
-  const payment = await prisma.payments.findUnique({
-    where: { id: paymentId },
-  });
-
-  if (!payment) {
-    throw new Error(ERROR_MESSAGES.PAYMENT_NOT_FOUND);
-  }
-
-  if (payment.status !== PAYMENT_STATUS.PENDING) {
-    throw new Error(ERROR_MESSAGES.PAYMENT_CANNOT_BE_CANCELLED);
-  }
-
-  // Note: PayMongo link archiving removed - payment cancellation handled locally
-
-  // Update payment status
-  await prisma.payments.update({
-    where: { id: paymentId },
-    data: { status: PAYMENT_STATUS.CANCELLED },
-  });
-
-  return { message: SUCCESS_MESSAGES.PAYMENT_CANCELLED };
-};
-
-/**
  * Get available payment methods
  * @returns {Promise<Object>} Available payment methods
  */
 export const getAvailablePaymentMethods = async () => {
-  // Return static payment methods for PIPM flow
   return {
     methods: [
       { id: 'gcash', name: 'GCash', type: 'gcash' },
-      { id: 'paymaya', name: 'PayMaya', type: 'paymaya' },
+      { id: 'maya', name: 'Maya', type: 'maya' },
       { id: 'card', name: 'Credit/Debit Card', type: 'card' }
     ]
   };
 };
 
 /**
- * Force sync payment status with PayMongo (more aggressive than regular sync)
+ * Force sync payment status with PayMongo
  * @param {string} paymentId - Payment ID
  * @returns {Promise<Object>} Sync result
  */
@@ -382,8 +279,7 @@ export const forceSyncPaymentStatus = async (paymentId) => {
     throw new Error(ERROR_MESSAGES.PAYMENT_NOT_FOUND);
   }
 
-  if (!payment.paymongoId) {
-    // Not an online payment, return as-is
+  if (!payment.referenceNumber) {
     return {
       paymentId: payment.id,
       status: payment.status,
@@ -391,14 +287,12 @@ export const forceSyncPaymentStatus = async (paymentId) => {
     };
   }
 
-  console.log(`Force syncing payment ${paymentId} with PayMongo ID: ${payment.paymongoId}`);
+  console.log(`Force syncing payment ${paymentId} with reference: ${payment.referenceNumber}`);
   
-  // For PIPM flow, we don't sync with PayMongo links
-  // Return current status as-is
   return {
     paymentId: payment.id,
     status: payment.status,
-    message: "Payment status retrieved (no PayMongo sync for PIPM flow)"
+    message: "Payment status retrieved"
   };
 };
 
@@ -407,18 +301,14 @@ export const forceSyncPaymentStatus = async (paymentId) => {
  * @returns {Promise<Object>} Bulk sync result
  */
 export const bulkSyncPendingPayments = async () => {
-  console.log('Starting bulk sync of all pending payments...');
-  
-  // Find all pending payments with PayMongo IDs, but exclude very recent ones
-  // to avoid syncing payments that PayMongo hasn't fully processed yet
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
   const pendingPayments = await prisma.payments.findMany({
     where: {
       status: PAYMENT_STATUS.PENDING,
-      paymongoId: { not: null }, // Only online payments
-      createdAt: { lt: twoMinutesAgo }, // Only sync payments older than 2 minutes
+      referenceNumber: { not: null }, 
+      createdAt: { lt: twoMinutesAgo }, 
     },
-    take: 50, // Limit to avoid overwhelming PayMongo API
+    take: 50, 
   });
 
   let updatedCount = 0;
@@ -468,10 +358,10 @@ export const cleanupOrphanedPayments = async () => {
   const pendingPayments = await prisma.payments.findMany({
     where: {
       status: PAYMENT_STATUS.PENDING,
-      paymongoId: { not: null }, // Only online payments
-      createdAt: { lt: oneDayAgo }, // Older than 24 hours
+      referenceNumber: { not: null },
+      createdAt: { lt: oneDayAgo },
     },
-    take: 50, // Limit to avoid overwhelming PayMongo API
+    take: 50, 
   });
 
   let updatedCount = 0;
@@ -479,20 +369,15 @@ export const cleanupOrphanedPayments = async () => {
 
   for (const payment of pendingPayments) {
     try {
-      console.log(`Checking orphaned payment ${payment.id} with PayMongo ID: ${payment.paymongoId}`);
+      console.log(`Checking orphaned payment ${payment.id} with reference: ${payment.referenceNumber}`);
       
-      // For PIPM flow, we don't check PayMongo links
-      // Just mark old pending payments as failed
+      // Mark old pending payments as failed
       console.log(`Marking old pending payment ${payment.id} as failed (PIPM flow)`);
       
       await prisma.payments.update({
         where: { id: payment.id },
         data: {
           status: "failed",
-          paymongoResponse: JSON.stringify({
-            error: "Payment expired in PIPM flow",
-            cleanupAt: new Date()
-          })
         },
       });
       
@@ -500,7 +385,7 @@ export const cleanupOrphanedPayments = async () => {
       results.push({
         paymentId: payment.id,
         action: 'marked_as_failed',
-        reason: 'Payment expired in PIPM flow'
+        reason: 'Payment expired'
       });
     } catch (error) {
       console.error(`Error checking orphaned payment ${payment.id}:`, error);
@@ -521,8 +406,7 @@ export const cleanupOrphanedPayments = async () => {
   };
 };
 
-// ==================== Response Helpers ====================
-
+// Response Helpers 
 /**
  * Send success response
  * @param {Object} res - Express response object
@@ -557,32 +441,27 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
   } = paymentData;
 
   try {
-    // Generate custom payment ID
-    const customPaymentId = await generatePaymentId();
-    const checkoutID = `EMAIL-${Date.now()}-${userId || 'Guest'}`;
-    
-    // Create pending payment record IMMEDIATELY when email is sent
-    // This ensures it shows up in Manage Transaction page right away
+
+    const customTransactionId = await generatePaymentId();
+
     const payment = await prisma.payments.create({
       data: {
-        id: customPaymentId,
+        transactionId: customTransactionId,
         userId: userId || null,
         amount: parseFloat(amount),
         status: PAYMENT_STATUS.PENDING,
-        paymentMethod: "Online Payment", // Will be updated to specific method (GCash/Maya/Card) by webhook
+        paymentMethod: "Online Payment", 
         feeType: feeType || 'tuition_fee',
-        referenceNumber: checkoutID,
         remarks: description || `Payment for ${firstName} ${lastName}`,
       },
     });
 
-    console.log(`✅ Created pending payment record: ${payment.id}`);
+    console.log(`Created pending payment record: ${payment.id}`);
     
-    // Create payment link URL (pointing to your payment page)
-    const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    const checkoutUrl = `${baseUrl}/payment?amount=${amount}&description=${encodeURIComponent(description)}&checkoutID=${checkoutID}&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&paymentId=${payment.id}`;
+  const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  const checkoutUrl = `${baseUrl}/payment?paymentId=${payment.id}`;
 
-    // Prepare user and payment details for email
+    // User and payment details for email
     const user = { firstName, lastName };
     const paymentDetails = {
       amount: parseFloat(amount),
@@ -590,7 +469,6 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       remarks: feeType ? `Fee Type: ${feeType.replace('_', ' ')}` : '',
     };
 
-    // Send email
     const emailSent = await sendPaymentLinkEmail(
       email,
       checkoutUrl,
@@ -602,12 +480,10 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       return {
         success: true,
         message: "Payment link sent to your email successfully!",
-        checkoutID,
         checkoutUrl,
         paymentId: payment.id
       };
     } else {
-      // If email fails, delete the pending payment record
       await prisma.payments.delete({
         where: { id: payment.id }
       });

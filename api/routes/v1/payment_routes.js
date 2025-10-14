@@ -13,16 +13,16 @@ const {
     bulkSyncPendingPayments,
     cleanupOrphanedPayments,
     createPaymentIntent,
-    createPaymentMethod,
     attachPaymentMethod,
     sendPaymentLinkEmail,
     checkPaymentStatus,
     handleWebhook,
     getPaymentDetails,
     getPaymentsByUserId,
-    cancelPayment,
     getAvailablePaymentMethods,
-    forceSyncPaymentStatus
+    forceSyncPaymentStatus,
+    manualSyncPayment,
+    cancelPayment
 } = paymentController;
 
 const router = express.Router();
@@ -30,18 +30,18 @@ const router = express.Router();
 // Public endpoints
 router.post('/send-email', sendPaymentLinkEmail);
 router.get('/check-status/:paymentIntentId', checkPaymentStatus);
+router.post('/sync/:paymentIntentId', manualSyncPayment);
 router.post('/webhook', handleWebhook);
-
-// PIPM Flow endpoints
-router.post('/create-intent', createPaymentIntent);
-// Note: Payment method creation should be done client-side per PayMongo devs advice
-router.post('/attach-method', attachPaymentMethod);
 
 // Admin endpoints
 router.post('/manual', validateCreateManualTransaction, createManualTransaction);
 router.get('/admin/allTransactions', validatePagination, getAllTransactions);
 router.post('/admin/cleanup', cleanupOrphanedPayments);
 router.post('/admin/bulk-sync', bulkSyncPendingPayments);
+
+// PIPM Flow endpoints
+router.post('/create-intent', createPaymentIntent);
+router.post('/attach-method', attachPaymentMethod);
 
 // Payment management
 router.get('/:paymentId', validatePaymentId, getPaymentDetails);

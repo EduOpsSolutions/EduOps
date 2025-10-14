@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import styles from "../../styles/Payment.module.css";
 
-const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
+const CreditCard = ({ amount, description, userId, firstName, lastName, userEmail, onPaymentSuccess, onPaymentError }) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -18,8 +18,7 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    // Format card number with spaces
+
     if (name === "number") {
       const formattedValue = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
       const matches = formattedValue.match(/\d{4,16}/g);
@@ -38,7 +37,6 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
     }
   };
 
-  // Function to Listen to the Payment in the Front End
   const listenToPayment = async (fullClient) => {
     const paymentIntentId = fullClient.split('_client')[0];
     
@@ -51,7 +49,7 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
           'https://api.paymongo.com/v1/payment_intents/' + paymentIntentId + '?client_key=' + fullClient,
           {
             headers: {
-              Authorization: `Basic ${Buffer.from(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY).toString("base64")}`
+              Authorization: `Basic ${btoa(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':')}`
             }
           }
         ).then((response) => {
@@ -68,13 +66,12 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
           setPaymentStatus("Payment Success");
           onPaymentSuccess && onPaymentSuccess(paymentIntentData);
         } else {
-          i = 5; // Reset counter to continue checking
+          i = 5; 
         }
       }
     }
   };
 
-  // Function to Create a Payment Intent
   const createPaymentIntent = async () => {
     setPaymentStatus("Creating Payment Intent");
     
@@ -87,16 +84,22 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
         body: JSON.stringify({
           amount: amount,
           description: description,
-          statement_descriptor: "EduOps"
+          statement_descriptor: "EduOps",
+          userId: userId,
+          firstName: firstName,
+          lastName: lastName,
+          email: userEmail
         }),
       });
 
       const data = await response.json();
-      // Debug: Payment Intent Response
+      
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `HTTP ${response.status}: Failed to create payment intent`);
+      }
       
       if (data.success && data.data && data.data.data) {
-        // Backend returns: { success: true, data: { data: <pi> } }
-        return data.data.data; // PayMongo payment intent object
+        return data.data.data; 
       } else {
         throw new Error(data.message || data.error || 'Failed to create payment intent');
       }
@@ -107,18 +110,12 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
     }
   };
 
-  // Function to Create a Payment Method
+  // Create Payment Method
   const createPaymentMethod = async () => {
     setPaymentStatus("Creating Payment Method");
     
     try {
       const expYear = parseInt(formData.year) > 2000 ? parseInt(formData.year) % 100 : parseInt(formData.year);
-      // Debug: Card details being sent
-        card_number: formData.number.replace(/\s/g, ''),
-        exp_month: parseInt(formData.month),
-        exp_year: expYear,
-        cvc: formData.code,
-      }); // Debug log
       
       const response = await fetch('https://api.paymongo.com/v1/payment_methods', {
         method: "POST",
@@ -147,40 +144,31 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
       });
 
       const data = await response.json();
-      // Debug: Payment Method Response
-      
       if (data.data) {
-        return data.data; // Extract the actual PayMongo payment method data
+        return data.data; 
       } else {
-        // Handle PayMongo errors
         let errorMessage = 'Failed to create payment method';
         if (data.data && data.data.error && data.data.error.errors) {
           errorMessage = data.data.error.errors.map(err => err.detail || err.message).join(', ');
         } else if (data.message) {
           errorMessage = data.message;
         }
-        // Debug: Payment Method Error Details
         throw new Error(errorMessage);
       }
     } catch (error) {
-      // Debug: Error creating payment method
       setPaymentStatus("Error creating payment method");
       throw error;
     }
   };
 
-  // Function to Attach a Payment Method to the Intent
+  // Attach Payment Method to the Intent
   const attachIntentMethod = async (intent, method) => {
     setPaymentStatus("Processing Payment");
     
     try {
-      // Debug: Intent and Method objects
-      
-      // Intent is PayMongo object
       const clientKey = intent?.attributes?.client_key;
       if (!clientKey) throw new Error('Client key not found in intent object');
       
-      // Method object is PayMongo data
       const methodId = method?.id || method?.data?.id;
       
       const response = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
@@ -196,12 +184,8 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
       });
 
       const data = await response.json();
-      // Debug: Attach Method Response
-      
       if (data.success && data.data && data.data.data) {
         const paymentIntent = data.data.data;
-        
-        // Debug: Extracted payment intent
         
         if (!paymentIntent || !paymentIntent.attributes) {
           throw new Error('Invalid payment intent structure returned from attach method');
@@ -223,7 +207,6 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
         throw new Error(data.message || 'Failed to attach payment method');
       }
     } catch (error) {
-      // Debug: Error attaching payment method
       setPaymentStatus("Error processing payment");
       onPaymentError && onPaymentError(error);
     }
@@ -238,7 +221,6 @@ const CreditCard = ({ amount, description, onPaymentSuccess, onPaymentError }) =
       const paymentMethod = await createPaymentMethod();
       await attachIntentMethod(paymentIntent, paymentMethod);
     } catch (error) {
-      // Debug: Credit card payment error
       setPaymentStatus("Payment failed. Please try again.");
       onPaymentError && onPaymentError(error);
     } finally {

@@ -288,6 +288,9 @@ enum FileStatus {
 model payments {
   id                  String        @id @default(cuid())
   userId              String
+  transactionId       String        @unique // Format (PAY-YYYYMMDD-XXXXX)
+  paymentIntentId     String?       // PayMongo payment intent ID (pi_xxxxx) for matching
+  referenceNumber     String?       // PayMongo reference ID (pay_xxxxx) 
   feeId               String?
   enrollmentRequestId String?
   courseId            String?
@@ -296,10 +299,7 @@ model payments {
   currency            String        @default("PHP")
   status              PaymentStatus @default(pending)
   paymentMethod       String?
-  referenceNumber     String?
-  checkoutUrl         String?       @db.LongText // PayMongo checkout URL
-  paymongoId          String? // PayMongo payment ID
-  paymongoResponse    Json? // PayMongo webhook response data
+  paymongoResponse    Json?         // PayMongo webhook response data
   remarks             String?       @db.Text
   paidAt              DateTime?
   createdAt           DateTime      @default(now())

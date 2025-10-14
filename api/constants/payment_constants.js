@@ -30,31 +30,18 @@ export const createPayMongoAuthHeaders = () => {
   };
 };
 
-// PayMongo payment method mappings
+// PayMongo payment method mappings (used for webhook payment method extraction)
 export const PAYMONGO_METHOD_MAP = {
   'card': 'Credit/Debit Card',
   'gcash': 'GCash',
-  'grab_pay': 'GrabPay',
-  'paymaya': 'PayMaya',
-  'bank_transfer': 'Bank Transfer',
-  'over_the_counter': 'Over the Counter',
-  'online_banking': 'Online Banking'
+  'maya': 'Maya'
 };
 
-// Fee type mappings for display
-export const FEE_TYPE_MAP = {
-  'down_payment': 'Down Payment',
-  'tuition_fee': 'Tuition Fee', 
-  'document_fee': 'Document Fee',
-  'book_fee': 'Book Fee',
-};
-
-// Payment status constants (matches Prisma enum)
+// Payment status constants 
 export const PAYMENT_STATUS = {
   PENDING: 'pending',
   PAID: 'paid',
   FAILED: 'failed',
-  EXPIRED: 'expired',
   CANCELLED: 'cancelled',
   REFUNDED: 'refunded'
 };
@@ -62,30 +49,7 @@ export const PAYMENT_STATUS = {
 // Database query includes for consistent data fetching
 export const PAYMENT_INCLUDES = {
   WITH_USER: {
-    user: {
-      select: {
-        id: true,
-        userId: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        email: true,
-        phoneNumber: true
-      }
-    }
-  },
-  WITH_USER_FULL: {
-    user: {
-      select: {
-        id: true,
-        userId: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        email: true,
-        phoneNumber: true
-      }
-    }
+    user: true
   }
 };
 
@@ -94,15 +58,12 @@ export const ERROR_MESSAGES = {
   PAYMENT_NOT_FOUND: 'Payment not found',
   USER_NOT_FOUND: 'User not found',
   PAYMENT_CANNOT_BE_CANCELLED: 'Payment cannot be cancelled',
-  PAYMONGO_ERROR: 'PayMongo service error',
-  INVALID_PAYMENT_DATA: 'Invalid payment data provided'
+  INTERNAL_SERVER_ERROR: 'Internal server error'
 };
 
 // Success messages
 export const SUCCESS_MESSAGES = {
-  PAYMENT_CREATED: 'Payment created successfully',
-  PAYMENT_CANCELLED: 'Payment cancelled successfully',
-  PAYMENT_SYNCED: 'Payment status synced successfully'
+  MANUAL_TRANSACTION_CREATED: 'Manual transaction created successfully'
 };
 
 // PayMongo webhook event types
@@ -128,7 +89,6 @@ export default {
   PAYMONGO_CONFIG,
   createPayMongoAuthHeaders,
   PAYMONGO_METHOD_MAP,
-  FEE_TYPE_MAP,
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
   ERROR_MESSAGES,

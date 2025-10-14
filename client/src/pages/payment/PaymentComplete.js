@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import UserNavbar from "../../components/navbars/UserNav";
 
@@ -8,16 +8,13 @@ const PaymentComplete = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    const paymentIntentId = searchParams.get('payment_intent_id');
-    
-    const checkPaymentStatus = async (paymentIntentId) => {
+  const checkPaymentStatus = useCallback(async (paymentIntentId) => {
       try {
         setLoading(true);
         console.log('Checking payment status for:', paymentIntentId);
         
-        // Call backend to check the payment status (only on this page)
         const response = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/check-status/${paymentIntentId}`);
         const data = await response.json();
         
@@ -25,6 +22,15 @@ const PaymentComplete = () => {
         
         if (data.success && (data.data.status === 'succeeded' || data.data.dbStatus === 'paid')) {
           setPaymentData(data.data);
+        } else if (response.status === 404 && retryCount < 3) {
+          console.log(`Retry ${retryCount + 1}/3 for payment: ${paymentIntentId}`);
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => {
+            checkPaymentStatus(paymentIntentId);
+          }, 2000 * (retryCount + 1)); 
+          return; 
+        } else if (response.status === 404) {
+          setError('Payment is being processed. Please wait a moment and refresh the page, or contact support if the issue persists.');
         } else {
           setError(data.message || 'Payment was not completed');
         }
@@ -34,15 +40,23 @@ const PaymentComplete = () => {
       } finally {
         setLoading(false);
       }
+    }, [retryCount]);
+
+  useEffect(() => {
+    const paymentIntentId = searchParams.get('payment_intent_id');
+    
+    // Validate payment intent ID format for security
+    const isValidPaymentIntentId = (id) => {
+      return id && typeof id === 'string' && id.startsWith('pi_') && id.length > 10;
     };
     
-    if (paymentIntentId) {
+    if (paymentIntentId && isValidPaymentIntentId(paymentIntentId)) {
       checkPaymentStatus(paymentIntentId);
     } else {
-      setError('No payment information found');
+      setError('Invalid payment information. Please contact support if you believe this is an error.');
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, checkPaymentStatus]);
 
   // Loading state
   if (loading) {
@@ -53,7 +67,9 @@ const PaymentComplete = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-dark-red mx-auto mb-4"></div>
             <p className="text-xl text-gray-700 font-medium">Verifying your payment...</p>
-            <p className="text-sm text-gray-500 mt-2">Please wait a moment</p>
+            <p className="text-sm text-gray-500 mt-2">
+              {retryCount > 0 ? `Retry ${retryCount}/3 - Please wait a moment` : 'Please wait a moment'}
+            </p>
           </div>
         </div>
       </div>
@@ -79,43 +95,34 @@ const PaymentComplete = () => {
             </div>
 
             {/* Payment Details Card */}
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6 mb-6">
+            <div className="bg-green-50 rounded-lg p-6 mb-6">
               <h2 className="text-lg font-semibold text-green-800 mb-4">Transaction Details</h2>
               
               <div className="space-y-3">
-                {paymentData.paymongoPaymentId && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700 font-medium">PayMongo Payment ID:</span>
-                    <span className="text-gray-900 font-mono text-sm bg-white px-3 py-1 rounded border border-green-200 font-bold">
-                      {paymentData.paymongoPaymentId}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-medium">Transaction ID:</span>
+                  <span className="text-gray-900 font-mono text-sm bg-white px-3 py-1 rounded border border-gray-200">
+                    {paymentData.transactionId}
+                  </span>
+                </div>
 
                 {paymentData.referenceNumber && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700 font-medium">Reference Number:</span>
-                    <span className="text-gray-900 font-mono text-sm bg-white px-3 py-1 rounded border border-green-200">
+                    <span className="text-gray-900 font-mono text-sm bg-white px-3 py-1 rounded border border-gray-200">
                       {paymentData.referenceNumber}
                     </span>
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center pb-3 border-b border-green-200">
-                  <span className="text-gray-700 font-medium">Transaction ID:</span>
-                  <span className="text-gray-900 font-mono text-xs bg-white px-3 py-1 rounded border border-green-200">
-                    {paymentData.transactionId}
-                  </span>
-                </div>
-                
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 font-medium">Payment Method:</span>
-                  <span className="text-gray-900 font-semibold">
+                  <span className="text-green-600 font-semibold">
                     {paymentData.paymentMethod || 'Online Payment'}
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center pt-3 border-t border-green-200">
+                <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-800">Amount Paid:</span>
                   <span className="text-2xl font-bold text-green-600">
                     ₱{parseFloat(paymentData.amount || 0).toFixed(2)}
@@ -139,48 +146,17 @@ const PaymentComplete = () => {
               </div>
             </div>
 
-            {/* User Information */}
-            {paymentData.user && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-800">
-                  <strong>Paid by:</strong> {paymentData.user.firstName} {paymentData.user.lastName}
-                </p>
-                <p className="text-sm text-blue-700">
-                  {paymentData.user.email}
-                </p>
-              </div>
-            )}
-
-            {/* Info Notice */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start">
-                <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                <div className="text-sm text-yellow-800">
-                  <p className="font-medium mb-2">📧 Receipt & Confirmation:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>An invoice/receipt will be sent to your email shortly (check spam if not received).</li>
-                    <li>You can safely exit this page.</li>
-                    <li>Save your <strong>PayMongo Payment ID</strong> and <strong>Transaction ID</strong> for your records</li>
-                    <li>You can view this transaction in your payment history anytime.</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Home Button */}
+            <div className="mt-6">
               <button
                 onClick={() => navigate("/")}
-                className="flex-1 px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
+                className="w-full px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 Go to Home
               </button>
-              {/* Only one button required as per request */}
             </div>
           </div>
         </div>
@@ -219,29 +195,42 @@ const PaymentComplete = () => {
           {/* Help Section */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-blue-800">
-              <strong>Need Help?</strong> If you believe this is an error or if the amount was deducted from your account, please contact support with your transaction reference.
+              <strong>Need Help?</strong> If you believe this is an error or if the amount was deducted from your account, please contact support.
             </p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate("/paymentForm")}
+              onClick={() => {
+                const paymentIntentId = searchParams.get('payment_intent_id');
+                if (paymentIntentId) {
+                  setError(null);
+                  setLoading(true);
+                  setRetryCount(0);
+                  // Retry the payment check
+                  setTimeout(() => {
+                    checkPaymentStatus(paymentIntentId);
+                  }, 1000);
+                } else {
+                  navigate("/paymentForm");
+                }
+              }}
               className="flex-1 px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Try Again
+             Try Again
             </button>
             <button
-              onClick={() => window.open('mailto:support@sprachinstitut-cebu.inc?subject=Payment Issue', '_blank')}
+              onClick={() => navigate("/")}
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-dark-red border-2 border-dark-red font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              Contact Support
+              Go to Home
             </button>
           </div>
         </div>

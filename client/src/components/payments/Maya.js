@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import styles from "../../styles/Payment.module.css";
 
-const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
+const Maya = ({ amount, description, userId, firstName, lastName, userEmail, onPaymentSuccess, onPaymentError }) => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -13,7 +13,6 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
     setIsProcessing(true);
     
     try {
-      // Use the traditional PIPM workflow for Maya payments
       console.log('Starting Maya payment with traditional PIPM workflow...');
       await handleTraditionalPIPMFlow();
     } catch (error) {
@@ -25,10 +24,9 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
     }
   };
 
-  // Traditional Payment Intent + Payment Method workflow
   const handleTraditionalPIPMFlow = async () => {
     try {
-      // Step 1: Create Payment Intent (NO return_url here per PayMongo guidance)
+      // Create Payment Intent 
       const intentResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`, {
         method: 'POST',
         headers: {
@@ -38,38 +36,35 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
           amount: amount,
           currency: 'PHP',
           description: description,
-          payment_method_allowed: ['paymaya'] // Correct type confirmed by PayMongo
-          // NO return_url here - it goes in Payment Method creation per PayMongo guidance
+          payment_method_allowed: ['paymaya'],
+          userId: userId,
+          firstName: firstName,
+          lastName: lastName,
+          email: userEmail
         }),
       });
 
       const intentData = await intentResponse.json();
-      // Debug: Payment Intent response
+      
+      if (!intentResponse.ok) {
+        throw new Error(intentData.message || intentData.error || `HTTP ${intentResponse.status}: Failed to create payment intent`);
+      }
       
       if (!intentData.success) {
-        throw new Error('Failed to create payment intent');
+        throw new Error(intentData.message || intentData.error || 'Failed to create payment intent');
       }
-
-      // Extract payment intent data from backend response (PayMongo shape)
       const paymentIntent = intentData?.data?.data;
       const clientKey = paymentIntent?.attributes?.client_key;
-      
-      // Extract Payment Intent ID (prefer direct id; fallback to split)
       const paymentIntentId = paymentIntent?.id || (clientKey ? clientKey.split('_client')[0] : undefined);
 
-      // Client key is used only server-side via intent mapping; avoid storing locally
-      
-      // Debug IDs
-      
       if (!paymentIntentId) {
         console.error('Full response:', intentData);
         throw new Error('Payment Intent ID not found in response');
       }
 
-      // Step 2: Create Payment Method (NO return_url here per latest PayMongo guidance)
+      // Create Payment Method
       let paymentMethod;
       try {
-        // Create PayMaya payment method directly via PayMongo API (client-side per devs advice)
         const methodResponse = await fetch('https://api.paymongo.com/v1/payment_methods', {
           method: 'POST',
           headers: {
@@ -79,11 +74,10 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
           body: JSON.stringify({
             data: {
               attributes: {
-                type: 'paymaya', // Confirmed correct type by PayMongo
-                // Omit details entirely for e-wallets to avoid parameter_blank
+                type: 'paymaya', 
                 billing: {
                   name: name,
-                  email: email,
+                  email: userEmail,
                   phone: phone,
                 }
               }
@@ -92,10 +86,9 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
         });
 
         const methodData = await methodResponse.json();
-        // Debug: Payment Method response
-        
+
         if (!methodData.data) {
-          const errMsg = methodData?.errors?.map?.(e => e?.detail).join(', ') || 'Failed to create PayMaya payment method';
+          const errMsg = methodData?.errors?.map?.(e => e?.detail).join(', ') || 'Failed to create Maya payment method';
           throw new Error(errMsg);
         }
 
@@ -103,10 +96,8 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
       } catch (error) {
         throw new Error(`Payment method creation failed: ${error.message}`);
       }
-      
-      // Debug: Payment Method ID
 
-      // Step 3: Attach Payment Method to Payment Intent (with return_url per latest PayMongo guidance)
+      // Attach Payment Method to Payment Intent 
       const attachResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
         method: 'POST',
         headers: {
@@ -116,12 +107,12 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
           payment_intent_id: paymentIntentId,
           payment_method_id: paymentMethod.id,
           client_key: clientKey,
+          //return_url: `${process.env.REACT_APP_CLIENT_URL || window.location.origin}/payment-complete` //production
           return_url: `${window.location.origin}/payment-complete` // Redirect to completion page
         }),
       });
 
       const attachData = await attachResponse.json();
-      // Debug: Attach response
       
       if (!attachData.success) {
         throw new Error('Failed to attach payment method');
@@ -131,7 +122,6 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
       const status = attachedIntent.attributes.status;
 
       if (status === 'awaiting_next_action') {
-        // Maya requires redirect
         const nextAction = attachedIntent.attributes.next_action;
         if (nextAction && nextAction.redirect && nextAction.redirect.url) {
           setPaymentStatus("Redirecting to Maya...");
@@ -146,7 +136,7 @@ const Maya = ({ amount, description, onPaymentSuccess, onPaymentError }) => {
         throw new Error(`Unexpected payment status: ${status}`);
       }
     } catch (error) {
-      throw error; // Re-throw to be handled by the main error handler
+      throw error;
     }
   };
 

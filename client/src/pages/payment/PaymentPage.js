@@ -4,7 +4,6 @@ import UserNavbar from "../../components/navbars/UserNav";
 import CreditCard from "../../components/payments/CreditCard";
 import GCash from "../../components/payments/GCash";
 import Maya from "../../components/payments/Maya";
-import { generatePaymentId } from "../../utils/paymentApi";
 import Swal from "sweetalert2";
 
 const PaymentPage = () => {
@@ -12,13 +11,11 @@ const PaymentPage = () => {
   const [paymentData, setPaymentData] = useState({
     amount: 0,
     description: "",
-    paymentID: "",
     studentInfo: null
   });
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Payment method configurations
   const paymentMethods = [
     { 
       id: 0, 
@@ -41,11 +38,9 @@ const PaymentPage = () => {
   ];
 
   useEffect(() => {
-    // Get payment data from various sources
     const urlParams = new URLSearchParams(location.search);
     const stateData = location.state;
     
-    // Try to get data from URL params, state, or localStorage
     const amount = urlParams.get('amount') || 
                   stateData?.amount || 
                   localStorage.getItem("totalPayment");
@@ -53,14 +48,10 @@ const PaymentPage = () => {
     const description = urlParams.get('description') || 
                        stateData?.description || 
                        "EduOps Payment";
-    
-    const paymentID = urlParams.get('paymentID') || 
-                      stateData?.paymentID || 
-                      localStorage.getItem("paymentID") ||
-                      generatePaymentId();
 
     const studentInfo = stateData?.studentInfo || 
                        JSON.parse(localStorage.getItem("studentInfo") || "null");
+
 
     if (!amount || amount === "0") {
       Swal.fire({
@@ -77,22 +68,18 @@ const PaymentPage = () => {
     setPaymentData({
       amount: parseFloat(amount),
       description,
-      paymentID,
       studentInfo
     });
 
     // Store data in localStorage for persistence
     localStorage.setItem("totalPayment", amount);
-    localStorage.setItem("paymentID", paymentID);
     if (studentInfo) {
       localStorage.setItem("studentInfo", JSON.stringify(studentInfo));
     }
   }, [location, navigate]);
 
   const handlePaymentSuccess = async (paymentResult) => {
-    // Clear stored payment data
     localStorage.removeItem("totalPayment");
-    localStorage.removeItem("paymentID");
     localStorage.removeItem("cartItems");
 
     const result = await Swal.fire({
@@ -103,10 +90,6 @@ const PaymentPage = () => {
           <p class="mb-3">Your payment has been processed successfully!</p>
           <div class="bg-gray-50 p-3 rounded text-sm">
             <div class="flex justify-between mb-2">
-              <span class="font-medium">Payment ID:</span>
-              <span>${paymentData.paymentID}</span>
-            </div>
-            <div class="flex justify-between mb-2">
               <span class="font-medium">Amount:</span>
               <span class="text-green-600 font-semibold">₱${paymentData.amount.toFixed(2)}</span>
             </div>
@@ -115,6 +98,7 @@ const PaymentPage = () => {
               <span class="text-green-600 font-semibold">Completed</span>
             </div>
           </div>
+          <!-- <p class="mt-3 text-sm text-gray-600">You will receive a confirmation email with your transaction ID shortly.</p> -->
         </div>
       `,
       showCancelButton: false,
@@ -168,7 +152,6 @@ const PaymentPage = () => {
     });
 
     if (result.isConfirmed) {
-      // Retry payment - user can try again with same form
       window.location.reload();
     }
   };
@@ -179,16 +162,22 @@ const PaymentPage = () => {
 
     const PaymentComponent = method.component;
     
+    const userId = paymentData.studentInfo?.userId || paymentData.studentInfo?.id || 'student001';
+    
+    
     return (
       <PaymentComponent
         amount={paymentData.amount}
         description={paymentData.description}
+        userId={userId}
+        firstName={paymentData.studentInfo?.firstName || ''}
+        lastName={paymentData.studentInfo?.lastName || ''}
+        userEmail={paymentData.studentInfo?.email || ''}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
       />
     );
   };
-
 
   if (!paymentData.amount) {
     return (
@@ -223,14 +212,10 @@ const PaymentPage = () => {
             <h2 className="text-xl font-semibold text-blue-800 mb-4">Payment Summary</h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-medium">Payment ID:</span>
-                <span className="text-gray-900 font-mono bg-white px-3 py-1 rounded border border-blue-200">{paymentData.paymentID}</span>
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-medium">Description:</span>
                 <span className="text-gray-900 text-right">{paymentData.description}</span>
               </div>
-              
+
               {paymentData.studentInfo && (
                 <div className="pt-3 border-t border-blue-200">
                   <p className="text-gray-700 font-medium mb-2">Student Information:</p>
@@ -240,7 +225,7 @@ const PaymentPage = () => {
                   <p className="text-sm text-gray-600">{paymentData.studentInfo.email}</p>
                 </div>
               )}
-              
+
               <div className="pt-3 border-t border-blue-200">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-800">Total Amount:</span>
