@@ -2,10 +2,24 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 class DocumentModel {
+  // Helper method to get user by ID
+  static async getUserById(userId) {
+    return await prisma.users.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+      }
+    });
+  }
+
   // Document Templates CRUD
   
   static async createDocumentTemplate(data) {
-    return await prisma.document_templates.create({
+    return await prisma.document_template.create({
       data: {
         documentName: data.documentName,
         description: data.description,
@@ -14,28 +28,27 @@ class DocumentModel {
         downloadable: data.downloadable || false,
         price: data.price || 'free',
         amount: data.price === 'paid' ? parseFloat(data.amount) : null,
-        uploadFile: data.uploadFile,
-        isHidden: data.isHidden || false,
+        isActive: data.isActive !== undefined ? data.isActive : true,
       }
     });
   }
 
   static async getAllDocumentTemplates(includeHidden = false) {
-    const where = includeHidden ? {} : { isHidden: false, deletedAt: null };
-    return await prisma.document_templates.findMany({
+    const where = includeHidden ? {} : { isActive: true, deletedAt: null };
+    return await prisma.document_template.findMany({
       where,
       orderBy: { createdAt: 'desc' }
     });
   }
 
   static async getDocumentTemplateById(id) {
-    return await prisma.document_templates.findUnique({
+    return await prisma.document_template.findUnique({
       where: { id }
     });
   }
 
   static async updateDocumentTemplate(id, data) {
-    return await prisma.document_templates.update({
+    return await prisma.document_template.update({
       where: { id },
       data: {
         ...data,
@@ -46,16 +59,16 @@ class DocumentModel {
   }
 
   static async deleteDocumentTemplate(id) {
-    return await prisma.document_templates.update({
+    return await prisma.document_template.update({
       where: { id },
       data: { deletedAt: new Date() }
     });
   }
 
-  static async hideDocumentTemplate(id, isHidden) {
-    return await prisma.document_templates.update({
+  static async hideDocumentTemplate(id, isActive) {
+    return await prisma.document_template.update({
       where: { id },
-      data: { isHidden }
+      data: { isActive: !isActive }
     });
   }
 
@@ -66,7 +79,7 @@ class DocumentModel {
       console.log('DocumentModel: Creating request with data:', data);
       
       // Validate that the document template exists
-      const documentExists = await prisma.document_templates.findUnique({
+      const documentExists = await prisma.document_template.findUnique({
         where: { id: data.documentId }
       });
       
@@ -83,21 +96,18 @@ class DocumentModel {
         throw new Error(`Student with ID ${data.studentId} not found`);
       }
 
-      const result = await prisma.document_requests.create({
+      const result = await prisma.document_request.create({
         data: {
-          studentId: data.studentId,
+          userId: data.studentId,
           documentId: data.documentId,
           status: data.status || 'in_process',
-          remarks: data.remarks,
           email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
           phone: data.phone,
           mode: data.mode || 'pickup',
-          paymentMethod: data.paymentMethod,
           address: data.address,
           city: data.city,
-          state: data.state,
-          zipCode: data.zipCode,
-          country: data.country,
           purpose: data.purpose,
           additionalNotes: data.additionalNotes,
         }
@@ -112,10 +122,10 @@ class DocumentModel {
   }
 
   static async getAllDocumentRequests() {
-    return await prisma.document_requests.findMany({
+    return await prisma.document_request.findMany({
       include: {
         document: true,
-        student: {
+        user: {
           select: {
             id: true,
             firstName: true,
@@ -130,11 +140,11 @@ class DocumentModel {
   }
 
   static async getDocumentRequestById(id) {
-    return await prisma.document_requests.findUnique({
+    return await prisma.document_request.findUnique({
       where: { id },
       include: {
         document: true,
-        student: {
+        user: {
           select: {
             id: true,
             firstName: true,
@@ -148,9 +158,9 @@ class DocumentModel {
     });
   }
 
-  static async getDocumentRequestsByStudent(studentId) {
-    return await prisma.document_requests.findMany({
-      where: { studentId },
+  static async getDocumentRequestsByStudent(userId) {
+    return await prisma.document_request.findMany({
+      where: { userId },
       include: {
         document: true
       },
@@ -159,38 +169,35 @@ class DocumentModel {
   }
 
   static async updateDocumentRequestStatus(id, status, remarks) {
-    return await prisma.document_requests.update({
+    return await prisma.document_request.update({
       where: { id },
       data: { 
-        status, 
-        remarks, 
+        status,
         updatedAt: new Date() 
       }
     });
   }
 
   static async deleteDocumentRequest(id) {
-    return await prisma.document_requests.update({
-      where: { id },
-      data: { deletedAt: new Date() }
+    return await prisma.document_request.delete({
+      where: { id }
     });
   }
 
   // Document Validations CRUD
 
   static async createDocumentValidation(data) {
-    return await prisma.document_validations.create({
+    return await prisma.document_validation.create({
       data: {
         fileSignature: data.fileSignature,
         documentName: data.documentName,
-        filePath: data.filePath,
         userId: data.userId,
       }
     });
   }
 
   static async getAllDocumentValidations() {
-    return await prisma.document_validations.findMany({
+    return await prisma.document_validation.findMany({
       include: {
         user: {
           select: {
@@ -206,7 +213,7 @@ class DocumentModel {
   }
 
   static async getDocumentValidationBySignature(fileSignature) {
-    return await prisma.document_validations.findUnique({
+    return await prisma.document_validation.findUnique({
       where: { fileSignature },
       include: {
         user: {
@@ -222,7 +229,7 @@ class DocumentModel {
   }
 
   static async deleteDocumentValidation(id) {
-    return await prisma.document_validations.delete({
+    return await prisma.document_validation.delete({
       where: { id }
     });
   }
@@ -232,7 +239,7 @@ class DocumentModel {
   static async searchDocumentTemplates(filters = {}) {
     const where = {
       deletedAt: null,
-      ...(filters.includeHidden ? {} : { isHidden: false }),
+      ...(filters.includeHidden ? {} : { isActive: true }),
       ...(filters.documentName && {
         OR: [
           { documentName: { contains: filters.documentName } },
@@ -243,7 +250,7 @@ class DocumentModel {
       ...(filters.price && { price: filters.price })
     };
 
-    return await prisma.document_templates.findMany({
+    return await prisma.document_template.findMany({
       where,
       orderBy: { createdAt: 'desc' }
     });
@@ -251,9 +258,8 @@ class DocumentModel {
 
   static async searchDocumentRequests(filters = {}) {
     const where = {
-      deletedAt: null,
       ...(filters.studentName && {
-        student: {
+        user: {
           OR: [
             { firstName: { contains: filters.studentName } },
             { lastName: { contains: filters.studentName } },
@@ -266,14 +272,15 @@ class DocumentModel {
           documentName: { contains: filters.documentName }
         }
       }),
-      ...(filters.status && { status: filters.status })
+      ...(filters.status && { status: filters.status }),
+      ...(filters.userId && { userId: filters.userId })
     };
 
-    return await prisma.document_requests.findMany({
+    return await prisma.document_request.findMany({
       where,
       include: {
         document: true,
-        student: {
+        user: {
           select: {
             id: true,
             firstName: true,
@@ -297,7 +304,7 @@ class DocumentModel {
       })
     };
 
-    return await prisma.document_validations.findMany({
+    return await prisma.document_validation.findMany({
       where,
       include: {
         user: {
@@ -335,10 +342,10 @@ class DocumentModel {
     };
 
     if (!includeHidden) {
-      baseWhere.isHidden = false;
+      baseWhere.isActive = true;
     }
 
-    return await prisma.document_templates.findMany({
+    return await prisma.document_template.findMany({
       where: baseWhere,
       orderBy: { createdAt: 'desc' }
     });
@@ -363,7 +370,7 @@ class DocumentModel {
     const where = {
       deletedAt: null,
       ...privacyFilter[userRole] || privacyFilter.student,
-      ...(filters.includeHidden && userRole === 'admin' ? {} : { isHidden: false }),
+      ...(filters.includeHidden && userRole === 'admin' ? {} : { isActive: true }),
       ...(filters.documentName && {
         OR: [
           { documentName: { contains: filters.documentName, mode: 'insensitive' } },
@@ -374,7 +381,7 @@ class DocumentModel {
       ...(filters.price && { price: filters.price })
     };
 
-    return await prisma.document_templates.findMany({
+    return await prisma.document_template.findMany({
       where,
       orderBy: { createdAt: 'desc' }
     });

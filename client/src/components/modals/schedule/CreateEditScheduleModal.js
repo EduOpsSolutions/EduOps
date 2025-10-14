@@ -51,6 +51,7 @@ function CreateEditScheduleModal({
     teacherName: "",
     notes: "",
     color: "#FFCF00",
+    capacity: 30,
   });
 
   const colorOptions = [
@@ -109,6 +110,7 @@ function CreateEditScheduleModal({
         teacherName: event.teacherName || "",
         notes: event.notes || "",
         color: event.color || "#FFCF00",
+        capacity: event.capacity || 30,
       });
     } else if (aiPrefillData) {
       // AI-created schedule (prefill but treat as new)
@@ -127,6 +129,7 @@ function CreateEditScheduleModal({
         teacherName: aiPrefillData.teacherName || "",
         notes: aiPrefillData.notes || "",
         color: aiPrefillData.color || "#FFCF00",
+        capacity: aiPrefillData.capacity || 30,
       });
     } else if (selectedDate) {
       // Creating new event with default time from selectedDate if available
@@ -632,6 +635,25 @@ function CreateEditScheduleModal({
                     )}
                   </div>
                 </div>
+                {/* Capacity */}
+                <div className="flex items-start gap-3">
+                  <MdPerson className="text-gray-400 mt-3" size={20} />
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Capacity<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      value={formData.capacity}
+                      onChange={handleChange}
+                      placeholder="30"
+                      min={0}
+                      max={100}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                    />
+                  </div>
+                </div>
 
                 {/* Event Location */}
                 <div className="flex items-start gap-3">
@@ -923,6 +945,7 @@ function CreateEditScheduleModal({
         time_end={formData.time_end}
         refreshToken={studentsRefreshTick}
         scheduleId={event?.id}
+        capacity={formData.capacity}
         onStudentSelected={({ student, conflict }) => {
           if (conflict?.hasConflicts) {
             Swal.fire({
@@ -1064,6 +1087,7 @@ CreateEditScheduleModal.propTypes = {
     teacherName: PropTypes.string,
     notes: PropTypes.string,
     color: PropTypes.string,
+    capacity: PropTypes.number,
   }),
   event: PropTypes.shape({
     title: PropTypes.string, // For backward compatibility
@@ -1081,6 +1105,7 @@ CreateEditScheduleModal.propTypes = {
     teacherName: PropTypes.string,
     notes: PropTypes.string,
     color: PropTypes.string,
+    capacity: PropTypes.number,
   }),
   selectedDate: PropTypes.instanceOf(Date),
   onSave: PropTypes.func.isRequired,
