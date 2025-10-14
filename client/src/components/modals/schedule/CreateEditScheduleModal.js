@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import React, { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import {
   MdClose,
   MdLocationOn,
@@ -7,14 +7,15 @@ import {
   MdPerson,
   MdRepeat,
   MdCalendarToday,
-} from 'react-icons/md';
-import { FaAlignLeft } from 'react-icons/fa';
-import TeacherSelect from '../../inputs/TeacherSelect';
-import CourseSelect from '../../inputs/CourseSelect';
-import AcademicPeriodSelect from '../../inputs/AcademicPeriodSelect';
-import Swal from 'sweetalert2';
-import ViewStudentsModal from './ViewStudentsModal';
-import axiosInstance from '../../../utils/axios';
+} from "react-icons/md";
+import { FaAlignLeft } from "react-icons/fa";
+import TeacherSelect from "../../inputs/TeacherSelect";
+import CourseSelect from "../../inputs/CourseSelect";
+import AcademicPeriodSelect from "../../inputs/AcademicPeriodSelect";
+import Swal from "sweetalert2";
+import ViewStudentsModal from "./ViewStudentsModal";
+import axiosInstance from "../../../utils/axios";
+import { convertTo12Hour } from "../../../utils/scheduleUtils";
 
 /**
  * Create/Edit Schedule Modal
@@ -36,76 +37,102 @@ function CreateEditScheduleModal({
   isLoadingAcademicPeriods,
 }) {
   const [formData, setFormData] = useState({
-    courseId: '',
-    courseName: '',
-    academicPeriodId: '',
-    academicPeriodName: '',
-    location: '',
-    time_start: '',
-    time_end: '',
-    days: '',
-    periodStart: '',
-    periodEnd: '',
-    teacherId: '',
-    teacherName: '',
-    notes: '',
-    color: '#FFCF00',
+    courseId: "",
+    courseName: "",
+    academicPeriodId: "",
+    academicPeriodName: "",
+    location: "",
+    time_start: "",
+    time_end: "",
+    days: "",
+    periodStart: "",
+    periodEnd: "",
+    teacherId: "",
+    teacherName: "",
+    notes: "",
+    color: "#FFCF00",
   });
 
   const colorOptions = [
-    '#4A90E2', // Blue
-    '#F5A623', // Orange
-    '#FFCF00', // Yellow
-    '#BD10E0', // Purple
-    '#50E3C2', // Teal
-    '#7ED321', // Green
-    '#D0021B', // Red
-    '#4A4A4A', // Gray
-    '#9013FE', // Violet
+    "#4A90E2", // Blue
+    "#F5A623", // Orange
+    "#FFCF00", // Yellow
+    "#BD10E0", // Purple
+    "#50E3C2", // Teal
+    "#7ED321", // Green
+    "#D0021B", // Red
+    "#4A4A4A", // Gray
+    "#9013FE", // Violet
   ];
+
+  const periodStartRef = useRef(null);
+  const periodEndRef = useRef(null);
+
+  // Format date to "Oct 22, 2025" format
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString + "T00:00:00"); // Add time to avoid timezone issues
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Set initial formatted display
+  useEffect(() => {
+    if (periodStartRef.current && formData.periodStart) {
+      periodStartRef.current.type = "text";
+      periodStartRef.current.value = formatDateDisplay(formData.periodStart);
+    }
+    if (periodEndRef.current && formData.periodEnd) {
+      periodEndRef.current.type = "text";
+      periodEndRef.current.value = formatDateDisplay(formData.periodEnd);
+    }
+  }, [formData.periodStart, formData.periodEnd]);
 
   useEffect(() => {
     if (event) {
       // Editing existing event
       setFormData({
-        courseId: event.courseId || '',
-        courseName: event.courseName || event.title || '',
-        academicPeriodId: event.academicPeriodId || '',
-        academicPeriodName: event.academicPeriodName || '',
-        location: event.location || '',
-        time_start: event.time_start || '',
-        time_end: event.time_end || '',
-        days: event.days || '',
-        periodStart: event.periodStart || '',
-        periodEnd: event.periodEnd || '',
-        teacherId: event.teacherId || '',
-        teacherName: event.teacherName || '',
-        notes: event.notes || '',
-        color: event.color || '#FFCF00',
+        courseId: event.courseId || "",
+        courseName: event.courseName || event.title || "",
+        academicPeriodId: event.academicPeriodId || "",
+        academicPeriodName: event.academicPeriodName || "",
+        location: event.location || "",
+        time_start: event.time_start || "",
+        time_end: event.time_end || "",
+        days: event.days || "",
+        periodStart: event.periodStart || "",
+        periodEnd: event.periodEnd || "",
+        teacherId: event.teacherId || "",
+        teacherName: event.teacherName || "",
+        notes: event.notes || "",
+        color: event.color || "#FFCF00",
       });
     } else if (aiPrefillData) {
       // AI-created schedule (prefill but treat as new)
       setFormData({
-        courseId: aiPrefillData.courseId || '',
-        courseName: aiPrefillData.courseName || '',
-        academicPeriodId: aiPrefillData.academicPeriodId || '',
-        academicPeriodName: aiPrefillData.academicPeriodName || '',
-        location: aiPrefillData.location || '',
-        time_start: aiPrefillData.time_start || '',
-        time_end: aiPrefillData.time_end || '',
-        days: aiPrefillData.days || '',
-        periodStart: aiPrefillData.periodStart || '',
-        periodEnd: aiPrefillData.periodEnd || '',
-        teacherId: aiPrefillData.teacherId || '',
-        teacherName: aiPrefillData.teacherName || '',
-        notes: aiPrefillData.notes || '',
-        color: aiPrefillData.color || '#FFCF00',
+        courseId: aiPrefillData.courseId || "",
+        courseName: aiPrefillData.courseName || "",
+        academicPeriodId: aiPrefillData.academicPeriodId || "",
+        academicPeriodName: aiPrefillData.academicPeriodName || "",
+        location: aiPrefillData.location || "",
+        time_start: aiPrefillData.time_start || "",
+        time_end: aiPrefillData.time_end || "",
+        days: aiPrefillData.days || "",
+        periodStart: aiPrefillData.periodStart || "",
+        periodEnd: aiPrefillData.periodEnd || "",
+        teacherId: aiPrefillData.teacherId || "",
+        teacherName: aiPrefillData.teacherName || "",
+        notes: aiPrefillData.notes || "",
+        color: aiPrefillData.color || "#FFCF00",
       });
     } else if (selectedDate) {
       // Creating new event with default time from selectedDate if available
       setFormData((prev) => ({
         ...prev,
-        periodStart: selectedDate.toISOString().split('T')[0],
+        periodStart: selectedDate.toISOString().split("T")[0],
       }));
     }
   }, [event, aiPrefillData, selectedDate]);
@@ -139,13 +166,13 @@ function CreateEditScheduleModal({
     // Format dates to YYYY-MM-DD for date input
     const formatDate = (dateString) => {
       const date = new Date(dateString);
-      return date.toISOString().split('T')[0];
+      return date.toISOString().split("T")[0];
     };
 
     setFormData((prev) => ({
       ...prev,
       academicPeriodId: period.id,
-      academicPeriodName: `${period.batchName || ''}`,
+      academicPeriodName: `${period.batchName || ""}`,
       // Automatically set schedule dates to match academic period dates
       periodStart: formatDate(period.startAt),
       periodEnd: formatDate(period.endAt),
@@ -154,7 +181,7 @@ function CreateEditScheduleModal({
 
   const handleDayToggle = (day) => {
     const daysArray = formData.days
-      ? formData.days.split(',').map((d) => d.trim())
+      ? formData.days.split(",").map((d) => d.trim())
       : [];
     const dayIndex = daysArray.indexOf(day);
 
@@ -168,7 +195,7 @@ function CreateEditScheduleModal({
 
     setFormData((prev) => ({
       ...prev,
-      days: daysArray.join(','),
+      days: daysArray.join(","),
     }));
   };
 
@@ -181,16 +208,63 @@ function CreateEditScheduleModal({
     // Validate required fields
     if (!formData.academicPeriodId) {
       Swal.fire({
-        title: 'Error',
-        text: 'Please select an academic period',
-        icon: 'error',
-        confirmButtonText: 'Confirm',
-        confirmButtonColor: '#ff0000',
-        confirmButtonTextColor: 'white',
+        title: "Error",
+        text: "Please select an academic period",
+        icon: "error",
+        confirmButtonText: "Confirm",
+        confirmButtonColor: "#ff0000",
+        confirmButtonTextColor: "white",
       });
       return;
     }
 
+    // Check academic period status and warn if needed
+    const selectedPeriod = academicPeriods.find(
+      (p) => p.id === formData.academicPeriodId
+    );
+    if (selectedPeriod) {
+      if (selectedPeriod.batchStatus === "ended") {
+        Swal.fire({
+          title: "Warning",
+          text: "This academic period has ended. Are you sure you want to create a schedule for it?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Yes, continue",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#992525",
+          cancelButtonColor: "#6B7280",
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+          // Continue with validation
+          continueValidation();
+        });
+        return;
+      }
+
+      if (selectedPeriod.enrollmentStatus === "closed") {
+        Swal.fire({
+          title: "Warning",
+          text: "Enrollment for this academic period is closed. Students may not be able to enroll in this schedule.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Yes, continue",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#992525",
+          cancelButtonColor: "#6B7280",
+        }).then((result) => {
+          if (!result.isConfirmed) return;
+          // Continue with validation
+          continueValidation();
+        });
+        return;
+      }
+    }
+
+    // Continue with the rest of validation
+    continueValidation();
+  };
+
+  const continueValidation = () => {
     // Validate schedule dates are within academic period boundaries
     if (formData.periodStart && formData.periodEnd) {
       const selectedPeriod = academicPeriods.find(
@@ -203,95 +277,95 @@ function CreateEditScheduleModal({
         const periodStart = new Date(selectedPeriod.startAt);
         const periodEnd = new Date(selectedPeriod.endAt);
 
-        if (formData.time_start === '' || formData.time_end === '') {
+        if (formData.time_start === "" || formData.time_end === "") {
           Swal.fire({
-            title: 'Error',
-            text: 'Please select a time',
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            title: "Error",
+            text: "Please select a time",
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
 
         if (formData.time_start >= formData.time_end) {
           Swal.fire({
-            title: 'Error',
-            text: 'Start time must be before end time',
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            title: "Error",
+            text: "Start time must be before end time",
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
 
-        if (formData.time_start < '06:00') {
+        if (formData.time_start < "06:00") {
           Swal.fire({
-            title: 'Error',
-            text: 'Earliest Start Time is 6:00 AM',
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            title: "Error",
+            text: "Earliest Start Time is 6:00 AM",
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
 
-        if (formData.time_end >= '21:01') {
+        if (formData.time_end >= "21:01") {
           Swal.fire({
-            title: 'Error',
-            text: 'Latest End Time is 9:00 PM',
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            title: "Error",
+            text: "Latest End Time is 9:00 PM",
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
 
         // Validate minimum duration of 30 minutes
         const [startHours, startMinutes] = formData.time_start
-          .split(':')
+          .split(":")
           .map(Number);
-        const [endHours, endMinutes] = formData.time_end.split(':').map(Number);
+        const [endHours, endMinutes] = formData.time_end.split(":").map(Number);
         const startTotalMinutes = startHours * 60 + startMinutes;
         const endTotalMinutes = endHours * 60 + endMinutes;
         const durationMinutes = endTotalMinutes - startTotalMinutes;
 
         if (durationMinutes < 30) {
           Swal.fire({
-            title: 'Error',
-            text: 'Schedule duration must be at least 30 minutes',
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            title: "Error",
+            text: "Schedule duration must be at least 30 minutes",
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
 
         if (scheduleStart < periodStart || scheduleEnd > periodEnd) {
           Swal.fire({
-            title: 'Error',
+            title: "Error",
             text: `Schedule dates must be within the academic period range:\n${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`,
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
 
         if (scheduleStart > scheduleEnd) {
           Swal.fire({
-            title: 'Error',
-            text: 'Schedule end date must be after start date',
-            icon: 'error',
-            confirmButtonText: 'Confirm',
-            confirmButtonColor: '#ff0000',
-            confirmButtonTextColor: 'white',
+            title: "Error",
+            text: "Schedule end date must be after start date",
+            icon: "error",
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#ff0000",
+            confirmButtonTextColor: "white",
           });
           return;
         }
@@ -300,20 +374,20 @@ function CreateEditScheduleModal({
 
     // Confirmation dialog before saving
     Swal.fire({
-      title: event ? 'Update Schedule?' : 'Create Schedule?',
-      text: 'Are you sure you want to save these changes? This action cannot be undone.',
-      icon: 'warning',
+      title: event ? "Update Schedule?" : "Create Schedule?",
+      text: "Are you sure you want to save these changes? This action cannot be undone.",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'Yes, save it!',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6B7280',
+      confirmButtonText: "Yes, save it!",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6B7280",
     }).then(async (result) => {
       if (result.isConfirmed) {
         // Show loading
         Swal.fire({
-          title: 'Saving...',
-          text: 'Please wait while we save the schedule.',
+          title: "Saving...",
+          text: "Please wait while we save the schedule.",
           allowOutsideClick: false,
           allowEscapeKey: false,
           didOpen: () => {
@@ -326,11 +400,13 @@ function CreateEditScheduleModal({
 
           // Success
           Swal.fire({
-            title: 'Success!',
-            text: event ? 'Schedule updated successfully.' : 'Schedule created successfully.',
-            icon: 'success',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#992525',
+            title: "Success!",
+            text: event
+              ? "Schedule updated successfully."
+              : "Schedule created successfully.",
+            icon: "success",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#992525",
           }).then(() => {
             // Reload page after success
             window.location.reload();
@@ -341,11 +417,13 @@ function CreateEditScheduleModal({
         } catch (error) {
           // Error
           Swal.fire({
-            title: 'Error',
-            text: error.response?.data?.message || 'Failed to save schedule. Please try again.',
-            icon: 'error',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#ff0000',
+            title: "Error",
+            text:
+              error.response?.data?.message ||
+              "Failed to save schedule. Please try again.",
+            icon: "error",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#ff0000",
           });
           // Don't close modal on error
         }
@@ -354,49 +432,49 @@ function CreateEditScheduleModal({
   };
 
   const formatRecurrenceDisplay = () => {
-    if (!formData.days || !formData.periodEnd) return '';
+    if (!formData.days || !formData.periodEnd) return "";
     const dayMap = {
-      M: 'Mon',
-      T: 'Tue',
-      W: 'Wed',
-      TH: 'Thu',
-      F: 'Fri',
-      S: 'Sat',
-      SU: 'Sun',
+      M: "Mon",
+      T: "Tue",
+      W: "Wed",
+      TH: "Thu",
+      F: "Fri",
+      S: "Sat",
+      SU: "Sun",
     };
     const daysArray = formData.days
-      .split(',')
+      .split(",")
       .map((d) => dayMap[d.trim()] || d.trim());
-    const endDate = new Date(formData.periodEnd).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
+    const endDate = new Date(formData.periodEnd).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
-    return `Every ${daysArray.join(', ')} until ${endDate}`;
+    return `Every ${daysArray.join(", ")} until ${endDate}`;
   };
 
   const calculateTotalHours = () => {
     try {
       const { periodStart, periodEnd, time_start, time_end, days } = formData;
       if (!periodStart || !periodEnd || !time_start || !time_end || !days)
-        return '';
+        return "";
 
-      const [sh, sm] = String(time_start).split(':').map(Number);
-      const [eh, em] = String(time_end).split(':').map(Number);
+      const [sh, sm] = String(time_start).split(":").map(Number);
+      const [eh, em] = String(time_end).split(":").map(Number);
       const minutes = eh * 60 + em - (sh * 60 + sm);
-      if (minutes <= 0) return '';
+      if (minutes <= 0) return "";
       const hoursPerSession = minutes / 60;
 
       const dayMap = { SU: 0, M: 1, T: 2, W: 3, TH: 4, F: 5, S: 6 };
       const selectedDays = new Set(
         String(days)
-          .split(',')
+          .split(",")
           .map((d) => d.trim())
           .filter(Boolean)
           .map((d) => dayMap[d])
           .filter((n) => n !== undefined)
       );
-      if (selectedDays.size === 0) return '';
+      if (selectedDays.size === 0) return "";
 
       const start = new Date(periodStart);
       const end = new Date(periodEnd);
@@ -405,7 +483,7 @@ function CreateEditScheduleModal({
         Number.isNaN(end.getTime()) ||
         start > end
       )
-        return '';
+        return "";
 
       let count = 0;
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -414,9 +492,9 @@ function CreateEditScheduleModal({
 
       const total = count * hoursPerSession;
       const fixed = total.toFixed(1);
-      return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
+      return fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
     } catch (e) {
-      return '';
+      return "";
     }
   };
 
@@ -429,14 +507,14 @@ function CreateEditScheduleModal({
         <div className="flex items-center justify-between p-4 border-b">
           <div>
             <h2 className="text-lg font-semibold text-gray-800">
-              {event ? 'Edit Schedule' : 'Create Schedule'}
+              {event ? "Edit Schedule" : "Create Schedule"}
             </h2>
             {selectedDate && (
               <p className="text-sm text-gray-500">
-                {selectedDate.toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
+                {selectedDate.toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
                 })}
               </p>
             )}
@@ -490,9 +568,62 @@ function CreateEditScheduleModal({
                       isLoading={isLoadingAcademicPeriods}
                     />
                     {formData.academicPeriodId && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Schedule dates must be within the academic period range
-                      </p>
+                      <div className="mt-1">
+                        <p className="text-xs text-gray-500">
+                          Schedule dates must be within the academic period
+                          range
+                        </p>
+                        {(() => {
+                          const selectedPeriod = academicPeriods.find(
+                            (p) => p.id === formData.academicPeriodId
+                          );
+                          if (selectedPeriod) {
+                            return (
+                              <div className="flex gap-2 mt-1">
+                                {selectedPeriod.batchStatus && (
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded-full ${
+                                      selectedPeriod.batchStatus === "ongoing"
+                                        ? "bg-green-100 text-green-700"
+                                        : selectedPeriod.batchStatus ===
+                                          "upcoming"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}
+                                  >
+                                    {selectedPeriod.batchStatus
+                                      .charAt(0)
+                                      .toUpperCase() +
+                                      selectedPeriod.batchStatus.slice(1)}
+                                  </span>
+                                )}
+                                {selectedPeriod.enrollmentStatus && (
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded-full ${
+                                      selectedPeriod.enrollmentStatus === "open"
+                                        ? "bg-green-100 text-green-700"
+                                        : selectedPeriod.enrollmentStatus ===
+                                          "upcoming"
+                                        ? "bg-yellow-100 text-yellow-700"
+                                        : selectedPeriod.enrollmentStatus ===
+                                          "closed"
+                                        ? "bg-red-100 text-red-700"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}
+                                  >
+                                    Enrollment:{" "}
+                                    {selectedPeriod.enrollmentStatus
+                                      .charAt(0)
+                                      .toUpperCase() +
+                                      selectedPeriod.enrollmentStatus.slice(1)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
                     )}
                     {!formData.academicPeriodId && (
                       <p className="text-xs text-gray-500 mt-1">
@@ -539,6 +670,11 @@ function CreateEditScheduleModal({
                           onChange={handleChange}
                           min="06:00"
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                          style={{
+                            WebkitAppearance: "menulist-button",
+                            MozAppearance: "menulist-button",
+                            textTransform: "uppercase",
+                          }}
                           required
                         />
                       </div>
@@ -552,6 +688,11 @@ function CreateEditScheduleModal({
                           value={formData.time_end}
                           onChange={handleChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                          style={{
+                            WebkitAppearance: "menulist-button",
+                            MozAppearance: "menulist-button",
+                            textTransform: "uppercase",
+                          }}
                           required
                         />
                       </div>
@@ -570,17 +711,17 @@ function CreateEditScheduleModal({
                       {/* Day Selection Buttons */}
                       <div className="flex flex-wrap gap-2">
                         {[
-                          { value: 'M', label: 'Mon' },
-                          { value: 'T', label: 'Tue' },
-                          { value: 'W', label: 'Wed' },
-                          { value: 'TH', label: 'Thu' },
-                          { value: 'F', label: 'Fri' },
-                          { value: 'S', label: 'Sat' },
-                          { value: 'SU', label: 'Sun' },
+                          { value: "M", label: "Mon" },
+                          { value: "T", label: "Tue" },
+                          { value: "W", label: "Wed" },
+                          { value: "TH", label: "Thu" },
+                          { value: "F", label: "Fri" },
+                          { value: "S", label: "Sat" },
+                          { value: "SU", label: "Sun" },
                         ].map((day) => {
                           const isSelected = formData.days
                             ? formData.days
-                                .split(',')
+                                .split(",")
                                 .map((d) => d.trim())
                                 .includes(day.value)
                             : false;
@@ -591,8 +732,8 @@ function CreateEditScheduleModal({
                               onClick={() => handleDayToggle(day.value)}
                               className={`px-3 py-2 rounded text-sm font-medium transition-all ${
                                 isSelected
-                                  ? 'bg-dark-red-2 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  ? "bg-dark-red-2 text-white"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                               }`}
                             >
                               {day.label}
@@ -606,11 +747,24 @@ function CreateEditScheduleModal({
                             Start Date<span className="text-red-500">*</span>
                           </label>
                           <input
+                            ref={periodStartRef}
                             type="date"
                             name="periodStart"
                             value={formData.periodStart}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                            onFocus={(e) => {
+                              e.target.type = "date";
+                              e.target.value = formData.periodStart;
+                            }}
+                            onBlur={(e) => {
+                              if (formData.periodStart) {
+                                e.target.type = "text";
+                                e.target.value = formatDateDisplay(
+                                  formData.periodStart
+                                );
+                              }
+                            }}
                             required
                           />
                         </div>
@@ -619,11 +773,24 @@ function CreateEditScheduleModal({
                             End Date<span className="text-red-500">*</span>
                           </label>
                           <input
+                            ref={periodEndRef}
                             type="date"
                             name="periodEnd"
                             value={formData.periodEnd}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2"
+                            onFocus={(e) => {
+                              e.target.type = "date";
+                              e.target.value = formData.periodEnd;
+                            }}
+                            onBlur={(e) => {
+                              if (formData.periodEnd) {
+                                e.target.type = "text";
+                                e.target.value = formatDateDisplay(
+                                  formData.periodEnd
+                                );
+                              }
+                            }}
                             required
                           />
                         </div>
@@ -674,8 +841,8 @@ function CreateEditScheduleModal({
                         onClick={() => handleColorSelect(color)}
                         className={`w-8 h-8 rounded-full border-2 transition-all ${
                           formData.color === color
-                            ? 'border-gray-800 scale-110'
-                            : 'border-gray-300 hover:scale-105'
+                            ? "border-gray-800 scale-110"
+                            : "border-gray-300 hover:scale-105"
                         }`}
                         style={{ backgroundColor: color }}
                       ></button>
@@ -759,61 +926,80 @@ function CreateEditScheduleModal({
         onStudentSelected={({ student, conflict }) => {
           if (conflict?.hasConflicts) {
             Swal.fire({
-              title: 'Schedule Conflict',
-              text: 'Selected student has a conflicting schedule in this period.',
-              icon: 'warning',
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#992525',
+              title: "Schedule Conflict",
+              text: "Selected student has a conflicting schedule in this period.",
+              icon: "warning",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#992525",
             });
             return;
           }
           if (!event?.id) {
             Swal.fire({
-              title: 'Schedule Not Saved',
-              text: 'Save the schedule first before adding students.',
-              icon: 'info',
-              confirmButtonText: 'OK',
-              confirmButtonColor: '#000000',
+              title: "Schedule Not Saved",
+              text: "Save the schedule first before adding students.",
+              icon: "info",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#000000",
             });
             return;
           }
 
           // Format schedule details for confirmation
-          const dayMap = { M: 'Mon', T: 'Tue', W: 'Wed', TH: 'Thu', F: 'Fri', S: 'Sat', SU: 'Sun' };
+          const dayMap = {
+            M: "Mon",
+            T: "Tue",
+            W: "Wed",
+            TH: "Thu",
+            F: "Fri",
+            S: "Sat",
+            SU: "Sun",
+          };
           const daysDisplay = formData.days
-            ? formData.days.split(',').map(d => dayMap[d.trim()] || d.trim()).join(', ')
-            : 'N/A';
-          const timeDisplay = formData.time_start && formData.time_end
-            ? `${formData.time_start} - ${formData.time_end}`
-            : 'N/A';
-          const dateRangeDisplay = formData.periodStart && formData.periodEnd
-            ? `${new Date(formData.periodStart).toLocaleDateString()} - ${new Date(formData.periodEnd).toLocaleDateString()}`
-            : 'N/A';
+            ? formData.days
+                .split(",")
+                .map((d) => dayMap[d.trim()] || d.trim())
+                .join(", ")
+            : "N/A";
+          const timeDisplay =
+            formData.time_start && formData.time_end
+              ? `${convertTo12Hour(formData.time_start)} - ${convertTo12Hour(
+                  formData.time_end
+                )}`
+              : "N/A";
+          const dateRangeDisplay =
+            formData.periodStart && formData.periodEnd
+              ? `${new Date(
+                  formData.periodStart
+                ).toLocaleDateString()} - ${new Date(
+                  formData.periodEnd
+                ).toLocaleDateString()}`
+              : "N/A";
 
           // Confirmation dialog
           Swal.fire({
-            title: 'Add Student to Schedule?',
+            title: "Add Student to Schedule?",
             html: `
               <div style="text-align: left; margin-top: 10px;">
                 <p><strong>Student:</strong> ${student.name}</p>
-                <p><strong>Course:</strong> ${formData.courseName || 'N/A'}</p>
+                <p><strong>Course:</strong> ${formData.courseName || "N/A"}</p>
                 <p><strong>Days:</strong> ${daysDisplay}</p>
                 <p><strong>Time:</strong> ${timeDisplay}</p>
                 <p><strong>Date Range:</strong> ${dateRangeDisplay}</p>
               </div>
             `,
-            icon: 'question',
+            icon: "question",
             showCancelButton: true,
-            confirmButtonText: 'Yes, add student',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#992525',
-            cancelButtonColor: '#6B7280',
+            confirmButtonText: "Yes, add student",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#992525",
+            cancelButtonColor: "#6B7280",
           }).then((result) => {
             if (result.isConfirmed) {
               // Show loading
               Swal.fire({
-                title: 'Adding Student...',
-                text: 'Please wait while we add the student to the schedule.',
+                title: "Adding Student...",
+                text: "Please wait while we add the student to the schedule.",
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 didOpen: () => {
@@ -826,30 +1012,30 @@ function CreateEditScheduleModal({
                 .then((resp) => {
                   if (resp?.data?.alreadyLinked) {
                     Swal.fire({
-                      title: 'Already Added',
+                      title: "Already Added",
                       text: `${student.name} is already linked to this schedule.`,
-                      icon: 'info',
-                      confirmButtonText: 'OK',
-                      confirmButtonColor: '#992525',
+                      icon: "info",
+                      confirmButtonText: "OK",
+                      confirmButtonColor: "#992525",
                     });
                   } else {
                     Swal.fire({
-                      title: 'Success!',
+                      title: "Success!",
                       text: `${student.name} has been added to the schedule.`,
-                      icon: 'success',
-                      confirmButtonText: 'OK',
-                      confirmButtonColor: '#992525',
+                      icon: "success",
+                      confirmButtonText: "OK",
+                      confirmButtonColor: "#992525",
                     });
                   }
                   setStudentsRefreshTick((v) => v + 1);
                 })
                 .catch((error) => {
                   Swal.fire({
-                    title: 'Failed to Add Student',
-                    text: error.response?.data?.message || 'Please try again.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#ff0000',
+                    title: "Failed to Add Student",
+                    text: error.response?.data?.message || "Please try again.",
+                    icon: "error",
+                    confirmButtonText: "OK",
+                    confirmButtonColor: "#ff0000",
                   });
                 });
             }
@@ -923,11 +1109,19 @@ CreateEditScheduleModal.propTypes = {
   academicPeriods: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
-      periodName: PropTypes.string.isRequired,
       batchName: PropTypes.string,
       startAt: PropTypes.string.isRequired,
       endAt: PropTypes.string.isRequired,
-      status: PropTypes.string,
+      batchStatus: PropTypes.oneOf(["upcoming", "ongoing", "ended"]),
+      enrollmentStatus: PropTypes.oneOf([
+        "upcoming",
+        "open",
+        "ended",
+        "closed",
+      ]),
+      isEnrollmentClosed: PropTypes.bool,
+      enrollmentOpenAt: PropTypes.string,
+      enrollmentCloseAt: PropTypes.string,
     })
   ),
   isLoadingAcademicPeriods: PropTypes.bool,

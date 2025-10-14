@@ -171,9 +171,11 @@ model course_requisite {
 model academic_period {
   id        String               @id @default(cuid())
   batchName String
-  status    AcademicPeriodStatus @default(upcoming)
   startAt   DateTime
   endAt     DateTime
+  enrollmentOpenAt DateTime
+  enrollmentCloseAt DateTime
+  isEnrollmentClosed Boolean @default(false)
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
   deletedAt DateTime?
@@ -218,12 +220,6 @@ model logs {
 enum Visibility {
   hidden
   visible
-}
-
-enum AcademicPeriodStatus {
-  upcoming
-  ongoing
-  ended
 }
 
 enum RequisiteType {
