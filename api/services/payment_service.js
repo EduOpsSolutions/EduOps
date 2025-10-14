@@ -133,6 +133,7 @@ const buildPaymentWhereClause = (filters = {}) => {
  * @returns {Promise<Object>} Payment creation result
  */
 export const createManualPayment = async (transactionData) => {
+  console.log('createManualPayment received data:', transactionData);
   const {
     studentId,
     firstName,
@@ -144,21 +145,34 @@ export const createManualPayment = async (transactionData) => {
     remarks,
   } = transactionData;
 
+  const user = await prisma.users.findUnique({
+    where: {
+      userId: studentId
+    }
+  });
+
+  if (!user) {
+    throw new Error(`User with student ID '${studentId}' not found`);
+  }
+
   const customTransactionId = await generatePaymentId();
 
   // Create payment record for manual transaction
+  const paymentData = {
+    transactionId: customTransactionId,
+    userId: user.id, 
+    amount: parseFloat(amountPaid),
+    status: PAYMENT_STATUS.PAID,
+    paymentMethod: paymentMethod || "Physical Payment",
+    referenceNumber: referenceNumber,
+    feeType: purpose,
+    remarks: remarks || null,
+    paidAt: new Date(),
+  };
+  
+  console.log('Creating payment with data:', paymentData);
   const payment = await prisma.payments.create({
-    data: {
-      transactionId: customTransactionId,
-      userId: studentId,
-      amount: parseFloat(amountPaid),
-      status: PAYMENT_STATUS.PAID,
-      paymentMethod: paymentMethod || "Physical Payment",
-      referenceNumber: referenceNumber,
-      feeType: purpose,
-      remarks: remarks || `Manual ${purpose} payment`,
-      paidAt: new Date(),
-    },
+    data: paymentData,
   });
 
   return {

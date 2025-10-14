@@ -68,8 +68,18 @@ function TransactionDetailModal({
             <label className="font-semibold text-gray-700 w-32 mb-1 sm:mb-0">
               Payment ID:
             </label>
-            <span className="text-gray-900 font-mono">{transaction.id}</span>
+            <span className="text-gray-900 font-mono">{transaction.transactionId}</span>
           </div>
+
+          {/* OR/Reference Number */}
+          {transaction.referenceNumber && (
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <label className="font-semibold text-gray-700 w-32 mb-1 sm:mb-0">
+                OR/Reference Number:
+              </label>
+              <span className="text-gray-900 font-mono">{transaction.referenceNumber}</span>
+            </div>
+          )}
 
           {/* Student Information */}
           <div className="flex flex-col sm:flex-row sm:items-center">
@@ -127,15 +137,13 @@ function TransactionDetailModal({
             <span className="text-gray-900">{transaction.paymentMethod}</span>
           </div>
 
-          {/* OR/Reference Number (use PayMongo Payment ID for OR) */}
-          {(transaction?.paymongoDetails?.paymongoId || transaction?.paymongoDetails?.referenceNumber || transaction?.referenceNumber) && (
+          {/* OR/Reference ID */}
+          {transaction.paymongoId && (
             <div className="flex flex-col sm:flex-row sm:items-center">
               <label className="font-semibold text-gray-700 w-32 mb-1 sm:mb-0">
-                OR/Reference:
+                OR/Reference ID:
               </label>
-              <span className="text-gray-900 font-mono">
-                {transaction?.paymongoDetails?.paymongoId || transaction?.paymongoDetails?.referenceNumber || transaction?.referenceNumber}
-              </span>
+              <span className="text-gray-900 font-mono">{transaction.paymongoId}</span>
             </div>
           )}
 

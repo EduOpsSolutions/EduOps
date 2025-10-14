@@ -5,33 +5,21 @@ import axiosInstance from '../utils/axios';
 const useTransactionSearchStore = createSearchStore({
   initialData: [],
   defaultSearchParams: {
-    searchTerm: "",
-    status: ""
+    searchTerm: ""
   },
-  searchableFields: ["firstName", "lastName", "userId", "feeType"],
-  exactMatchFields: ["status"],
+  searchableFields: ["firstName", "lastName", "userId", "studentId", "feeType"],
+  exactMatchFields: [],
   initialItemsPerPage: 10,
   filterFunction: (data, params) => {
-    if (!params.searchTerm && !params.status) return data;
+    if (!params.searchTerm) return data;
     
-    let filteredData = data;
-    
-    // Filter by search term
-    if (params.searchTerm) {
-      filteredData = filteredData.filter(transaction => 
-        transaction.firstName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
-        transaction.lastName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
-        transaction.userId?.toString().includes(params.searchTerm) ||
-        transaction.feeType?.toLowerCase().includes(params.searchTerm.toLowerCase())
-      );
-    }
-    
-    // Filter by status
-    if (params.status) {
-      filteredData = filteredData.filter(transaction => transaction.status === params.status);
-    }
-    
-    return filteredData;
+    return data.filter(transaction => 
+      transaction.firstName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
+      transaction.lastName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
+      transaction.userId?.toString().includes(params.searchTerm) ||
+      transaction.studentId?.toString().includes(params.searchTerm) ||
+      transaction.feeType?.toLowerCase().includes(params.searchTerm.toLowerCase())
+    );
   },
   showResultsOnLoad: true
 });
@@ -98,9 +86,8 @@ const useTransactionStore = create((set, get) => ({
       transactionDetailModal: true 
     });
   },
-
-  openAddTransactionModal: () => set({ addTransactionModal: true }),
   
+  openAddTransactionModal: () => set({ addTransactionModal: true }),
   closeAddTransactionModal: () => set({ addTransactionModal: false }),
   
   openDetailModal: () => set({ transactionDetailModal: true }),
@@ -157,7 +144,6 @@ const useTransactionStore = create((set, get) => ({
       set({ loading: true });
       
       const { transactions } = get();
-      // Find all transactions with PayMongo IDs
       const paymongoTransactions = transactions.filter(transaction => 
         transaction.paymongoId && (transaction.status === 'paid' || transaction.status === 'pending')
       );
@@ -194,8 +180,6 @@ const useTransactionStore = create((set, get) => ({
       const response = await axiosInstance.get(`/payments/${paymentId}/status`);
       if (response.data.success) {
         const { selectedTransaction } = get();
-        
-        // Update the selected transaction in the modal
         if (selectedTransaction && selectedTransaction.id === paymentId) {
           set({
             selectedTransaction: {

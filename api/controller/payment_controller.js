@@ -40,7 +40,6 @@ const createManualTransaction = async (req, res) => {
     const result = await createManualPayment(req.body);
     return sendSuccess(res, result, SUCCESS_MESSAGES.MANUAL_TRANSACTION_CREATED, 201);
   } catch (error) {
-    console.error("Create manual transaction error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -52,7 +51,6 @@ const getPaymentDetails = async (req, res) => {
     const payment = await getPaymentWithSync(paymentId);
     return sendSuccess(res, payment);
   } catch (error) {
-    console.error("Get payment details error:", error);
     const statusCode = error.message === ERROR_MESSAGES.PAYMENT_NOT_FOUND ? 404 : 500;
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, statusCode, error.message);
   }
@@ -67,7 +65,6 @@ const getPaymentsByUserId = async (req, res) => {
     const result = await getPaymentsByUser(userId, { page, limit, status });
     return sendSuccess(res, result);
   } catch (error) {
-    console.error("Get payments by user ID error:", error);
     const statusCode = error.message === ERROR_MESSAGES.USER_NOT_FOUND ? 404 : 500;
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, statusCode, error.message);
   }
@@ -80,7 +77,6 @@ const getPaymentMethods = async (req, res) => {
     const result = await getAvailablePaymentMethods();
     return sendSuccess(res, result);
   } catch (error) {
-    console.error("Get payment methods error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -92,7 +88,6 @@ const refreshPaymentStatus = async (req, res) => {
     const result = await getPaymentWithSync(paymentId);
     return sendSuccess(res, result, "Payment status refreshed successfully");
   } catch (error) {
-    console.error("Refresh payment status error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -104,7 +99,6 @@ const getAllPaymentTransactions = async (req, res) => {
     const result = await getAllTransactions({ page, limit, status, searchTerm });
     return sendSuccess(res, result);
   } catch (error) {
-    console.error("Get all transactions error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -116,7 +110,6 @@ const forceSyncPaymentStatusController = async (req, res) => {
     const result = await forceSyncPaymentStatus(paymentId);
     return sendSuccess(res, result, "Payment status force synced successfully");
   } catch (error) {
-    console.error("Force sync payment status error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -130,7 +123,6 @@ const manualSyncPayment = async (req, res) => {
       return sendError(res, "Payment intent ID is required", 400);
     }
 
-    console.log(`Manual sync requested for payment intent: ${paymentIntentId}`);
     
     // Get the latest status from PayMongo
     const paymongoResult = await getPayMongoPaymentIntent(paymentIntentId);
@@ -150,7 +142,6 @@ const manualSyncPayment = async (req, res) => {
     }
 
     const paymongoStatus = paymongoResult.data?.data?.attributes?.status;
-    console.log(`PayMongo status: ${paymongoStatus}, Local status: ${payment.status}`);
 
     if (paymongoStatus === 'succeeded' && payment.status === 'pending') {
       await prisma.payments.update({
@@ -161,7 +152,6 @@ const manualSyncPayment = async (req, res) => {
         }
       });
       
-      console.log(`Successfully synced payment ${payment.id} to paid status`);
       
       return sendSuccess(res, {
         paymentId: payment.id,
@@ -180,7 +170,6 @@ const manualSyncPayment = async (req, res) => {
     }, "Payment status is already up to date");
 
   } catch (error) {
-    console.error("Manual sync payment error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -191,7 +180,6 @@ const bulkSyncPendingPaymentsController = async (req, res) => {
     const result = await bulkSyncPendingPayments();
     return sendSuccess(res, result, "Bulk sync of pending payments completed");
   } catch (error) {
-    console.error("Bulk sync pending payments error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -202,7 +190,6 @@ const cleanupOrphanedPaymentsController = async (req, res) => {
     const result = await cleanupOrphanedPayments();
     return sendSuccess(res, result, "Orphaned payments cleanup completed");
   } catch (error) {
-    console.error("Cleanup orphaned payments error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };
@@ -210,10 +197,6 @@ const cleanupOrphanedPaymentsController = async (req, res) => {
 // Webhook Handling
 const handleWebhook = async (req, res) => {
   try {
-    console.log('=== WEBHOOK RECEIVED ===');
-    console.log('Time:', new Date().toISOString());
-    console.log('Headers:', req.headers);
-    console.log('Body:', JSON.stringify(req.body, null, 2));
 
     // Verify webhook signature
     verifyWebhookSignature(req);
@@ -221,13 +204,9 @@ const handleWebhook = async (req, res) => {
     // Process webhook event
     const event = req.body;
     const eventType = event.data.attributes.type;
-    console.log(`📨 Processing webhook event: ${eventType}`);
     
     const result = await processWebhookEvent(event);
 
-    console.log('=== WEBHOOK PROCESSED ===');
-    console.log('Result:', result);
-    console.log('Time:', new Date().toISOString());
 
     // Always respond with 200 to acknowledge the webhook
     return res.status(200).json({
@@ -235,9 +214,6 @@ const handleWebhook = async (req, res) => {
       body: { message: "SUCCESS", result },
     });
   } catch (error) {
-    console.error("Webhook processing error:", error);
-    console.error("Time:", new Date().toISOString());
-    
     // Handle specific webhook errors
     if (error.message.includes("Webhook secret not configured")) {
       return res.status(500).json({ error: "Webhook secret not configured" });
@@ -268,7 +244,6 @@ const sendPaymentLinkEmail = async (req, res) => {
       return sendError(res, result.message, 500, result.error);
     }
   } catch (error) {
-    console.error("Send payment link email error:", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };

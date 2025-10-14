@@ -26,12 +26,10 @@ function Transaction() {
     closeTransactionDetailModal,
     handleModalSubmit,
     openCheckoutUrl,
-    refreshPaymentStatus,
     clearError,
     resetStore
   } = useTransactionStore();
 
-  // Auto-refresh every 3 seconds for live status updates
   useEffect(() => {
     fetchTransactions();
 
@@ -90,9 +88,12 @@ function Transaction() {
               <div>
                 <SearchField
                   name="searchTerm"
-                  placeholder="Search by Student ID or Name"
+                  placeholder="Search Student ID, Name, or Fee Type"
                   value={searchStore.searchParams.searchTerm || ""}
-                  onChange={searchStore.handleInputChange}
+                  onChange={(e) => {
+                    searchStore.handleInputChange(e);
+                    handleSearch();
+                  }}
                   onClick={handleSearch}
                   className="w-full sm:w-80"
                 />
@@ -121,8 +122,6 @@ function Transaction() {
               </div>
             </div>
           )}
-
-
 
           {/* Table Section */}
           <div className="pt-2">

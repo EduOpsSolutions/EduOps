@@ -9,12 +9,15 @@ const ModalTextField = ({
   placeholder,
   required = false,
   className = '',
+  inputClassName = '',
   disabled = false,
   min,
   max,
   step,
   children, // For prefix/suffix content like peso symbol
   options = [],
+  isTextArea = false,
+  rows = 4,
   ...props
 }) => {
   if (type === 'option') {
@@ -41,6 +44,25 @@ const ModalTextField = ({
       </div>
     );
   }
+
+  if (isTextArea) {
+    return (
+      <div className={className}>
+        <label className="block text-sm font-medium mb-1">{label}</label>
+        <textarea
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+          disabled={disabled}
+          rows={rows}
+          className={`w-full border border-dark-red-2 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red resize-vertical ${inputClassName}`}
+          {...props}
+        />
+      </div>
+    );
+  }
   return (
     <div className={className}>
       <label className="block text-sm font-medium mb-1">{label}</label>
@@ -61,7 +83,7 @@ const ModalTextField = ({
             type === 'number'
               ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
               : ''
-          } ${children ? 'pl-8 pr-3' : ''}`}
+          } ${children ? 'pl-8 pr-3' : ''} ${inputClassName}`}
           {...props}
         />
       </div>
