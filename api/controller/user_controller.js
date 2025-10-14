@@ -779,10 +779,10 @@ const getStudentById = async (req, res) => {
   const { studentId } = req.params;
 
   if (!studentId) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: true,
       success: false,
-      message: 'Student ID is required' 
+      message: "Student ID is required",
     });
   }
 
@@ -790,7 +790,7 @@ const getStudentById = async (req, res) => {
     const student = await prisma.users.findFirst({
       where: {
         userId: studentId,
-        role: 'STUDENT',
+        role: "STUDENT",
         deletedAt: null,
       },
       select: {
@@ -804,26 +804,26 @@ const getStudentById = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: true,
         success: false,
-        message: 'Student not found with the provided ID' 
+        message: "Student not found with the provided ID",
       });
     }
 
-    res.json({ 
+    res.json({
       error: false,
       success: true,
       data: student,
-      message: 'Student found successfully'
+      message: "Student found successfully",
     });
   } catch (error) {
-    console.error('Error fetching student by ID:', error);
-    res.status(500).json({ 
+    console.error("Error fetching student by ID:", error);
+    res.status(500).json({
       error: true,
       success: false,
-      message: 'Server error while fetching student',
-      error_details: error.message
+      message: "Server error while fetching student",
+      error_details: error.message,
     });
   }
 };
