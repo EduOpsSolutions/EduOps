@@ -40,6 +40,7 @@ export const getSchedules = async (req, res) => {
         : null,
       color: schedule.color || "#FFCF00",
       notes: schedule.notes,
+      capacity: schedule.capacity,
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
     }));
@@ -93,6 +94,7 @@ export const getSchedule = async (req, res) => {
         : null,
       color: schedule.color || "#FFCF00",
       notes: schedule.notes,
+      capacity: schedule.capacity,
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
     };
@@ -183,6 +185,7 @@ export const getMySchedules = async (req, res) => {
         : null,
       color: schedule.color || "#FFCF00",
       notes: schedule.notes,
+      capacity: schedule.capacity,
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
     }));
@@ -307,6 +310,15 @@ export const createSchedule = async (req, res) => {
       });
     }
 
+    // Validate capacity
+    const capacity = parseInt(req.body.capacity, 10);
+    if (capacity && (capacity < 1 || capacity > 100)) {
+      return res.status(400).json({
+        error: true,
+        message: "Capacity must be between 1 and 100",
+      });
+    }
+
     const body = {
       courseId: req.body.courseId,
       academicPeriodId: req.body.academicPeriodId,
@@ -319,6 +331,7 @@ export const createSchedule = async (req, res) => {
       periodEnd: req.body.periodEnd,
       color: req.body.color,
       notes: req.body.notes,
+      capacity: capacity || 30,
     };
 
     const schedule = await ScheduleModel.createSchedule(body);
@@ -345,6 +358,7 @@ export const createSchedule = async (req, res) => {
         : null,
       color: schedule.color || "#FFCF00",
       notes: schedule.notes,
+      capacity: schedule.capacity,
     };
 
     res.status(201).json(transformedSchedule);
@@ -398,6 +412,27 @@ export const updateSchedule = async (req, res) => {
         });
       }
     }
+    // Validate capacity if provided
+    if (req.body.capacity !== undefined) {
+      const capacity = parseInt(req.body.capacity, 10);
+      if (capacity < 1 || capacity > 100) {
+        return res.status(400).json({
+          error: true,
+          message: "Capacity must be between 1 and 100",
+        });
+      }
+
+      const count = await prisma.user_schedule.count({
+        where: { scheduleId: parseInt(req.params.id, 10), deletedAt: null },
+      });
+
+      if (capacity < count) {
+        return res.status(400).json({
+          error: true,
+          message: `Cannot reduce capacity below current enrollment count of ${count}`,
+        });
+      }
+    }
 
     const schedule = await ScheduleModel.updateSchedule(
       req.params.id,
@@ -426,6 +461,10 @@ export const updateSchedule = async (req, res) => {
         : null,
       color: schedule.color || "#FFCF00",
       notes: schedule.notes,
+      capacity: schedule.capacity,
+      createdAt: schedule.createdAt,
+      updatedAt: schedule.updatedAt,
+      deletedAt: schedule.deletedAt,
     };
 
     res.json(transformedSchedule);
@@ -487,12 +526,23 @@ export const addStudentToSchedule = async (req, res) => {
     // Ensure schedule exists and not deleted
     const schedule = await prisma.schedule.findFirst({
       where: { id: scheduleId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, capacity: true },
     });
     if (!schedule) {
       return res
         .status(404)
         .json({ error: true, message: "Schedule not found" });
+    }
+
+    // Check capacity
+    const count = await prisma.user_schedule.count({
+      where: { scheduleId, deletedAt: null },
+    });
+
+    if (count >= schedule.capacity) {
+      return res
+        .status(400)
+        .json({ error: true, message: "Schedule capacity is full" });
     }
 
     // Ensure user exists and is a student
