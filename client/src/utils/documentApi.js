@@ -137,7 +137,7 @@ export const documentHelpers = {
     ...document,
     formattedAmount: document.price === 'paid' && document.amount 
       ? parseFloat(document.amount).toLocaleString('en-US', {
-          minimeFractionDigits: 2,
+          minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })
       : null,
