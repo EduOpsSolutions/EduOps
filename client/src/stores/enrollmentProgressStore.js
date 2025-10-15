@@ -126,8 +126,9 @@ const useEnrollmentStore = create((set, get) => ({
         throw new Error("Failed to upload file to storage");
       }
 
+      const apiUrl = process.env.REACT_APP_API_URL;
       const apiResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/enrollment/payment-proof`,
+        `${apiUrl}/enrollment/payment-proof`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

@@ -12,6 +12,7 @@ import { router as schedules } from "./schedule_routes.js";
 import { router as ai } from "./ai_routes.js";
 import payments from "./payment_routes.js";
 import documents from "./document_routes.js";
+import {router as grades} from './grades_routes.js';
 
 const router = express.Router();
 router.get("/", function (req, res) {
@@ -33,5 +34,6 @@ router.use("/schedules", schedules);
 router.use("/ai", ai);
 router.use("/payments", payments);
 router.use("/documents", documents);
+router.use('/grades', grades);
 
 export default router;
