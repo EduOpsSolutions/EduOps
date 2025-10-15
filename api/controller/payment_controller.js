@@ -12,6 +12,7 @@ import {
   sendError,
   generatePaymentId,
 } from "../services/payment_service.js";
+import { sendPaymentReceiptEmail } from "../services/paymentEmailService.js";
 import {
   verifyWebhookSignature,
   processWebhookEvent,
@@ -144,14 +145,52 @@ const manualSyncPayment = async (req, res) => {
     const paymongoStatus = paymongoResult.data?.data?.attributes?.status;
 
     if (paymongoStatus === 'succeeded' && payment.status === 'pending') {
-      await prisma.payments.update({
+      const updatedPayment = await prisma.payments.update({
         where: { id: payment.id },
         data: { 
           status: 'paid',
           paidAt: new Date()
-        }
+        },
+        include: PAYMENT_INCLUDES.WITH_USER
       });
       
+      // Send receipt email when payment status changes to paid
+      /*
+      if (updatedPayment.users && updatedPayment.users.email) {
+        console.log(`Sending payment receipt email to ${updatedPayment.users.email} after manual sync`);
+        
+        try {
+          const emailSent = await sendPaymentReceiptEmail(
+            updatedPayment.users.email,
+            {
+              transactionId: updatedPayment.transactionId,
+              referenceNumber: updatedPayment.referenceNumber,
+              amount: parseFloat(updatedPayment.amount),
+              paymentMethod: updatedPayment.paymentMethod || 'Online Payment',
+              feeType: updatedPayment.feeType,
+              remarks: updatedPayment.remarks,
+              paidAt: updatedPayment.paidAt,
+              createdAt: updatedPayment.createdAt,
+              currency: updatedPayment.currency || 'PHP'
+            },
+                {
+                  firstName: updatedPayment.users.firstName,
+                  lastName: updatedPayment.users.lastName,
+                  email: updatedPayment.users.email,
+                  student_id: updatedPayment.users.userId
+                }
+          );
+
+          if (emailSent) {
+            console.log(`Payment receipt email sent successfully to ${updatedPayment.users.email}`);
+          } else {
+            console.error(`Failed to send payment receipt email to ${updatedPayment.users.email}`);
+          }
+        } catch (emailError) {
+          console.error('Error sending payment receipt email after manual sync:', emailError);
+        }
+      }
+      */
       
       return sendSuccess(res, {
         paymentId: payment.id,
@@ -548,6 +587,44 @@ const checkPaymentStatus = async (req, res) => {
           });
           payment.status = 'paid';
           payment.paidAt = new Date();
+
+          // Send receipt email when payment status changes to paid
+          /*
+          if (payment.users && payment.users.email) {
+            console.log(`Sending payment receipt email to ${payment.users.email} after status sync`);
+            
+            try {
+              const emailSent = await sendPaymentReceiptEmail(
+                payment.users.email,
+                {
+                  transactionId: payment.transactionId,
+                  referenceNumber: payment.referenceNumber,
+                  amount: parseFloat(payment.amount),
+                  paymentMethod: finalPaymentMethod,
+                  feeType: payment.feeType,
+                  remarks: payment.remarks,
+                  paidAt: payment.paidAt,
+                  createdAt: payment.createdAt,
+                  currency: payment.currency || 'PHP'
+                },
+                {
+                  firstName: payment.users.firstName,
+                  lastName: payment.users.lastName,
+                  email: payment.users.email,
+                  student_id: payment.users.userId
+                }
+              );
+
+              if (emailSent) {
+                console.log(`Payment receipt email sent successfully to ${payment.users.email}`);
+              } else {
+                console.error(`Failed to send payment receipt email to ${payment.users.email}`);
+              }
+            } catch (emailError) {
+              console.error('Error sending payment receipt email after status sync:', emailError);
+            }
+          }
+          */
         } catch (updateError) {
           console.error('Failed to update payment status:', updateError);
         }

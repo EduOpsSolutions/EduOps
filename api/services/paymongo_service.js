@@ -7,6 +7,7 @@ import {
   PAYMONGO_METHOD_MAP,
   PAYMONGO_EVENTS 
 } from '../constants/payment_constants.js';
+import { sendPaymentReceiptEmail } from './paymentEmailService.js';
 
 const prisma = new PrismaClient();
 
@@ -135,6 +136,7 @@ export const processWebhookEvent = async (event) => {
   switch (eventType) {
     case PAYMONGO_EVENTS.LINK_PAYMENT_PAID:
       const linkPaymentMethod = getPaymentMethodFromPayMongo(eventData);
+      
       updateData = {
         status: "paid",
         paidAt: new Date(),
@@ -323,13 +325,54 @@ export const processWebhookEvent = async (event) => {
       };
   }
 
-
   if (paymentRecord && Object.keys(updateData).length > 0) {
     try {
-      await prisma.payments.update({
+      const updatedPayment = await prisma.payments.update({
         where: { id: paymentRecord.id },
         data: updateData,
+        include: {
+          user: true
+        }
       });
+
+      // Send receipt email if payment was successful
+      if (updateData.status === 'paid' && (updatedPayment.paymentEmail || updatedPayment.user)) {
+        const receiptEmail = updatedPayment.paymentEmail || updatedPayment.user?.email;
+        console.log(`Sending payment receipt email to ${receiptEmail}`);
+        
+        try {
+          const emailSent = await sendPaymentReceiptEmail(
+            receiptEmail,
+            {
+              transactionId: updatedPayment.transactionId,
+              referenceNumber: updatedPayment.referenceNumber,
+              amount: parseFloat(updatedPayment.amount),
+              paymentMethod: updatedPayment.paymentMethod || 'Online Payment',
+              feeType: updatedPayment.feeType,
+              remarks: updatedPayment.remarks,
+              paidAt: updatedPayment.paidAt,
+              createdAt: updatedPayment.createdAt,
+              currency: updatedPayment.currency
+            },
+            {
+              firstName: updatedPayment.user?.firstName || 'Student',
+              lastName: updatedPayment.user?.lastName || '',
+              email: updatedPayment.paymentEmail || updatedPayment.user?.email || receiptEmail,
+              student_id: updatedPayment.user?.userId,
+              studentName: updatedPayment.user ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}` : 'N/A'
+            }
+          );
+
+          if (emailSent) {
+            console.log(`Payment receipt email sent successfully to ${receiptEmail}`);
+          } else {
+            console.error(`Failed to send payment receipt email to ${receiptEmail}`);
+          }
+        } catch (emailError) {
+          console.error('Error sending payment receipt email:', emailError);
+        }
+      }
+
     } catch (updateError) {
       console.error(`Failed to update payment ${paymentRecord.id}:`, updateError);
     }
@@ -478,6 +521,34 @@ export const getPaymentIntent = async (paymentIntentId) => {
     };
   } catch (error) {
     console.error('Error retrieving PayMongo Payment Intent:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data || error.message
+    };
+  }
+};
+
+/**
+ * Get Payment details from PayMongo API to fetch billing information
+ * @param {string} paymentId - Payment ID
+ * @returns {Promise<Object>} PayMongo response with billing info
+ */
+export const getPaymentFromPayMongo = async (paymentId) => {
+  try {
+    const response = await axios.get(
+      `${PAYMONGO_CONFIG.BASE_URL}/v1/payments/${paymentId}`,
+      {
+        headers: createPayMongoAuthHeaders()
+      }
+    );
+
+    console.log('PayMongo Payment retrieved:', response.data);
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Error retrieving PayMongo Payment:', error.response?.data || error.message);
     return {
       success: false,
       error: error.response?.data || error.message

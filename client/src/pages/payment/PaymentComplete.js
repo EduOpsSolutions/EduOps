@@ -91,7 +91,7 @@ const PaymentComplete = () => {
                 </svg>
               </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
-            <p className="text-gray-600">Your payment has been processed successfully. You may close this page.</p>
+            <p className="text-gray-600">Your payment has been processed successfully. The receipt has been sent to your email address.</p>
             </div>
 
             {/* Payment Details Card */}
@@ -185,7 +185,6 @@ const PaymentComplete = () => {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-red-800 mb-2">Common Reasons:</h3>
             <ul className="list-disc list-inside space-y-1 text-red-700 text-sm">
-              <li>Payment was cancelled by user</li>
               <li>Insufficient funds in account</li>
               <li>Network connectivity issues</li>
               <li>Payment is still being processed</li>
@@ -208,7 +207,6 @@ const PaymentComplete = () => {
                   setError(null);
                   setLoading(true);
                   setRetryCount(0);
-                  // Retry the payment check
                   setTimeout(() => {
                     checkPaymentStatus(paymentIntentId);
                   }, 1000);

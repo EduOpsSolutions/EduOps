@@ -98,7 +98,7 @@ const PaymentPage = () => {
               <span class="text-green-600 font-semibold">Completed</span>
             </div>
           </div>
-          <!-- <p class="mt-3 text-sm text-gray-600">You will receive a confirmation email with your transaction ID shortly.</p> -->
+        <p class="mt-3 text-sm text-gray-600">The receipt will be sent to the email address shortly.</p>
         </div>
       `,
       showCancelButton: false,

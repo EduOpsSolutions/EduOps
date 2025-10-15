@@ -306,6 +306,7 @@ model payments {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   feeType             String?
+  paymentEmail        String?       // Email from payment form (for receipt)
   // Relations
   user              users               @relation(fields: [userId], references: [id])
   fee               fees?               @relation(fields: [feeId], references: [id])

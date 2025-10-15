@@ -5,7 +5,7 @@ import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
 } from "../constants/payment_constants.js";
-import { sendPaymentLinkEmail } from "./paymentEmailService.js";
+import { sendPaymentLinkEmail, sendPaymentReceiptEmail } from "./paymentEmailService.js";
 
 const prisma = new PrismaClient();
 
@@ -174,6 +174,43 @@ export const createManualPayment = async (transactionData) => {
   const payment = await prisma.payments.create({
     data: paymentData,
   });
+
+  // Send receipt email for manual payment
+  /*
+  try {
+    console.log(`Sending payment receipt email to ${user.email} for manual payment`);
+    
+    const emailSent = await sendPaymentReceiptEmail(
+      user.email,
+      {
+        transactionId: payment.transactionId,
+        referenceNumber: payment.referenceNumber,
+        amount: parseFloat(payment.amount),
+        paymentMethod: payment.paymentMethod,
+        feeType: payment.feeType,
+        remarks: payment.remarks,
+        paidAt: payment.paidAt,
+        createdAt: payment.createdAt,
+        currency: 'PHP'
+      },
+      {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        student_id: user.userId
+      }
+    );
+
+    if (emailSent) {
+      console.log(`Payment receipt email sent successfully to ${user.email}`);
+    } else {
+      console.error(`Failed to send payment receipt email to ${user.email}`);
+    }
+  } catch (emailError) {
+    console.error('Error sending payment receipt email for manual payment:', emailError);
+    // Don't fail the payment creation if email fails
+  }
+  */
 
   return {
     paymentId: payment.id,
@@ -467,6 +504,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         paymentMethod: "Online Payment", 
         feeType: feeType || 'tuition_fee',
         remarks: description || `Payment for ${firstName} ${lastName}`,
+        paymentEmail: email, // Store the email from payment form
       },
     });
 
