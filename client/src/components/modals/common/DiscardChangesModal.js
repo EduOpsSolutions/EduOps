@@ -3,8 +3,6 @@ import GrayButton from '../../buttons/GrayButton';
 import SmallButton from '../../buttons/SmallButton';
 
 function DiscardChangesModal({ show, onConfirm, onCancel }) {
-    console.log('DiscardChangesModal render, show:', show);
-    
     if (!show) return null;
 
     return (

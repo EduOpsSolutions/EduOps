@@ -5,6 +5,7 @@ export const filePaths = {
   enrollment: 'enrollment',
   proofIds: 'proof-ids',
   paymentProofs: 'payment-proofs',
+  grades: 'grades',
   uncategorized: 'uncategorized',
 };
 

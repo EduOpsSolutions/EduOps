@@ -109,7 +109,8 @@ const usePaymentStore = create((set, get) => ({
   preparePaymentData: () => {
     const { formData, studentData } = get();
     return {
-      userId: studentData?.id || null, 
+      userId: studentData?.id || null,
+      studentId: studentData?.userId || null, 
       firstName: formData.first_name,
       middleName: formData.middle_name || null,
       lastName: formData.last_name,
@@ -164,7 +165,7 @@ const usePaymentStore = create((set, get) => ({
 
     try {
       const paymentData = store.preparePaymentData();
-      const response = await axiosInstance.post('/payments', paymentData);
+      const response = await axiosInstance.post('/payments/send-email', paymentData);
       const { paymentId, amount, checkoutUrl } = response.data.data;
 
       await store.showDialog({
@@ -193,6 +194,21 @@ const usePaymentStore = create((set, get) => ({
       });
     } finally {
       set({ loading: false });
+    }
+  },
+
+  sendPaymentLinkEmail: async (paymentData) => {
+    try {
+      const response = await axiosInstance.post('/payments/send-email', paymentData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to send payment link email'
+      };
     }
   },
 }));

@@ -22,7 +22,7 @@ const LabelledInputField = ({
       {showLabel && (
         <label
           htmlFor={id}
-          class="block mb-2 text-sm font-medium dark:text-white"
+          className="block mb-2 text-sm font-medium dark:text-white"
         >
           {label}
         </label>

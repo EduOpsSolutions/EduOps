@@ -9,10 +9,10 @@ import { router as academicPeriods } from './academic_period_routes.js';
 import { router as academicPeriodCourses } from './academic_period_courses_routes.js';
 import { router as posts } from './post_routes.js';
 import { router as schedules } from './schedule_routes.js';
-import documents from './document_routes.js';
 import { router as ai } from './ai_routes.js';
 import payments from './payment_routes.js';
-import { router as reports } from './reports_routes.js';
+import documents from './document_routes.js';
+import { router as grades } from './grades_routes.js';
 
 const router = express.Router();
 router.get('/', function (req, res) {
@@ -35,5 +35,6 @@ router.use('/ai', ai);
 router.use('/payments', payments);
 router.use('/reports', reports);
 router.use('/documents', documents);
+router.use('/grades', grades);
 
 export default router;
