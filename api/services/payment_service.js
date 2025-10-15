@@ -472,7 +472,11 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
 
     console.log(`Created pending payment record: ${payment.id}`);
     
-  const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  // Use dynamic baseUrl for production and development
+  const isProd = process.env.ENVIRONMENT === 'production';
+  const baseUrl = isProd
+    ? process.env.PRODUCTION_CLIENT_URL || 'https://preprod-eduops.danred-server.uk/login'
+    : process.env.CLIENT_URL || 'http://localhost:3000';
   const checkoutUrl = `${baseUrl}/payment?paymentId=${payment.id}`;
 
     // User and payment details for email

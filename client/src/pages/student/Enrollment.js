@@ -486,7 +486,7 @@ function Enrollment() {
                     </svg>
                   </button>
                 )}
-              {/* Temporary Next Button for Demo */}
+              {/* Temporary Next Button for Demo
               <button
                 onClick={() => {
                   advanceToNextStep();
@@ -494,7 +494,7 @@ function Enrollment() {
                 className="fixed bottom-4 right-4 px-4 py-2 bg-german-red text-white rounded shadow-md hover:bg-dark-red"
               >
                 Next
-              </button>
+              </button> */}
             </div>
 
             {/* Contact Information Footer */}
