@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BsFileEarmarkText,
   BsFileEarmarkBarGraph,
   BsFileEarmarkSpreadsheet,
-  BsDownload,
   BsEye,
   BsCalendar,
   BsPeople,
@@ -13,24 +13,24 @@ import {
   BsFileEarmarkPdf,
   BsGraphUp,
   BsX,
-} from "react-icons/bs";
-import useAuthStore from "../../stores/authStore";
-import axiosInstance from "../../utils/axios";
-import Swal from "sweetalert2";
+} from 'react-icons/bs';
+import useAuthStore from '../../stores/authStore';
+import axiosInstance from '../../utils/axios';
+import Swal from 'sweetalert2';
 
 function Reports() {
   const [selectedReport, setSelectedReport] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [reportData, setReportData] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(false);
   const [reportParams, setReportParams] = useState({});
   const [academicPeriods, setAcademicPeriods] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [courseSearchTerm, setCourseSearchTerm] = useState("");
+  const [courseSearchTerm, setCourseSearchTerm] = useState('');
   const [isCoursesDropdownOpen, setIsCoursesDropdownOpen] = useState(false);
 
   const { getToken } = useAuthStore();
+  const navigate = useNavigate();
 
   const fetchAcademicPeriods = async () => {
     try {
@@ -41,8 +41,8 @@ function Reports() {
         },
       });
       const data = response.data;
-      console.log("Academic periods fetched:", data);
-      console.log("Type of data:", Array.isArray(data), typeof data);
+      console.log('Academic periods fetched:', data);
+      console.log('Type of data:', Array.isArray(data), typeof data);
 
       // Handle both array response and object with data property
       if (Array.isArray(data)) {
@@ -53,9 +53,9 @@ function Reports() {
         setAcademicPeriods([data]);
       }
 
-      console.log("Academic periods state updated");
+      console.log('Academic periods state updated');
     } catch (error) {
-      console.error("Error fetching academic periods:", error);
+      console.error('Error fetching academic periods:', error);
     }
   };
 
@@ -68,7 +68,7 @@ function Reports() {
         },
       });
       const data = response.data;
-      console.log("Courses fetched:", data);
+      console.log('Courses fetched:', data);
 
       // Handle both array response and object with data property
       if (Array.isArray(data)) {
@@ -79,7 +79,7 @@ function Reports() {
         setCourses([data]);
       }
     } catch (error) {
-      console.error("Error fetching courses:", error);
+      console.error('Error fetching courses:', error);
     }
   };
 
@@ -87,405 +87,399 @@ function Reports() {
   const reports = [
     {
       id: 1,
-      name: "Student Enrollment Report",
+      name: 'Student Enrollment Report',
       description:
-        "Comprehensive list of all students with their enrollment status, academic period, courses enrolled, and account status",
-      category: "Enrollment",
+        'Comprehensive list of all students with their enrollment status, academic period, courses enrolled, and account status',
+      category: 'Enrollment',
       icon: <BsPeople className="text-2xl" />,
-      color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-      endpoint: "student-enrollment",
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
+      endpoint: 'student-enrollment',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
+          required: true,
         },
         {
-          name: "courseIds",
-          label: "Courses (Multi-select)",
-          type: "multiselect",
-          source: "courses",
+          name: 'courseIds',
+          label: 'Courses (Multi-select)',
+          type: 'multiselect',
+          source: 'courses',
           searchable: true,
+          required: true,
         },
         {
-          name: "enrollmentStatus",
-          label: "Enrollment Request Status",
-          type: "select",
+          name: 'studentEnrollmentStatus',
+          label: 'Student Enrollment Status',
+          type: 'select',
           options: [
-            { value: null, label: "All" },
-            { value: "pending", label: "Pending" },
-            { value: "verified", label: "Verified" },
-            { value: "payment_pending", label: "Payment Pending" },
-            { value: "approved", label: "Approved" },
-            { value: "completed", label: "Completed" },
-            { value: "rejected", label: "Rejected" },
+            { value: 'all', label: 'All Students' },
+            { value: 'enrolled', label: 'Enrolled' },
+            { value: 'not_enrolled', label: 'Not Enrolled' },
           ],
+          default: 'all',
         },
         {
-          name: "studentEnrollmentStatus",
-          label: "Student Enrollment Status",
-          type: "select",
+          name: 'accountStatus',
+          label: 'Account Status',
+          type: 'select',
           options: [
-            { value: null, label: "All" },
-            { value: "enrolled", label: "Enrolled" },
-            { value: "completed", label: "Completed" },
-            { value: "dropped", label: "Dropped" },
-            { value: "withdrawn", label: "Withdrawn" },
+            { value: null, label: 'All' },
+            { value: 'active', label: 'Active' },
+            { value: 'disabled', label: 'Disabled' },
+            { value: 'inactive', label: 'Inactive' },
+            { value: 'suspended', label: 'Suspended' },
           ],
-        },
-        {
-          name: "accountStatus",
-          label: "Account Status",
-          type: "select",
-          options: [
-            { value: null, label: "All" },
-            { value: "active", label: "Active" },
-            { value: "disabled", label: "Disabled" },
-            { value: "inactive", label: "Inactive" },
-            { value: "suspended", label: "Suspended" },
-          ],
+          required: true,
         },
       ],
     },
     {
       id: 2,
-      name: "Financial Assessment Summary",
+      name: 'Financial Assessment Summary',
       description:
-        "Overview of student assessments, fees, payments, and outstanding balances",
-      category: "Financial",
+        'Overview of student assessments, fees, payments, and outstanding balances',
+      category: 'Financial',
       icon: <BsCash className="text-2xl" />,
       color:
-        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
-      endpoint: "financial-assessment",
+        'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+      endpoint: 'financial-assessment',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "status", label: "Status", type: "text" },
-        { name: "minBalance", label: "Min Balance", type: "number" },
-        { name: "maxBalance", label: "Max Balance", type: "number" },
+        { name: 'status', label: 'Status', type: 'text' },
+        { name: 'minBalance', label: 'Min Balance', type: 'number' },
+        { name: 'maxBalance', label: 'Max Balance', type: 'number' },
       ],
     },
     {
       id: 3,
-      name: "Grade Distribution Report",
+      name: 'Grade Distribution Report',
       description:
-        "Analysis of grade distributions across courses, programs, and academic periods",
-      category: "Academic",
+        'Analysis of grade distributions across courses, programs, and academic periods',
+      category: 'Academic',
       icon: <BsGraphUp className="text-2xl" />,
       color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "grade-distribution",
+        'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+      endpoint: 'grade-distribution',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "courseId", label: "Course ID", type: "text" },
-        { name: "gradeRange", label: "Grade Range", type: "text" },
+        { name: 'courseId', label: 'Course ID', type: 'text' },
+        { name: 'gradeRange', label: 'Grade Range', type: 'text' },
       ],
     },
     {
       id: 4,
-      name: "Course Enrollment Statistics",
-      description:
-        "Student count per course, section capacity, and enrollment trends",
-      category: "Enrollment",
+      name: 'Course Enrollment Statistics',
+      description: 'Student count per course and schedule capacity',
+      category: 'Enrollment',
       icon: <BsBook className="text-2xl" />,
-      color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-      endpoint: "course-enrollment-stats",
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
+      endpoint: 'course-enrollment-stats',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "courseId", label: "Course ID", type: "text" },
+        {
+          name: 'courseIds',
+          label: 'Courses (Multi-select)',
+          type: 'multiselect',
+          source: 'courses',
+          searchable: true,
+          required: true,
+        },
       ],
     },
     {
       id: 5,
-      name: "Transaction History Report",
+      name: 'Transaction History Report',
       description:
-        "Detailed log of all financial transactions including payments, refunds, and adjustments",
-      category: "Financial",
+        'Detailed log of all financial transactions including payments, refunds, and adjustments',
+      category: 'Financial',
       icon: <BsFileEarmarkBarGraph className="text-2xl" />,
       color:
-        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
-      endpoint: "transaction-history",
+        'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+      endpoint: 'transaction-history',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
-        { name: "minAmount", label: "Min Amount", type: "number" },
-        { name: "maxAmount", label: "Max Amount", type: "number" },
+        { name: 'startDate', label: 'Start Date', type: 'date' },
+        { name: 'endDate', label: 'End Date', type: 'date' },
+        { name: 'minAmount', label: 'Min Amount', type: 'number' },
+        { name: 'maxAmount', label: 'Max Amount', type: 'number' },
       ],
     },
     {
       id: 6,
-      name: "Faculty Teaching Load Report",
+      name: 'Faculty Teaching Load Report',
       description:
-        "Summary of teaching assignments, units, and schedules for all faculty members",
-      category: "Faculty",
+        'Summary of teaching assignments, units, and schedules for all faculty members',
+      category: 'Faculty',
       icon: <BsClipboardCheck className="text-2xl" />,
       color:
-        "bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-300",
-      endpoint: "faculty-teaching-load",
+        'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-300',
+      endpoint: 'faculty-teaching-load',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "facultyId", label: "Faculty ID", type: "text" },
+        { name: 'facultyId', label: 'Faculty ID', type: 'text' },
       ],
     },
     {
       id: 7,
-      name: "Student Academic Progress",
+      name: 'Student Academic Progress',
       description:
-        "Track student progress including completed units, GPA, and remaining requirements",
-      category: "Academic",
+        'Track student progress including completed units, GPA, and remaining requirements',
+      category: 'Academic',
       icon: <BsFileEarmarkText className="text-2xl" />,
       color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "student-academic-progress",
+        'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+      endpoint: 'student-academic-progress',
       parameters: [
-        { name: "studentId", label: "Student ID", type: "text" },
+        { name: 'studentId', label: 'Student ID', type: 'text' },
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
       ],
     },
     {
       id: 8,
-      name: "Enrollment Period Analysis",
+      name: 'Enrollment Period Analysis',
       description:
-        "Statistics on enrollment periods including start/end dates and enrollment counts",
-      category: "Enrollment",
+        'Statistics on enrollment periods including start/end dates and enrollment counts',
+      category: 'Enrollment',
       icon: <BsCalendar className="text-2xl" />,
-      color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-      endpoint: "enrollment-period-analysis",
-      parameters: [{ name: "schoolYear", label: "School Year", type: "text" }],
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
+      endpoint: 'enrollment-period-analysis',
+      parameters: [{ name: 'schoolYear', label: 'School Year', type: 'text' }],
     },
     {
       id: 9,
-      name: "Outstanding Balance Report",
+      name: 'Outstanding Balance Report',
       description:
-        "List of students with unpaid balances and aging analysis of receivables",
-      category: "Financial",
+        'List of students with unpaid balances and aging analysis of receivables',
+      category: 'Financial',
       icon: <BsCash className="text-2xl" />,
       color:
-        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
-      endpoint: "outstanding-balance",
+        'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+      endpoint: 'outstanding-balance',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
         {
-          name: "minBalance",
-          label: "Min Balance (default: 0.01)",
-          type: "number",
+          name: 'minBalance',
+          label: 'Min Balance (default: 0.01)',
+          type: 'number',
         },
       ],
     },
     {
       id: 10,
-      name: "Document Submission Status",
+      name: 'Document Submission Status',
       description:
-        "Track status of required document submissions and pending validations",
-      category: "Documents",
+        'Track status of required document submissions and pending validations',
+      category: 'Documents',
       icon: <BsFileEarmarkPdf className="text-2xl" />,
-      color: "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300",
-      endpoint: "document-submission-status",
+      color: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',
+      endpoint: 'document-submission-status',
       parameters: [
-        { name: "status", label: "Status", type: "text" },
-        { name: "studentId", label: "Student ID", type: "text" },
+        { name: 'status', label: 'Status', type: 'text' },
+        { name: 'studentId', label: 'Student ID', type: 'text' },
       ],
     },
     {
       id: 11,
-      name: "Class Schedule Report",
+      name: 'Class Schedule Report',
       description:
-        "Complete class schedule with room assignments, time slots, and instructor information",
-      category: "Academic",
+        'Complete class schedule with room assignments, time slots, and instructor information',
+      category: 'Academic',
       icon: <BsCalendar className="text-2xl" />,
       color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "class-schedule",
+        'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+      endpoint: 'class-schedule',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "courseId", label: "Course ID", type: "text" },
-        { name: "days", label: "Days", type: "text" },
+        { name: 'courseId', label: 'Course ID', type: 'text' },
+        { name: 'days', label: 'Days', type: 'text' },
       ],
     },
     {
       id: 12,
-      name: "Student Ledger Summary",
+      name: 'Student Ledger Summary',
       description:
-        "Individual student ledgers showing charges, payments, and balance history",
-      category: "Financial",
+        'Individual student ledgers showing charges, payments, and balance history',
+      category: 'Financial',
       icon: <BsFileEarmarkSpreadsheet className="text-2xl" />,
       color:
-        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
-      endpoint: "student-ledger-summary",
+        'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+      endpoint: 'student-ledger-summary',
       parameters: [
         {
-          name: "studentId",
-          label: "Student ID (Required)",
-          type: "text",
+          name: 'studentId',
+          label: 'Student ID (Required)',
+          type: 'text',
           required: true,
         },
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
       ],
     },
     {
       id: 13,
-      name: "Enrollment Requests Log",
+      name: 'Enrollment Requests Log',
       description:
-        "History of enrollment requests with approval/rejection status and timestamps",
-      category: "Enrollment",
+        'History of enrollment requests with approval/rejection status and timestamps',
+      category: 'Enrollment',
       icon: <BsClipboardCheck className="text-2xl" />,
-      color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-      endpoint: "enrollment-requests-log",
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
+      endpoint: 'enrollment-requests-log',
       parameters: [
-        { name: "status", label: "Status", type: "text" },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
+        { name: 'status', label: 'Status', type: 'text' },
+        { name: 'startDate', label: 'Start Date', type: 'date' },
+        { name: 'endDate', label: 'End Date', type: 'date' },
       ],
     },
     {
       id: 14,
-      name: "Fee Structure Report",
-      description: "Breakdown of all fees by program, year level, and fee type",
-      category: "Financial",
+      name: 'Fee Structure Report',
+      description: 'Breakdown of all fees by program, year level, and fee type',
+      category: 'Financial',
       icon: <BsFileEarmarkBarGraph className="text-2xl" />,
       color:
-        "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300",
-      endpoint: "fee-structure",
+        'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300',
+      endpoint: 'fee-structure',
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: 'periodId',
+          label: 'Academic Period',
+          type: 'select',
+          source: 'academicPeriods',
         },
-        { name: "feeType", label: "Fee Type", type: "text" },
+        { name: 'feeType', label: 'Fee Type', type: 'text' },
       ],
     },
     {
       id: 15,
-      name: "User Account Activity",
+      name: 'User Account Activity',
       description:
-        "Log of user activities including logins, profile updates, and system access",
-      category: "System",
+        'Log of user activities including logins, profile updates, and system access',
+      category: 'System',
       icon: <BsPeople className="text-2xl" />,
-      color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-      endpoint: "user-account-activity",
+      color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+      endpoint: 'user-account-activity',
       parameters: [
         {
-          name: "role",
-          label: "Role",
-          type: "select",
-          options: ["student", "teacher", "admin"],
+          name: 'role',
+          label: 'Role',
+          type: 'select',
+          options: ['student', 'teacher', 'admin'],
         },
         {
-          name: "status",
-          label: "Status",
-          type: "select",
-          options: ["active", "inactive", "disabled"],
+          name: 'status',
+          label: 'Status',
+          type: 'select',
+          options: ['active', 'inactive', 'disabled'],
         },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
+        { name: 'startDate', label: 'Start Date', type: 'date' },
+        { name: 'endDate', label: 'End Date', type: 'date' },
       ],
     },
     {
       id: 16,
-      name: "Graduated Students Report",
+      name: 'Graduated Students Report',
       description:
-        "List of students who have completed all requirements and graduation dates",
-      category: "Academic",
+        'List of students who have completed all requirements and graduation dates',
+      category: 'Academic',
       icon: <BsFileEarmarkText className="text-2xl" />,
       color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "graduated-students",
+        'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+      endpoint: 'graduated-students',
       parameters: [
-        { name: "schoolYear", label: "School Year", type: "text" },
-        { name: "program", label: "Program", type: "text" },
+        { name: 'schoolYear', label: 'School Year', type: 'text' },
+        { name: 'program', label: 'Program', type: 'text' },
       ],
     },
     {
       id: 17,
-      name: "Archived Records Report",
+      name: 'Archived Records Report',
       description:
-        "Summary of archived student and course records by academic year",
-      category: "System",
+        'Summary of archived student and course records by academic year',
+      category: 'System',
       icon: <BsFileEarmarkPdf className="text-2xl" />,
-      color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-      endpoint: "archived-records",
+      color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+      endpoint: 'archived-records',
       parameters: [
         {
-          name: "recordType",
-          label: "Record Type",
-          type: "select",
-          options: ["users", "courses", "schedules"],
+          name: 'recordType',
+          label: 'Record Type',
+          type: 'select',
+          options: ['users', 'courses', 'schedules'],
         },
-        { name: "schoolYear", label: "School Year", type: "text" },
+        { name: 'schoolYear', label: 'School Year', type: 'text' },
       ],
     },
     {
       id: 18,
-      name: "Program Enrollment Trends",
+      name: 'Program Enrollment Trends',
       description:
-        "Analysis of enrollment trends across different academic programs over time",
-      category: "Enrollment",
+        'Analysis of enrollment trends across different academic programs over time',
+      category: 'Enrollment',
       icon: <BsGraphUp className="text-2xl" />,
-      color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-      endpoint: "program-enrollment-trends",
+      color: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300',
+      endpoint: 'program-enrollment-trends',
       parameters: [
-        { name: "startYear", label: "Start Year", type: "text" },
-        { name: "endYear", label: "End Year", type: "text" },
+        { name: 'startYear', label: 'Start Year', type: 'text' },
+        { name: 'endYear', label: 'End Year', type: 'text' },
       ],
     },
   ];
 
   const categories = [
-    "All",
-    "Enrollment",
-    "Financial",
-    "Academic",
-    "Faculty",
-    "Documents",
-    "System",
+    'All',
+    'Enrollment',
+    'Financial',
+    'Academic',
+    'Faculty',
+    'Documents',
+    'System',
   ];
 
   // Filter reports based on search term and category
@@ -494,13 +488,30 @@ function Reports() {
       report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
-      selectedCategory === "All" || report.category === selectedCategory;
+      selectedCategory === 'All' || report.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
+  const checkRequiredFields = (report) => {
+    // Check all required fields first
+    for (const param of report.parameters) {
+      if (param.required && !reportParams[param.name]) {
+        console.log(`${param.label} is required`);
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: `${param.label} is required`,
+        });
+        return; // Exit the function, don't generate report
+      }
+    }
+
+    // All required fields are filled, proceed with report generation
+    handleGenerateReport(report);
+  };
+
   const handleGenerateReport = async (report) => {
     setLoading(true);
-    setReportData(null);
 
     try {
       const token = getToken();
@@ -523,31 +534,45 @@ function Reports() {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
         }
       );
 
       const data = response.data;
-      console.log("Report data received:", data);
+      console.log('Report data received:', data);
 
       if (data.error) {
         Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: data.message || "Error generating report. Please try again.",
+          icon: 'error',
+          title: 'Oops...',
+          text: data.message || 'Error generating report. Please try again.',
         });
-        console.error("Error generating report:", data.message);
+        console.error('Error generating report:', data.message);
       } else {
-        setReportData(data);
+        // Navigate to report summary page with data
+        // Only pass serializable properties (exclude React elements like icon)
+        navigate('/admin/report-summary', {
+          state: {
+            reportData: data,
+            selectedReport: {
+              id: report.id,
+              name: report.name,
+              description: report.description,
+              category: report.category,
+              color: report.color,
+              endpoint: report.endpoint,
+            },
+          },
+        });
       }
     } catch (error) {
       Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: error || "Error generating report. Please try again.",
+        icon: 'error',
+        title: 'Oops...',
+        text: error || 'Error generating report. Please try again.',
       });
-      console.error("Error generating report:", error.response?.data?.message);
+      console.error('Error generating report:', error.response?.data?.message);
     } finally {
       setLoading(false);
     }
@@ -555,27 +580,17 @@ function Reports() {
 
   const handleViewReport = (report) => {
     setSelectedReport(report);
-    setReportParams({});
-    setReportData(null);
-  };
 
-  const handleDownloadReport = () => {
-    if (!reportData) return;
-
-    // Convert report data to JSON and download
-    const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${selectedReport.name.replace(
-      /\s+/g,
-      "_"
-    )}_${new Date().toISOString()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Initialize reportParams with default values
+    const initialParams = {};
+    if (report.parameters) {
+      report.parameters.forEach((param) => {
+        if (param.default !== undefined) {
+          initialParams[param.name] = param.default;
+        }
+      });
+    }
+    setReportParams(initialParams);
   };
 
   const handleParamChange = (paramName, value) => {
@@ -586,8 +601,8 @@ function Reports() {
   };
 
   const renderParameterInput = (param) => {
-    if (param.type === "multiselect") {
-      if (param.source === "courses") {
+    if (param.type === 'multiselect') {
+      if (param.source === 'courses') {
         const selectedCourses = reportParams[param.name] || [];
 
         const filteredCourses = courses.filter((course) =>
@@ -601,11 +616,6 @@ function Reports() {
           handleParamChange(param.name, newSelected);
         };
 
-        const selectedCourseNames = selectedCourses
-          .map((id) => courses.find((c) => c.id === id)?.name)
-          .filter(Boolean)
-          .join(", ");
-
         return (
           <div className="relative">
             {/* Dropdown button */}
@@ -617,11 +627,11 @@ function Reports() {
               <span className="truncate">
                 {selectedCourses.length > 0
                   ? `${selectedCourses.length} course(s) selected`
-                  : "Select courses..."}
+                  : 'Select courses...'}
               </span>
               <svg
                 className={`w-5 h-5 transition-transform ${
-                  isCoursesDropdownOpen ? "transform rotate-180" : ""
+                  isCoursesDropdownOpen ? 'transform rotate-180' : ''
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -733,19 +743,23 @@ function Reports() {
       }
     }
 
-    if (param.type === "select") {
-      if (param.source === "academicPeriods") {
+    if (param.type === 'select') {
+      if (param.source === 'academicPeriods') {
         return (
           <>
             <select
-              value={reportParams[param.name] || ""}
+              value={
+                reportParams[param.name] !== undefined
+                  ? reportParams[param.name]
+                  : param.default || ''
+              }
               onChange={(e) => handleParamChange(param.name, e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red"
             >
               <option value="">Select {param.label}</option>
               {academicPeriods.map((period) => (
                 <option key={period.id} value={period.id}>
-                  {period.name || period.batchName}{" "}
+                  {period.name || period.batchName}{' '}
                   {period.schoolYear && `(${period.schoolYear})`}
                 </option>
               ))}
@@ -755,7 +769,11 @@ function Reports() {
       } else if (param.options) {
         return (
           <select
-            value={reportParams[param.name] || ""}
+            value={
+              reportParams[param.name] !== undefined
+                ? reportParams[param.name]
+                : param.default || ''
+            }
             onChange={(e) => handleParamChange(param.name, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red"
           >
@@ -773,7 +791,11 @@ function Reports() {
     return (
       <input
         type={param.type}
-        value={reportParams[param.name] || ""}
+        value={
+          reportParams[param.name] !== undefined
+            ? reportParams[param.name]
+            : param.default || ''
+        }
         onChange={(e) => handleParamChange(param.name, e.target.value)}
         placeholder={param.label}
         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red"
@@ -785,16 +807,17 @@ function Reports() {
   useEffect(() => {
     fetchAcademicPeriods();
     fetchCourses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debug: Monitor academicPeriods state changes
   useEffect(() => {
-    console.log("Academic periods state changed:", academicPeriods);
+    console.log('Academic periods state changed:', academicPeriods);
   }, [academicPeriods]);
 
   // Debug: Monitor courses state changes
   useEffect(() => {
-    console.log("Courses state changed:", courses);
+    console.log('Courses state changed:', courses);
   }, [courses]);
 
   return (
@@ -833,8 +856,8 @@ function Reports() {
                   onClick={() => setSelectedCategory(category)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     selectedCategory === category
-                      ? "bg-dark-red text-white"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      ? 'bg-dark-red text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
                   {category}
@@ -898,8 +921,8 @@ function Reports() {
 
         {/* Selected Report Modal */}
         {selectedReport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4 overflow-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-visible">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-lg ${selectedReport.color}`}>
@@ -917,8 +940,9 @@ function Reports() {
                 <button
                   onClick={() => {
                     setSelectedReport(null);
-                    setReportData(null);
                     setReportParams({});
+                    setIsCoursesDropdownOpen(false);
+                    setCourseSearchTerm('');
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
                 >
@@ -954,72 +978,24 @@ function Reports() {
                 )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 mb-6">
+              <div className="flex gap-3">
                 <button
-                  onClick={() => handleGenerateReport(selectedReport)}
+                  onClick={() => checkRequiredFields(selectedReport)}
                   disabled={loading}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-dark-red text-white rounded-lg hover:bg-dark-red-2 transition-colors font-medium disabled:opacity-50"
                 >
                   <BsEye />
-                  {loading ? "Generating..." : "Generate Report"}
+                  {loading ? 'Generating...' : 'Generate Report'}
                 </button>
-                {reportData && (
-                  <button
-                    onClick={handleDownloadReport}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                  >
-                    <BsDownload />
-                    Download
-                  </button>
-                )}
               </div>
 
-              {/* Report Data Display */}
+              {/* Loading State */}
               {loading && (
-                <div className="text-center py-8">
+                <div className="text-center py-8 mt-6">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dark-red mx-auto"></div>
                   <p className="text-gray-600 dark:text-gray-400 mt-4">
                     Generating report...
                   </p>
-                </div>
-              )}
-
-              {reportData && !loading && (
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                      {reportData.reportName}
-                    </h3>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      <p>
-                        Generated:{" "}
-                        {new Date(reportData.generatedAt).toLocaleString()}
-                      </p>
-                      <p>Total Records: {reportData.totalRecords}</p>
-                    </div>
-                  </div>
-
-                  {/* Summary Section */}
-                  {reportData.summary && (
-                    <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                        Summary
-                      </h4>
-                      <pre className="text-sm text-gray-700 dark:text-gray-300 overflow-x-auto">
-                        {JSON.stringify(reportData.summary, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
-                  {/* Data Preview */}
-                  <div className="max-h-96 overflow-auto">
-                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                      Data Preview
-                    </h4>
-                    <pre className="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 p-3 rounded overflow-x-auto">
-                      {JSON.stringify(reportData.data, null, 2)}
-                    </pre>
-                  </div>
                 </div>
               )}
             </div>

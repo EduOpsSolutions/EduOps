@@ -7,16 +7,6 @@ export const getAllCourses = (isStudent) => {
       deletedAt: null,
       ...(isStudent ? { visibility: 'visible' } : {}),
     },
-    // include: {
-    //     adviser: {
-    //         select: {
-    //             id: true,
-    //             firstName: true,
-    //             middleName: true,
-    //             lastName: true
-    //         }
-    //     }
-    // }
   });
 };
 
@@ -26,13 +16,6 @@ export const getCourseById = (id) => {
     select: {
       id: true,
       name: true,
-      // adviser: {
-      //     select: {
-      //         id: true,
-      //         firstName: true,
-      //         lastName: true
-      //     }
-      // }
     },
   });
 };

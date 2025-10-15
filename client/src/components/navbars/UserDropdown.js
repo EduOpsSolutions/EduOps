@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { Dropdown } from "flowbite-react";
-import { Link } from "react-router-dom";
-import useAuthStore from "../../stores/authStore";
-import useNavigationStore from "../../stores/navigationStore";
-import { getCachedProfileImage } from "../../utils/profileImageCache";
+import React, { useState, useEffect } from 'react';
+import { Dropdown } from 'flowbite-react';
+import { Link } from 'react-router-dom';
+import useAuthStore from '../../stores/authStore';
+import useNavigationStore from '../../stores/navigationStore';
+import { getCachedProfileImage } from '../../utils/profileImageCache';
 
 const UserActionsDropdown = ({ role, isCompact = false }) => {
   const { logout, getUser } = useAuthStore();
   const { closeCompactMenu } = useNavigationStore();
   const user = getUser();
-  const userInitials = String(user?.firstName || "")
-    .slice(0, 2)
-    .toUpperCase();
+  const userInitials = String(
+    user?.firstName[0] + user?.lastName[0] || ''
+  ).toUpperCase();
   const [profilePic, setProfilePic] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const avatarSize = isCompact ? "size-[40px]" : "size-[48px]";
-  const textSize = isCompact ? "text-lg" : "text-xl";
+  const avatarSize = isCompact ? 'size-[40px]' : 'size-[48px]';
+  const textSize = isCompact ? 'text-lg' : 'text-xl';
 
   // Load profile picture from cache
   useEffect(() => {
@@ -56,7 +56,7 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
                   setImageLoading(false);
                 }}
                 style={{
-                  display: imageLoading && !imageError ? "none" : "block",
+                  display: imageLoading && !imageError ? 'none' : 'block',
                 }}
               />
               {imageLoading && !imageError && (
