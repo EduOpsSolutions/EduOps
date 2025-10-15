@@ -86,6 +86,7 @@ function Reports() {
   // Hardcoded list of reports for educational operations system
   const reports = [
     {
+      //done
       id: 1,
       name: 'Student Enrollment Report',
       description:
@@ -180,6 +181,7 @@ function Reports() {
       ],
     },
     {
+      //Done
       id: 4,
       name: 'Course Enrollment Statistics',
       description: 'Student count per course and schedule capacity',
@@ -190,9 +192,10 @@ function Reports() {
       parameters: [
         {
           name: 'periodId',
-          label: 'Academic Period',
+          label: 'Academic Period/ Batch',
           type: 'select',
           source: 'academicPeriods',
+          required: true,
         },
         {
           name: 'courseIds',
@@ -200,7 +203,6 @@ function Reports() {
           type: 'multiselect',
           source: 'courses',
           searchable: true,
-          required: true,
         },
       ],
     },

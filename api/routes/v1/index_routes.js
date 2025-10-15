@@ -13,6 +13,7 @@ import { router as ai } from './ai_routes.js';
 import payments from './payment_routes.js';
 import documents from './document_routes.js';
 import { router as grades } from './grades_routes.js';
+import { router as reports } from './reports_routes.js';
 
 const router = express.Router();
 router.get('/', function (req, res) {

@@ -134,6 +134,13 @@ function ReportSummary() {
     });
     const headers = Array.from(allKeys);
 
+    const renderHeader = (header) => {
+      return header
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/([0-9])/g, '$1')
+        .trim();
+    };
+
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -144,7 +151,7 @@ function ReportSummary() {
                   key={header}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                 >
-                  {header.replace(/([A-Z])/g, ' $1').trim()}
+                  {renderHeader(header)}
                 </th>
               ))}
             </tr>
@@ -379,7 +386,10 @@ function ReportSummary() {
                   className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4"
                 >
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                    {key
+                      .replace(/([A-Z])/g, ' $1')
+                      .toUpperCase()
+                      .trim()}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {typeof value === 'object'

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-
+import { convert24To12HourFormatLocale } from '../utils/format.js';
 // Report 1: Student Enrollment Report
 const getStudentEnrollmentReport = async (req, res) => {
   try {
@@ -66,15 +66,21 @@ const getStudentEnrollmentReport = async (req, res) => {
         user: {
           deletedAt: null,
           role: 'student',
-          ...(!accountStatus || accountStatus === 'all'
-            ? { status: true }
-            : { status: accountStatus }),
+          ...(accountStatus && accountStatus !== 'All'
+            ? { status: accountStatus }
+            : {}),
         },
       },
       select: {
         scheduleId: true,
         schedule: {
           select: {
+            id: true,
+            days: true,
+            time_start: true,
+            time_end: true,
+            location: true,
+            teacherId: true,
             course: {
               select: {
                 id: true,
@@ -132,6 +138,7 @@ const getStudentEnrollmentReport = async (req, res) => {
     // Get unique students (remove duplicates)
     const uniqueStudentsMap = new Map();
     userSchedules.forEach((us) => {
+      console.log('us ko before', us);
       if (!uniqueStudentsMap.has(us.user.userId)) {
         uniqueStudentsMap.set(us.user.userId, us.user);
       }
@@ -140,6 +147,10 @@ const getStudentEnrollmentReport = async (req, res) => {
 
     const reportData = students.map((student) => ({
       studentId: student.userId,
+      lastName: student.lastName,
+      firstName: student.firstName,
+      middleName: student.middleName,
+      status: student.status,
       fullName: `${student.firstName}${
         student.middleName ? ' ' + student.middleName : ''
       } ${student.lastName}`,
@@ -149,6 +160,14 @@ const getStudentEnrollmentReport = async (req, res) => {
         .map((us) => ({
           courseId: us.schedule.course.id,
           courseName: us.schedule.course.name,
+          scheduleId: us.schedule.id,
+          scheduleDays: us.schedule.days,
+          scheduleTimeStart: convert24To12HourFormatLocale(
+            us.schedule.time_start
+          ),
+          scheduleTimeEnd: convert24To12HourFormatLocale(us.schedule.time_end),
+          scheduleLocation: us.schedule.location,
+          scheduleTeacherId: us.schedule.teacherId,
         })),
     }));
 
@@ -403,38 +422,50 @@ const getGradeDistributionReport = async (req, res) => {
 // Report 4: Course Enrollment Statistics
 const getCourseEnrollmentStatistics = async (req, res) => {
   try {
-    const { periodId, courseId } = req.query;
+    const { periodId, courseIds } = req.query;
+
+    if (!periodId) {
+      return res.status(400).json({
+        error: true,
+        message: 'Period ID is required',
+      });
+    }
 
     let whereClause = {
       deletedAt: null,
     };
 
     if (periodId) whereClause.periodId = periodId;
-    if (courseId) whereClause.courseId = courseId;
+    if (courseIds) {
+      whereClause.courseId = {
+        in: Array.isArray(courseIds) ? courseIds : courseIds.split(','),
+      };
+    }
 
-    const schedules = await prisma.schedule.groupBy({
-      by: ['id'],
+    const schedules = await prisma.schedule.findMany({
       where: whereClause,
-      _count: {
-        select: { enrollments: true },
-      },
       select: {
+        courseId: true,
+        capacity: true,
+        days: true,
+        time_start: true,
+        time_end: true,
         course: {
           select: {
             id: true,
             name: true,
           },
         },
-        period: {
-          select: {
-            id: true,
-            batchName: true,
-            schoolYear: true,
-          },
-        },
-        user_schedule: {
+        userSchedules: {
           where: {
             deletedAt: null,
+            user: {
+              role: 'student',
+              deletedAt: null,
+            },
+          },
+          select: {
+            id: true,
           },
         },
       },
@@ -444,15 +475,26 @@ const getCourseEnrollmentStatistics = async (req, res) => {
       },
     });
 
+    const period = await prisma.academic_period.findUnique({
+      where: {
+        id: periodId,
+      },
+      select: {
+        id: true,
+        batchName: true,
+        startAt: true,
+        endAt: true,
+        isEnrollmentClosed: true,
+      },
+    });
+
     const reportData = schedules.map((schedule) => ({
-      section: schedule.section,
-      academicPeriod: schedule.academicPeriod?.name,
-      schoolYear: schedule.academicPeriod?.schoolYear,
-      enrolledStudents: schedule.user_schedule.length,
-      capacity: schedule.capacity || 'N/A',
+      courseName: schedule.course?.name,
+      enrolledStudents: schedule.userSchedules.length,
+      capacity: schedule.capacity || 0,
       occupancyRate: schedule.capacity
         ? `${(
-            (schedule.user_schedule.length / schedule.capacity) *
+            (schedule.userSchedules.length / schedule.capacity) *
             100
           ).toFixed(2)}%`
         : 'N/A',
@@ -472,13 +514,19 @@ const getCourseEnrollmentStatistics = async (req, res) => {
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
+        periodId: period.id || 'N/A',
+        batchId: period.name || 'N/A',
+        startDate: new Date(period?.startAt).toLocaleDateString() || 'N/A',
+        endDate: new Date(period?.endAt).toLocaleDateString() || 'N/A',
+        isEnrollmentClosed: period?.isEnrollmentClosed || 'N/A',
+        batchName: period?.batchName || 'N/A',
         totalSections: reportData.length,
         totalEnrolledStudents: totalEnrolled,
         averageEnrollmentPerSection: (
           totalEnrolled / reportData.length || 0
         ).toFixed(2),
       },
-      filters: { periodId, courseId },
+      filters: { periodId, courseIds },
       data: reportData,
     });
   } catch (error) {
