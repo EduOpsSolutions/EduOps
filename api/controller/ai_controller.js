@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const SCHEMA_CONTEXT = `
 Database Schema:
-- schedule: id, days, time, time_start, time_end, location, notes, color, periodStart, periodEnd, courseId, periodId, teacherId
+- schedule: id, days, time, time_start, time_end, location, notes, color, periodStart, periodEnd, courseId, periodId, teacherId, capacity
 - course: id, name, description, maxNumber, visibility, price
 - users: id, userId, firstName, lastName, email, role (student/teacher/admin)
 - academic_period: id, batchName, startAt, endAt, enrollmentOpenAt, enrollmentCloseAt, isEnrollmentClosed
@@ -15,6 +15,7 @@ Database Schema:
 Relationships:
 - Schedule belongs to course, academic_period, and teacher (users)
 - Students enroll in academic periods and have schedules through user_schedule
+- Schedule capacity limits the number of students that can enroll (default: 30)
 `;
 
 async function getSchedulingContext() {
@@ -73,6 +74,7 @@ async function getSchedulingContext() {
         notes: true,
         periodStart: true,
         periodEnd: true,
+        capacity: true,
         course: {
           select: { name: true },
         },
@@ -160,7 +162,8 @@ When the user asks you to CREATE or GENERATE a schedule, you must respond with a
   "teacherFullName": "FirstName LastName",
   "periodBatchName": "Batch Name",
   "requestedPeriodStart": "2025-10-15",
-  "requestedPeriodEnd": "2025-11-15"
+  "requestedPeriodEnd": "2025-11-15",
+  "capacity": 30
 }
 
 IMPORTANT:
@@ -168,13 +171,14 @@ IMPORTANT:
 - Use 24-hour time format for time_start and time_end (e.g., "14:00" for 2 PM)
 - If the user specifies custom start/end dates different from the academic period dates, include them in requestedPeriodStart and requestedPeriodEnd in YYYY-MM-DD format
 - periodBatchName should match one of the academic periods from the database exactly
+- capacity should be a number between 1 and 100 (default: 30). If the user specifies a capacity, use it. Otherwise, use 30 or a reasonable default based on the course's maxNumber if available.
 
 Example response when creating a schedule:
 "I recommend this optimized schedule for the {coursename} course with minimal conflicts. Please double check for any mistakes."
 "Here is the recommended schedule based on your request."
 
 SCHEDULE_CREATE_COMMAND
-{"days":"M,W,F","time_start":"09:00","time_end":"11:00","location":"Room 101","notes":"Optimized to avoid teacher conflicts, AI Generated","courseName":"English A1","teacherFullName":"John Doe","periodBatchName":"Batch 2025-1","requestedPeriodStart":"2025-10-15","requestedPeriodEnd":"2025-11-15"}"
+{"days":"M,W,F","time_start":"09:00","time_end":"11:00","location":"Room 101","notes":"Optimized to avoid teacher conflicts, AI Generated","courseName":"English A1","teacherFullName":"John Doe","periodBatchName":"Batch 2025-1","requestedPeriodStart":"2025-10-15","requestedPeriodEnd":"2025-11-15","capacity":30}"
 
 ${SCHEMA_CONTEXT}
 
@@ -340,6 +344,7 @@ ${JSON.stringify(aiContext, null, 2)}`;
             periodStart,
             periodEnd,
             color: "#FFCF00",
+            capacity: scheduleData.capacity || 30,
           },
         });
       } catch (parseError) {

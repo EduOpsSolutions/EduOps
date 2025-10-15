@@ -116,6 +116,7 @@ model schedule {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
+  capacity    Int? @default(30)
 
   course        course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
