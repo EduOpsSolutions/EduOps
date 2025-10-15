@@ -4,6 +4,7 @@ import EditDocumentModal from "../../components/modals/documents/EditDocumentMod
 import SearchFormVertical from "../../components/common/SearchFormVertical";
 import DocumentsTable from "../../components/tables/ManageDocumentsTable";
 import Pagination from "../../components/common/Pagination";
+import Spinner from "../../components/common/Spinner";
 import Swal from "sweetalert2";
 import {
     useManageDocumentsStore,
@@ -12,18 +13,21 @@ import {
 
 function ManageDocuments() {
     const searchStore = useManageDocumentsSearchStore();
-    const { initializeSearch, resetSearch } = searchStore;
+    const { resetSearch } = searchStore;
 
     const {
         // State
         showAddDocumentModal,
         showEditDocumentModal,
         selectedDocument,
+        loading,
+        error,
 
         // Actions
+        fetchDocuments,
+        searchDocuments,
         handleAddDocument,
         handleCloseAddDocumentModal,
-        handleAddDocumentSubmit,
         handleDeleteDocument,
         handleHideDocument,
         handleDocumentClick,
@@ -33,16 +37,16 @@ function ManageDocuments() {
     } = useManageDocumentsStore();
 
     useEffect(() => {
-        initializeSearch();
+        fetchDocuments(false); // Start with includeHidden = false
         return () => {
             resetStore();
             resetSearch();
         };
-    }, [initializeSearch, resetStore, resetSearch]);
+    }, [fetchDocuments, resetStore, resetSearch]);
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault();
-        searchStore.handleSearch();
+        await searchDocuments(searchStore.searchParams);
     };
 
     const handleDeleteConfirmation = (documentId) => {
@@ -63,6 +67,12 @@ function ManageDocuments() {
         });
     };
 
+    const handleIncludeHiddenChange = (e) => {
+        const includeHidden = e.target.checked;
+        searchStore.handleInputChange(e);
+        fetchDocuments(includeHidden);
+    };
+
     const searchFormConfig = {
         title: "SEARCH",
         formFields: [
@@ -79,9 +89,9 @@ function ManageDocuments() {
                 placeholder: "Select privacy",
                 options: [
                     { value: "", label: "All" },
-                    { value: "Teacher's Only", label: "Teacher's Only" },
-                    { value: "Student's Only", label: "Student's Only" },
-                    { value: "Public", label: "Public" },
+                    { value: "teacher_only", label: "Teacher's Only" },
+                    { value: "student_only", label: "Student's Only" },
+                    { value: "public", label: "Public" },
                 ],
             },
             {
@@ -91,9 +101,15 @@ function ManageDocuments() {
                 placeholder: "Select price type",
                 options: [
                     { value: "", label: "All" },
-                    { value: "Free", label: "Free" },
-                    { value: "Paid", label: "Paid" },
+                    { value: "free", label: "Free" },
+                    { value: "paid", label: "Paid" },
                 ],
+            },
+            {
+                name: "includeHidden",
+                label: "Include Hidden",
+                type: "checkbox",
+                onChange: handleIncludeHiddenChange,
             },
         ],
     };
@@ -120,34 +136,55 @@ function ManageDocuments() {
                             <button
                                 onClick={handleAddDocument}
                                 type="button"
-                                className="text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm sm:text-md px-4 sm:px-6 py-2 text-center shadow-sm shadow-black ease-in duration-150 w-full sm:w-auto"
+                                disabled={loading}
+                                className="text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm sm:text-md px-4 sm:px-6 py-2 text-center shadow-sm shadow-black ease-in duration-150 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Add Document
                             </button>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <DocumentsTable
-                                documents={displayedDocuments}
-                                hasSearched={searchStore.hasSearched}
-                                onDocumentClick={handleDocumentClick}
-                                onHideDocument={handleHideDocument}
-                                onDeleteConfirmation={handleDeleteConfirmation}
-                            />
-                        </div>
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                                <p>{error}</p>
+                                <button
+                                    onClick={() => fetchDocuments(searchStore.searchParams.includeHidden)}
+                                    className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        )}
 
-                        <div className="mt-4">
-                            <Pagination
-                                currentPage={searchStore.currentPage}
-                                totalPages={searchStore.totalPages}
-                                onPageChange={searchStore.handlePageChange}
-                                itemsPerPage={searchStore.itemsPerPage}
-                                onItemsPerPageChange={searchStore.handleItemsPerPageChange}
-                                totalItems={searchStore.totalItems}
-                                itemName="documents"
-                                showItemsPerPageSelector={true}
-                            />
-                        </div>
+                        {loading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <Spinner size="large" />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="overflow-x-auto">
+                                    <DocumentsTable
+                                        documents={displayedDocuments}
+                                        hasSearched={searchStore.hasSearched}
+                                        onDocumentClick={handleDocumentClick}
+                                        onHideDocument={handleHideDocument}
+                                        onDeleteConfirmation={handleDeleteConfirmation}
+                                    />
+                                </div>
+
+                                <div className="mt-4">
+                                    <Pagination
+                                        currentPage={searchStore.currentPage}
+                                        totalPages={searchStore.totalPages}
+                                        onPageChange={searchStore.handlePageChange}
+                                        itemsPerPage={searchStore.itemsPerPage}
+                                        onItemsPerPageChange={searchStore.handleItemsPerPageChange}
+                                        totalItems={searchStore.totalItems}
+                                        itemName="documents"
+                                        showItemsPerPageSelector={true}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -156,7 +193,6 @@ function ManageDocuments() {
                 <AddNewDocumentModal
                     isOpen={showAddDocumentModal}
                     onClose={handleCloseAddDocumentModal}
-                    onAddDocument={handleAddDocumentSubmit}
                 />
             )}
 

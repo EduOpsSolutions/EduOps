@@ -6,19 +6,50 @@ import RequestDocumentModal from "../../components/modals/documents/RequestDocum
 import RequestSentModal from "../../components/modals/documents/RequestDocumentSentModal";
 import SearchField from "../../components/textFields/SearchField";
 import Pagination from "../../components/common/Pagination";
-import { useManageDocumentsSearchStore } from "../../stores/manageDocumentsStore";
+import Spinner from "../../components/common/Spinner";
+import ViewRequestDetailsModal from "../../components/modals/documents/ViewRequestDetailsModal";
+import { useManageDocumentsSearchStore, useManageDocumentsStore } from "../../stores/manageDocumentsStore";
+import { useDocumentRequestStore } from "../../stores/documentRequestStore";
+import useAuthStore from "../../stores/authStore";
+import documentApi from "../../utils/documentApi";
 
 function Documents() {
     const [request_document_modal, setRequestDocumentModal] = useState(false);
     const [request_sent_modal, setRequestSentModal] = useState(false);
     const [doc_requests_modal, setDocRequestsModal] = useState(false);
-    const [selectedDocName, setSelectedDocName] = useState("");
+    const [selectedDocument, setSelectedDocument] = useState(null);
+    
     const searchStore = useManageDocumentsSearchStore();
-    const { initializeSearch } = searchStore;
+    const { fetchDocuments, loading, error } = useManageDocumentsStore();
+    const { viewDetailsModal, closeViewDetailsModal } = useDocumentRequestStore();
+    const user = useAuthStore((state) => state.user);
 
     useEffect(() => {
-        initializeSearch();
-    }, [initializeSearch]);
+        // Fetch documents available to teachers
+        fetchDocuments(false); // Don't include hidden documents
+    }, [fetchDocuments]);
+
+    const handleDownload = async (document) => {
+        try {
+            if (document.uploadFile) {
+                const success = await documentApi.helpers.downloadFile(
+                    document.uploadFile, 
+                    document.documentName
+                );
+                if (!success) {
+                    throw new Error('Download failed');
+                }
+            }
+        } catch (error) {
+            console.error('Download failed:', error);
+            // You could show a toast notification here
+        }
+    };
+
+    const handleRequestDocument = (document) => {
+        setSelectedDocument(document);
+        setRequestDocumentModal(true);
+    };
 
     return (
         <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex justify-center items-start py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
@@ -56,68 +87,95 @@ function Documents() {
                         name="documentName"
                         id="search-documents"
                         placeholder="Search Documents"
-                        value={searchStore.searchParams.documentName}
+                        value={searchStore.searchParams.documentName || ''}
                         onChange={searchStore.handleInputChange}
                         onClick={searchStore.handleSearch}
                     />
                 </div>
 
-                <div className="overflow-x-auto mb-6">
-                    <div className="inline-block min-w-full align-middle">
-                        <table className="w-full mb-6">
-                            <thead>
-                                <tr className="border-b-2 border-dark-red-2">
-                                    <th className="py-4 px-4 font-bold text-left text-xs sm:text-sm lg:text-base w-[15%]">
-                                        Fee
-                                    </th>
-                                    <th className="py-4 px-4 font-bold text-left text-xs sm:text-sm lg:text-base w-[30%]">
-                                        Name
-                                    </th>
-                                    <th className="py-4 px-4 font-bold text-center text-xs sm:text-sm lg:text-base w-[15%]">
-                                        Actions
-                                    </th>
-                                    <th className="py-4 px-4 font-bold text-left text-xs sm:text-sm lg:text-base w-[40%]">
-                                        Description
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {searchStore.currentItems.map((row, idx) => (
-                                    <tr
-                                        key={row.id || idx}
-                                        className="border-b-2 border-[rgb(137,14,7,.49)] cursor-pointer transition-colors duration-150 hover:bg-gray-100"
-                                    >
-                                        <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
-                                            {row.price === "Free" ? "FREE" : row.amount || row.price}
-                                        </td>
-                                        <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
-                                            {row.documentName}
-                                        </td>
-                                        <td className="py-4 px-4 text-center">
-                                            {row.downloadable === "Yes" ? (
-                                                <DownloadButton
-                                                    onClick={() => {
-                                                        /* download logic */
-                                                    }}
-                                                />
-                                            ) : (
-                                                <RequestButton
-                                                    onClick={() => {
-                                                        setSelectedDocName(row.documentName);
-                                                        setRequestDocumentModal(true);
-                                                    }}
-                                                />
-                                            )}
-                                        </td>
-                                        <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
-                                            {row.description}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                {error && (
+                    <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                        <p>{error}</p>
+                        <button
+                            onClick={() => fetchDocuments(false)}
+                            className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                        >
+                            Retry
+                        </button>
                     </div>
-                </div>
+                )}
+
+                {loading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <Spinner size="large" />
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto mb-6">
+                            <div className="inline-block min-w-full align-middle">
+                                <table className="w-full mb-6">
+                                    <thead>
+                                        <tr className="border-b-2 border-dark-red-2">
+                                            <th className="py-4 px-4 font-bold text-left text-xs sm:text-sm lg:text-base w-[15%]">
+                                                Fee
+                                            </th>
+                                            <th className="py-4 px-4 font-bold text-left text-xs sm:text-sm lg:text-base w-[30%]">
+                                                Name
+                                            </th>
+                                            <th className="py-4 px-4 font-bold text-center text-xs sm:text-sm lg:text-base w-[15%]">
+                                                Actions
+                                            </th>
+                                            <th className="py-4 px-4 font-bold text-left text-xs sm:text-sm lg:text-base w-[40%]">
+                                                Description
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {searchStore.currentItems && searchStore.currentItems.length > 0 ? (
+                                            searchStore.currentItems
+                                                .filter(row => documentApi.helpers.canAccessDocument(row, user?.role || 'teacher'))
+                                                .map((row, idx) => (
+                                                    <tr
+                                                        key={row.id || idx}
+                                                        className="border-b-2 border-[rgb(137,14,7,.49)] cursor-pointer transition-colors duration-150 hover:bg-gray-100"
+                                                    >
+                                                        <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
+                                                            {row.price === 'free' ? 'FREE' : 
+                                                             row.price === 'paid' && row.amount ? `₱${parseFloat(row.amount).toFixed(2)}` : 
+                                                             row.displayPrice || 'FREE'}
+                                                        </td>
+                                                        <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
+                                                            {row.documentName}
+                                                        </td>
+                                                        <td className="py-4 px-4 text-center">
+                                                            {row.downloadable && row.uploadFile ? (
+                                                                <DownloadButton onClick={() => handleDownload(row)} />
+                                                            ) : row.requestBasis ? (
+                                                                <RequestButton
+                                                                    onClick={() => handleRequestDocument(row)}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-gray-500 text-sm">Not Available</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
+                                                            {row.description || 'No description'}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="4" className="py-8 text-center text-gray-500">
+                                                    No documents available
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </>
+                )}
                 {/* Pagination */}
                 <div className="mt-4 sm:mt-6">
                     <Pagination
@@ -136,7 +194,7 @@ function Documents() {
                     setRequestDocumentModal={setRequestDocumentModal}
                     request_sent_modal={request_sent_modal}
                     setRequestSentModal={setRequestSentModal}
-                    documentName={selectedDocName}
+                    selectedDocument={selectedDocument}
                 />
 
                 <RequestSentModal
@@ -147,6 +205,11 @@ function Documents() {
                 <DocRequestsModal
                     doc_requests_modal={doc_requests_modal}
                     setDocRequestsModal={setDocRequestsModal}
+                />
+
+                <ViewRequestDetailsModal
+                    viewDetailsModal={viewDetailsModal}
+                    closeViewDetailsModal={closeViewDetailsModal}
                 />
             </div>
         </div>

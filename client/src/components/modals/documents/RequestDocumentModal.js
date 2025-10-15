@@ -1,28 +1,122 @@
 import { Modal } from "flowbite-react";
-import React, { useState } from 'react';
-import SmallButton from "../../buttons/SmallButton";
-import LargeInputField from "../../textFields/LargeInputField";
-import NotLabelledInputField from "../../textFields/NotLabelledInputField";
-import SelectField from "../../textFields/SelectField";
+import React, { useState, useEffect } from 'react';
+import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
+import useAuthStore from "../../../stores/authStore";
+import Spinner from "../../common/Spinner";
 
 function RequestDocumentModal(props) {
     const [selectedMode, setSelectedMode] = useState('pickup');
+    const { createDocumentRequest, loading } = useDocumentRequestStore();
+    const user = useAuthStore((state) => state.user);
+    
+    const [formData, setFormData] = useState({
+        email: '',
+        phone: '',
+        paymentMethod: 'online',
+        address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
+        purpose: '',
+        additionalNotes: ''
+    });
+    
+    const [errors, setErrors] = useState({});
 
-    // Insert other payment options
+    // Initialize form with user data when modal opens
+    useEffect(() => {
+        if (props.request_document_modal && user) {
+            setFormData(prev => ({
+                ...prev,
+                email: user.email || '',
+                phone: user.phoneNumber || ''
+            }));
+        }
+    }, [props.request_document_modal, user]);
+
+    // Payment options
     const paymentOptions = [
         { value: 'online', label: 'Online (Maya)' },
         { value: 'cod', label: 'Cash on Delivery' },
         { value: 'cashPickup', label: 'Cash (Pay upon Pickup)' },
     ];
 
-    // Insert other mode options
+    // Mode options
     const pickupOptions = [
         { value: 'pickup', label: 'Pickup' },
         { value: 'delivery', label: 'Delivery' }
     ];
 
-    // Editor's Note:
-    // Add parameters to this function wherein it would receive a string for the document name
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        
+        // Clear error when user starts typing
+        if (errors[name]) {
+            setErrors(prev => ({
+                ...prev,
+                [name]: ''
+            }));
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!props.selectedDocument?.id) {
+            console.error('No document selected');
+            return;
+        }
+
+        try {
+            const requestData = {
+                documentId: props.selectedDocument.id,
+                email: formData.email,
+                phone: formData.phone,
+                mode: selectedMode,
+                paymentMethod: formData.paymentMethod,
+                purpose: formData.purpose,
+                additionalNotes: formData.additionalNotes,
+                ...(selectedMode === 'delivery' && {
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state,
+                    zipCode: formData.zipCode,
+                    country: formData.country
+                })
+            };
+
+            await createDocumentRequest(requestData);
+            
+            // Reset form and close modal
+            setFormData({
+                email: user?.email || '',
+                phone: user?.phoneNumber || '',
+                paymentMethod: 'online',
+                address: '',
+                city: '',
+                state: '',
+                zipCode: '',
+                country: '',
+                purpose: '',
+                additionalNotes: ''
+            });
+            setSelectedMode('pickup');
+            setErrors({});
+            
+            props.setRequestDocumentModal(false);
+            if (props.setRequestSentModal) {
+                props.setRequestSentModal(true);
+            }
+        } catch (error) {
+            // Error is already handled in the store
+            console.error('Request submission failed:', error);
+        }
+    };
 
     return (
         <Modal
@@ -41,20 +135,70 @@ function RequestDocumentModal(props) {
                 </Modal.Header>
                 <Modal.Body>
                     {/* Document Form */}
-                    <form>
+                    <form onSubmit={handleSubmit}>
                         <div className="grid md:grid-cols-5 md:gap-6">
                             <div className="flex flex-col col-span-2">
-                                <SelectField name="payment_method" id="payment_method" label="Select Payment Method" required={true} options={paymentOptions} />
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Email Address *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        id="email"
+                                        value={formData.email}
+                                        onChange={handleInputChange}
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+                                        required
+                                    />
+                                    {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                                </div>
 
-                                <div className="relative z-0 w-full group mb-5 group">
-                                    <label htmlFor="mode" className="block mb-2 text-sm font-medium dark:text-gray-400">
-                                        Mode
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="phone" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Contact Number *
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        id="phone"
+                                        value={formData.phone}
+                                        onChange={handleInputChange}
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                                        required
+                                    />
+                                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                                </div>
+
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="paymentMethod" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Payment Method *
+                                    </label>
+                                    <select
+                                        name="paymentMethod"
+                                        id="paymentMethod"
+                                        value={formData.paymentMethod}
+                                        onChange={handleInputChange}
+                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                        required
+                                    >
+                                        {paymentOptions.map((option, index) => (
+                                            <option key={index} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="mode" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Mode *
                                     </label>
                                     <select
                                         name="mode"
                                         id="mode"
-                                        className="mt-2 py-2.5 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red block w-full dark:bg-dark-red-5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-dark-red-2 dark:focus:border-dark-red-2"
-                                        required={true}
+                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                        required
                                         value={selectedMode}
                                         onChange={(e) => setSelectedMode(e.target.value)}
                                     >
@@ -67,72 +211,162 @@ function RequestDocumentModal(props) {
                                 </div>
                             </div>
                             <div className="col-span-2">
-                                <LargeInputField name="notes" id="notes" label="Notes" type="text" required={true} placeholder="You can leave it at the guard house." />
-                            </div>
-                        </div>
-                        <div className="grid md:grid-cols-5 md:gap-6">
-                            <div className="grid md:grid-cols-2 md:gap-6 col-span-2">
-                                <NotLabelledInputField name="contact_number" id="contact_number" label="Contact Number" type="tel" required={true} />
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="purpose" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Purpose *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="purpose"
+                                        id="purpose"
+                                        value={formData.purpose}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g., Employment, School Transfer, Scholarship Application"
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.purpose ? 'border-red-500' : 'border-gray-300'}`}
+                                        required
+                                    />
+                                    {errors.purpose && <p className="text-red-500 text-xs mt-1">{errors.purpose}</p>}
+                                </div>
+
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="additionalNotes" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Additional Notes
+                                    </label>
+                                    <textarea
+                                        name="additionalNotes"
+                                        id="additionalNotes"
+                                        rows="4"
+                                        value={formData.additionalNotes}
+                                        onChange={handleInputChange}
+                                        placeholder="Any special instructions or notes..."
+                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* The delivery section is rendered based on selectedMode */}
-
+                        {/* Delivery section */}
                         {selectedMode === 'delivery' && (
                             <>
-                                <h1 className="mb-4 font-bold">For Delivery:</h1>
-                                <div className="grid md:grid-cols-5 md:gap-6">
-                                    <NotLabelledInputField name="country" id="country" label="Country" type="text" required={selectedMode === 'delivery'} />
-                                    <NotLabelledInputField name="zip_code" id="zip_code" label="Zip Code" type="text" required={selectedMode === 'delivery'} />
-                                </div>
-                                <div className="grid md:grid-cols-5 md:gap-6">
-                                    <NotLabelledInputField name="state" id="state" label="State" type="text" required={selectedMode === 'delivery'} />
-                                    <NotLabelledInputField name="city" id="city" label="City" type="text" required={selectedMode === 'delivery'} />
-                                </div>
-                                <div className="grid md:grid-cols-5 md:gap-6">
-                                    <div className="col-span-2">
-                                        <NotLabelledInputField name="add_1" id="add_1" label="Address Line 1" type="text" required={selectedMode === 'delivery'} />
+                                <h1 className="mb-4 font-bold text-lg">Delivery Information:</h1>
+                                <div className="grid md:grid-cols-2 md:gap-6 mb-4">
+                                    <div className="relative z-0 w-full group mb-5">
+                                        <label htmlFor="country" className="block mb-2 text-sm font-medium text-gray-900">
+                                            Country *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="country"
+                                            id="country"
+                                            value={formData.country}
+                                            onChange={handleInputChange}
+                                            className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.country ? 'border-red-500' : 'border-gray-300'}`}
+                                            required={selectedMode === 'delivery'}
+                                        />
+                                        {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
+                                    </div>
+                                    
+                                    <div className="relative z-0 w-full group mb-5">
+                                        <label htmlFor="zipCode" className="block mb-2 text-sm font-medium text-gray-900">
+                                            ZIP Code *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="zipCode"
+                                            id="zipCode"
+                                            value={formData.zipCode}
+                                            onChange={handleInputChange}
+                                            className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.zipCode ? 'border-red-500' : 'border-gray-300'}`}
+                                            required={selectedMode === 'delivery'}
+                                        />
+                                        {errors.zipCode && <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>}
                                     </div>
                                 </div>
-                                <div className="grid md:grid-cols-5 md:gap-6">
-                                    <div className="col-span-2">
-                                        <NotLabelledInputField name="add_2" id="add_2" label="Address Line 2" type="text" required={selectedMode === 'delivery'} />
+                                
+                                <div className="grid md:grid-cols-2 md:gap-6 mb-4">
+                                    <div className="relative z-0 w-full group mb-5">
+                                        <label htmlFor="state" className="block mb-2 text-sm font-medium text-gray-900">
+                                            State/Province *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="state"
+                                            id="state"
+                                            value={formData.state}
+                                            onChange={handleInputChange}
+                                            className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.state ? 'border-red-500' : 'border-gray-300'}`}
+                                            required={selectedMode === 'delivery'}
+                                        />
+                                        {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
                                     </div>
+                                    
+                                    <div className="relative z-0 w-full group mb-5">
+                                        <label htmlFor="city" className="block mb-2 text-sm font-medium text-gray-900">
+                                            City *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            id="city"
+                                            value={formData.city}
+                                            onChange={handleInputChange}
+                                            className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.city ? 'border-red-500' : 'border-gray-300'}`}
+                                            required={selectedMode === 'delivery'}
+                                        />
+                                        {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                                    </div>
+                                </div>
+                                
+                                <div className="relative z-0 w-full group mb-5">
+                                    <label htmlFor="address" className="block mb-2 text-sm font-medium text-gray-900">
+                                        Complete Address *
+                                    </label>
+                                    <textarea
+                                        name="address"
+                                        id="address"
+                                        rows="3"
+                                        value={formData.address}
+                                        onChange={handleInputChange}
+                                        placeholder="Street address, building name, unit number, etc."
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+                                        required={selectedMode === 'delivery'}
+                                    />
+                                    {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
                                 </div>
                             </>
                         )}
-                        <div className="grid md:grid-cols-5 md:gap-6">
+                        <div className="grid md:grid-cols-5 md:gap-6 mt-6">
                             <div className="col-span-4">
-                                <p className="text-xs italic">By submitting, you confirm that the information above is true and any false information may void your document request.</p>
-                                <p className="text-xs italic">For further questions please contact: +63 923 0321 023</p>
+                                <p className="text-xs italic text-gray-600 mb-2">
+                                    By submitting, you confirm that the information above is true and any false information may void your document request.
+                                </p>
+                                <p className="text-xs italic text-gray-600">
+                                    For further questions please contact: +63 923 0321 023
+                                </p>
+                                {Object.keys(errors).length > 0 && (
+                                    <p className="text-red-500 text-sm mt-2">
+                                        Please correct the errors above before submitting.
+                                    </p>
+                                )}
                             </div>
-                            <SmallButton onClick={() => {
-                                const formData = {
-                                    documentName: props.documentName,
-                                    mode: selectedMode,
-                                    paymentMethod: document.getElementById('payment_method').value,
-                                    notes: document.getElementById('notes').value,
-                                    contactNumber: document.getElementById('contact_number').value
-                                };
-
-                                if (selectedMode === 'delivery') {
-                                    formData.deliveryDetails = {
-                                        country: document.getElementById('country')?.value,
-                                        zipCode: document.getElementById('zip_code')?.value,
-                                        state: document.getElementById('state')?.value,
-                                        city: document.getElementById('city')?.value,
-                                        addressLine1: document.getElementById('add_1')?.value,
-                                        addressLine2: document.getElementById('add_2')?.value
-                                    };
-                                }
-
-                                console.log('Document request data:', formData);
-
-                                props.setRequestDocumentModal(false);
-                                props.setRequestSentModal(true);
-                            }}>
-                                Confirm
-                            </SmallButton>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => props.setRequestDocumentModal(false)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-dark-red-2 rounded-md hover:bg-dark-red-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {loading && <Spinner size="small" />}
+                                    {loading ? 'Submitting...' : 'Confirm Request'}
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </Modal.Body>

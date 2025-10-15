@@ -196,8 +196,8 @@ export const updateDocumentTemplate = async (req, res) => {
     
     // Handle file upload if present
     if (req.file) {
-      const fileResult = await uploadFile(req.file, filePaths.documents);  // Changed from saveFile to uploadFile
-      updateData.uploadFile = fileResult.downloadURL;  // Changed from url to downloadURL
+      const fileResult = await uploadFile(req.file, filePaths.documents);
+      updateData.uploadFile = fileResult.downloadURL;
     }
 
     // Convert string booleans to actual booleans
@@ -284,7 +284,7 @@ export const toggleDocumentVisibility = async (req, res) => {
       });
     }
 
-    const updatedDocument = await DocumentModel.hideDocumentTemplate(id, !isActive);
+    const updatedDocument = await DocumentModel.hideDocumentTemplate(id, isActive);
 
     res.json({
       error: false,

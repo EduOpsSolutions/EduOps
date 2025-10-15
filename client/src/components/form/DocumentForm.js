@@ -7,7 +7,8 @@ const DocumentForm = ({
   handleChange,
   handleFileChange,
   loading,
-  isEditing = false
+  isEditing = false,
+  uploadedFile = null
 }) => {
   const fileInputId = isEditing ? "fileUploadEdit" : "fileUploadAddNew";
 
@@ -41,9 +42,9 @@ const DocumentForm = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2"
           required
         >
-          <option value="Teacher's Only">Teacher's Only</option>
-          <option value="Student's Only">Student's Only</option>
-          <option value="Public">Public</option>
+          <option value="teacher_only">Teacher's Only</option>
+          <option value="student_only">Student's Only</option>
+          <option value="public">Public</option>
         </select>
       </div>
 
@@ -55,25 +56,13 @@ const DocumentForm = ({
           <div className="flex gap-4">
             <label className="flex items-center">
               <input
-                type="radio"
+                type="checkbox"
                 name="requestBasis"
-                value="Yes"
-                checked={formData.requestBasis === "Yes"}
+                checked={formData.requestBasis}
                 onChange={handleChange}
                 className="mr-2"
               />
-              Yes
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="requestBasis"
-                value="No"
-                checked={formData.requestBasis === "No"}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              No
+              Requires request to obtain
             </label>
           </div>
         </div>
@@ -85,25 +74,13 @@ const DocumentForm = ({
           <div className="flex gap-4">
             <label className="flex items-center">
               <input
-                type="radio"
+                type="checkbox"
                 name="downloadable"
-                value="Yes"
-                checked={formData.downloadable === "Yes"}
+                checked={formData.downloadable}
                 onChange={handleChange}
                 className="mr-2"
               />
-              Yes
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="downloadable"
-                value="No"
-                checked={formData.downloadable === "No"}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              No
+              Allow direct download
             </label>
           </div>
         </div>
@@ -119,8 +96,8 @@ const DocumentForm = ({
               <input
                 type="radio"
                 name="price"
-                value="Free"
-                checked={formData.price === "Free"}
+                value="free"
+                checked={formData.price === "free"}
                 onChange={handleChange}
                 className="mr-2"
               />
@@ -130,8 +107,8 @@ const DocumentForm = ({
               <input
                 type="radio"
                 name="price"
-                value="Paid"
-                checked={formData.price === "Paid"}
+                value="paid"
+                checked={formData.price === "paid"}
                 onChange={handleChange}
                 className="mr-2"
               />
@@ -139,7 +116,7 @@ const DocumentForm = ({
             </label>
           </div>
 
-          {formData.price === "Paid" && (
+          {formData.price === "paid" && (
             <div className="mt-3">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-900 mb-1">
@@ -186,7 +163,7 @@ const DocumentForm = ({
               Upload
             </button>
             <div className="flex-1 text-sm text-black bg-white py-2 px-3 rounded-md border border-gray-300 truncate">
-              {(isEditing ? formData.uploadFile : formData.uploadedFile?.name) || "No file chosen"}
+              {(isEditing ? formData.uploadFile : uploadedFile?.name) || "No file chosen"}
             </div>
           </div>
         </div>

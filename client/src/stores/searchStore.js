@@ -30,6 +30,7 @@ const createSearchStore = (config) => {
     showDetails: false,
     isLoading: false,
     error: null,
+    hasSearched: showResultsOnLoad,
 
     // Actions
     updateSearchParams: (params) => {
@@ -78,7 +79,8 @@ const createSearchStore = (config) => {
         totalPages,
         currentItems,
         showResults: true,
-        showDetails: false
+        showDetails: false,
+        hasSearched: true
       });
     },
 

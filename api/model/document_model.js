@@ -28,7 +28,7 @@ class DocumentModel {
         downloadable: data.downloadable || false,
         price: data.price || 'free',
         amount: data.price === 'paid' ? parseFloat(data.amount) : null,
-        isActive: data.isActive !== undefined ? data.isActive : true,
+
       }
     });
   }
@@ -68,7 +68,7 @@ class DocumentModel {
   static async hideDocumentTemplate(id, isActive) {
     return await prisma.document_template.update({
       where: { id },
-      data: { isActive: !isActive }
+      data: { isActive }
     });
   }
 
@@ -158,9 +158,9 @@ class DocumentModel {
     });
   }
 
-  static async getDocumentRequestsByStudent(userId) {
+  static async getDocumentRequestsByStudent(studentId) {
     return await prisma.document_request.findMany({
-      where: { userId },
+      where: { studentId },
       include: {
         document: true
       },
@@ -179,8 +179,9 @@ class DocumentModel {
   }
 
   static async deleteDocumentRequest(id) {
-    return await prisma.document_request.delete({
-      where: { id }
+    return await prisma.document_request.update({
+      where: { id },
+      data: { deletedAt: new Date() }
     });
   }
 
