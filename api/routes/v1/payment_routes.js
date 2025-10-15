@@ -1,47 +1,54 @@
 import express from 'express';
 import paymentController from '../../controller/payment_controller.js';
 import {
-    validateCreatePayment,
+    validateCreateManualTransaction,
     validatePagination,
-    validatePaymentId,
-    validateUserId
+    validatePaymentId
 } from '../../middleware/paymentValidator.js';
 
 const {
-    createPayment,
+    createManualTransaction,
+    getAllTransactions,
+    refreshPaymentStatus,
+    bulkSyncPendingPayments,
+    cleanupOrphanedPayments,
+    createPaymentIntent,
+    attachPaymentMethod,
+    sendPaymentLinkEmail,
+    checkPaymentStatus,
+    handleWebhook,
     getPaymentDetails,
     getPaymentsByUserId,
-    getAllTransactions,
-    cancelPayment,
-    getAvailablePaymentMethods
+    getAvailablePaymentMethods,
+    forceSyncPaymentStatus,
+    manualSyncPayment,
+    cancelPayment
 } = paymentController;
-
-/**
- * Payment Routes
- * 
- * Handles all payment-related API endpoints including:
- * - Creating payment links via PayMongo
- * - Managing payment status (cancel, etc.)
- */
 
 const router = express.Router();
 
-// Create payment link (Public endpoint - no auth required)
-router.post('/', validateCreatePayment, createPayment);
+// Public endpoints
+router.post('/send-email', sendPaymentLinkEmail);
+router.get('/check-status/:paymentIntentId', checkPaymentStatus);
+router.post('/sync/:paymentIntentId', manualSyncPayment);
+router.post('/webhook', handleWebhook);
 
-// Get all transactions for admin management
+// Admin endpoints
+router.post('/manual', validateCreateManualTransaction, createManualTransaction);
 router.get('/admin/allTransactions', validatePagination, getAllTransactions);
+router.post('/admin/cleanup', cleanupOrphanedPayments);
+router.post('/admin/bulk-sync', bulkSyncPendingPayments);
 
-// Get payment details by ID
+// PIPM Flow endpoints
+router.post('/create-intent', createPaymentIntent);
+router.post('/attach-method', attachPaymentMethod);
+
+// Payment management
 router.get('/:paymentId', validatePaymentId, getPaymentDetails);
-
-// Get payments by user ID
-router.get('/user/:userId', validateUserId, validatePagination, getPaymentsByUserId);
-
-// Cancel a pending payment
-router.put('/:paymentId/cancel', validatePaymentId, cancelPayment);
-
-// Get available payment methods
+router.get('/:paymentId/status', validatePaymentId, refreshPaymentStatus);
+router.get('/:paymentId/force-sync', validatePaymentId, forceSyncPaymentStatus);
+router.delete('/:paymentId/cancel', validatePaymentId, cancelPayment);
+router.get('/user/:userId', getPaymentsByUserId);
 router.get('/methods/available', getAvailablePaymentMethods);
 
 export default router;

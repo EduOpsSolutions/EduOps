@@ -5,33 +5,21 @@ import axiosInstance from '../utils/axios';
 const useTransactionSearchStore = createSearchStore({
   initialData: [],
   defaultSearchParams: {
-    searchTerm: "",
-    status: ""
+    searchTerm: ""
   },
-  searchableFields: ["firstName", "lastName", "userId", "feeType"],
-  exactMatchFields: ["status"],
+  searchableFields: ["firstName", "lastName", "userId", "studentId", "feeType"],
+  exactMatchFields: [],
   initialItemsPerPage: 10,
   filterFunction: (data, params) => {
-    if (!params.searchTerm && !params.status) return data;
+    if (!params.searchTerm) return data;
     
-    let filteredData = data;
-    
-    // Filter by search term
-    if (params.searchTerm) {
-      filteredData = filteredData.filter(transaction => 
-        transaction.firstName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
-        transaction.lastName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
-        transaction.userId?.toString().includes(params.searchTerm) ||
-        transaction.feeType?.toLowerCase().includes(params.searchTerm.toLowerCase())
-      );
-    }
-    
-    // Filter by status
-    if (params.status) {
-      filteredData = filteredData.filter(transaction => transaction.status === params.status);
-    }
-    
-    return filteredData;
+    return data.filter(transaction => 
+      transaction.firstName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
+      transaction.lastName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
+      transaction.userId?.toString().includes(params.searchTerm) ||
+      transaction.studentId?.toString().includes(params.searchTerm) ||
+      transaction.feeType?.toLowerCase().includes(params.searchTerm.toLowerCase())
+    );
   },
   showResultsOnLoad: true
 });
@@ -65,6 +53,22 @@ const useTransactionStore = create((set, get) => ({
     }
   },
 
+  // Auto-refresh function for webhook updates
+  refreshTransactions: async () => {
+    try {
+      const response = await axiosInstance.get("/payments/admin/allTransactions");
+      const transactions = response.data.data?.payments || [];
+      
+      set({ transactions });
+      
+      const searchStore = useTransactionSearchStore.getState();
+      searchStore.setData(transactions);
+      
+    } catch (error) {
+      console.error("Failed to refresh transactions: ", error);
+    }
+  },
+
   setSelectedTransaction: (transaction) => set({ selectedTransaction: transaction }),
   
   clearSelectedTransaction: () => set({ selectedTransaction: null }),
@@ -82,9 +86,8 @@ const useTransactionStore = create((set, get) => ({
       transactionDetailModal: true 
     });
   },
-
-  openAddTransactionModal: () => set({ addTransactionModal: true }),
   
+  openAddTransactionModal: () => set({ addTransactionModal: true }),
   closeAddTransactionModal: () => set({ addTransactionModal: false }),
   
   openDetailModal: () => set({ transactionDetailModal: true }),
@@ -104,13 +107,70 @@ const useTransactionStore = create((set, get) => ({
 
   // Handle modal submit (placeholder for now)
   handleModalSubmit: async (data) => {
-    console.log('Modal submit:', data);
+    try {
+      const response = await axiosInstance.post('/payments/manual', {
+        studentId: data.studentId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        purpose: data.purpose,
+        paymentMethod: data.paymentMethod,
+        amountPaid: data.amountPaid,
+        referenceNumber: data.referenceNumber,
+        remarks: data.remarks
+      });
+      
+      if (response.data.success) {
+        // Refresh transactions to show the new manual transaction
+        const store = get();
+        store.refreshTransactions();
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Failed to create manual transaction:', error);
+      throw error;
+    }
   },
 
   // Open checkout URL
   openCheckoutUrl: (url) => {
     if (url) {
       window.open(url, '_blank');
+    }
+  },
+
+  // Sync all PayMongo payments status
+  syncAllPayMongoPayments: async () => {
+    try {
+      set({ loading: true });
+      
+      const { transactions } = get();
+      const paymongoTransactions = transactions.filter(transaction => 
+        transaction.paymongoId && (transaction.status === 'paid' || transaction.status === 'pending')
+      );
+      
+      console.log(`Syncing ${paymongoTransactions.length} PayMongo payments...`);
+      
+      // Refresh status for each PayMongo payment
+      const syncPromises = paymongoTransactions.map(transaction =>
+        axiosInstance.get(`/payments/${transaction.id}/status`).catch(error => {
+          console.error(`Failed to sync payment ${transaction.id}:`, error);
+          return null;
+        })
+      );
+      
+      await Promise.all(syncPromises);
+      
+      // Refresh the entire transactions list
+      const store = get();
+      await store.refreshTransactions();
+      
+      set({ loading: false });
+      
+      return { success: true, syncedCount: paymongoTransactions.length };
+    } catch (error) {
+      console.error('Error syncing PayMongo payments:', error);
+      set({ loading: false, error: 'Failed to sync PayMongo payments' });
+      return { success: false, error: error.message };
     }
   },
 
@@ -124,10 +184,16 @@ const useTransactionStore = create((set, get) => ({
           set({
             selectedTransaction: {
               ...selectedTransaction,
-              status: response.data.data.status
+              status: response.data.data.status,
+              ...response.data.data
             }
           });
         }
+        
+        // Refresh the entire transactions list to update the table
+        const store = get();
+        await store.refreshTransactions();
+        
         return response.data.data;
       }
     } catch (error) {

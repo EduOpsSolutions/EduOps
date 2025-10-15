@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 
 const useEnrollmentStore = create((set, get) => ({
   enrollmentId: null,
+  studentId: null,
   enrollmentStatus: "Pending",
   remarkMsg: "Please track your enrollment to view progress.",
   fullName: "",
@@ -33,6 +34,7 @@ const useEnrollmentStore = create((set, get) => ({
 
     set({
       enrollmentId: data.enrollmentId,
+      studentId: data.studentId,
       enrollmentStatus: data.status,
       currentStep,
       completedSteps,
@@ -51,6 +53,7 @@ const useEnrollmentStore = create((set, get) => ({
   clearEnrollmentData: () => {
     set({
       enrollmentId: null,
+      studentId: null,
       enrollmentStatus: "Pending",
       remarkMsg: "Please track your enrollment to view progress.",
       fullName: "",
