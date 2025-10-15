@@ -44,6 +44,7 @@ model users {
   adjustments         adjustments[]
   documentRequests    document_request[]    @relation("UserDocumentRequests")
   documentValidations document_validation[] @relation("UserDocumentValidations")
+  studentGrades       student_grade[]       @relation("UserStudentGrades")
 }
 
 model enrollment_request {
@@ -97,6 +98,7 @@ model course {
   schedules       schedule[]
   payments        payments[]
   fees            fees[]
+  studentGrades   student_grade[]           @relation("CourseStudentGrades")
 }
 
 model schedule {
@@ -246,7 +248,7 @@ model posts {
 
 model post_files {
   id        String     @id @default(cuid())
-  url       String
+  url       String     @db.LongText
   fileName  String?
   fileType  String?
   fileSize  Int?
@@ -452,4 +454,38 @@ enum DocumentRequestStatus {
   delivered
   failed
   fulfilled
+}
+
+model student_grade {
+  id           String     @id @default(cuid())
+  studentId    String
+  courseId     String
+  periodId     String?
+  grade        GradeValue
+  approvedBy   String?    // userId of teacher/admin who approved
+  approvedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  student users  @relation("UserStudentGrades", fields: [studentId], references: [id])
+  course  course @relation("CourseStudentGrades", fields: [courseId], references: [id])
+  files   grade_file[]
+}
+
+model grade_file {
+  id             String     @id @default(cuid())
+  studentGradeId String
+  url            String     @db.LongText
+  fileName       String?
+  fileType       String?
+  uploadedBy     String?    // userId of uploader
+  uploadedAt     DateTime   @default(now())
+
+  studentGrade student_grade @relation(fields: [studentGradeId], references: [id], onDelete: Cascade)
+}
+
+enum GradeValue {
+  Pass
+  Fail
+  NoGrade
 }

@@ -11,10 +11,10 @@ function Grades() {
         loading,
         error,
         studentsGradeModal,
-        selectedCourse,
+        selectedSchedule,
         
         // Actions
-        fetchCourses,
+        fetchSchedules,
         handleGradeStudents,
         resetStore,
         closeStudentsGradeModal
@@ -24,7 +24,7 @@ function Grades() {
         searchTerm,
         currentPage,
         itemsPerPage,
-        filteredCourses,
+        filteredSchedules,
         totalItems,
         totalPages,
         
@@ -35,17 +35,17 @@ function Grades() {
     } = useGradeSearchStore();
     
     useEffect(() => {
-        fetchCourses();
+        fetchSchedules();
         
         return () => {
             resetStore();
             resetSearch();
         };
-    }, [fetchCourses, resetStore, resetSearch]);
+    }, [fetchSchedules, resetStore, resetSearch]);
     
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentItems = filteredCourses.slice(startIndex, endIndex);
+    const currentItems = filteredSchedules.slice(startIndex, endIndex);
     
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
@@ -73,8 +73,8 @@ function Grades() {
                         <div className="flex flex-col sm:flex-row justify-start items-center gap-4 mb-4">
                             <div>
                                 <SearchField
-                                    name="courses"
-                                    placeholder="Search Course"
+                                    name="schedules"
+                                    placeholder="Search Schedule or Course"
                                     value={searchTerm}
                                     onChange={handleSearch}
                                     className="w-full sm:w-80"
@@ -89,13 +89,13 @@ function Grades() {
                                 {loading ? (
                                     <div className="text-center py-12 text-gray-500">
                                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-900 mb-4"></div>
-                                        <p>Loading courses...</p>
+                                        <p>Loading schedules...</p>
                                     </div>
                                 ) : error ? (
                                     <div className="text-center py-12 text-red-600">
-                                        <p>Error loading courses: {error}</p>
+                                        <p>Error loading schedules: {error}</p>
                                         <button 
-                                            onClick={fetchCourses}
+                                            onClick={fetchSchedules}
                                             className="mt-4 text-red-900 underline"
                                         >
                                             Try again
@@ -122,63 +122,52 @@ function Grades() {
                                                 </th>
                                             </tr>
                                         </thead>
-                                    <tbody>
-                                        {currentItems.map((course) => (
-                                            <tr
-                                                key={course.id}
-                                                className="cursor-pointer transition-colors duration-150 hover:bg-gray-50"
-                                                onClick={() => handleGradeStudents(course)}
-                                            >
-                                                <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                                                    <div 
-                                                        className="truncate max-w-20 sm:max-w-24 md:max-w-none" 
-                                                        title={course.name}
-                                                    >
-                                                        {course.name}
-                                                    </div>
-                                                </td>
-                                                <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                                                    <div 
-                                                        className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" 
-                                                        title={course.schedule}
-                                                    >
-                                                        {course.schedule}
-                                                    </div>
-                                                </td>
-                                                <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                                                    <div 
-                                                        className="truncate max-w-20 sm:max-w-28 md:max-w-36 lg:max-w-none" 
-                                                        title={course.time}
-                                                    >
-                                                        {course.time}
-                                                    </div>
-                                                </td>
-                                                <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                                                    <div 
-                                                        className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" 
-                                                        title={course.room}
-                                                    >
-                                                        {course.room}
-                                                    </div>
-                                                </td>
-                                                <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base text-center">
-                                                    <ThinRedButton onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleGradeStudents(course);
-                                                    }}>
-                                                        Grade Students
-                                                    </ThinRedButton>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {currentItems.length === 0 && (
-                                            <tr>
-                                                <td
-                                                    colSpan="5"
-                                                    className="text-center py-6 md:py-8 text-gray-500 border-t border-b border-red-900 text-sm md:text-base"
+                                        <tbody>
+                                            {currentItems.map((schedule) => (
+                                                <tr
+                                                    key={schedule.id}
+                                                    className="cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+                                                    onClick={() => handleGradeStudents(schedule)}
                                                 >
-                                                    No courses found
-                                                </td>                                                </tr>
+                                                    <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                                                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={schedule.course?.name}>
+                                                            {schedule.course?.name}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                                                        <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={schedule.days}>
+                                                            {schedule.days}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                                                        <div className="truncate max-w-20 sm:max-w-28 md:max-w-36 lg:max-w-none" title={`${schedule.time_start} - ${schedule.time_end}`}>
+                                                            {`${schedule.time_start} - ${schedule.time_end}`}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                                                        <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={schedule.location}>
+                                                            {schedule.location}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base text-center">
+                                                        <ThinRedButton onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleGradeStudents(schedule);
+                                                        }}>
+                                                            Grade Students
+                                                        </ThinRedButton>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {currentItems.length === 0 && (
+                                                <tr>
+                                                    <td
+                                                        colSpan="5"
+                                                        className="text-center py-6 md:py-8 text-gray-500 border-t border-b border-red-900 text-sm md:text-base"
+                                                    >
+                                                        No schedules found
+                                                    </td>
+                                                </tr>
                                             )}
                                         </tbody>
                                     </table>
@@ -194,7 +183,7 @@ function Grades() {
                                 itemsPerPage={itemsPerPage}
                                 onItemsPerPageChange={handleItemsPerPageChange}
                                 totalItems={totalItems}
-                                itemName="courses"
+                                itemName="schedules"
                                 showItemsPerPageSelector={true}
                             />
                         </div>
@@ -203,7 +192,7 @@ function Grades() {
                     <StudentsGradeModal
                         students_grade_modal={studentsGradeModal}
                         setStudentsGradeModal={closeStudentsGradeModal}
-                        course={selectedCourse}
+                        schedule={selectedSchedule}
                     />
                 </div>
             </div>
@@ -211,4 +200,4 @@ function Grades() {
     )
 }
 
-export default Grades
+export default Grades;
