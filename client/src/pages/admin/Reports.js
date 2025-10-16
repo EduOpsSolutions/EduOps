@@ -28,6 +28,9 @@ function Reports() {
   const [courses, setCourses] = useState([]);
   const [courseSearchTerm, setCourseSearchTerm] = useState('');
   const [isCoursesDropdownOpen, setIsCoursesDropdownOpen] = useState(false);
+  const [teachers, setTeachers] = useState([]);
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+  const [isTeachersDropdownOpen, setIsTeachersDropdownOpen] = useState(false);
 
   const { getToken } = useAuthStore();
   const navigate = useNavigate();
@@ -56,6 +59,41 @@ function Reports() {
       console.log('Academic periods state updated');
     } catch (error) {
       console.error('Error fetching academic periods:', error);
+    }
+  };
+
+  const fetchTeachers = async () => {
+    // to use for report parameters
+    // {
+    //   name: 'teacherIds',
+    //   label: 'Teachers (Multi-select)',
+    //   type: 'multiselect',
+    //   source: 'teachers',
+    //   searchable: true,
+    //   required: false // or true if needed
+    // }
+    try {
+      const token = getToken();
+      const response = await axiosInstance.get(`/users/role/teacher`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = response.data;
+      console.log('Teachers fetched:', data);
+      console.log('Type of data:', Array.isArray(data), typeof data);
+
+      // Handle both array response and object with data property
+      if (Array.isArray(data)) {
+        setTeachers(data);
+      } else if (data && !data.error && data.data) {
+        setTeachers(data.data);
+      } else if (data && !data.error) {
+        setTeachers([data]);
+      } else {
+        setTeachers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+      setTeachers([]);
     }
   };
 
@@ -245,8 +283,15 @@ function Reports() {
           label: 'Academic Period',
           type: 'select',
           source: 'academicPeriods',
+          required: true,
         },
-        { name: 'facultyId', label: 'Faculty ID', type: 'text' },
+        {
+          name: 'teacherIds',
+          label: 'Teachers (Multi-select)',
+          type: 'multiselect',
+          source: 'teachers',
+          searchable: true,
+        },
       ],
     },
     {
@@ -743,6 +788,149 @@ function Reports() {
           </div>
         );
       }
+
+      if (param.source === 'teachers') {
+        const selectedTeachers = reportParams[param.name] || [];
+
+        const filteredTeachers = teachers.filter((teacher) =>
+          `${teacher.firstName} ${teacher.lastName} ${teacher.userId}`
+            .toLowerCase()
+            .includes(teacherSearchTerm.toLowerCase())
+        );
+
+        const toggleTeacher = (teacherId) => {
+          const newSelected = selectedTeachers.includes(teacherId)
+            ? selectedTeachers.filter((id) => id !== teacherId)
+            : [...selectedTeachers, teacherId];
+          handleParamChange(param.name, newSelected);
+        };
+
+        return (
+          <div className="relative">
+            {/* Dropdown button */}
+            <button
+              type="button"
+              onClick={() => setIsTeachersDropdownOpen(!isTeachersDropdownOpen)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red text-left flex items-center justify-between"
+            >
+              <span className="truncate">
+                {selectedTeachers.length > 0
+                  ? `${selectedTeachers.length} teacher(s) selected`
+                  : 'Select teachers...'}
+              </span>
+              <svg
+                className={`w-5 h-5 transition-transform ${
+                  isTeachersDropdownOpen ? 'transform rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Selected teachers display as tags */}
+            {selectedTeachers.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {selectedTeachers.map((teacherId) => {
+                  const teacher = teachers.find((t) => t.id === teacherId);
+                  return (
+                    <span
+                      key={teacherId}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-dark-red text-white text-xs rounded-full"
+                    >
+                      {teacher?.firstName} {teacher?.lastName}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTeacher(teacherId);
+                        }}
+                        className="hover:text-gray-300"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Dropdown panel */}
+            {isTeachersDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                {/* Search input */}
+                <div className="p-2 border-b border-gray-300 dark:border-gray-600">
+                  <input
+                    type="text"
+                    placeholder="Search teachers..."
+                    value={teacherSearchTerm}
+                    onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red text-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+
+                {/* Teacher list */}
+                <div className="max-h-60 overflow-y-auto">
+                  {filteredTeachers.length > 0 ? (
+                    filteredTeachers.map((teacher) => (
+                      <label
+                        key={teacher.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTeachers.includes(teacher.id)}
+                          onChange={() => toggleTeacher(teacher.id)}
+                          className="rounded text-dark-red focus:ring-dark-red"
+                        />
+                        <span className="text-sm text-gray-900 dark:text-gray-100">
+                          [{teacher.userId}] - {teacher.firstName}{' '}
+                          {teacher.lastName}
+                        </span>
+                      </label>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                      No teachers found
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-2 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {selectedTeachers.length} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsTeachersDropdownOpen(false)}
+                    className="px-3 py-1 text-xs bg-dark-red text-white rounded hover:bg-dark-red-2"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Click outside to close */}
+            {isTeachersDropdownOpen && (
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsTeachersDropdownOpen(false)}
+              />
+            )}
+          </div>
+        );
+      }
     }
 
     if (param.type === 'select') {
@@ -809,6 +997,7 @@ function Reports() {
   useEffect(() => {
     fetchAcademicPeriods();
     fetchCourses();
+    fetchTeachers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -945,6 +1134,8 @@ function Reports() {
                     setReportParams({});
                     setIsCoursesDropdownOpen(false);
                     setCourseSearchTerm('');
+                    setIsTeachersDropdownOpen(false);
+                    setTeacherSearchTerm('');
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
                 >

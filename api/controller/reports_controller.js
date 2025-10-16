@@ -479,13 +479,6 @@ const getCourseEnrollmentStatistics = async (req, res) => {
       where: {
         id: periodId,
       },
-      select: {
-        id: true,
-        batchName: true,
-        startAt: true,
-        endAt: true,
-        isEnrollmentClosed: true,
-      },
     });
 
     const reportData = schedules.map((schedule) => ({
@@ -515,11 +508,10 @@ const getCourseEnrollmentStatistics = async (req, res) => {
       totalRecords: reportData.length,
       summary: {
         periodId: period.id || 'N/A',
-        batchId: period.name || 'N/A',
-        startDate: new Date(period?.startAt).toLocaleDateString() || 'N/A',
-        endDate: new Date(period?.endAt).toLocaleDateString() || 'N/A',
-        isEnrollmentClosed: period?.isEnrollmentClosed || 'N/A',
         batchName: period?.batchName || 'N/A',
+        startDate: new Date(period.startAt).toLocaleDateString() || 'N/A',
+        endDate: new Date(period.endAt).toLocaleDateString() || 'N/A',
+        isEnrollmentClosed: period.isEnrollmentClosed ? 'Closed' : 'Open',
         totalSections: reportData.length,
         totalEnrolledStudents: totalEnrolled,
         averageEnrollmentPerSection: (
@@ -640,15 +632,15 @@ const getTransactionHistoryReport = async (req, res) => {
 // Report 6: Faculty Teaching Load Report
 const getFacultyTeachingLoadReport = async (req, res) => {
   try {
-    const { periodId, facultyId } = req.query;
+    const { periodId, teacherIds } = req.query;
 
     let whereClause = {
       deletedAt: null,
-      teacher: { not: null },
+      ...(teacherIds && { teacher: { in: teacherIds.split(',') } }),
     };
 
     if (periodId) whereClause.periodId = periodId;
-    if (facultyId) whereClause.teacher = facultyId;
+    if (teacherIds) whereClause.teacher = { in: teacherIds.split(',') };
 
     const schedules = await prisma.schedule.findMany({
       where: whereClause,
@@ -732,14 +724,14 @@ const getFacultyTeachingLoadReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Faculty Teaching Load Report',
+      reportName: 'Teacher Teaching Load Report',
       generatedAt: new Date(),
       totalRecords: reportData.length,
-      filters: { periodId, facultyId },
+      filters: { periodId, teacherIds },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating faculty teaching load report:', error);
+    console.error('Error generating teacher teaching load report:', error);
     res.status(500).json({
       error: true,
       message: 'Error generating report',
