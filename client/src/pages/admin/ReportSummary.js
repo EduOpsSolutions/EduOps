@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   BsDownload,
   BsArrowLeft,
@@ -7,7 +7,7 @@ import {
   BsCalendar,
   BsFileEarmarkBarGraph,
   BsFileEarmarkSpreadsheet,
-} from 'react-icons/bs';
+} from "react-icons/bs";
 
 function ReportSummary() {
   const location = useLocation();
@@ -22,7 +22,7 @@ function ReportSummary() {
       setSelectedReport(location.state.selectedReport);
     } else {
       // If no data, redirect back to reports page
-      navigate('/admin/reports');
+      navigate("/admin/reports");
     }
   }, [location.state, navigate]);
 
@@ -31,13 +31,13 @@ function ReportSummary() {
 
     // Convert report data to JSON and download
     const dataStr = JSON.stringify(reportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `${selectedReport.name.replace(
       /\s+/g,
-      '_'
+      "_"
     )}_${new Date().toISOString()}.json`;
     document.body.appendChild(link);
     link.click();
@@ -61,27 +61,27 @@ function ReportSummary() {
 
       // Helper function to flatten nested objects/arrays for CSV
       const flattenValue = (value) => {
-        if (value === null || value === undefined) return '';
+        if (value === null || value === undefined) return "";
         if (Array.isArray(value)) {
           // Handle array of objects
-          if (value.length > 0 && typeof value[0] === 'object') {
+          if (value.length > 0 && typeof value[0] === "object") {
             return value
-              .map((item) => Object.values(item).join(': '))
-              .join('; ');
+              .map((item) => Object.values(item).join(": "))
+              .join("; ");
           }
           // Handle simple arrays
-          return value.join('; ');
+          return value.join("; ");
         }
-        if (typeof value === 'object') {
+        if (typeof value === "object") {
           return Object.entries(value)
             .map(([k, v]) => `${k}: ${v}`)
-            .join('; ');
+            .join("; ");
         }
         return String(value);
       };
 
       // Create CSV header row
-      const csvHeaders = headers.map((h) => `"${h}"`).join(',');
+      const csvHeaders = headers.map((h) => `"${h}"`).join(",");
 
       // Create CSV data rows
       const csvRows = data.map((row) => {
@@ -91,21 +91,21 @@ function ReportSummary() {
             // Escape quotes and wrap in quotes
             return `"${String(value).replace(/"/g, '""')}"`;
           })
-          .join(',');
+          .join(",");
       });
 
       // Combine header and rows
-      const csv = [csvHeaders, ...csvRows].join('\n');
+      const csv = [csvHeaders, ...csvRows].join("\n");
 
       // Create and download the file
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.setAttribute(
-        'download',
-        `${selectedReport.name.replace(/\s+/g, '_')}_${
-          new Date().toISOString().split('.')[0]
+        "download",
+        `${selectedReport.name.replace(/\s+/g, "_")}_${
+          new Date().toISOString().split(".")[0]
         }.csv`
       );
       document.body.appendChild(link);
@@ -113,8 +113,8 @@ function ReportSummary() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error generating CSV:', error);
-      alert('Error generating CSV file. Please try again.');
+      console.error("Error generating CSV:", error);
+      alert("Error generating CSV file. Please try again.");
     }
   };
 
@@ -157,8 +157,8 @@ function ReportSummary() {
         return columnMap[header].header;
       }
       return header
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/([0-9])/g, '$1')
+        .replace(/([A-Z])/g, " $1")
+        .replace(/([0-9])/g, "$1")
         .trim();
     };
 
@@ -168,26 +168,26 @@ function ReportSummary() {
       }
 
       switch (columnType) {
-        case 'currency':
-          return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
+        case "currency":
+          return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
           }).format(value);
-        case 'percentage':
+        case "percentage":
           // If already formatted with %, return as is, otherwise format
-          if (typeof value === 'string' && value.includes('%')) {
+          if (typeof value === "string" && value.includes("%")) {
             return value;
           }
           return `${value}%`;
-        case 'number':
-          return new Intl.NumberFormat('en-US').format(value);
-        case 'date':
+        case "number":
+          return new Intl.NumberFormat("en-US").format(value);
+        case "date":
           try {
             return new Date(value).toLocaleDateString();
           } catch (e) {
             return String(value);
           }
-        case 'text':
+        case "text":
         default:
           return renderCellValue(value);
       }
@@ -218,7 +218,7 @@ function ReportSummary() {
                   const columnType =
                     hasCustomColumns && columnMap[header]
                       ? columnMap[header].type
-                      : 'text';
+                      : "text";
                   return (
                     <td
                       key={header}
@@ -238,10 +238,16 @@ function ReportSummary() {
 
   const renderNestedTable = (data, depth = 0) => {
     // If it's an array of objects, render as a table
-    if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
-      const headers = Object.keys(data[0]);
+    if (Array.isArray(data) && data.length > 0 && typeof data[0] === "object") {
+      const headers = Array.from(
+        new Set(
+          data.flatMap((item) =>
+            item && typeof item === "object" ? Object.keys(item) : []
+          )
+        )
+      );
       return (
-        <div className={`${depth > 0 ? 'ml-4 my-2' : ''}`}>
+        <div className={`${depth > 0 ? "ml-4 my-2" : ""}`}>
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
             <thead className="bg-gray-100 dark:bg-gray-700">
               <tr>
@@ -250,7 +256,7 @@ function ReportSummary() {
                     key={header}
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   >
-                    {header.replace(/([A-Z])/g, ' $1').trim()}
+                    {header.replace(/([A-Z])/g, " $1").trim()}
                   </th>
                 ))}
               </tr>
@@ -263,7 +269,10 @@ function ReportSummary() {
                       key={header}
                       className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"
                     >
-                      {renderCellValue(row[header], depth + 1)}
+                      {renderCellValue(
+                        row ? row[header] : undefined,
+                        depth + 1
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -275,15 +284,15 @@ function ReportSummary() {
     }
 
     // If it's an object, render as a key-value table
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
+    if (data && typeof data === "object" && !Array.isArray(data)) {
       return (
-        <div className={`${depth > 0 ? 'ml-4 my-2' : ''}`}>
+        <div className={`${depth > 0 ? "ml-4 my-2" : ""}`}>
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {Object.entries(data).map(([key, value]) => (
                 <tr key={key}>
                   <td className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-100 dark:bg-gray-700">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                    {key.replace(/([A-Z])/g, " $1").trim()}
                   </td>
                   <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
                     {renderCellValue(value, depth + 1)}
@@ -318,9 +327,9 @@ function ReportSummary() {
     }
 
     // Check if it's a nested object or array
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       // Limit nesting depth to prevent excessive nesting
-      if (depth > 3) {
+      if (depth > 10) {
         return (
           <pre className="text-xs max-w-xs overflow-auto bg-gray-50 dark:bg-gray-900 p-2 rounded">
             {JSON.stringify(value, null, 2)}
@@ -330,24 +339,24 @@ function ReportSummary() {
       return renderNestedTable(value, depth);
     }
 
-    if (typeof value === 'boolean') {
+    if (typeof value === "boolean") {
       return (
         <span
           className={`px-2 py-1 rounded text-xs font-medium ${
             value
-              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
           }`}
         >
-          {value ? 'Yes' : 'No'}
+          {value ? "Yes" : "No"}
         </span>
       );
     }
 
     // Check if value looks like a date
     if (
-      typeof value === 'string' &&
-      (value.includes('T') || value.match(/^\d{4}-\d{2}-\d{2}/))
+      typeof value === "string" &&
+      (value.includes("T") || value.match(/^\d{4}-\d{2}-\d{2}/))
     ) {
       try {
         const date = new Date(value);
@@ -376,7 +385,7 @@ function ReportSummary() {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => navigate('/admin/reports')}
+            onClick={() => navigate("/admin/reports")}
             className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4"
           >
             <BsArrowLeft />
@@ -445,12 +454,12 @@ function ReportSummary() {
                 >
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     {key
-                      .replace(/([A-Z])/g, ' $1')
+                      .replace(/([A-Z])/g, " $1")
                       .toUpperCase()
                       .trim()}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {typeof value === 'object'
+                    {typeof value === "object"
                       ? JSON.stringify(value)
                       : String(value)}
                   </p>

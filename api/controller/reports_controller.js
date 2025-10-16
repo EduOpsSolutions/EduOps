@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-import { convert24To12HourFormatLocale } from '../utils/format.js';
+import { convert24To12HourFormatLocale } from "../utils/format.js";
 // Report 1: Student Enrollment Report
 const getStudentEnrollmentReport = async (req, res) => {
   try {
@@ -13,12 +13,12 @@ const getStudentEnrollmentReport = async (req, res) => {
       : [];
 
     let whereClause = {
-      role: 'student',
+      role: "student",
       deletedAt: null,
     };
 
     // Simple binary check: enrolled or not enrolled
-    if (studentEnrollmentStatus === 'enrolled') {
+    if (studentEnrollmentStatus === "enrolled") {
       // Student has at least one enrollment
       whereClause.enrollments = {
         some: {
@@ -26,7 +26,7 @@ const getStudentEnrollmentReport = async (req, res) => {
           ...(periodId && { periodId: periodId }),
         },
       };
-    } else if (studentEnrollmentStatus === 'not_enrolled') {
+    } else if (studentEnrollmentStatus === "not_enrolled") {
       // Student has no enrollments
       whereClause.enrollments = {
         none: {
@@ -65,8 +65,8 @@ const getStudentEnrollmentReport = async (req, res) => {
         deletedAt: null,
         user: {
           deletedAt: null,
-          role: 'student',
-          ...(accountStatus && accountStatus !== 'All'
+          role: "student",
+          ...(accountStatus && accountStatus !== "All"
             ? { status: accountStatus }
             : {}),
         },
@@ -103,7 +103,7 @@ const getStudentEnrollmentReport = async (req, res) => {
     });
 
     console.log(
-      'yserschscules ko data',
+      "yserschscules ko data",
       JSON.stringify(userSchedules, null, 2)
     );
 
@@ -138,7 +138,7 @@ const getStudentEnrollmentReport = async (req, res) => {
     // Get unique students (remove duplicates)
     const uniqueStudentsMap = new Map();
     userSchedules.forEach((us) => {
-      console.log('us ko before', us);
+      console.log("us ko before", us);
       if (!uniqueStudentsMap.has(us.user.userId)) {
         uniqueStudentsMap.set(us.user.userId, us.user);
       }
@@ -152,7 +152,7 @@ const getStudentEnrollmentReport = async (req, res) => {
       middleName: student.middleName,
       status: student.status,
       fullName: `${student.firstName}${
-        student.middleName ? ' ' + student.middleName : ''
+        student.middleName ? " " + student.middleName : ""
       } ${student.lastName}`,
       email: student.email,
       enrolled_courses: userSchedules
@@ -173,7 +173,7 @@ const getStudentEnrollmentReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Student Enrollment Report',
+      reportName: "Student Enrollment Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       filters: {
@@ -185,10 +185,10 @@ const getStudentEnrollmentReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating student enrollment report:', error);
+    console.error("Error generating student enrollment report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -235,7 +235,7 @@ const getFinancialAssessmentReport = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
@@ -249,7 +249,7 @@ const getFinancialAssessmentReport = async (req, res) => {
       return {
         studentId: assessment.user?.userId,
         fullName: `${assessment.user?.firstName}${
-          assessment.user?.middleName ? ' ' + assessment.user?.middleName : ''
+          assessment.user?.middleName ? " " + assessment.user?.middleName : ""
         } ${assessment.user?.lastName}`,
         email: assessment.user?.email,
         academicPeriod: assessment.academicPeriod?.name,
@@ -286,7 +286,7 @@ const getFinancialAssessmentReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Financial Assessment Summary',
+      reportName: "Financial Assessment Summary",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
@@ -298,10 +298,10 @@ const getFinancialAssessmentReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating financial assessment report:', error);
+    console.error("Error generating financial assessment report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -367,11 +367,11 @@ const getGradeDistributionReport = async (req, res) => {
     // Calculate grade distribution
     const gradeDistribution = {};
     const gradeRanges = {
-      '1.0-1.5': { min: 1.0, max: 1.5, count: 0 },
-      '1.6-2.0': { min: 1.6, max: 2.0, count: 0 },
-      '2.1-2.5': { min: 2.1, max: 2.5, count: 0 },
-      '2.6-3.0': { min: 2.6, max: 3.0, count: 0 },
-      '3.1-5.0': { min: 3.1, max: 5.0, count: 0 },
+      "1.0-1.5": { min: 1.0, max: 1.5, count: 0 },
+      "1.6-2.0": { min: 1.6, max: 2.0, count: 0 },
+      "2.1-2.5": { min: 2.1, max: 2.5, count: 0 },
+      "2.6-3.0": { min: 2.6, max: 3.0, count: 0 },
+      "3.1-5.0": { min: 3.1, max: 5.0, count: 0 },
     };
 
     const reportData = grades.map((g) => {
@@ -388,7 +388,7 @@ const getGradeDistributionReport = async (req, res) => {
       return {
         studentId: g.user?.userId,
         fullName: `${g.user?.firstName}${
-          g.user?.middleName ? ' ' + g.user?.middleName : ''
+          g.user?.middleName ? " " + g.user?.middleName : ""
         } ${g.user?.lastName}`,
         courseCode: g.schedule?.course?.courseCode,
         courseName: g.schedule?.course?.courseName,
@@ -402,7 +402,7 @@ const getGradeDistributionReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Grade Distribution Report',
+      reportName: "Grade Distribution Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       distribution: gradeRanges,
@@ -410,10 +410,10 @@ const getGradeDistributionReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating grade distribution report:', error);
+    console.error("Error generating grade distribution report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -427,7 +427,7 @@ const getCourseEnrollmentStatistics = async (req, res) => {
     if (!periodId) {
       return res.status(400).json({
         error: true,
-        message: 'Period ID is required',
+        message: "Period ID is required",
       });
     }
 
@@ -438,7 +438,7 @@ const getCourseEnrollmentStatistics = async (req, res) => {
     if (periodId) whereClause.periodId = periodId;
     if (courseIds) {
       whereClause.courseId = {
-        in: Array.isArray(courseIds) ? courseIds : courseIds.split(','),
+        in: Array.isArray(courseIds) ? courseIds : courseIds.split(","),
       };
     }
 
@@ -460,7 +460,7 @@ const getCourseEnrollmentStatistics = async (req, res) => {
           where: {
             deletedAt: null,
             user: {
-              role: 'student',
+              role: "student",
               deletedAt: null,
             },
           },
@@ -471,7 +471,7 @@ const getCourseEnrollmentStatistics = async (req, res) => {
       },
 
       orderBy: {
-        courseId: 'asc',
+        courseId: "asc",
       },
     });
 
@@ -490,7 +490,7 @@ const getCourseEnrollmentStatistics = async (req, res) => {
             (schedule.userSchedules.length / schedule.capacity) *
             100
           ).toFixed(2)}%`
-        : 'N/A',
+        : "N/A",
       days: schedule.days,
       timeStart: schedule.time_start,
       timeEnd: schedule.time_end,
@@ -503,15 +503,15 @@ const getCourseEnrollmentStatistics = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Course Enrollment Statistics',
+      reportName: "Course Enrollment Statistics",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
-        periodId: period.id || 'N/A',
-        batchName: period?.batchName || 'N/A',
-        startDate: new Date(period.startAt).toLocaleDateString() || 'N/A',
-        endDate: new Date(period.endAt).toLocaleDateString() || 'N/A',
-        isEnrollmentClosed: period.isEnrollmentClosed ? 'Closed' : 'Open',
+        periodId: period.id || "N/A",
+        batchName: period?.batchName || "N/A",
+        startDate: new Date(period.startAt).toLocaleDateString() || "N/A",
+        endDate: new Date(period.endAt).toLocaleDateString() || "N/A",
+        isEnrollmentClosed: period.isEnrollmentClosed ? "Closed" : "Open",
         totalSections: reportData.length,
         totalEnrolledStudents: totalEnrolled,
         averageEnrollmentPerSection: (
@@ -522,10 +522,10 @@ const getCourseEnrollmentStatistics = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating course enrollment statistics:', error);
+    console.error("Error generating course enrollment statistics:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -569,7 +569,7 @@ const getTransactionHistoryReport = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
@@ -577,7 +577,7 @@ const getTransactionHistoryReport = async (req, res) => {
       transactionId: transaction.id,
       studentId: transaction.user?.userId,
       fullName: `${transaction.user?.firstName}${
-        transaction.user?.middleName ? ' ' + transaction.user?.middleName : ''
+        transaction.user?.middleName ? " " + transaction.user?.middleName : ""
       } ${transaction.user?.lastName}`,
       email: transaction.user?.email,
       academicPeriod: transaction.academicPeriod?.name,
@@ -586,8 +586,8 @@ const getTransactionHistoryReport = async (req, res) => {
       previousBalance: parseFloat(transaction.previousBalance || 0),
       balance: parseFloat(transaction.balance),
       transactionDate: transaction.createdAt,
-      paymentMethod: transaction.paymentMethod || 'N/A',
-      referenceNumber: transaction.referenceNumber || 'N/A',
+      paymentMethod: transaction.paymentMethod || "N/A",
+      referenceNumber: transaction.referenceNumber || "N/A",
     }));
 
     // Filter by amount range if provided
@@ -609,7 +609,7 @@ const getTransactionHistoryReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Transaction History Report',
+      reportName: "Transaction History Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
@@ -620,10 +620,10 @@ const getTransactionHistoryReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating transaction history report:', error);
+    console.error("Error generating transaction history report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -636,31 +636,29 @@ const getFacultyTeachingLoadReport = async (req, res) => {
 
     let whereClause = {
       deletedAt: null,
-      ...(teacherIds && { teacher: { in: teacherIds.split(',') } }),
+      ...(teacherIds && { teacherId: { in: teacherIds.split(",") } }),
     };
 
     if (periodId) whereClause.periodId = periodId;
-    if (teacherIds) whereClause.teacher = { in: teacherIds.split(',') };
 
     const schedules = await prisma.schedule.findMany({
       where: whereClause,
       include: {
         course: {
           select: {
-            courseCode: true,
-            courseName: true,
-            units: true,
-            yearLevel: true,
-          },
-        },
-        academicPeriod: {
-          select: {
+            id: true,
             name: true,
-            schoolYear: true,
           },
         },
-        teacherUser: {
+        period: {
           select: {
+            id: true,
+            batchName: true,
+          },
+        },
+        teacher: {
+          select: {
+            id: true,
             userId: true,
             firstName: true,
             middleName: true,
@@ -668,7 +666,7 @@ const getFacultyTeachingLoadReport = async (req, res) => {
             email: true,
           },
         },
-        user_schedule: {
+        userSchedules: {
           where: {
             deletedAt: null,
           },
@@ -678,63 +676,83 @@ const getFacultyTeachingLoadReport = async (req, res) => {
         },
       },
       orderBy: {
-        teacher: 'asc',
+        teacher: {
+          lastName: "asc",
+        },
       },
     });
 
     // Group by teacher
-    const teacherLoads = {};
+    console.log("schedules", JSON.stringify(schedules, null, 2));
+    let teacherLoads = [];
     schedules.forEach((schedule) => {
-      const teacherId = schedule.teacher;
-      if (!teacherLoads[teacherId]) {
-        teacherLoads[teacherId] = {
-          teacherId: schedule.teacherUser?.userId,
-          fullName: `${schedule.teacherUser?.firstName}${
-            schedule.teacherUser?.middleName
-              ? ' ' + schedule.teacherUser?.middleName
-              : ''
-          } ${schedule.teacherUser?.lastName}`,
-          email: schedule.teacherUser?.email,
-          totalUnits: 0,
-          totalCourses: 0,
-          totalStudents: 0,
-          courses: [],
-        };
+      // Skip schedules without assigned teacher to avoid undefined accesses
+      if (!schedule.teacher) {
+        return;
       }
 
-      teacherLoads[teacherId].totalUnits += schedule.course?.units || 0;
-      teacherLoads[teacherId].totalCourses += 1;
-      teacherLoads[teacherId].totalStudents += schedule.user_schedule.length;
-      teacherLoads[teacherId].courses.push({
-        courseCode: schedule.course?.courseCode,
-        courseName: schedule.course?.courseName,
-        section: schedule.section,
-        units: schedule.course?.units,
-        yearLevel: schedule.course?.yearLevel,
-        enrolledStudents: schedule.user_schedule.length,
-        days: schedule.days,
-        timeStart: schedule.time_start,
-        timeEnd: schedule.time_end,
-        academicPeriod: schedule.academicPeriod?.name,
-        schoolYear: schedule.academicPeriod?.schoolYear,
-      });
-    });
+      const existingTeacher = teacherLoads.find(
+        (t) => t.teacherId === schedule.teacher.userId
+      );
+      if (!existingTeacher) {
+        teacherLoads = [
+          ...teacherLoads,
+          {
+            teacherId: schedule.teacher.userId,
+            fullName: `${schedule.teacher.firstName}${
+              schedule.teacher.middleName
+                ? " " + schedule.teacher.middleName
+                : ""
+            } ${schedule.teacher.lastName}`,
+            email: schedule.teacher.email,
+            totalStudents: 0,
+            totalCourses: 0,
+            courses: [],
+          },
+        ];
+      }
 
-    const reportData = Object.values(teacherLoads);
+      // Recompute index after potential push above
+      const index = teacherLoads.findIndex(
+        (t) => t.teacherId === schedule.teacher.userId
+      );
+      if (index === -1) {
+        return;
+      }
+
+      teacherLoads[index].totalStudents += schedule.userSchedules.length;
+
+      // Ensure course entry exists
+      let courseIndex = teacherLoads[index].courses.findIndex(
+        (c) => c.courseId === schedule.course?.id
+      );
+      if (courseIndex === -1) {
+        teacherLoads[index].courses.push({
+          courseId: schedule.course?.id,
+          courseName: schedule.course?.name,
+          totalStudents: 0,
+        });
+        courseIndex = teacherLoads[index].courses.length - 1;
+      }
+
+      teacherLoads[index].courses[courseIndex].totalStudents +=
+        schedule.userSchedules.length;
+      teacherLoads[index].totalCourses += 1;
+    });
 
     res.json({
       error: false,
-      reportName: 'Teacher Teaching Load Report',
+      reportName: "Teacher Teaching Load Report",
       generatedAt: new Date(),
-      totalRecords: reportData.length,
+      totalRecords: teacherLoads.length,
       filters: { periodId, teacherIds },
-      data: reportData,
+      data: teacherLoads,
     });
   } catch (error) {
-    console.error('Error generating teacher teaching load report:', error);
+    console.error("Error generating teacher teaching load report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -746,7 +764,7 @@ const getStudentAcademicProgressReport = async (req, res) => {
     const { studentId, periodId } = req.query;
 
     let userWhereClause = {
-      role: 'student',
+      role: "student",
       deletedAt: null,
     };
 
@@ -808,12 +826,12 @@ const getStudentAcademicProgressReport = async (req, res) => {
       const gpa =
         grades.length > 0
           ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-          : 'N/A';
+          : "N/A";
 
       return {
         studentId: student.userId,
         fullName: `${student.firstName}${
-          student.middleName ? ' ' + student.middleName : ''
+          student.middleName ? " " + student.middleName : ""
         } ${student.lastName}`,
         email: student.email,
         totalCoursesEnrolled: student.user_schedule.length,
@@ -827,25 +845,25 @@ const getStudentAcademicProgressReport = async (req, res) => {
           yearLevel: us.schedule?.course?.yearLevel,
           academicPeriod: us.schedule?.academicPeriod?.name,
           schoolYear: us.schedule?.academicPeriod?.schoolYear,
-          grade: us.grade || 'In Progress',
-          remarks: us.remarks || 'Ongoing',
+          grade: us.grade || "In Progress",
+          remarks: us.remarks || "Ongoing",
         })),
       };
     });
 
     res.json({
       error: false,
-      reportName: 'Student Academic Progress Report',
+      reportName: "Student Academic Progress Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       filters: { studentId, periodId },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating student academic progress report:', error);
+    console.error("Error generating student academic progress report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -882,7 +900,7 @@ const getEnrollmentPeriodAnalysis = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
@@ -910,17 +928,17 @@ const getEnrollmentPeriodAnalysis = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Enrollment Period Analysis',
+      reportName: "Enrollment Period Analysis",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       filters: { schoolYear },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating enrollment period analysis:', error);
+    console.error("Error generating enrollment period analysis:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -958,7 +976,7 @@ const getOutstandingBalanceReport = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
@@ -969,7 +987,7 @@ const getOutstandingBalanceReport = async (req, res) => {
         userBalances[ledger.userId] = {
           studentId: ledger.user?.userId,
           fullName: `${ledger.user?.firstName}${
-            ledger.user?.middleName ? ' ' + ledger.user?.middleName : ''
+            ledger.user?.middleName ? " " + ledger.user?.middleName : ""
           } ${ledger.user?.lastName}`,
           email: ledger.user?.email,
           academicPeriod: ledger.academicPeriod?.name,
@@ -991,10 +1009,10 @@ const getOutstandingBalanceReport = async (req, res) => {
       const daysSinceLastPayment = Math.floor(
         (new Date() - new Date(item.lastPaymentDate)) / (1000 * 60 * 60 * 24)
       );
-      let agingCategory = 'Current';
-      if (daysSinceLastPayment > 90) agingCategory = '90+ days';
-      else if (daysSinceLastPayment > 60) agingCategory = '60-90 days';
-      else if (daysSinceLastPayment > 30) agingCategory = '30-60 days';
+      let agingCategory = "Current";
+      if (daysSinceLastPayment > 90) agingCategory = "90+ days";
+      else if (daysSinceLastPayment > 60) agingCategory = "60-90 days";
+      else if (daysSinceLastPayment > 30) agingCategory = "30-60 days";
 
       return {
         ...item,
@@ -1010,7 +1028,7 @@ const getOutstandingBalanceReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Outstanding Balance Report',
+      reportName: "Outstanding Balance Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
@@ -1020,10 +1038,10 @@ const getOutstandingBalanceReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating outstanding balance report:', error);
+    console.error("Error generating outstanding balance report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1058,7 +1076,7 @@ const getDocumentSubmissionStatus = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
@@ -1066,7 +1084,7 @@ const getDocumentSubmissionStatus = async (req, res) => {
       documentId: doc.id,
       studentId: doc.user?.userId,
       fullName: `${doc.user?.firstName}${
-        doc.user?.middleName ? ' ' + doc.user?.middleName : ''
+        doc.user?.middleName ? " " + doc.user?.middleName : ""
       } ${doc.user?.lastName}`,
       email: doc.user?.email,
       documentType: doc.type,
@@ -1074,7 +1092,7 @@ const getDocumentSubmissionStatus = async (req, res) => {
       status: doc.status,
       submittedDate: doc.createdAt,
       validatedDate: doc.validatedAt,
-      remarks: doc.remarks || 'N/A',
+      remarks: doc.remarks || "N/A",
     }));
 
     // Count by status
@@ -1085,7 +1103,7 @@ const getDocumentSubmissionStatus = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Document Submission Status Report',
+      reportName: "Document Submission Status Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
@@ -1095,10 +1113,10 @@ const getDocumentSubmissionStatus = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating document submission status report:', error);
+    console.error("Error generating document submission status report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1151,7 +1169,7 @@ const getClassScheduleReport = async (req, res) => {
           },
         },
       },
-      orderBy: [{ days: 'asc' }, { time_start: 'asc' }],
+      orderBy: [{ days: "asc" }, { time_start: "asc" }],
     });
 
     const reportData = schedules.map((schedule) => ({
@@ -1166,32 +1184,32 @@ const getClassScheduleReport = async (req, res) => {
       instructor: schedule.teacherUser
         ? `${schedule.teacherUser.firstName}${
             schedule.teacherUser.middleName
-              ? ' ' + schedule.teacherUser.middleName
-              : ''
+              ? " " + schedule.teacherUser.middleName
+              : ""
           } ${schedule.teacherUser.lastName}`
-        : 'TBA',
+        : "TBA",
       instructorId: schedule.teacherUser?.userId,
       days: schedule.days,
       timeStart: schedule.time_start,
       timeEnd: schedule.time_end,
-      room: schedule.room || 'TBA',
+      room: schedule.room || "TBA",
       enrolledStudents: schedule.user_schedule.length,
-      capacity: schedule.capacity || 'N/A',
+      capacity: schedule.capacity || "N/A",
     }));
 
     res.json({
       error: false,
-      reportName: 'Class Schedule Report',
+      reportName: "Class Schedule Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       filters: { periodId, courseId, days },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating class schedule report:', error);
+    console.error("Error generating class schedule report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1205,7 +1223,7 @@ const getStudentLedgerSummary = async (req, res) => {
     if (!studentId) {
       return res.status(400).json({
         error: true,
-        message: 'studentId is required for this report',
+        message: "studentId is required for this report",
       });
     }
 
@@ -1238,16 +1256,16 @@ const getStudentLedgerSummary = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: 'asc',
+        createdAt: "asc",
       },
     });
 
     if (ledgers.length === 0) {
       return res.json({
         error: false,
-        reportName: 'Student Ledger Summary',
+        reportName: "Student Ledger Summary",
         generatedAt: new Date(),
-        message: 'No ledger entries found for this student',
+        message: "No ledger entries found for this student",
         filters: { studentId, periodId },
         data: [],
       });
@@ -1263,7 +1281,7 @@ const getStudentLedgerSummary = async (req, res) => {
     const reportData = {
       studentId: student.userId,
       fullName: `${student.firstName}${
-        student.middleName ? ' ' + student.middleName : ''
+        student.middleName ? " " + student.middleName : ""
       } ${student.lastName}`,
       email: student.email,
       summary: {
@@ -1279,23 +1297,23 @@ const getStudentLedgerSummary = async (req, res) => {
         paymentAmount: parseFloat(ledger.paymentAmount || 0),
         previousBalance: parseFloat(ledger.previousBalance || 0),
         balance: parseFloat(ledger.balance),
-        paymentMethod: ledger.paymentMethod || 'N/A',
-        referenceNumber: ledger.referenceNumber || 'N/A',
+        paymentMethod: ledger.paymentMethod || "N/A",
+        referenceNumber: ledger.referenceNumber || "N/A",
       })),
     };
 
     res.json({
       error: false,
-      reportName: 'Student Ledger Summary',
+      reportName: "Student Ledger Summary",
       generatedAt: new Date(),
       filters: { studentId, periodId },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating student ledger summary:', error);
+    console.error("Error generating student ledger summary:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1304,82 +1322,56 @@ const getStudentLedgerSummary = async (req, res) => {
 // Report 13: Enrollment Requests Log
 const getEnrollmentRequestsLog = async (req, res) => {
   try {
-    const { status, startDate, endDate } = req.query;
+    const { periodIds } = req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
-
-    if (status) whereClause.status = status;
-
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
+    let whereClause = {};
+    if (!periodIds) {
+      return res.status(400).json({
+        error: true,
+        message: "Please select at least one academic period",
+      });
     }
+    if (periodIds) whereClause.periodId = { in: periodIds.split(",") };
 
-    const enrollments = await prisma.enrollment.findMany({
+    const enrollments = await prisma.enrollment_request.findMany({
       where: whereClause,
       include: {
-        user: {
+        payments: {
           select: {
-            userId: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            email: true,
+            amount: true,
+            paymentMethod: true,
+            status: true,
+            referenceNumber: true,
           },
         },
-        academicPeriod: {
+        period: {
           select: {
-            name: true,
-            schoolYear: true,
+            batchName: true,
           },
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
-    const reportData = enrollments.map((enrollment) => ({
-      enrollmentId: enrollment.id,
-      studentId: enrollment.user?.userId,
-      fullName: `${enrollment.user?.firstName}${
-        enrollment.user?.middleName ? ' ' + enrollment.user?.middleName : ''
-      } ${enrollment.user?.lastName}`,
-      email: enrollment.user?.email,
-      academicPeriod: enrollment.academicPeriod?.name,
-      schoolYear: enrollment.academicPeriod?.schoolYear,
-      status: enrollment.status,
-      requestDate: enrollment.createdAt,
-      processedDate: enrollment.updatedAt,
-      remarks: enrollment.remarks || 'N/A',
-    }));
-
-    // Count by status
-    const statusCounts = reportData.reduce((acc, enr) => {
-      acc[enr.status] = (acc[enr.status] || 0) + 1;
-      return acc;
-    }, {});
-
+    const reportData = enrollments;
+    console.log("repdata", reportData);
     res.json({
       error: false,
-      reportName: 'Enrollment Requests Log',
+      reportName: "Enrollment Requests Log",
       generatedAt: new Date(),
-      totalRecords: reportData.length,
       summary: {
-        statusBreakdown: statusCounts,
+        totalRecords: reportData.length,
       },
-      filters: { status, startDate, endDate },
+      filters: { periodIds },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating enrollment requests log:', error);
+    console.error("Error generating enrollment requests log:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1407,7 +1399,7 @@ const getFeeStructureReport = async (req, res) => {
           },
         },
       },
-      orderBy: [{ feeType: 'asc' }, { amount: 'desc' }],
+      orderBy: [{ feeType: "asc" }, { amount: "desc" }],
     });
 
     const reportData = fees.map((fee) => ({
@@ -1415,11 +1407,11 @@ const getFeeStructureReport = async (req, res) => {
       feeName: fee.name,
       feeType: fee.feeType,
       amount: parseFloat(fee.amount),
-      yearLevel: fee.yearLevel || 'All',
-      program: fee.program || 'All',
+      yearLevel: fee.yearLevel || "All",
+      program: fee.program || "All",
       academicPeriod: fee.academicPeriod?.name,
       schoolYear: fee.academicPeriod?.schoolYear,
-      description: fee.description || 'N/A',
+      description: fee.description || "N/A",
       isRequired: fee.isRequired || false,
     }));
 
@@ -1436,7 +1428,7 @@ const getFeeStructureReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Fee Structure Report',
+      reportName: "Fee Structure Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
@@ -1454,10 +1446,10 @@ const getFeeStructureReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating fee structure report:', error);
+    console.error("Error generating fee structure report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1496,14 +1488,14 @@ const getUserAccountActivity = async (req, res) => {
         updatedAt: true,
       },
       orderBy: {
-        updatedAt: 'desc',
+        updatedAt: "desc",
       },
     });
 
     const reportData = users.map((user) => ({
       userId: user.userId,
       fullName: `${user.firstName}${
-        user.middleName ? ' ' + user.middleName : ''
+        user.middleName ? " " + user.middleName : ""
       } ${user.lastName}`,
       email: user.email,
       role: user.role,
@@ -1528,7 +1520,7 @@ const getUserAccountActivity = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'User Account Activity Report',
+      reportName: "User Account Activity Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
@@ -1539,10 +1531,10 @@ const getUserAccountActivity = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating user account activity report:', error);
+    console.error("Error generating user account activity report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1557,8 +1549,8 @@ const getGraduatedStudentsReport = async (req, res) => {
     // This is a simplified approach - adjust based on your actual graduation logic
     const students = await prisma.users.findMany({
       where: {
-        role: 'student',
-        status: 'active',
+        role: "student",
+        status: "active",
         deletedAt: null,
       },
       select: {
@@ -1617,7 +1609,7 @@ const getGraduatedStudentsReport = async (req, res) => {
         const gpa =
           grades.length > 0
             ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-            : 'N/A';
+            : "N/A";
 
         // Get latest academic period from completed courses
         const latestCourse = completedCourses.sort(
@@ -1629,7 +1621,7 @@ const getGraduatedStudentsReport = async (req, res) => {
         return {
           studentId: student.userId,
           fullName: `${student.firstName}${
-            student.middleName ? ' ' + student.middleName : ''
+            student.middleName ? " " + student.middleName : ""
           } ${student.lastName}`,
           email: student.email,
           enrollmentDate: student.createdAt,
@@ -1651,17 +1643,17 @@ const getGraduatedStudentsReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Graduated Students Report',
+      reportName: "Graduated Students Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
       filters: { schoolYear, program },
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating graduated students report:', error);
+    console.error("Error generating graduated students report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1679,7 +1671,7 @@ const getArchivedRecordsReport = async (req, res) => {
       enrollments: [],
     };
 
-    if (!recordType || recordType === 'users') {
+    if (!recordType || recordType === "users") {
       const archivedUsers = await prisma.users.findMany({
         where: {
           deletedAt: { not: null },
@@ -1696,14 +1688,14 @@ const getArchivedRecordsReport = async (req, res) => {
           deletedAt: true,
         },
         orderBy: {
-          deletedAt: 'desc',
+          deletedAt: "desc",
         },
       });
 
       reportData.users = archivedUsers.map((user) => ({
         userId: user.userId,
         fullName: `${user.firstName}${
-          user.middleName ? ' ' + user.middleName : ''
+          user.middleName ? " " + user.middleName : ""
         } ${user.lastName}`,
         email: user.email,
         role: user.role,
@@ -1713,7 +1705,7 @@ const getArchivedRecordsReport = async (req, res) => {
       }));
     }
 
-    if (!recordType || recordType === 'courses') {
+    if (!recordType || recordType === "courses") {
       const archivedCourses = await prisma.course.findMany({
         where: {
           deletedAt: { not: null },
@@ -1727,14 +1719,14 @@ const getArchivedRecordsReport = async (req, res) => {
           deletedAt: true,
         },
         orderBy: {
-          deletedAt: 'desc',
+          deletedAt: "desc",
         },
       });
 
       reportData.courses = archivedCourses;
     }
 
-    if (!recordType || recordType === 'schedules') {
+    if (!recordType || recordType === "schedules") {
       let whereClause = {
         deletedAt: { not: null },
       };
@@ -1762,7 +1754,7 @@ const getArchivedRecordsReport = async (req, res) => {
           },
         },
         orderBy: {
-          deletedAt: 'desc',
+          deletedAt: "desc",
         },
       });
 
@@ -1785,7 +1777,7 @@ const getArchivedRecordsReport = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Archived Records Report',
+      reportName: "Archived Records Report",
       generatedAt: new Date(),
       totalRecords: totalRecords,
       summary: {
@@ -1798,10 +1790,10 @@ const getArchivedRecordsReport = async (req, res) => {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating archived records report:', error);
+    console.error("Error generating archived records report:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }
@@ -1850,7 +1842,7 @@ const getProgramEnrollmentTrends = async (req, res) => {
         },
       },
       orderBy: {
-        schoolYear: 'asc',
+        schoolYear: "asc",
       },
     });
 
@@ -1860,7 +1852,7 @@ const getProgramEnrollmentTrends = async (req, res) => {
 
       period.schedule.forEach((schedule) => {
         const programKey =
-          schedule.course?.courseCode?.substring(0, 3) || 'Unknown';
+          schedule.course?.courseCode?.substring(0, 3) || "Unknown";
 
         if (!programStats[programKey]) {
           programStats[programKey] = {
@@ -1873,7 +1865,7 @@ const getProgramEnrollmentTrends = async (req, res) => {
         programStats[programKey].totalEnrollments +=
           schedule.user_schedule.length;
 
-        const courseKey = schedule.course?.courseCode || 'Unknown';
+        const courseKey = schedule.course?.courseCode || "Unknown";
         if (!programStats[programKey].courses[courseKey]) {
           programStats[programKey].courses[courseKey] = {
             courseCode: courseKey,
@@ -1901,17 +1893,17 @@ const getProgramEnrollmentTrends = async (req, res) => {
 
     res.json({
       error: false,
-      reportName: 'Program Enrollment Trends',
+      reportName: "Program Enrollment Trends",
       generatedAt: new Date(),
       totalPeriods: trendsData.length,
       filters: { startYear, endYear },
       data: trendsData,
     });
   } catch (error) {
-    console.error('Error generating program enrollment trends:', error);
+    console.error("Error generating program enrollment trends:", error);
     res.status(500).json({
       error: true,
-      message: 'Error generating report',
+      message: "Error generating report",
       details: error.message,
     });
   }

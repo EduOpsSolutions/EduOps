@@ -32,6 +32,9 @@ function Reports() {
   const [teachers, setTeachers] = useState([]);
   const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
   const [isTeachersDropdownOpen, setIsTeachersDropdownOpen] = useState(false);
+  const [academicPeriodSearchTerm, setAcademicPeriodSearchTerm] = useState("");
+  const [isAcademicPeriodsDropdownOpen, setIsAcademicPeriodsDropdownOpen] =
+    useState(false);
 
   // AI Report states
   const [showAIModal, setShowAIModal] = useState(false);
@@ -296,7 +299,7 @@ function Reports() {
       id: 6,
       name: "Faculty Teaching Load Report",
       description:
-        "Summary of teaching assignments, units, and schedules for all faculty members",
+        "Summary of teaching schedules and courses for all faculty members",
       category: "Faculty",
       icon: <BsClipboardCheck className="text-2xl" />,
       color:
@@ -444,9 +447,14 @@ function Reports() {
       color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
       endpoint: "enrollment-requests-log",
       parameters: [
-        { name: "status", label: "Status", type: "text" },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
+        {
+          name: "periodIds",
+          label: "Academic Periods (Multi-select)",
+          type: "multiselect",
+          source: "academicPeriods",
+          required: true,
+          searchable: true,
+        },
       ],
     },
     {
@@ -1042,6 +1050,154 @@ function Reports() {
           </div>
         );
       }
+
+      if (param.source === "academicPeriods") {
+        const selectedPeriods = reportParams[param.name] || [];
+
+        const filteredPeriods = academicPeriods.filter((period) =>
+          `${period.name || period.batchName} ${period.schoolYear || ""}`
+            .toLowerCase()
+            .includes(academicPeriodSearchTerm.toLowerCase())
+        );
+
+        const togglePeriod = (periodId) => {
+          const newSelected = selectedPeriods.includes(periodId)
+            ? selectedPeriods.filter((id) => id !== periodId)
+            : [...selectedPeriods, periodId];
+          handleParamChange(param.name, newSelected);
+        };
+
+        return (
+          <div className="relative">
+            {/* Dropdown button */}
+            <button
+              type="button"
+              onClick={() =>
+                setIsAcademicPeriodsDropdownOpen(!isAcademicPeriodsDropdownOpen)
+              }
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red text-left flex items-center justify-between"
+            >
+              <span className="truncate">
+                {selectedPeriods.length > 0
+                  ? `${selectedPeriods.length} academic period(s) selected`
+                  : "Select academic periods..."}
+              </span>
+              <svg
+                className={`w-5 h-5 transition-transform ${
+                  isAcademicPeriodsDropdownOpen ? "transform rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Selected periods display as tags */}
+            {selectedPeriods.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {selectedPeriods.map((periodId) => {
+                  const period = academicPeriods.find((p) => p.id === periodId);
+                  return (
+                    <span
+                      key={periodId}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-dark-red text-white text-xs rounded-full"
+                    >
+                      {period?.name || period?.batchName}{" "}
+                      {period?.schoolYear && `(${period.schoolYear})`}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePeriod(periodId);
+                        }}
+                        className="hover:text-gray-300"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Dropdown panel */}
+            {isAcademicPeriodsDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                {/* Search input */}
+                <div className="p-2 border-b border-gray-300 dark:border-gray-600">
+                  <input
+                    type="text"
+                    placeholder="Search academic periods..."
+                    value={academicPeriodSearchTerm}
+                    onChange={(e) =>
+                      setAcademicPeriodSearchTerm(e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red text-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+
+                {/* Academic periods list */}
+                <div className="max-h-60 overflow-y-auto">
+                  {filteredPeriods.length > 0 ? (
+                    filteredPeriods.map((period) => (
+                      <label
+                        key={period.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPeriods.includes(period.id)}
+                          onChange={() => togglePeriod(period.id)}
+                          className="rounded text-dark-red focus:ring-dark-red"
+                        />
+                        <span className="text-sm text-gray-900 dark:text-gray-100">
+                          {period.name || period.batchName}{" "}
+                          {period.schoolYear && `(${period.schoolYear})`}
+                        </span>
+                      </label>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                      No academic periods found
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-2 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {selectedPeriods.length} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAcademicPeriodsDropdownOpen(false)}
+                    className="px-3 py-1 text-xs bg-dark-red text-white rounded hover:bg-dark-red-2"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Click outside to close */}
+            {isAcademicPeriodsDropdownOpen && (
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsAcademicPeriodsDropdownOpen(false)}
+              />
+            )}
+          </div>
+        );
+      }
     }
 
     if (param.type === "select") {
@@ -1378,6 +1534,8 @@ function Reports() {
                     setCourseSearchTerm("");
                     setIsTeachersDropdownOpen(false);
                     setTeacherSearchTerm("");
+                    setIsAcademicPeriodsDropdownOpen(false);
+                    setAcademicPeriodSearchTerm("");
                   }}
                   className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
                 >
