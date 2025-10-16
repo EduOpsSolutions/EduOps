@@ -127,18 +127,70 @@ function ReportSummary() {
       );
     }
 
-    // Get all unique keys from all data objects
-    const allKeys = new Set();
-    reportData.data.forEach((item) => {
-      Object.keys(item).forEach((key) => allKeys.add(key));
-    });
-    const headers = Array.from(allKeys);
+    // Check if AI-generated columns are provided
+    const hasCustomColumns =
+      reportData.columns &&
+      Array.isArray(reportData.columns) &&
+      reportData.columns.length > 0;
+
+    let headers = [];
+    let columnMap = {};
+
+    if (hasCustomColumns) {
+      // Use AI-defined columns
+      headers = reportData.columns.map((col) => col.field);
+      columnMap = reportData.columns.reduce((acc, col) => {
+        acc[col.field] = col;
+        return acc;
+      }, {});
+    } else {
+      // Get all unique keys from all data objects (default behavior)
+      const allKeys = new Set();
+      reportData.data.forEach((item) => {
+        Object.keys(item).forEach((key) => allKeys.add(key));
+      });
+      headers = Array.from(allKeys);
+    }
 
     const renderHeader = (header) => {
+      if (hasCustomColumns && columnMap[header]) {
+        return columnMap[header].header;
+      }
       return header
         .replace(/([A-Z])/g, ' $1')
         .replace(/([0-9])/g, '$1')
         .trim();
+    };
+
+    const renderFormattedCell = (value, columnType) => {
+      if (value === null || value === undefined) {
+        return <span className="text-gray-400">-</span>;
+      }
+
+      switch (columnType) {
+        case 'currency':
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+          }).format(value);
+        case 'percentage':
+          // If already formatted with %, return as is, otherwise format
+          if (typeof value === 'string' && value.includes('%')) {
+            return value;
+          }
+          return `${value}%`;
+        case 'number':
+          return new Intl.NumberFormat('en-US').format(value);
+        case 'date':
+          try {
+            return new Date(value).toLocaleDateString();
+          } catch (e) {
+            return String(value);
+          }
+        case 'text':
+        default:
+          return renderCellValue(value);
+      }
     };
 
     return (
@@ -162,14 +214,20 @@ function ReportSummary() {
                 key={index}
                 className="hover:bg-gray-50 dark:hover:bg-gray-800"
               >
-                {headers.map((header) => (
-                  <td
-                    key={header}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100"
-                  >
-                    {renderCellValue(row[header])}
-                  </td>
-                ))}
+                {headers.map((header) => {
+                  const columnType =
+                    hasCustomColumns && columnMap[header]
+                      ? columnMap[header].type
+                      : 'text';
+                  return (
+                    <td
+                      key={header}
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100"
+                    >
+                      {renderFormattedCell(row[header], columnType)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>

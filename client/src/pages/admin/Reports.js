@@ -13,6 +13,7 @@ import {
   BsFileEarmarkPdf,
   BsGraphUp,
   BsX,
+  BsRobot,
 } from 'react-icons/bs';
 import useAuthStore from '../../stores/authStore';
 import axiosInstance from '../../utils/axios';
@@ -31,6 +32,12 @@ function Reports() {
   const [teachers, setTeachers] = useState([]);
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   const [isTeachersDropdownOpen, setIsTeachersDropdownOpen] = useState(false);
+
+  // AI Report states
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiHistory, setAiHistory] = useState([]);
 
   const { getToken } = useAuthStore();
   const navigate = useNavigate();
@@ -647,6 +654,92 @@ function Reports() {
     }));
   };
 
+  const handleAIReportGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Empty Prompt',
+        text: 'Please enter a question or request for the AI.',
+      });
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const token = getToken();
+      const response = await axiosInstance.post(
+        '/ai/generate-report',
+        {
+          prompt: aiPrompt,
+          history: aiHistory,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = response.data;
+
+      if (data.error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: data.message || 'Failed to generate AI report',
+        });
+      } else if (data.action === 'generate_report_table' && data.reportData) {
+        // AI generated a report table - navigate to report summary
+        setShowAIModal(false);
+        navigate('/admin/report-summary', {
+          state: {
+            reportData: {
+              error: false,
+              reportName: data.reportData.reportName,
+              generatedAt: data.reportData.generatedAt,
+              totalRecords: data.reportData.data?.length || 0,
+              summary: data.reportData.summary,
+              data: data.reportData.data,
+              columns: data.reportData.columns,
+            },
+            selectedReport: {
+              id: 'ai-generated',
+              name: data.reportData.reportName,
+              description: data.text || 'AI-generated custom report',
+              category: 'AI Generated',
+              color:
+                'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300',
+            },
+            isAIGenerated: true,
+          },
+        });
+      } else {
+        // Add to history
+        setAiHistory([
+          ...aiHistory,
+          { role: 'user', content: aiPrompt },
+          { role: 'model', content: data.text },
+        ]);
+        setAiPrompt('');
+      }
+    } catch (error) {
+      console.error('AI report generation error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.response?.data?.message || 'Failed to generate AI report',
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleClearAIChat = () => {
+    setAiHistory([]);
+    setAiPrompt('');
+  };
+
   const renderParameterInput = (param) => {
     if (param.type === 'multiselect') {
       if (param.source === 'courses') {
@@ -1015,14 +1108,23 @@ function Reports() {
     <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Reports
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Generate and download various reports for your educational
-            institution
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Reports
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Generate and download various reports for your educational
+              institution
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium shadow-lg"
+          >
+            <BsRobot className="text-xl" />
+            AI Report Generator
+          </button>
         </div>
 
         {/* Search and Filter */}
@@ -1107,6 +1209,128 @@ function Reports() {
             <p className="text-gray-500 dark:text-gray-400 text-lg">
               No reports found matching your criteria
             </p>
+          </div>
+        )}
+
+        {/* AI Report Generator Modal */}
+        {showAIModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                    <BsRobot className="text-2xl text-purple-600 dark:text-purple-300" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      AI Report Generator
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Ask questions about your educational data
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIModal(false);
+                    handleClearAIChat();
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <BsX size={32} />
+                </button>
+              </div>
+
+              {/* Chat History */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
+                {aiHistory.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BsRobot className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-2">
+                      Welcome to AI Report Generator
+                    </p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500">
+                      Ask questions like:
+                    </p>
+                    <ul className="text-sm text-gray-400 dark:text-gray-500 mt-2 space-y-1">
+                      <li>"How many students are enrolled this period?"</li>
+                      <li>"What are the most popular courses?"</li>
+                      <li>"Generate a course enrollment statistics table"</li>
+                      <li>"Create a report showing enrollment by period"</li>
+                    </ul>
+                  </div>
+                ) : (
+                  aiHistory.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${
+                        msg.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] p-4 rounded-lg ${
+                          msg.role === 'user'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {aiLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                        <span>Generating response...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input Area */}
+              <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !aiLoading) {
+                        handleAIReportGenerate();
+                      }
+                    }}
+                    placeholder="Ask a question about your data..."
+                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    disabled={aiLoading}
+                  />
+                  <button
+                    onClick={handleAIReportGenerate}
+                    disabled={aiLoading || !aiPrompt.trim()}
+                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {aiLoading ? 'Generating...' : 'Send'}
+                  </button>
+                  {aiHistory.length > 0 && (
+                    <button
+                      onClick={handleClearAIChat}
+                      disabled={aiLoading}
+                      className="px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Note: Passwords and email addresses are never accessible to
+                  the AI for security.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

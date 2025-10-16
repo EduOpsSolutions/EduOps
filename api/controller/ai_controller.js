@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { PrismaClient } from "@prisma/client";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -48,7 +48,7 @@ async function getSchedulingContext() {
     const courses = await prisma.course.findMany({
       where: {
         deletedAt: null,
-        visibility: "visible",
+        visibility: 'visible',
       },
       select: {
         id: true,
@@ -91,7 +91,7 @@ async function getSchedulingContext() {
 
     return context;
   } catch (error) {
-    console.error("Error fetching scheduling context:", error);
+    console.error('Error fetching scheduling context:', error);
     return {};
   }
 }
@@ -106,24 +106,293 @@ const geminiConfig = {
 };
 
 const geminiModel = googleAI.getGenerativeModel({
-  model: "gemini-2.0-flash-exp",
+  model: 'gemini-2.0-flash-exp',
   generationConfig: geminiConfig,
 });
 
-export const askGemini = async (req, res) => {
+// Get safe database context with aggregated data
+async function getSafeReportContext() {
   try {
-    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+    const context = {};
+
+    // Get academic periods (no sensitive data)
+    const academicPeriods = await prisma.academic_period.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        batchName: true,
+        startAt: true,
+        endAt: true,
+        enrollmentOpenAt: true,
+        enrollmentCloseAt: true,
+        isEnrollmentClosed: true,
+      },
+      take: 50,
+    });
+    context.academicPeriods = academicPeriods;
+
+    // Get courses (no sensitive data)
+    const courses = await prisma.course.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        maxNumber: true,
+        visibility: true,
+        price: true,
+      },
+      take: 100,
+    });
+    context.courses = courses;
+
+    // Get schedules with related data (excluding sensitive info)
+    const schedules = await prisma.schedule.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        days: true,
+        time_start: true,
+        time_end: true,
+        location: true,
+        capacity: true,
+        periodStart: true,
+        periodEnd: true,
+        course: {
+          select: { id: true, name: true },
+        },
+        teacher: {
+          select: { id: true, userId: true, firstName: true, lastName: true },
+        },
+        period: {
+          select: { id: true, batchName: true },
+        },
+        userSchedules: {
+          where: { deletedAt: null },
+          select: {
+            id: true,
+            user: {
+              select: {
+                userId: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+      take: 100,
+    });
+    context.schedules = schedules.map((s) => ({
+      ...s,
+      enrollmentCount: s.userSchedules.length,
+      userSchedules: undefined, // Remove detailed user schedules, just keep count
+    }));
+
+    // Get enrollment statistics (excluding sensitive user data)
+    const enrollmentStats = await prisma.student_enrollment.groupBy({
+      by: ['periodId', 'status'],
+      where: { deletedAt: null },
+      _count: { id: true },
+    });
+    context.enrollmentStats = enrollmentStats;
+
+    // Get user counts by role and status (no personal data)
+    const userStats = await prisma.users.groupBy({
+      by: ['role', 'status'],
+      where: { deletedAt: null },
+      _count: { id: true },
+    });
+    context.userStats = userStats;
+
+    return context;
+  } catch (error) {
+    console.error('Error fetching safe report context:', error);
+    return {};
+  }
+}
+
+// AI Report Generation endpoint
+export const generateAIReport = async (req, res) => {
+  try {
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
     if (!apiKey) {
       return res
         .status(500)
-        .json({ error: true, message: "GEMINI_API_KEY is missing" });
+        .json({ error: true, message: 'GEMINI_API_KEY is missing' });
+    }
+
+    const { prompt, history } = req.body || {};
+    if (!prompt || typeof prompt !== 'string') {
+      return res
+        .status(400)
+        .json({ error: true, message: 'prompt is required' });
+    }
+
+    // Fetch safe database context
+    const dbContext = await getSafeReportContext();
+
+    const systemInstruction = `You are an AI assistant that helps analyze educational data and generate custom reports.
+
+Available Data:
+- Academic Periods: Information about enrollment periods and batches
+- Courses: Available courses with pricing and capacity
+- Schedules: Class schedules with time, location, teacher, and enrollment counts
+- Enrollment Statistics: Enrollment counts by period and status
+- User Statistics: User counts by role (student, teacher, admin) and status
+
+IMPORTANT SECURITY RULES:
+- You have access to aggregated and non-sensitive data only
+- Email addresses and passwords are NEVER accessible
+- You can analyze trends, create summaries, and answer questions about the data
+- You can perform calculations and generate insights
+
+Current Database Context:
+${JSON.stringify(dbContext, null, 2)}
+
+When the user asks for a report or analysis, analyze the provided data and present insights in a clear, well-formatted way. You can:
+- Count students, courses, enrollments
+- Calculate averages, percentages, trends
+- Compare data across periods
+- Identify patterns
+- Generate summaries
+
+SPECIAL ACTION - GENERATE REPORT TABLE:
+When the user asks you to create, generate, or build a report table, you must respond with a special format:
+1. First, provide your text response explaining the report and what it contains
+2. Then, on a new line, add: GENERATE_REPORT_TABLE
+3. Then, on the next line, add a JSON object with the report structure:
+{
+  "reportName": "Name of the Report",
+  "summary": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "columns": [
+    {"field": "fieldName1", "header": "Display Name 1", "type": "text"},
+    {"field": "fieldName2", "header": "Display Name 2", "type": "number"}
+  ],
+  "data": [
+    {"fieldName1": "value1", "fieldName2": 123},
+    {"fieldName1": "value2", "fieldName2": 456}
+  ]
+}
+
+Column types can be: "text", "number", "date", "percentage", "currency"
+
+Example response when creating a report table:
+"Here is a Course Enrollment Statistics report based on the current data. This shows enrollment metrics for each course section."
+
+GENERATE_REPORT_TABLE
+{"reportName":"Course Enrollment Statistics","summary":{"totalSections":5,"totalEnrolledStudents":120,"averageEnrollmentPerSection":"24.00"},"columns":[{"field":"courseName","header":"Course Name","type":"text"},{"field":"enrolledStudents","header":"Enrolled Students","type":"number"},{"field":"capacity","header":"Capacity","type":"number"},{"field":"occupancyRate","header":"Occupancy Rate","type":"percentage"}],"data":[{"courseName":"English A1","enrolledStudents":25,"capacity":30,"occupancyRate":"83.33%"},{"courseName":"Spanish B1","enrolledStudents":20,"capacity":30,"occupancyRate":"66.67%"}]}
+
+If the user asks for data you don't have access to, politely explain the limitation and suggest what you can provide instead.
+`;
+
+    // Build conversation history
+    const contents = [];
+
+    contents.push({
+      role: 'user',
+      parts: [{ text: systemInstruction }],
+    });
+    contents.push({
+      role: 'model',
+      parts: [
+        {
+          text: 'Understood. I will analyze the educational data and generate insights while respecting data privacy and security constraints.',
+        },
+      ],
+    });
+
+    // Add chat history if provided
+    if (Array.isArray(history) && history.length > 0) {
+      history.forEach((msg) => {
+        if (msg.role === 'user' || msg.role === 'model') {
+          contents.push({
+            role: msg.role,
+            parts: [{ text: msg.content || msg.text || '' }],
+          });
+        }
+      });
+    }
+
+    // Add current prompt
+    contents.push({
+      role: 'user',
+      parts: [{ text: prompt }],
+    });
+
+    const model = geminiModel;
+    const result = await model.generateContent({ contents });
+    const responseText = result?.response?.text?.() || '';
+
+    // Check if AI wants to generate a report table
+    const reportTableMatch = responseText.match(
+      /GENERATE_REPORT_TABLE[\s\n]*(\{[\s\S]*?\})(?=\n|$)/
+    );
+
+    if (reportTableMatch) {
+      try {
+        const reportData = JSON.parse(reportTableMatch[1]);
+        const cleanText = responseText
+          .replace(/GENERATE_REPORT_TABLE\s*\{[\s\S]*?\}/, '')
+          .trim();
+
+        return res.json({
+          text: cleanText,
+          action: 'generate_report_table',
+          reportData: {
+            reportName: reportData.reportName || 'Custom Report',
+            summary: reportData.summary || {},
+            columns: reportData.columns || [],
+            data: reportData.data || [],
+            generatedAt: new Date(),
+          },
+          dataContext: {
+            academicPeriodsCount: dbContext.academicPeriods?.length || 0,
+            coursesCount: dbContext.courses?.length || 0,
+            schedulesCount: dbContext.schedules?.length || 0,
+          },
+        });
+      } catch (parseError) {
+        console.error('Failed to parse report table command:', parseError);
+        // Fall through to normal response if parsing fails
+      }
+    }
+
+    return res.json({
+      text: responseText,
+      dataContext: {
+        academicPeriodsCount: dbContext.academicPeriods?.length || 0,
+        coursesCount: dbContext.courses?.length || 0,
+        schedulesCount: dbContext.schedules?.length || 0,
+      },
+    });
+  } catch (err) {
+    console.error('generateAIReport error:', err);
+    return res.status(500).json({
+      error: true,
+      message: 'Failed to generate AI report',
+      details: err.message,
+    });
+  }
+};
+
+export const askGemini = async (req, res) => {
+  try {
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+    if (!apiKey) {
+      return res
+        .status(500)
+        .json({ error: true, message: 'GEMINI_API_KEY is missing' });
     }
 
     const { prompt, context, history } = req.body || {};
-    if (!prompt || typeof prompt !== "string") {
+    if (!prompt || typeof prompt !== 'string') {
       return res
         .status(400)
-        .json({ error: true, message: "prompt is required" });
+        .json({ error: true, message: 'prompt is required' });
     }
 
     // Fetch database context
@@ -187,18 +456,18 @@ ${JSON.stringify(aiContext, null, 2)}`;
 
     const contextualNotes = context
       ? `\n\nAdditional Context: ${JSON.stringify(context).slice(0, 4000)}`
-      : "";
+      : '';
 
     // Build conversation history
     const contents = [];
 
     // Add system instruction as first user message
     contents.push({
-      role: "user",
+      role: 'user',
       parts: [{ text: systemInstruction + contextualNotes }],
     });
     contents.push({
-      role: "model",
+      role: 'model',
       parts: [
         { text: "Understood. I'm ready to help with scheduling questions." },
       ],
@@ -207,10 +476,10 @@ ${JSON.stringify(aiContext, null, 2)}`;
     // Add chat history if provided
     if (Array.isArray(history) && history.length > 0) {
       history.forEach((msg) => {
-        if (msg.role === "user" || msg.role === "model") {
+        if (msg.role === 'user' || msg.role === 'model') {
           contents.push({
             role: msg.role,
-            parts: [{ text: msg.content || msg.text || "" }],
+            parts: [{ text: msg.content || msg.text || '' }],
           });
         }
       });
@@ -218,13 +487,13 @@ ${JSON.stringify(aiContext, null, 2)}`;
 
     // Add current prompt
     contents.push({
-      role: "user",
+      role: 'user',
       parts: [{ text: prompt }],
     });
 
     const model = geminiModel;
     const result = await model.generateContent({ contents });
-    const text = result?.response?.text?.() || "";
+    const text = result?.response?.text?.() || '';
 
     // Check if AI wants to create a schedule
     const scheduleCommandMatch = text.match(
@@ -235,12 +504,12 @@ ${JSON.stringify(aiContext, null, 2)}`;
       try {
         const scheduleData = JSON.parse(scheduleCommandMatch[1]);
         const responseText = text
-          .replace(/SCHEDULE_CREATE_COMMAND\s*\{[\s\S]*?\}/, "")
+          .replace(/SCHEDULE_CREATE_COMMAND\s*\{[\s\S]*?\}/, '')
           .trim();
 
         // Resolve course ID
-        let courseId = "";
-        let courseName = scheduleData.courseName || "";
+        let courseId = '';
+        let courseName = scheduleData.courseName || '';
         if (courseName) {
           // Try exact match first
           let course = dbContext.courses?.find(
@@ -263,16 +532,16 @@ ${JSON.stringify(aiContext, null, 2)}`;
         }
 
         // Resolve teacher ID
-        let teacherId = "";
-        let teacherName = scheduleData.teacherFullName || "";
+        let teacherId = '';
+        let teacherName = scheduleData.teacherFullName || '';
         if (teacherName) {
-          const nameParts = teacherName.split(" ");
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
+          const nameParts = teacherName.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
 
           const teacher = await prisma.users.findFirst({
             where: {
-              role: "teacher",
+              role: 'teacher',
               deletedAt: null,
               OR: [
                 {
@@ -294,10 +563,10 @@ ${JSON.stringify(aiContext, null, 2)}`;
         }
 
         // Resolve academic period ID
-        let academicPeriodId = "";
-        let academicPeriodName = "";
-        let periodStart = "";
-        let periodEnd = "";
+        let academicPeriodId = '';
+        let academicPeriodName = '';
+        let periodStart = '';
+        let periodEnd = '';
 
         if (scheduleData.periodBatchName) {
           const period = dbContext.academicPeriods?.find(
@@ -320,15 +589,15 @@ ${JSON.stringify(aiContext, null, 2)}`;
               // Format dates to YYYY-MM-DD
               periodStart = new Date(period.startAt)
                 .toISOString()
-                .split("T")[0];
-              periodEnd = new Date(period.endAt).toISOString().split("T")[0];
+                .split('T')[0];
+              periodEnd = new Date(period.endAt).toISOString().split('T')[0];
             }
           }
         }
 
         return res.json({
           text: responseText,
-          action: "create_schedule",
+          action: 'create_schedule',
           scheduleData: {
             courseId,
             courseName,
@@ -336,28 +605,28 @@ ${JSON.stringify(aiContext, null, 2)}`;
             academicPeriodName,
             teacherId,
             teacherName,
-            days: scheduleData.days || "",
-            time_start: scheduleData.time_start || "",
-            time_end: scheduleData.time_end || "",
-            location: scheduleData.location || "",
-            notes: scheduleData.notes || "",
+            days: scheduleData.days || '',
+            time_start: scheduleData.time_start || '',
+            time_end: scheduleData.time_end || '',
+            location: scheduleData.location || '',
+            notes: scheduleData.notes || '',
             periodStart,
             periodEnd,
-            color: "#FFCF00",
+            color: '#FFCF00',
             capacity: scheduleData.capacity || 30,
           },
         });
       } catch (parseError) {
-        console.error("Failed to parse schedule command:", parseError);
+        console.error('Failed to parse schedule command:', parseError);
       }
     }
 
     return res.json({ text });
   } catch (err) {
-    console.error("askGemini error:", err);
+    console.error('askGemini error:', err);
     return res.status(500).json({
       error: true,
-      message: "Failed to contact Gemini",
+      message: 'Failed to contact Gemini',
       details: err.message,
     });
   }
