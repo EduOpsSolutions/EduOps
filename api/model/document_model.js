@@ -28,7 +28,7 @@ class DocumentModel {
         downloadable: data.downloadable || false,
         price: data.price || 'free',
         amount: data.price === 'paid' ? parseFloat(data.amount) : null,
-
+        uploadFile: data.uploadFile || null
       }
     });
   }

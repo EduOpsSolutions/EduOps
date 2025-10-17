@@ -96,9 +96,13 @@ export const createDocumentTemplate = async (req, res) => {
 
   } catch (error) {
     console.error('Create document template error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    console.error('Request file:', req.file);
     res.status(500).json({
       error: true,
-      message: 'Failed to create document template'
+      message: error.message || 'Failed to create document template',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
