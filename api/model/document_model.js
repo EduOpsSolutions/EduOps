@@ -173,6 +173,7 @@ class DocumentModel {
       where: { id },
       data: { 
         status,
+        remarks,
         updatedAt: new Date() 
       }
     });

@@ -6,26 +6,26 @@ import Swal from 'sweetalert2';
 const useDocumentRequestSearchStore = createSearchStore({
   initialData: [],
   defaultSearchParams: {
-    studentName: "",
-    documentName: "",
+    name: "",
+    document: "",
     status: "",
     sortBy: "descending"
   },
-  searchableFields: ["studentName", "documentName"],
+  searchableFields: ["name", "document"],
   exactMatchFields: ["status"],
-  initialItemsPerPage: 10,
+  initialItemsPerPage: 5,
   filterFunction: (data, params) => {
     let filteredResults = [...data];
 
-    if (params.studentName?.trim()) {
+    if (params.name?.trim()) {
       filteredResults = filteredResults.filter(request =>
-        request.studentName.toLowerCase().includes(params.studentName.toLowerCase())
+        request.name.toLowerCase().includes(params.name.toLowerCase())
       );
     }
 
-    if (params.documentName?.trim()) {
+    if (params.document?.trim()) {
       filteredResults = filteredResults.filter(request =>
-        request.document?.documentName.toLowerCase().includes(params.documentName.toLowerCase())
+        request.document.toLowerCase().includes(params.document.toLowerCase())
       );
     }
 
@@ -48,7 +48,7 @@ const useDocumentRequestSearchStore = createSearchStore({
 
     return filteredResults;
   },
-  showResultsOnLoad: false
+  showResultsOnLoad: true
 });
 
 const useDocumentRequestStore = create((set, get) => ({
@@ -213,9 +213,20 @@ const useDocumentRequestStore = create((set, get) => ({
     try {
       set({ loading: true, error: null });
       
+      // Convert display status to database enum format
+      const statusMap = {
+        'In Process': 'in_process',
+        'In Transit': 'in_transit',
+        'Delivered': 'delivered',
+        'Failed': 'failed',
+        'Fulfilled': 'fulfilled',
+      };
+      
+      const dbStatus = statusMap[updateStatus] || updateStatus.toLowerCase().replace(/ /g, '_');
+      
       const response = await documentApi.requests.updateStatus(
         selectedRequest.id, 
-        updateStatus, 
+        dbStatus, 
         updateRemarks
       );
       

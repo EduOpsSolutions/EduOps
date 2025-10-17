@@ -149,31 +149,40 @@ export const documentHelpers = {
   }),
 
   // Format document request for display
-  formatDocumentRequest: (request) => ({
-    ...request,
-    displayDate: new Date(request.createdAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
-    studentName: request.student 
-      ? `${request.student.firstName} ${request.student.middleName ? request.student.middleName + ' ' : ''}${request.student.lastName}`
-      : 'Unknown Student',
-    statusColor: {
-      'in_process': 'text-yellow-600 bg-yellow-100',
-      'approved': 'text-blue-600 bg-blue-100',
-      'ready_for_pickup': 'text-green-600 bg-green-100',
-      'delivered': 'text-purple-600 bg-purple-100',
-      'rejected': 'text-red-600 bg-red-100',
-    }[request.status] || 'text-gray-600 bg-gray-100',
-    statusDisplay: {
+  formatDocumentRequest: (request) => {
+    // Format name from user or firstName/lastName
+    let name = 'Unknown Student';
+    if (request.user) {
+      name = `${request.user.firstName} ${request.user.middleName ? request.user.middleName + ' ' : ''}${request.user.lastName}`;
+    } else if (request.firstName && request.lastName) {
+      name = `${request.firstName} ${request.lastName}`;
+    }
+
+    // Format document name
+    const documentName = request.document?.documentName || 'Unknown Document';
+
+    // Format status for display
+    const statusMap = {
       'in_process': 'In Process',
-      'approved': 'Approved',
-      'ready_for_pickup': 'Ready for Pickup',
+      'in_transit': 'In Transit',
       'delivered': 'Delivered',
-      'rejected': 'Rejected',
-    }[request.status] || request.status,
-  }),
+      'failed': 'Failed',
+      'fulfilled': 'Fulfilled',
+    };
+
+    return {
+      ...request,
+      name,
+      document: documentName,
+      displayDate: new Date(request.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      status: statusMap[request.status] || request.status,
+      remarks: request.remarks || '-',
+    };
+  },
 
   // Check if user can access document based on role and privacy
   canAccessDocument: (document, userRole) => {
