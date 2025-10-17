@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /S /B \"C:\\Users\\Administrator\\Documents\\IT Projects\\EduOps\\api\")",
+      "Bash(findstr:*)",
+      "Read(//c/Users/Administrator/Documents/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
