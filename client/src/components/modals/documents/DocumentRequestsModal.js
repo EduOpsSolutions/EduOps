@@ -1,5 +1,7 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useDocumentRequestStore, useDocumentRequestSearchStore } from "../../../stores/documentRequestStore";
+import Spinner from "../../common/Spinner";
 
 // To customize measurements of header 
 const customModalTheme = {
@@ -24,6 +26,45 @@ const customModalTheme = {
 };
 
 function DocRequestsModal(props) {
+    const { fetchDocumentRequests, loading, error, viewRequestDetails } = useDocumentRequestStore();
+    const searchStore = useDocumentRequestSearchStore();
+
+    useEffect(() => {
+        if (props.doc_requests_modal) {
+            fetchDocumentRequests();
+        }
+    }, [props.doc_requests_modal, fetchDocumentRequests]);
+
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit'
+        });
+    };
+
+    const getStatusStyle = (status) => {
+        const styles = {
+            'in_process': 'text-yellow-700 bg-yellow-100',
+            'approved': 'text-blue-700 bg-blue-100',
+            'ready_for_pickup': 'text-green-700 bg-green-100',
+            'delivered': 'text-purple-700 bg-purple-100',
+            'rejected': 'text-red-700 bg-red-100'
+        };
+        return styles[status] || 'text-gray-700 bg-gray-100';
+    };
+
+    const formatStatus = (status) => {
+        const statusMap = {
+            'in_process': 'In Process',
+            'approved': 'Approved',
+            'ready_for_pickup': 'Ready for Pickup',
+            'delivered': 'Delivered',
+            'rejected': 'Rejected'
+        };
+        return statusMap[status] || status;
+    };
+
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
             <Modal
@@ -40,49 +81,75 @@ function DocRequestsModal(props) {
                         Document Requests
                     </p>
                     <Modal.Body>
-                        {/*You can achange the height to be more dynamic pero if that is okay na then you can leave it like that*/}
-                        <div class="h-[500px]"> 
-                            <table class="text-base text-left rtl:text-right text-black mx-auto w-full">
-                                <thead class="text-base text-black text-center border-b-dark-red-2 border-b-2 p-0">
-                                    <tr>
-                                        <th scope="col" class="px-2 py-1">
-                                        Date
-                                        </th>
-                                        <th scope="col" class="px-2 py-1">
-                                        Document
-                                        </th>
-                                        <th scope="col" class="px-2 py-1">
-                                        Status
-                                        </th>
-                                        <th scope="col" class="px-2 py-1">
-                                        Remarks
-                                        </th>
-                                    </tr>
-                                </thead>
-                            {/* Note: Replace table body data with backend logic with classnames of first tr and add Onclick logic*/}
-                            {/* PS it should account na in case overflow probably hehe */}
-                                <tbody className="text-center">
-                                    <tr className="hover:bg-dark-red-2 hover:text-white cursor-pointer transition ease-in-out duration-300">
-                                        <td class="px-2 py-1">4-16-24</td>
-                                        <td class="px-2 py-1">Certificate of Good Moral</td>
-                                        <td class="px-2 py-1">In Transit</td>
-                                        <td class="px-2 py-1">ETA 3-4 days</td>
-                                    </tr>
-                                    <tr className="hover:bg-dark-red-2 hover:text-white cursor-pointer transition ease-in-out duration-300">
-                                        <td class="px-2 py-1">4-16-24</td>
-                                        <td class="px-2 py-1">Certificate of Good Moral</td>
-                                        <td class="px-2 py-1">Delivered</td>
-                                        <td class="px-2 py-1">Done</td>
-                                    </tr>
-                                    <tr className="hover:bg-dark-red-2 hover:text-white cursor-pointer transition ease-in-out duration-300">
-                                        <td class="px-2 py-1">4-16-24</td>
-                                        <td class="px-2 py-1">Form 138</td>
-                                        <td class="px-2 py-1">Delivered</td>
-                                        <td class="px-2 py-1">Done</td>
-                                    </tr>
-                                                    
-                                </tbody>
-                            </table>
+                        <div className="h-[500px] overflow-y-auto">
+                            {loading ? (
+                                <div className="flex justify-center items-center h-full">
+                                    <Spinner size="large" />
+                                </div>
+                            ) : error ? (
+                                <div className="flex justify-center items-center h-full">
+                                    <div className="text-center">
+                                        <p className="text-red-600 mb-4">{error}</p>
+                                        <button
+                                            onClick={fetchDocumentRequests}
+                                            className="px-4 py-2 bg-dark-red-2 text-white rounded-md hover:bg-dark-red-5 transition-colors"
+                                        >
+                                            Retry
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <table className="text-base text-left rtl:text-right text-black mx-auto w-full">
+                                    <thead className="text-base text-black text-center border-b-dark-red-2 border-b-2 p-0">
+                                        <tr>
+                                            <th scope="col" className="px-2 py-3">
+                                                Date
+                                            </th>
+                                            <th scope="col" className="px-2 py-3">
+                                                Document
+                                            </th>
+                                            <th scope="col" className="px-2 py-3">
+                                                Status
+                                            </th>
+                                            <th scope="col" className="px-2 py-3">
+                                                Remarks
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-center">
+                                        {searchStore.data && searchStore.data.length > 0 ? (
+                                            searchStore.data.map((request) => (
+                                                <tr 
+                                                    key={request.id}
+                                                    className="hover:bg-dark-red-2 hover:text-white cursor-pointer transition ease-in-out duration-300"
+                                                    onClick={() => viewRequestDetails(request)}
+                                                >
+                                                    <td className="px-2 py-3">
+                                                        {formatDate(request.createdAt)}
+                                                    </td>
+                                                    <td className="px-2 py-3">
+                                                        {request.document?.documentName || 'Unknown Document'}
+                                                    </td>
+                                                    <td className="px-2 py-3">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(request.status)}`}>
+                                                            {formatStatus(request.status)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-2 py-3">
+                                                        {request.remarks || 'No remarks'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="4" className="px-2 py-8 text-center text-gray-500">
+                                                    No document requests found
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </Modal.Body>
                 </div>
