@@ -173,6 +173,7 @@ function ManageDocuments() {
                                         onItemsPerPageChange={searchStore.handleItemsPerPageChange}
                                         totalItems={searchStore.totalItems}
                                         itemName="documents"
+                                        itemsPerPageOptions={[5, 10, 25, 50]}
                                         showItemsPerPageSelector={true}
                                     />
                                 </div>
