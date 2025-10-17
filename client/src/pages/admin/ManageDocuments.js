@@ -25,7 +25,6 @@ function ManageDocuments() {
 
         // Actions
         fetchDocuments,
-        searchDocuments,
         handleAddDocument,
         handleCloseAddDocumentModal,
         handleDeleteDocument,
@@ -46,7 +45,8 @@ function ManageDocuments() {
 
     const handleSearch = async (e) => {
         e.preventDefault();
-        await searchDocuments(searchStore.searchParams);
+        searchStore.handlePageChange(1);
+        await fetchDocuments(searchStore.searchParams.includeHidden);
     };
 
     const handleDeleteConfirmation = (documentId) => {
@@ -65,12 +65,6 @@ function ManageDocuments() {
                 handleDeleteDocument(documentId);
             }
         });
-    };
-
-    const handleIncludeHiddenChange = (e) => {
-        const includeHidden = e.target.checked;
-        searchStore.handleInputChange(e);
-        fetchDocuments(includeHidden);
     };
 
     const searchFormConfig = {
@@ -109,7 +103,6 @@ function ManageDocuments() {
                 name: "includeHidden",
                 label: "Include Hidden",
                 type: "checkbox",
-                onChange: handleIncludeHiddenChange,
             },
         ],
     };

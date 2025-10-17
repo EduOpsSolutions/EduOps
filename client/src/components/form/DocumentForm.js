@@ -162,8 +162,22 @@ const DocumentForm = ({
             >
               Upload
             </button>
-            <div className="flex-1 text-sm text-black bg-white py-2 px-3 rounded-md border border-gray-300 truncate">
-              {(isEditing ? formData.uploadFile : uploadedFile?.name) || "No file chosen"}
+            <div className="flex-1 text-sm text-black bg-white py-2 px-3 rounded-md border border-gray-300 truncate flex items-center justify-between gap-2">
+              <span className="truncate">
+                {(isEditing ? formData.uploadFile : uploadedFile?.name) || "No file chosen"}
+              </span>
+              {isEditing && formData.uploadFile && (
+                <a
+                  href={formData.uploadFile}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="text-dark-red-2 hover:text-dark-red-5 underline whitespace-nowrap flex-shrink-0"
+                  title="Download current file"
+                >
+                  Download
+                </a>
+              )}
             </div>
           </div>
         </div>

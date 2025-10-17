@@ -40,9 +40,10 @@ const createSearchStore = (config) => {
     },
 
     handleInputChange: (e) => {
-      const { name, value } = e.target;
+      const { name, value, type, checked } = e.target;
+      const inputValue = type === 'checkbox' ? checked : value;
       set((state) => ({
-        searchParams: { ...state.searchParams, [name]: value }
+        searchParams: { ...state.searchParams, [name]: inputValue }
       }));
     },
 

@@ -306,21 +306,9 @@ const useManageDocumentsStore = create((set, get) => ({
       const searchStore = useManageDocumentsSearchStore.getState();
       const includeHidden = searchStore.searchParams?.includeHidden || false;
       
-      const updatedDocuments = get().documents.map(doc => {
-        if (doc.id === id) {
-          return { 
-            ...doc, 
-            isActive: newIsActive,
-            isHidden: !newIsActive
-          };
-        }
-        return doc;
-      });
-      
-      set({ documents: updatedDocuments });
-      searchStore.updateData(updatedDocuments);
-      
+      // Fetch fresh data from API immediately
       await get().fetchDocuments(includeHidden);
+      
       set({ loading: false });
 
       const wasHidden = document.isHidden;
