@@ -31,7 +31,20 @@ export default function Logs() {
         },
       })
       .then((data) => {
-        setLogs(data.data);
+        setLogs(
+          data.data.map((item) => ({
+            ...item,
+            createdAt: new Date(item.createdAt).toLocaleString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            updatedAt: new Date(item.updatedAt).toLocaleString(),
+          }))
+        );
         setTotal(data.total);
         setTotalPages(data.totalPages);
         setCurrentPage(data.page);
@@ -140,14 +153,17 @@ export default function Logs() {
                       item && typeof item === "object" ? Object.keys(item) : []
                     )
                   )
-                ).map((header) => (
-                  <th
-                    key={header}
-                    className="px-6 py-3 sticky text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    {header.replace(/([A-Z])/g, " $1").trim()}
-                  </th>
-                ))}
+                ).map(
+                  (header) =>
+                    header !== "user" && (
+                      <th
+                        key={header}
+                        className="px-6 py-3 sticky text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        {header.replace(/([A-Z])/g, " $1").trim()}
+                      </th>
+                    )
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -161,14 +177,27 @@ export default function Logs() {
                 );
                 return (
                   <tr key={row.id || idx} className="hover:bg-gray-50">
-                    {headers.map((header) => (
-                      <td
-                        key={header}
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                      >
-                        {formatCell(row ? row[header] : undefined)}
-                      </td>
-                    ))}
+                    {headers.map((header) => {
+                      return (
+                        header !== "user" && (
+                          <td
+                            key={header}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
+                            {header === "createdAt" || header === "updatedAt"
+                              ? new Date(row[header]).toLocaleString("en-US", {
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })
+                              : formatCell(row ? row[header] : undefined)}
+                          </td>
+                        )
+                      );
+                    })}
                   </tr>
                 );
               })}

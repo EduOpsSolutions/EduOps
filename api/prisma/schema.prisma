@@ -214,7 +214,7 @@ model logs {
   type LogType @default(user_activity)
 
 
-  user      users? @relation(fields: [userId], references: [id])
+  user      users? @relation(fields: [userId], references: [userId])
 }
 
 enum LogType {
