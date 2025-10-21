@@ -14,10 +14,6 @@ export const useEnrollmentPeriodSearchStore = createSearchStore({
   filterFunction: (data, searchParams) => {
     return data.filter((period) => {
       return (
-        (searchParams.periodName === '' ||
-          period.periodName
-            .toLowerCase()
-            .includes(searchParams.periodName.toLowerCase())) &&
         (searchParams.batch === '' ||
           period.batchName.includes(searchParams.batch)) &&
         (searchParams.year === '' ||

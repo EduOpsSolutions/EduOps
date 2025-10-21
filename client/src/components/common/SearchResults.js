@@ -35,13 +35,13 @@ const SearchResults = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead>
             <tr className="border-b-2 border-dark-red-2">
               {columns.map((column) => (
                 <th 
                   key={column.key}
-                  className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold border-t-2 border-b-2 border-dark-red-2 text-sm sm:text-base"
+                  className="text-left py-2 sm:py-3 px-2 sm:px-4 font-semibold border-t-2 border-b-2 border-dark-red-2 text-sm sm:text-base w-1/3"
                 >
                   {column.header}
                 </th>
@@ -58,7 +58,7 @@ const SearchResults = ({
                 {columns.map((column) => (
                   <td 
                     key={`${item.id}-${column.key}`} 
-                    className="py-2 sm:py-3 px-2 sm:px-4 border-t border-b border-dark-red-2 text-sm sm:text-base"
+                    className="py-2 sm:py-3 px-2 sm:px-4 border-t border-b border-dark-red-2 text-sm sm:text-base w-1/3"
                   >
                     {columnRenderers[column.key] 
                       ? columnRenderers[column.key](item[column.key], item)

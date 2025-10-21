@@ -1,5 +1,6 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React, { useEffect } from 'react';
+import { getCookieItem } from '../../../utils/jwt';
 import GradeStudentsTable from "../../tables/GradeStudentsTable";
 import GradeModalFooter from "./GradeModalFooter";
 import useGradeStore from "../../../stores/gradeStore";
@@ -40,7 +41,9 @@ function StudentsGradeModal(props) {
         saveGradeChanges,
         resetGradeChanges,
         setChangesMade,
-        setLocalGrades
+        setLocalGrades,
+        handleGradeStudents,
+        selectedSchedule
     } = useGradeStore();
 
     const courseInfo = {
@@ -50,36 +53,76 @@ function StudentsGradeModal(props) {
         courseRoom: props.course ? props.course.room : ''
     };
 
-    const handleDocumentUpload = (studentId) => {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
-        fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                Swal.fire({
-                    title: 'Uploading...',
-                    text: `Uploading "${file.name}" for student ID: ${studentId}`,
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+    // Upload handler: sends file to backend
+    const handleDocumentUpload = async (studentId, file) => {
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const token = getCookieItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
 
-                setTimeout(() => {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: `Document "${file.name}" uploaded successfully for student ID: ${studentId}`,
-                        icon: 'success',
-                        confirmButtonColor: '#992525',
-                    });
-
-                    setChangesMade(true);
-                }, 1000);
+        Swal.fire({
+            title: 'Uploading...',
+            text: `Uploading "${file.name}" for student ID: ${studentId}`,
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
             }
-        };
+        });
 
-        fileInput.click();
+        try {
+            const res = await fetch(`${apiUrl}/grades/${studentId}/files`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    // Do NOT set Content-Type for FormData
+                },
+                body: formData,
+            });
+            if (!res.ok) throw new Error('Upload failed');
+            Swal.fire({
+                title: 'Success!',
+                text: `Document "${file.name}" uploaded successfully for student ID: ${studentId}`,
+                icon: 'success',
+                confirmButtonColor: '#992525',
+            });
+            setChangesMade(true);
+            // Optionally: refresh students list or update state here
+        } catch (err) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'File upload failed: ' + (err.message || 'Unknown error'),
+                icon: 'error',
+                confirmButtonColor: '#992525',
+            });
+        }
+    };
+
+    // View document handler: fetches file(s) for the studentGradeId and opens the first file's URL
+    const handleViewDocument = async (studentGradeId) => {
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const token = getCookieItem('token');
+        try {
+            const res = await fetch(`${apiUrl}/grades/${studentGradeId}/files`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error('Failed to fetch file(s)');
+            let files = await res.json();
+            if (files && files.length > 0) {
+                // Sort files by uploadedAt descending (latest first)
+                files = files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+                if (files[0].url) {
+                    window.open(files[0].url, '_blank', 'noopener');
+                } else {
+                    Swal.fire('No File', 'No file has been uploaded for this student.', 'info');
+                }
+            } else {
+                Swal.fire('No File', 'No file has been uploaded for this student.', 'info');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Failed to fetch or open file: ' + (err.message || 'Unknown error'), 'error');
+        }
     };
 
     const handleVisibilityToggle = (visible) => {
@@ -110,6 +153,11 @@ function StudentsGradeModal(props) {
                 });
 
                 await saveGradeChanges();
+
+                // Immediately refresh students list after saving
+                if (selectedSchedule && handleGradeStudents) {
+                    await handleGradeStudents(selectedSchedule);
+                }
 
                 Swal.fire({
                     title: 'Success!',
@@ -184,7 +232,7 @@ function StudentsGradeModal(props) {
 
                     <p className="font-bold -mt-8 sm:-mt-10 mx-4 sm:ml-6 mb-2 sm:mb-4 text-left text-lg sm:text-xl md:text-2xl transition ease-in-out duration-300 break-words">
                         <span className="block md:inline">{courseInfo.courseName}</span>
-                        <span className="hidden md:inline"> | </span>
+                        <span className="hidden md:inline">{props.schedule?.teacherName ? ` | ${props.schedule.teacherName}` : ''}</span>
                         <span className="block md:inline">{courseInfo.courseSchedule} {courseInfo.courseTime}</span>
                         {courseInfo.courseRoom && (
                             <>
@@ -203,6 +251,8 @@ function StudentsGradeModal(props) {
                                     getStudentGrade={getStudentGrade}
                                     handleGradeChange={handleGradeChange}
                                     handleDocumentUpload={handleDocumentUpload}
+                                    handleViewDocument={handleViewDocument}
+                                    teacherName={props.schedule?.teacherName}
                                 />
                             </div>
 

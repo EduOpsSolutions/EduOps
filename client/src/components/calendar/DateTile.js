@@ -55,6 +55,11 @@ function DateTile({
 
   // Filter events that occur on this day of the week
   const currentDate = new Date(year, month, day);
+  const today = new Date();
+  const isToday =
+    currentDate.getFullYear() === today.getFullYear() &&
+    currentDate.getMonth() === today.getMonth() &&
+    currentDate.getDate() === today.getDate();
   const filteredEvents = getEventsForDate(events, currentDate);
 
   const handleClick = () => {
@@ -67,9 +72,17 @@ function DateTile({
   return (
     <div
       onClick={handleClick}
-      className="w-full hover:cursor-pointer flex flex-col m-0.5 md:m-2 rounded-md p-1 md:p-2 border-solid border-2 border-neutral-400 hover:border-red-700 duration-100 min-h-[80px] md:min-h-[120px] max-h-[80px] md:max-h-[120px] overflow-hidden"
+      className={`w-full hover:cursor-pointer flex flex-col m-0.5 md:m-2 rounded-md p-1 md:p-2 border-solid border-2 border-neutral-400 hover:border-red-700 duration-100 min-h-[80px] md:min-h-[120px] max-h-[80px] md:max-h-[120px] overflow-hidden ${
+        isToday ? 'md:border-red-700 md:ring-2 md:ring-red-600' : ''
+      }`}
     >
-      <p className="text-sm md:text-base font-bold">{day}</p>
+      <p
+        className={`text-sm md:text-base font-bold ${
+          isToday ? 'text-red-700' : ''
+        }`}
+      >
+        {day}
+      </p>
 
       {/* Mobile view: Show only dots */}
       <div className="md:hidden flex flex-wrap gap-1">

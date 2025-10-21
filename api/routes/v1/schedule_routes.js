@@ -4,6 +4,8 @@ import {
   getSchedule,
   getSchedulesByPeriod,
   getSchedulesByTeacher,
+  getMySchedules,
+  getScheduleStudents,
   createSchedule,
   updateSchedule,
   deleteSchedule,
@@ -31,11 +33,23 @@ const router = express.Router();
 router.get('/', verifyToken, getSchedules);
 
 /**
- * GET /api/v1/schedules/:id
- * Get a single schedule by ID
- * Public route - anyone can view a schedule
+ * GET /api/v1/schedules/teacher/:teacherId
+ * Get schedules by teacher
+ * Public route - anyone can view schedules by teacher
  */
-router.get('/:id', verifyToken, getSchedule);
+router.get('/teacher/:teacherId', verifyToken, getSchedulesByTeacher);
+
+/**
+ * GET /api/v1/schedules/mine
+ * Get schedules for the logged-in student
+ */
+router.get('/mine', verifyToken, getMySchedules);
+
+/**
+ * GET /api/v1/schedules/:id/students
+ * Get students enrolled in a schedule (read-only)
+ */
+router.get('/:id/students', verifyToken, getScheduleStudents);
 
 /**
  * GET /api/v1/schedules/period/:periodId
@@ -43,13 +57,12 @@ router.get('/:id', verifyToken, getSchedule);
  * Public route - anyone can view schedules by period
  */
 router.get('/period/:periodId', verifyToken, getSchedulesByPeriod);
-
 /**
- * GET /api/v1/schedules/teacher/:teacherId
- * Get schedules by teacher
- * Public route - anyone can view schedules by teacher
+ * GET /api/v1/schedules/:id
+ * Get a single schedule by ID
+ * Public route - anyone can view a schedule
  */
-router.get('/teacher/:teacherId', verifyToken, getSchedulesByTeacher);
+router.get('/:id', verifyToken, getSchedule);
 
 /**
  * POST /api/v1/schedules
@@ -96,13 +109,7 @@ router.delete('/:id', verifyToken, validateUserIsAdmin, deleteSchedule);
 router.post(
   '/:id/students',
   verifyToken,
-  (req, res, next) => {
-    const role = req.user?.data?.role;
-    if (role === 'admin') return next();
-    return res
-      .status(403)
-      .json({ error: true, message: 'User is unauthorized' });
-  },
+  validateUserIsAdmin,
   addStudentToSchedule
 );
 
@@ -114,13 +121,7 @@ router.post(
 router.post(
   '/:id/students:batch-delete',
   verifyToken,
-  (req, res, next) => {
-    const role = req.user?.data?.role;
-    if (role === 'admin') return next();
-    return res
-      .status(403)
-      .json({ error: true, message: 'User is unauthorized' });
-  },
+  validateUserIsAdmin,
   removeStudentsFromSchedule
 );
 
