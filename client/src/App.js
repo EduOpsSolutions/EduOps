@@ -63,6 +63,8 @@ import DocumentRequests from './pages/admin/DocumentRequests';
 import ManageDocuments from './pages/admin/ManageDocuments';
 import Chatbot from './pages/admin/Chatbot';
 import AdminSchedule from './pages/admin/Schedule';
+import Reports from './pages/admin/Reports';
+import ReportSummary from './pages/admin/ReportSummary';
 
 function App() {
   const { isAuthenticated, validateToken } = useAuthStore();
@@ -165,6 +167,8 @@ function App() {
                 <Route path="manage-documents" element={<ManageDocuments />} />
                 <Route path="chatbot" element={<Chatbot />} />
                 <Route path="schedule" element={<AdminSchedule />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="report-summary" element={<ReportSummary />} />
               </Route>
             </>
           ) : (

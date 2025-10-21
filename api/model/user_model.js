@@ -97,4 +97,28 @@ export async function updateUserPassword(email, hashedPassword) {
   }
 }
 
+export async function getUsersByRole(role) {
+  if (!role) {
+    return {
+      error: true,
+      message: 'Role is required',
+    };
+  }
+  try {
+    const users = await prisma.users.findMany({
+      where: { role, deletedAt: null },
+    });
+    return {
+      error: false,
+      data: users,
+    };
+  } catch (error) {
+    console.error('Error getting users by role:', error);
+    return {
+      error: true,
+      message: error.message,
+    };
+  }
+}
+
 export { getUserByEmail, getUserByToken };
