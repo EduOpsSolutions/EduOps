@@ -35,7 +35,6 @@ export const getAllSchedules = async (options = {}) => {
               batchName: true,
               startAt: true,
               endAt: true,
-              status: true,
             },
           }
         : false,

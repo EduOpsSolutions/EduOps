@@ -1,19 +1,19 @@
-import { PrismaClient } from '@prisma/client';
-import { sendEmail } from '../utils/mailer.js';
+import { PrismaClient } from "@prisma/client";
+import { sendEmail } from "../utils/mailer.js";
 
 const prisma = new PrismaClient();
 
 function generateRandomId() {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-  const numbers = '0123456789';
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
 
   const randomLetters = Array.from({ length: 5 }, () =>
     letters.charAt(Math.floor(Math.random() * letters.length))
-  ).join('');
+  ).join("");
 
   const randomNumbers = Array.from({ length: 3 }, () =>
     numbers.charAt(Math.floor(Math.random() * numbers.length))
-  ).join('');
+  ).join("");
 
   return randomLetters + randomNumbers;
 }
@@ -61,6 +61,18 @@ const createEnrollmentRequest = async (req, res) => {
 
     const enrollmentId = await generateEnrollmentId();
 
+    // Resolve current open enrollment period
+    const now = new Date();
+    const currentPeriod = await prisma.academic_period.findFirst({
+      where: {
+        deletedAt: null,
+        isEnrollmentClosed: false,
+        enrollmentOpenAt: { lte: now },
+        enrollmentCloseAt: { gte: now },
+      },
+      orderBy: { enrollmentOpenAt: "desc" },
+    });
+
     const enrollmentRequest = await prisma.enrollment_request.create({
       data: {
         enrollmentId,
@@ -84,13 +96,15 @@ const createEnrollmentRequest = async (req, res) => {
         coursesToEnroll,
         validIdPath,
         idPhotoPath,
+        // Attach current period if available
+        ...(currentPeriod && { periodId: currentPeriod.id }),
       },
     });
 
     const email = await sendEmail(
       preferredEmail,
       `Enrollment Request Confirmation - Sprach Institut Cebu Inc.`,
-      '',
+      "",
       `
       <!DOCTYPE html>
       <html>
@@ -264,21 +278,23 @@ const createEnrollmentRequest = async (req, res) => {
               <tr class="section-header">
                 <td colspan="2">Personal Information</td>
               </tr>
-              <tr><td>Full Name</td><td>${firstName} ${middleName || ''
+              <tr><td>Full Name</td><td>${firstName} ${
+        middleName || ""
       } ${lastName}</td></tr>
               <tr><td>Birth Date</td><td>${new Date(
-        birthDate
-      ).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })}</td></tr>
+                birthDate
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}</td></tr>
               <tr><td>Civil Status</td><td>${civilStatus}</td></tr>
               <tr><td>Address</td><td>${address}</td></tr>
-              ${referredBy
-        ? `<tr><td>Referred By</td><td>${referredBy}</td></tr>`
-        : ''
-      }
+              ${
+                referredBy
+                  ? `<tr><td>Referred By</td><td>${referredBy}</td></tr>`
+                  : ""
+              }
             </table>
 
             <table class="info-table">
@@ -286,51 +302,60 @@ const createEnrollmentRequest = async (req, res) => {
                 <td colspan="2">Contact Information</td>
               </tr>
               <tr><td>Primary Contact</td><td>${contactNumber}</td></tr>
-              ${altContactNumber
-        ? `<tr><td>Alternative Contact</td><td>${altContactNumber}</td></tr>`
-        : ''
-      }
+              ${
+                altContactNumber
+                  ? `<tr><td>Alternative Contact</td><td>${altContactNumber}</td></tr>`
+                  : ""
+              }
               <tr><td>Primary Email</td><td>${preferredEmail}</td></tr>
-              ${altEmail
-        ? `<tr><td>Alternative Email</td><td>${altEmail}</td></tr>`
-        : ''
-      }
+              ${
+                altEmail
+                  ? `<tr><td>Alternative Email</td><td>${altEmail}</td></tr>`
+                  : ""
+              }
             </table>
 
-            ${motherName || fatherName || guardianName
-        ? `
+            ${
+              motherName || fatherName || guardianName
+                ? `
             <table class="info-table">
               <tr class="section-header">
                 <td colspan="2">Emergency Contact Information</td>
               </tr>
-              ${motherName
-          ? `<tr><td>Mother's Name</td><td>${motherName}</td></tr>`
-          : ''
-        }
-              ${motherContact
-          ? `<tr><td>Mother's Contact</td><td>${motherContact}</td></tr>`
-          : ''
-        }
-              ${fatherName
-          ? `<tr><td>Father's Name</td><td>${fatherName}</td></tr>`
-          : ''
-        }
-              ${fatherContact
-          ? `<tr><td>Father's Contact</td><td>${fatherContact}</td></tr>`
-          : ''
-        }
-              ${guardianName
-          ? `<tr><td>Guardian's Name</td><td>${guardianName}</td></tr>`
-          : ''
-        }
-              ${guardianContact
-          ? `<tr><td>Guardian's Contact</td><td>${guardianContact}</td></tr>`
-          : ''
-        }
+              ${
+                motherName
+                  ? `<tr><td>Mother's Name</td><td>${motherName}</td></tr>`
+                  : ""
+              }
+              ${
+                motherContact
+                  ? `<tr><td>Mother's Contact</td><td>${motherContact}</td></tr>`
+                  : ""
+              }
+              ${
+                fatherName
+                  ? `<tr><td>Father's Name</td><td>${fatherName}</td></tr>`
+                  : ""
+              }
+              ${
+                fatherContact
+                  ? `<tr><td>Father's Contact</td><td>${fatherContact}</td></tr>`
+                  : ""
+              }
+              ${
+                guardianName
+                  ? `<tr><td>Guardian's Name</td><td>${guardianName}</td></tr>`
+                  : ""
+              }
+              ${
+                guardianContact
+                  ? `<tr><td>Guardian's Contact</td><td>${guardianContact}</td></tr>`
+                  : ""
+              }
             </table>
             `
-        : ''
-      }
+                : ""
+            }
 
             <table class="info-table">
               <tr class="section-header">
@@ -359,31 +384,33 @@ const createEnrollmentRequest = async (req, res) => {
       </html>
       `
     );
-    console.log('email', email);
+    console.log("email", email);
 
     res.status(201).json({
       error: false,
-      message: 'Enrollment request created successfully',
+      message: "Enrollment request created successfully",
       data: enrollmentRequest,
     });
   } catch (error) {
-    console.error('Enrollment creation error:', error);
+    console.error("Enrollment creation error:", error);
 
-    let userMessage = 'Failed to create enrollment request. Please check your data and try again.';
+    let userMessage =
+      "Failed to create enrollment request. Please check your data and try again.";
 
-    if (error.message.includes('idPhotoPath')) {
-      userMessage = 'Invalid ID photo upload. Please try uploading your ID photo again.';
-    } else if (error.message.includes('validIdPath')) {
-      userMessage = 'Invalid valid ID upload. Please try uploading your valid ID again.';
-    } else if (error.message.includes('email')) {
-      userMessage = 'Email address is already in use or invalid.';
+    if (error.message.includes("idPhotoPath")) {
+      userMessage =
+        "Invalid ID photo upload. Please try uploading your ID photo again.";
+    } else if (error.message.includes("validIdPath")) {
+      userMessage =
+        "Invalid valid ID upload. Please try uploading your valid ID again.";
+    } else if (error.message.includes("email")) {
+      userMessage = "Email address is already in use or invalid.";
     }
 
     res.status(500).json({ message: userMessage, error: true });
   }
 };
 
-// Get enrollment requests with filtering, pagination, and search
 // Get enrollment requests with filtering, pagination, and search
 const getEnrollmentRequests = async (req, res) => {
   const {
@@ -392,7 +419,7 @@ const getEnrollmentRequests = async (req, res) => {
     page = 1,
     limit = 10,
     search,
-    order = 'desc',
+    order = "desc",
   } = req.query;
   const enrollmentRequests = await prisma.enrollment_request.findMany({
     where: {
@@ -447,7 +474,6 @@ const getEnrollmentRequests = async (req, res) => {
   res.status(200).json({ ...retval, error: false });
 };
 
-
 // Track enrollment by ID and/or email - for public enrollment tracking
 const trackEnrollment = async (req, res) => {
   const { enrollmentId, email } = req.body;
@@ -456,8 +482,8 @@ const trackEnrollment = async (req, res) => {
     // Validate that at least one parameter is provided
     if (!enrollmentId && !email) {
       return res.status(400).json({
-        message: 'Please provide either enrollment ID or email',
-        error: true
+        message: "Please provide either enrollment ID or email",
+        error: true,
       });
     }
 
@@ -469,12 +495,9 @@ const trackEnrollment = async (req, res) => {
         AND: [
           { enrollmentId: enrollmentId },
           {
-            OR: [
-              { preferredEmail: email },
-              { altEmail: email }
-            ]
-          }
-        ]
+            OR: [{ preferredEmail: email }, { altEmail: email }],
+          },
+        ],
       };
     } else if (enrollmentId) {
       // Only enrollment ID provided
@@ -482,10 +505,7 @@ const trackEnrollment = async (req, res) => {
     } else if (email) {
       // Only email provided
       whereClause = {
-        OR: [
-          { preferredEmail: email },
-          { altEmail: email }
-        ]
+        OR: [{ preferredEmail: email }, { altEmail: email }],
       };
     }
 
@@ -495,77 +515,81 @@ const trackEnrollment = async (req, res) => {
 
     if (!enrollmentRequest) {
       return res.status(404).json({
-        message: 'Enrollment request not found. Please check your enrollment ID or email.',
-        error: true
+        message:
+          "Enrollment request not found. Please check your enrollment ID or email.",
+        error: true,
       });
     }
 
     const course = await prisma.course.findFirst({
       where: {
-        name: enrollmentRequest.coursesToEnroll
+        name: enrollmentRequest.coursesToEnroll,
       },
       select: {
         id: true,
         name: true,
-        price: true
-      }
+        price: true,
+      },
     });
 
     // Map enrollment status to progress steps
     let currentStep = 1;
     let completedSteps = [];
-    let remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
+    let remarkMsg =
+      "Your enrollment form has been submitted and is pending verification by an administrator.";
 
     const coursePrice = course ? parseFloat(course.price) : null;
-    console.log('Enrollment request data:', {
+    console.log("Enrollment request data:", {
       courseTablePrice: course?.price,
       finalCoursePrice: coursePrice,
       courseName: enrollmentRequest.coursesToEnroll,
-      foundCourse: course
+      foundCourse: course,
     });
 
-    const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : '';
+    const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : "";
 
     switch (enrollmentRequest.enrollmentStatus.toUpperCase()) {
-      case 'PENDING':
+      case "PENDING":
         currentStep = 2;
         completedSteps = [1];
         remarkMsg = `Your enrollment form has been submitted and is pending verification by an administrator.${priceText}`;
         break;
-      case 'VERIFIED':
+      case "VERIFIED":
         currentStep = 3;
         completedSteps = [1, 2];
         remarkMsg = `Your form has been verified and please pay the Downpayment Fee: ₱3000 or ${priceText}`;
         break;
-      case 'PAYMENT_PENDING':
+      case "PAYMENT_PENDING":
         currentStep = 4;
         completedSteps = [1, 2, 3];
         remarkMsg = `Your payment is being verified. This may take 1-2 business days.${priceText}`;
         break;
-      case 'APPROVED':
+      case "APPROVED":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4];
         remarkMsg = `Congratulations! Your enrollment has been approved.${priceText}`;
         break;
-      case 'COMPLETED':
+      case "COMPLETED":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4, 5];
         remarkMsg = `Congratulations! Your enrollment is complete.${priceText}`;
         break;
-      case 'REJECTED':
+      case "REJECTED":
         currentStep = 1;
         completedSteps = [];
-        remarkMsg = 'Your enrollment request has been rejected. Please contact our admissions office for more information.';
+        remarkMsg =
+          "Your enrollment request has been rejected. Please contact our admissions office for more information.";
         break;
       default:
         currentStep = 1;
         completedSteps = [];
-        remarkMsg = 'Your enrollment form has been submitted and is pending verification by an administrator.';
+        remarkMsg =
+          "Your enrollment form has been submitted and is pending verification by an administrator.";
     }
 
     // Return enrollment tracking data
     res.status(200).json({
-      message: 'Enrollment found successfully',
+      message: "Enrollment found successfully",
       error: false,
       data: {
         enrollmentId: enrollmentRequest.enrollmentId,
@@ -573,21 +597,23 @@ const trackEnrollment = async (req, res) => {
         currentStep,
         completedSteps,
         remarkMsg,
-        fullName: `${enrollmentRequest.firstName} ${enrollmentRequest.middleName || ''} ${enrollmentRequest.lastName}`.trim(),
+        fullName: `${enrollmentRequest.firstName} ${
+          enrollmentRequest.middleName || ""
+        } ${enrollmentRequest.lastName}`.trim(),
         email: enrollmentRequest.preferredEmail,
         createdAt: enrollmentRequest.createdAt,
         coursesToEnroll: enrollmentRequest.coursesToEnroll,
         coursePrice: coursePrice,
         courseName: course?.name || enrollmentRequest.coursesToEnroll,
-        paymentProofPath: enrollmentRequest.paymentProofPath
-      }
+        paymentProofPath: enrollmentRequest.paymentProofPath,
+        studentId: enrollmentRequest.studentId,
+      },
     });
-
   } catch (error) {
-    console.error('Error tracking enrollment:', error);
+    console.error("Error tracking enrollment:", error);
     res.status(500).json({
-      message: 'An error occurred while tracking your enrollment',
-      error: true
+      message: "An error occurred while tracking your enrollment",
+      error: true,
     });
   }
 };
@@ -599,8 +625,8 @@ const updateEnrollmentPaymentProof = async (req, res) => {
 
     if (!enrollmentId || !paymentProofPath) {
       return res.status(400).json({
-        message: 'Enrollment ID and payment proof path are required',
-        error: true
+        message: "Enrollment ID and payment proof path are required",
+        error: true,
       });
     }
 
@@ -608,29 +634,28 @@ const updateEnrollmentPaymentProof = async (req, res) => {
       where: { enrollmentId },
       data: {
         paymentProofPath,
-        enrollmentStatus: 'PAYMENT_PENDING'
-      }
+        enrollmentStatus: "PAYMENT_PENDING",
+      },
     });
 
     res.status(200).json({
-      message: 'Payment proof uploaded successfully',
+      message: "Payment proof uploaded successfully",
       error: false,
-      data: updatedEnrollment
+      data: updatedEnrollment,
     });
-
   } catch (error) {
-    console.error('Error updating payment proof:', error);
+    console.error("Error updating payment proof:", error);
 
-    if (error.code === 'P2025') {
+    if (error.code === "P2025") {
       return res.status(404).json({
-        message: 'Enrollment request not found',
-        error: true
+        message: "Enrollment request not found",
+        error: true,
       });
     }
 
     res.status(500).json({
-      message: 'An error occurred while updating payment proof',
-      error: true
+      message: "An error occurred while updating payment proof",
+      error: true,
     });
   }
 };
@@ -647,23 +672,114 @@ const updateEnrollmentStatus = async (req, res) => {
     });
 
     res.status(200).json({
-      message: 'Enrollment status updated successfully',
+      message: "Enrollment status updated successfully",
       data: updated,
       error: false,
     });
   } catch (error) {
-    console.error('Error updating enrollment status:', error);
-    if (error.code === 'P2025') {
+    console.error("Error updating enrollment status:", error);
+    if (error.code === "P2025") {
       return res.status(404).json({
-        message: 'Enrollment request not found',
+        message: "Enrollment request not found",
         error: true,
       });
     }
     res.status(500).json({
-      message: 'An error occurred while updating enrollment status',
+      message: "An error occurred while updating enrollment status",
       error: true,
     });
   }
 };
 
-export { createEnrollmentRequest, getEnrollmentRequests, trackEnrollment, updateEnrollmentPaymentProof, updateEnrollmentStatus };
+// Update all fields of an enrollment request
+const updateEnrollment = async (req, res) => {
+  const { enrollmentId } = req.params;
+  // Accept all possible fields for update
+  const {
+    firstName,
+    middleName,
+    lastName,
+    birthDate,
+    civilStatus,
+    address,
+    referredBy,
+    contactNumber,
+    altContactNumber,
+    preferredEmail,
+    altEmail,
+    motherName,
+    motherContact,
+    fatherName,
+    fatherContact,
+    guardianName,
+    guardianContact,
+    coursesToEnroll,
+    validIdPath,
+    idPhotoPath,
+    paymentProofPath,
+    enrollmentStatus,
+  } = req.body;
+
+  // Build update data object only with provided fields
+  const updateData = {};
+  if (firstName !== undefined) updateData.firstName = firstName;
+  if (middleName !== undefined) updateData.middleName = middleName;
+  if (lastName !== undefined) updateData.lastName = lastName;
+  if (birthDate !== undefined) updateData.birthDate = new Date(birthDate);
+  if (civilStatus !== undefined) updateData.civilStatus = civilStatus;
+  if (address !== undefined) updateData.address = address;
+  if (referredBy !== undefined) updateData.referredBy = referredBy;
+  if (contactNumber !== undefined) updateData.contactNumber = contactNumber;
+  if (altContactNumber !== undefined)
+    updateData.altContactNumber = altContactNumber;
+  if (preferredEmail !== undefined) updateData.preferredEmail = preferredEmail;
+  if (altEmail !== undefined) updateData.altEmail = altEmail;
+  if (motherName !== undefined) updateData.motherName = motherName;
+  if (motherContact !== undefined) updateData.motherContact = motherContact;
+  if (fatherName !== undefined) updateData.fatherName = fatherName;
+  if (fatherContact !== undefined) updateData.fatherContact = fatherContact;
+  if (guardianName !== undefined) updateData.guardianName = guardianName;
+  if (guardianContact !== undefined)
+    updateData.guardianContact = guardianContact;
+  if (coursesToEnroll !== undefined)
+    updateData.coursesToEnroll = coursesToEnroll;
+  if (validIdPath !== undefined) updateData.validIdPath = validIdPath;
+  if (idPhotoPath !== undefined) updateData.idPhotoPath = idPhotoPath;
+  if (paymentProofPath !== undefined)
+    updateData.paymentProofPath = paymentProofPath;
+  if (enrollmentStatus !== undefined)
+    updateData.enrollmentStatus = enrollmentStatus;
+
+  try {
+    const updated = await prisma.enrollment_request.update({
+      where: { enrollmentId },
+      data: updateData,
+    });
+    res.status(200).json({
+      message: "Enrollment updated successfully",
+      data: updated,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Error updating enrollment:", error);
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        message: "Enrollment request not found",
+        error: true,
+      });
+    }
+    res.status(500).json({
+      message: "An error occurred while updating enrollment",
+      error: true,
+    });
+  }
+};
+
+export {
+  createEnrollmentRequest,
+  getEnrollmentRequests,
+  trackEnrollment,
+  updateEnrollmentPaymentProof,
+  updateEnrollmentStatus,
+  updateEnrollment,
+};

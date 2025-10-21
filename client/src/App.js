@@ -17,10 +17,14 @@ import Terms from "./pages/legal/Terms";
 import Login from "./pages/public/Login";
 import NotFound from "./pages/public/NotFound";
 import PaymentForm from "./pages/public/PaymentForm";
+import PaymentPage from "./pages/payment/PaymentPage";
+import PaymentComplete from "./pages/payment/PaymentComplete";
 import Profile from "./pages/public/Profile";
 import RedirectPage from "./pages/public/RedirectPage";
 import SignUp from "./pages/public/SignUp";
 import ResetPassword from "./pages/public/ResetPassword";
+import Swal from "sweetalert2";
+import axiosInstance from "./utils/axios";
 
 /* Student Pages */
 import StudentLayout from "./components/layout/StudentLayout";
@@ -60,6 +64,8 @@ import ManageDocuments from "./pages/admin/ManageDocuments";
 import Chatbot from "./pages/admin/Chatbot";
 import AdminSchedule from "./pages/admin/Schedule";
 import Logs from "./pages/admin/Logs";
+import Reports from "./pages/admin/Reports";
+import ReportSummary from "./pages/admin/ReportSummary";
 
 function App() {
   const { isAuthenticated, validateToken } = useAuthStore();
@@ -71,6 +77,8 @@ function App() {
     }
   }, [isAuthenticated, validateToken]);
 
+  // Removed global post-redirect and focus handlers to prevent premature Swal
+
   return (
     <div className="App">
       <Router>
@@ -80,6 +88,8 @@ function App() {
           <Route path="assets" element={<Assets />} />
           <Route path="signUp" element={<SignUp />} />
           <Route path="paymentForm" element={<PaymentForm />} />
+          <Route path="payment" element={<PaymentPage />} />
+          <Route path="payment-complete" element={<PaymentComplete />} />
           <Route path="redirectPage" element={<RedirectPage />} />
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
@@ -158,6 +168,8 @@ function App() {
                 <Route path="manage-documents" element={<ManageDocuments />} />
                 <Route path="chatbot" element={<Chatbot />} />
                 <Route path="schedule" element={<AdminSchedule />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="report-summary" element={<ReportSummary />} />
                 <Route path="logs" element={<Logs />} />
               </Route>
             </>

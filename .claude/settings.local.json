@@ -1,10 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(dir /S /B \"C:\\Users\\Administrator\\Documents\\IT Projects\\EduOps\\api\")",
-      "Bash(findstr:*)",
-      "Read(//c/Users/Administrator/Documents/**)"
-    ],
+    "allow": ["Bash(npx prisma migrate:*)", "Bash(npx prisma:*)"],
     "deny": [],
     "ask": []
   }

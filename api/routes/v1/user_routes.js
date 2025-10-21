@@ -15,6 +15,7 @@ import {
   searchStudentsForCoursePeriod,
   checkStudentScheduleConflicts,
   getStudentById,
+  getUsersByRole,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
@@ -35,6 +36,7 @@ router.get(
   validateUserIsAdmin,
   inspectEmailExists
 );
+router.get('/role/:role', verifyToken, validateUserIsAdmin, getUsersByRole);
 router.put(
   '/:id',
   verifyToken,

@@ -94,6 +94,9 @@ export const uploadFile = async (file, directory) => {
       case filePaths.paymentProofs:
         file_dir = "payment-proofs";
         break;
+      case filePaths.grades:
+        file_dir = 'grades';
+        break;
       case filePaths.uncategorized:
       default:
         file_dir = "uncategorized";

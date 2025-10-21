@@ -1,0 +1,97 @@
+/* Payment Form Styles */
+.formField {
+  margin-bottom: 1rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #890E07;
+  box-shadow: 0 0 0 3px rgba(137, 14, 7, 0.1);
+}
+
+.select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  background-color: white;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #890E07;
+  box-shadow: 0 0 0 3px rgba(137, 14, 7, 0.1);
+}
+
+.dateVal {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.payButton {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background-color: #890E07;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.payButton:hover:not(:disabled) {
+  background-color: #6b0a05;
+}
+
+.payButton:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Form styling */
+section {
+  padding: 1rem 0;
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .dateVal {
+    flex-direction: column;
+  }
+  
+  .input,
+  .select {
+    padding: 0.625rem;
+  }
+  
+  .payButton {
+    padding: 0.75rem 1.25rem;
+  }
+}
