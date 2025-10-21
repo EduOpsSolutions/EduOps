@@ -135,6 +135,7 @@ export const createPost = async (req, res) => {
         user: {
           select: {
             id: true,
+            userId: true,
             firstName: true,
             lastName: true,
             profilePicLink: true,
@@ -158,7 +159,7 @@ export const createPost = async (req, res) => {
 
     await logUserActivity(
       "Posts - Created New Post",
-      userId.userId,
+      post.user.userId,
       ModuleTypes.CONTENTS,
       `Created post: "${title}" with tag: ${tag}`
     );
@@ -226,6 +227,7 @@ export const updatePost = async (req, res) => {
         user: {
           select: {
             id: true,
+            userId: true,
             firstName: true,
             lastName: true,
             profilePicLink: true,
@@ -313,6 +315,7 @@ export const archivePost = async (req, res) => {
         user: {
           select: {
             id: true,
+            userId: true,
             firstName: true,
             lastName: true,
             profilePicLink: true,
@@ -400,6 +403,7 @@ export const unarchivePost = async (req, res) => {
         user: {
           select: {
             id: true,
+            userId: true,
             firstName: true,
             lastName: true,
             profilePicLink: true,
@@ -582,6 +586,7 @@ export const addFilesToPost = async (req, res) => {
         user: {
           select: {
             id: true,
+            userId: true,
             firstName: true,
             lastName: true,
             profilePicLink: true,

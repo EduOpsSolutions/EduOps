@@ -20,16 +20,28 @@ export const getLogs = async (req, res) => {
     };
 
     // Apply filters
-    if (type) whereClause.type = type;
+    // Handle multiple types (comma-separated)
+    if (type) {
+      if (type.includes(",")) {
+        whereClause.type = { in: type.split(",").map((t) => t.trim()) };
+      } else {
+        whereClause.type = type;
+      }
+    }
     if (moduleType) whereClause.moduleType = moduleType;
     if (userId) whereClause.userId = userId;
 
-    if (dateStart) {
+    // Handle date filters
+    if (dateStart && dateEnd) {
+      whereClause.createdAt = {
+        gte: new Date(dateStart),
+        lte: new Date(dateEnd),
+      };
+    } else if (dateStart) {
       whereClause.createdAt = {
         gte: new Date(dateStart),
       };
-    }
-    if (dateEnd) {
+    } else if (dateEnd) {
       whereClause.createdAt = {
         lte: new Date(dateEnd),
       };
