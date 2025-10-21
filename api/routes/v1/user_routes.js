@@ -14,6 +14,7 @@ import {
   removeProfilePicture,
   searchStudentsForCoursePeriod,
   checkStudentScheduleConflicts,
+  getStudentById,
 } from '../../controller/user_controller.js';
 import {
   validateUpdateUser,
@@ -76,19 +77,22 @@ router.post(
   validateCreateUser,
   createUser
 );
-router.delete('/remove-profile-picture', verifyToken, removeProfilePicture);
-router.delete('/:id', verifyToken, validateUserIsAdmin, deleteUser);
 router.post(
   '/create-student-account',
   verifyToken,
   validateUserIsAdmin,
   createStudentAccount
 );
+router.delete('/remove-profile-picture', verifyToken, removeProfilePicture);
+router.delete('/:id', verifyToken, validateUserIsAdmin, deleteUser);
 router.post(
   '/update-profile-picture',
   verifyToken,
   uploadSingle('profilePic'),
   updateProfilePicture
 );
+
+// Public routes (no auth required for payment form)
+router.get('/get-student-by-id/:studentId', getStudentById);
 
 export { router };

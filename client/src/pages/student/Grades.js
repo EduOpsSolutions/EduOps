@@ -1,31 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getCookieItem, decodeToken } from '../../utils/jwt';
 import GradeNotReadyModal from "../../components/modals/grades/GradeNotReadyModal";
 
 function Grades() {
+
     const [grade_not_ready_modal, setGradeNotReadyModal] = useState(false);
+    const [gradesData, setGradesData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const getStudentGradesData = () => {
-        return [
-            {
-                id: 1,
-                courseName: "B1 Course",
-                status: "NO GRADE",
-                completedDate: null,
-                courseId: 1,
-                studentId: 1,
-            },
-            {
-                id: 2,
-                courseName: "A2 Course",
-                status: "PASS",
-                completedDate: "2024-07-15",
-                courseId: 2,
-                studentId: 1,
-            },
-        ];
-    };
+    // Get studentId from JWT
+    const token = getCookieItem('token');
+    const decoded = decodeToken(token);
+    const studentId = decoded?.data?.id;
 
-    const gradesData = getStudentGradesData();
+    // Fetch grades on mount
+    useEffect(() => {
+        const fetchGrades = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const apiUrl = process.env.REACT_APP_API_URL;
+                const res = await fetch(`${apiUrl}/grades/student/${studentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                if (!res.ok) throw new Error('Failed to fetch grades');
+                const data = await res.json();
+                // Map backend grade values to display values, and keep files array
+                const mapped = (data || []).map(g => ({
+                    id: g.id,
+                    courseName: g.course?.name || 'Unknown',
+                    status: g.grade === 'Pass' ? 'PASS' : g.grade === 'Fail' ? 'FAIL' : 'NO GRADE',
+                    completedDate: g.updatedAt || null,
+                    courseId: g.courseId,
+                    studentId: g.studentId,
+                    files: g.files || [],
+                }));
+                setGradesData(mapped);
+            } catch (err) {
+                setError(err.message || 'Failed to fetch grades');
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (studentId) {
+            fetchGrades();
+        } else {
+            console.warn("[Grades Page] No studentId found, not fetching grades.");
+        }
+    }, [studentId, token]);
+
+    // gradesData is now fetched from backend
 
     const getStatusBadgeColor = (status) => {
         switch (status) {
@@ -53,12 +81,30 @@ function Grades() {
         if (grade.status === "NO GRADE") {
             setGradeNotReadyModal(true);
         } else {
-            console.log("Opening certificate for:", grade);
+            // Open the latest file if available
+            if (grade.files && grade.files.length > 0) {
+                // Sort files by uploadedAt descending (latest first)
+                const sortedFiles = [...grade.files].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+                const latestFile = sortedFiles[0];
+                if (latestFile.url) {
+                    window.open(latestFile.url, '_blank', 'noopener');
+                } else {
+                    alert('No file URL found.');
+                }
+            } else {
+                alert('No grade file has been uploaded for this course.');
+            }
         }
     };
 
     return (
         <div className="bg-white-yellow-tone min-h-screen">
+            {loading && (
+                <div className="text-center py-8 text-lg text-gray-600">Loading grades...</div>
+            )}
+            {error && (
+                <div className="text-center py-8 text-lg text-red-600">{error}</div>
+            )}
             <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
                 <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
 
@@ -172,7 +218,7 @@ function Grades() {
                     </div>
 
                     {/* Empty State */}
-                    {gradesData.length === 0 && (
+                    {!loading && gradesData.length === 0 && (
                         <div className="text-center py-12">
                             <svg
                                 className="mx-auto h-12 w-12 text-gray-400"

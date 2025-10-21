@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { MdClose } from 'react-icons/md';
 import useAuthStore from '../../../stores/authStore';
+import { convertTo12Hour } from '../../../utils/scheduleUtils';
 
 /**
  * Date Select Modal - Shows all events for a selected day
@@ -18,24 +19,20 @@ function DateSelectModal({
 
   if (!isOpen) return null;
 
-  const timeSlots = [
-    '6:00 AM',
-    '7:00 AM',
-    '8:00 AM',
-    '9:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '12:00 PM',
-    '1:00 PM',
-    '2:00 PM',
-    '3:00 PM',
-    '4:00 PM',
-    '5:00 PM',
-    '6:00 PM',
-    '7:00 PM',
-    '8:00 PM',
-    '9:00 PM',
-  ];
+  // Generate 30-minute time slots from 6:00 AM to 9:00 PM
+  const timeSlots = (() => {
+    const slots = [];
+    const startHour = 6;
+    const endHour = 21;
+    for (let h = startHour; h <= endHour; h++) {
+      for (const m of [0, 30]) {
+        const hour12 = ((h + 11) % 12) + 1;
+        const period = h >= 12 ? 'PM' : 'AM';
+        slots.push(`${hour12}:${m.toString().padStart(2, '0')} ${period}`);
+      }
+    }
+    return slots;
+  })();
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', {
@@ -46,20 +43,18 @@ function DateSelectModal({
   };
 
   const getEventsForTimeSlot = (timeSlot) => {
+    // 30-min slot window matching
+    const [slotHourLabel, slotPeriod] = timeSlot.split(' ');
+    const [slotH12, slotM] = slotHourLabel.split(':').map(Number);
+    let h24 = slotH12 % 12;
+    if (slotPeriod === 'PM') h24 += 12;
+    const slotStart = h24 * 60 + slotM;
+    const slotEnd = slotStart + 30;
+
     return events.filter((event) => {
-      // Convert event time from 24-hour format to 12-hour format for comparison
-      const convertTo12Hour = (time24) => {
-        const [hours, minutes] = time24.split(':').map(Number);
-        const period = hours >= 12 ? 'PM' : 'AM';
-        let hour12 = hours % 12;
-        if (hour12 === 0) hour12 = 12;
-        return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
-      };
-
-      const eventTime12Hour = convertTo12Hour(event.time_start);
-
-      // Check if the event's time matches this time slot
-      return eventTime12Hour === timeSlot;
+      const [eh, em] = String(event.time_start).split(':').map(Number);
+      const eventMinutes = eh * 60 + em;
+      return eventMinutes >= slotStart && eventMinutes < slotEnd;
     });
   };
 
@@ -121,7 +116,7 @@ function DateSelectModal({
                               {displayTitle}
                             </p>
                             <p className="text-xs text-gray-700">
-                              {event.time_start} - {event.time_end}
+                              {convertTo12Hour(event.time_start)} - {convertTo12Hour(event.time_end)}
                             </p>
                           </div>
                         );

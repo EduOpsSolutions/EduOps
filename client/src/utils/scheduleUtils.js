@@ -101,16 +101,30 @@ export const parseTime = (timeString) => {
 };
 
 /**
- * Convert 24-hour time format to 12-hour format for comparison
- * @param {string} time24 - Time in 24-hour format (e.g., "14:00")
+ * Convert 24-hour time format to 12-hour format with AM/PM
+ * @param {string} time24 - Time in 24-hour format (e.g., "14:00" or "14:00:00")
  * @returns {string} - Time in 12-hour format (e.g., "2:00 PM")
  */
-const convertTo12Hour = (time24) => {
-  const [hours, minutes] = time24.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  let hour12 = hours % 12;
-  if (hour12 === 0) hour12 = 12;
-  return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+export const convertTo12Hour = (time24) => {
+  if (!time24) return '';
+
+  // Handle both "HH:MM" and "HH:MM:SS" formats
+  const timeMatch = time24.match(/(\d+):(\d+)/);
+  if (!timeMatch) return time24; // Return as-is if format doesn't match
+
+  let hour = parseInt(timeMatch[1], 10);
+  const minute = timeMatch[2];
+
+  const period = hour >= 12 ? 'PM' : 'AM';
+
+  // Convert to 12-hour format
+  if (hour === 0) {
+    hour = 12; // Midnight
+  } else if (hour > 12) {
+    hour -= 12;
+  }
+
+  return `${hour}:${minute} ${period}`;
 };
 
 /**
@@ -137,12 +151,19 @@ export const getEventsForTimeSlot = (events, timeSlot, date) => {
       return false;
     }
 
-    // Convert event time from 24-hour format to 12-hour format for comparison
-    const eventTime12Hour = convertTo12Hour(event.time_start);
+    // Compare by 30-minute slot window: event time in [slotStart, slotStart+30)
+    const { hour, minute } = parseTime(timeSlot); // timeSlot is 12-hour string
+    const slotStartMinutes = hour * 60 + minute;
+    const slotEndMinutes = slotStartMinutes + 30;
 
-    // Check if the event's time matches this time slot
-    const timeMatches = eventTime12Hour === timeSlot;
+    // Parse event time (could be 24-hour format from backend like "14:00")
+    const timeMatch = String(event.time_start).match(/(\d+):(\d+)/);
+    if (!timeMatch) return false;
 
-    return timeMatches;
+    const eh = parseInt(timeMatch[1], 10);
+    const em = parseInt(timeMatch[2], 10);
+    const eventMinutes = eh * 60 + em;
+
+    return eventMinutes >= slotStartMinutes && eventMinutes < slotEndMinutes;
   });
 };

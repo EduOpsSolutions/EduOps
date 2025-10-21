@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 
 const useEnrollmentStore = create((set, get) => ({
   enrollmentId: null,
+  studentId: null,
   enrollmentStatus: "Pending",
   remarkMsg: "Please track your enrollment to view progress.",
   fullName: "",
@@ -33,6 +34,7 @@ const useEnrollmentStore = create((set, get) => ({
 
     set({
       enrollmentId: data.enrollmentId,
+      studentId: data.studentId,
       enrollmentStatus: data.status,
       currentStep,
       completedSteps,
@@ -51,6 +53,7 @@ const useEnrollmentStore = create((set, get) => ({
   clearEnrollmentData: () => {
     set({
       enrollmentId: null,
+      studentId: null,
       enrollmentStatus: "Pending",
       remarkMsg: "Please track your enrollment to view progress.",
       fullName: "",
@@ -89,7 +92,7 @@ const useEnrollmentStore = create((set, get) => ({
     const statusUpdates = {
       2: {
         enrollmentStatus: 'Enrollment Form Verified',
-        remarkMsg: `Please pay the amount of ${coursePrice || 'TBA'} to proceed with your enrollment.`,
+        remarkMsg: `Please pay the Downpayment of ₱3000 or the full amount of ₱${coursePrice || 'TBA'} to proceed with your enrollment.`,
       },
       3: {
         enrollmentStatus: 'Payment Pending',
@@ -126,8 +129,9 @@ const useEnrollmentStore = create((set, get) => ({
         throw new Error("Failed to upload file to storage");
       }
 
+      const apiUrl = process.env.REACT_APP_API_URL;
       const apiResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/enrollment/payment-proof`,
+        `${apiUrl}/enrollment/payment-proof`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

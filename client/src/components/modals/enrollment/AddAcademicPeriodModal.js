@@ -10,7 +10,6 @@ function AcademicPeriodModal({
 }) {
   const [formData, setFormData] = useState({
     batchName: '',
-    periodName: '',
     startAt: '',
     endAt: '',
   });
@@ -24,9 +23,10 @@ function AcademicPeriodModal({
       setShowDiscardModal(false);
       setFormData({
         batchName: '',
-        periodName: '',
         startAt: '',
         endAt: '',
+        enrollmentOpenAt: '',
+        enrollmentCloseAt: '',
       });
       setError('');
     }
@@ -46,10 +46,6 @@ function AcademicPeriodModal({
       setError('Batch name is required');
       return false;
     }
-    if (!formData.periodName.trim()) {
-      setError('Period name is required');
-      return false;
-    }
     if (!formData.startAt) {
       setError('Start date is required');
       return false;
@@ -58,8 +54,20 @@ function AcademicPeriodModal({
       setError('End date is required');
       return false;
     }
+    if (!formData.enrollmentOpenAt) {
+      setError('Enrollment open date is required');
+      return false;
+    }
+    if (!formData.enrollmentCloseAt) {
+      setError('Enrollment close date is required');
+      return false;
+    }
     if (new Date(formData.startAt) >= new Date(formData.endAt)) {
       setError('End date must be after start date');
+      return false;
+    }
+    if (new Date(formData.enrollmentOpenAt) >= new Date(formData.enrollmentCloseAt)) {
+      setError('Enrollment close date must be after enrollment open date');
       return false;
     }
     return true;
@@ -74,17 +82,41 @@ function AcademicPeriodModal({
       setLoading(true);
       setError('');
 
+      // Check for overlapping enrollment window before submitting
+      const enrollmentOpenDateTime = new Date(formData.enrollmentOpenAt);
+      enrollmentOpenDateTime.setHours(0, 0, 0, 0);
+      const enrollmentCloseDateTime = new Date(formData.enrollmentCloseAt);
+      enrollmentCloseDateTime.setHours(23, 59, 59, 999);
+
+      // Fetch all periods to check for overlap
+      const periodsResp = await axiosInstance.get('/academic-periods');
+      const overlapping = periodsResp.data.find(period => {
+        if (period.deletedAt || period.isEnrollmentClosed) return false;
+        const existingOpen = new Date(period.enrollmentOpenAt);
+        const existingClose = new Date(period.enrollmentCloseAt);
+        // Overlap: new.open <= existing.close && new.close >= existing.open
+        return (
+          enrollmentOpenDateTime <= existingClose &&
+          enrollmentCloseDateTime >= existingOpen
+        );
+      });
+      if (overlapping) {
+        setError('There is already an ongoing or overlapping enrollment window. Only one open enrollment period is allowed at a time.');
+        setLoading(false);
+        return;
+      }
+
       const startDateTime = new Date(formData.startAt);
       startDateTime.setHours(0, 0, 0, 0);
-
       const endDateTime = new Date(formData.endAt);
       endDateTime.setHours(23, 59, 59, 999);
 
       const payload = {
         batchName: formData.batchName.trim(),
-        periodName: formData.periodName.trim(),
         startAt: startDateTime.toISOString(),
         endAt: endDateTime.toISOString(),
+        enrollmentOpenAt: enrollmentOpenDateTime.toISOString(),
+        enrollmentCloseAt: enrollmentCloseDateTime.toISOString(),
       };
 
       console.log('Payload for creating academic period:', payload);
@@ -138,7 +170,7 @@ function AcademicPeriodModal({
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-2xl mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="flex items-start justify-between mb-6">
-            <h2 className="text-2xl font-bold">Period Creation</h2>
+            <h2 className="text-2xl font-bold">Create Batch</h2>
             <button
               className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
               onClick={handleClose}
@@ -178,15 +210,7 @@ function AcademicPeriodModal({
               required
             />
 
-            {/* Period Name */}
-            <ModalTextField
-              label="Period Name"
-              name="periodName"
-              value={formData.periodName}
-              onChange={handleInputChange}
-              placeholder="Enter period name"
-              required
-            />
+            {/* Removed Period Name: using batch and dates only */}
 
             {/* Date Range */}
             <div className="flex flex-row justify-center items-center gap-4">
@@ -205,6 +229,28 @@ function AcademicPeriodModal({
                 name="endAt"
                 type="date"
                 value={formData.endAt}
+                onChange={handleInputChange}
+                required
+                className="w-1/2"
+              />
+            </div>
+
+            <div className="flex flex-row justify-center items-center gap-4">
+              <ModalTextField
+                label="Enrollment Open Date"
+                name="enrollmentOpenAt"
+                type="date"
+                value={formData.enrollmentOpenAt}
+                onChange={handleInputChange}
+                required
+                className="w-1/2"
+              />
+
+              <ModalTextField
+                label="Enrollment Close Date"
+                name="enrollmentCloseAt"
+                type="date"
+                value={formData.enrollmentCloseAt}
                 onChange={handleInputChange}
                 required
                 className="w-1/2"

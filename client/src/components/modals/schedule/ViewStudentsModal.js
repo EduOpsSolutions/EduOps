@@ -15,6 +15,7 @@ function ViewStudentsModal({
   onStudentSelected,
   refreshToken,
   scheduleId,
+  capacity,
 }) {
   const [query, setQuery] = useState('');
   const [enrolledStudents, setEnrolledStudents] = useState([]);
@@ -23,6 +24,7 @@ function ViewStudentsModal({
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [checkingId, setCheckingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [enrolledCount, setEnrolledCount] = useState(0);
 
   const disabled = useMemo(() => !courseId || !periodId, [courseId, periodId]);
 
@@ -40,27 +42,43 @@ function ViewStudentsModal({
     (async () => {
       try {
         setEnrolledLoading(true);
-        const resp = await axiosInstance.get(`/users/search-students`, {
-          params: {
-            courseId,
-            periodId,
-            enrolledOnly: true,
-            take: 50,
-          },
-          signal: controller.signal,
-        });
-        setEnrolledStudents(Array.isArray(resp.data) ? resp.data : []);
-        setSelectedIds([]);
+
+        // If we have a scheduleId, get students directly from the schedule
+        if (scheduleId) {
+          const resp = await axiosInstance.get(`/schedules/${scheduleId}/students`, {
+            signal: controller.signal,
+          });
+          const students = Array.isArray(resp.data) ? resp.data : [];
+          setEnrolledStudents(students);
+          setEnrolledCount(students.length);
+          setSelectedIds([]);
+        } else {
+          // Otherwise, search for enrolled students by course and period
+          const resp = await axiosInstance.get(`/users/search-students`, {
+            params: {
+              courseId,
+              periodId,
+              enrolledOnly: true,
+              take: 50,
+            },
+            signal: controller.signal,
+          });
+          const students = Array.isArray(resp.data) ? resp.data : [];
+          setEnrolledStudents(students);
+          setEnrolledCount(students.length);
+          setSelectedIds([]);
+        }
       } catch (e) {
         if (e.name !== 'CanceledError') {
           setEnrolledStudents([]);
+          setEnrolledCount(0);
         }
       } finally {
         setEnrolledLoading(false);
       }
     })();
     return () => controller.abort();
-  }, [isOpen, courseId, periodId, disabled, refreshToken]);
+  }, [isOpen, courseId, periodId, disabled, refreshToken, scheduleId]);
 
   // Autocomplete suggestions as user types
   useEffect(() => {
@@ -159,11 +177,24 @@ function ViewStudentsModal({
       // trigger refresh from parent via refreshToken or local reload
       const controller = new AbortController();
       setEnrolledLoading(true);
-      const resp = await axiosInstance.get(`/users/search-students`, {
-        params: { courseId, periodId, enrolledOnly: true, take: 100 },
-        signal: controller.signal,
-      });
-      setEnrolledStudents(Array.isArray(resp.data) ? resp.data : []);
+
+      // Refresh the list based on whether we have scheduleId
+      if (scheduleId) {
+        const resp = await axiosInstance.get(`/schedules/${scheduleId}/students`, {
+          signal: controller.signal,
+        });
+        const students = Array.isArray(resp.data) ? resp.data : [];
+        setEnrolledStudents(students);
+        setEnrolledCount(students.length);
+      } else {
+        const resp = await axiosInstance.get(`/users/search-students`, {
+          params: { courseId, periodId, enrolledOnly: true, take: 100 },
+          signal: controller.signal,
+        });
+        const students = Array.isArray(resp.data) ? resp.data : [];
+        setEnrolledStudents(students);
+        setEnrolledCount(students.length);
+      }
     } catch (e) {
       // swallow
     } finally {
@@ -177,7 +208,17 @@ function ViewStudentsModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">List of Students</h3>
+          <div>
+            <h3 className="text-lg font-semibold">List of Students</h3>
+            {capacity && (
+              <p className="text-sm text-gray-600 mt-1">
+                Enrolled: {enrolledCount} / {capacity}
+                {enrolledCount >= capacity && (
+                  <span className="ml-2 text-red-600 font-medium">(Full)</span>
+                )}
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -346,6 +387,8 @@ ViewStudentsModal.propTypes = {
   time_end: PropTypes.string,
   onStudentSelected: PropTypes.func,
   refreshToken: PropTypes.number,
+  scheduleId: PropTypes.number,
+  capacity: PropTypes.number,
 };
 
 export default ViewStudentsModal;
