@@ -1,42 +1,17 @@
 import { create } from 'zustand';
 import createSearchStore from './searchStore';
+import documentApi from '../utils/documentApi';
 import Swal from 'sweetalert2';
 
-const sampleDocuments = [
-  {
-    id: 1,
-    documentName: "Certificate",
-    description: "Official academic certificate",
-    privacy: "Teacher's Only",
-    requestBasis: "Yes",
-    downloadable: "Yes",
-    price: "Paid",
-    amount: "25,850.00",
-    uploadFile: "certificate_template.pdf",
-    isHidden: false
-  },
-  {
-    id: 2,
-    documentName: "Form 138",
-    description: "Report card for academic records",
-    privacy: "Student's Only",
-    requestBasis: "Yes",
-    downloadable: "No",
-    price: "Free",
-    amount: "",
-    uploadFile: "form138_template.pdf",
-    isHidden: false
-  },
-];
-
 const useManageDocumentsSearchStore = createSearchStore({
-  initialData: sampleDocuments,
+  initialData: [],
   defaultSearchParams: {
     documentName: "",
     privacy: "",
-    price: ""
+    price: "",
+    includeHidden: false
   },
-  searchableFields: ["documentName", "description", "privacy", "price"],
+  searchableFields: ["documentName", "description"],
   exactMatchFields: ["privacy", "price"],
   initialItemsPerPage: 5,
   showResultsOnLoad: true,
@@ -49,19 +24,103 @@ const useManageDocumentsSearchStore = createSearchStore({
       const privacyMatch = !params.privacy || document.privacy === params.privacy;
 
       const priceMatch = !params.price ||
-        (params.price === "Free" && (!document.price || document.price === "Free")) ||
-        (params.price === "Paid" && document.price === "Paid");
+        (params.price === "free" && document.price === "free") ||
+        (params.price === "paid" && document.price === "paid");
 
-      return documentNameMatch && privacyMatch && priceMatch;
+      const hiddenMatch = params.includeHidden || !document.isHidden;
+
+      return documentNameMatch && privacyMatch && priceMatch && hiddenMatch;
     });
   }
 });
 
 const useManageDocumentsStore = create((set, get) => ({
-  documents: [...sampleDocuments],
+  documents: [],
   showAddDocumentModal: false,
   showEditDocumentModal: false,
   selectedDocument: null,
+  loading: false,
+  error: null,
+
+  // Fetch all document templates
+  fetchDocuments: async (includeHidden = false) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const response = await documentApi.templates.getAll(includeHidden);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to fetch documents');
+      }
+
+      const formattedDocuments = response.data.map(doc => ({
+        ...doc,
+        // Format for display compatibility
+        displayPrice: doc.price === 'free' ? 'Free' : 'Paid',
+        displayAmount: doc.price === 'paid' && doc.amount ? 
+          parseFloat(doc.amount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }) : '',
+        requestBasisDisplay: doc.requestBasis ? 'Yes' : 'No',
+        downloadableDisplay: doc.downloadable ? 'Yes' : 'No',
+        // Map isActive to isHidden for frontend compatibility
+        isHidden: !doc.isActive
+      }));
+
+      set({ documents: formattedDocuments });
+
+      const searchStore = useManageDocumentsSearchStore.getState();
+      searchStore.setData(formattedDocuments);
+      searchStore.initializeSearch();
+
+      set({ loading: false });
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to fetch documents'
+      });
+    }
+  },
+
+  // Search document templates
+  searchDocuments: async (filters = {}) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const response = await documentApi.templates.search(filters);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to search documents');
+      }
+
+      const formattedDocuments = response.data.map(doc => ({
+        ...doc,
+        displayPrice: doc.price === 'free' ? 'Free' : 'Paid',
+        displayAmount: doc.price === 'paid' && doc.amount ? 
+          parseFloat(doc.amount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }) : '',
+        requestBasisDisplay: doc.requestBasis ? 'Yes' : 'No',
+        downloadableDisplay: doc.downloadable ? 'Yes' : 'No'
+      }));
+
+      set({ documents: formattedDocuments });
+
+      const searchStore = useManageDocumentsSearchStore.getState();
+      searchStore.setData(formattedDocuments);
+
+      set({ loading: false });
+    } catch (error) {
+      console.error('Failed to search documents:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to search documents'
+      });
+    }
+  },
 
   handleDocumentClick: (document) => {
     set({
@@ -77,27 +136,57 @@ const useManageDocumentsStore = create((set, get) => ({
     });
   },
 
-  handleUpdateDocument: (updatedDocument) => {
-    const { documents } = get();
-    const updatedDocuments = documents.map(doc =>
-      doc.id === updatedDocument.id ? updatedDocument : doc
-    );
+  // Update document template
+  handleUpdateDocument: async (updatedDocument, file) => {
+    try {
+      set({ loading: true, error: null });
 
-    set({
-      documents: updatedDocuments,
-      showEditDocumentModal: false,
-      selectedDocument: null
-    });
+      // Filter to only send editable fields
+      const editableData = {
+        documentName: updatedDocument.documentName,
+        description: updatedDocument.description,
+        privacy: updatedDocument.privacy,
+        requestBasis: updatedDocument.requestBasis,
+        downloadable: updatedDocument.downloadable,
+        price: updatedDocument.price,
+        amount: updatedDocument.amount
+      };
 
-    const searchStore = useManageDocumentsSearchStore.getState();
-    searchStore.updateData(updatedDocuments);
+      const formData = documentApi.helpers.createFormData(editableData, file);
+      const response = await documentApi.templates.update(updatedDocument.id, formData);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to update document');
+      }
 
-    Swal.fire({
-      title: 'Success!',
-      text: 'Document has been updated successfully.',
-      icon: 'success',
-      confirmButtonColor: '#992525',
-    });
+      await get().fetchDocuments(get().searchStore?.searchParams?.includeHidden || false);
+
+      set({
+        showEditDocumentModal: false,
+        selectedDocument: null,
+        loading: false
+      });
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Document has been updated successfully.',
+        icon: 'success',
+        confirmButtonColor: '#992525',
+      });
+    } catch (error) {
+      console.error('Failed to update document:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to update document'
+      });
+      
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to update document',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+    }
   },
 
   handleAddDocument: () => {
@@ -108,69 +197,157 @@ const useManageDocumentsStore = create((set, get) => ({
     set({ showAddDocumentModal: false });
   },
 
-  handleAddDocumentSubmit: (newDocument) => {
-    const { documents } = get();
+  // Create new document template
+  handleAddDocumentSubmit: async (newDocument, file) => {
+    try {
+      set({ loading: true, error: null });
 
-    const formattedDocument = {
-      ...newDocument,
-      id: Math.max(...documents.map((d) => d.id), 0) + 1,
-      amount: newDocument.price === "Paid" && newDocument.amount ?
-        parseFloat(newDocument.amount).toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }) : "",
-      isHidden: false
-    };
+      const formData = documentApi.helpers.createFormData(newDocument, file);
+      const response = await documentApi.templates.create(formData);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to create document');
+      }
 
-    const updatedDocuments = [...documents, formattedDocument];
-    set({
-      documents: updatedDocuments,
-      showAddDocumentModal: false
-    });
+      await get().fetchDocuments(get().searchStore?.searchParams?.includeHidden || false);
 
-    const searchStore = useManageDocumentsSearchStore.getState();
-    searchStore.updateData(updatedDocuments);
+      set({
+        showAddDocumentModal: false,
+        loading: false
+      });
 
-    Swal.fire({
-      title: 'Success!',
-      text: 'Document has been added successfully.',
-      icon: 'success',
-      confirmButtonColor: '#992525',
-    });
+      Swal.fire({
+        title: 'Success!',
+        text: 'Document has been added successfully.',
+        icon: 'success',
+        confirmButtonColor: '#992525',
+      });
+    } catch (error) {
+      console.error('Failed to create document:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to create document'
+      });
+      
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to create document',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+    }
   },
 
-  handleDeleteDocument: (id) => {
-    const { documents } = get();
-    const updatedDocuments = documents.filter((document) => document.id !== id);
-    set({
-      documents: updatedDocuments
-    });
+  // Delete document template
+  handleDeleteDocument: async (id) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: 'This document will be permanently deleted.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      });
 
-    const searchStore = useManageDocumentsSearchStore.getState();
-    searchStore.updateData(updatedDocuments);
+      if (result.isConfirmed) {
+        set({ loading: true, error: null });
+
+        const response = await documentApi.templates.delete(id);
+        
+        if (response.error) {
+          throw new Error(response.message || 'Failed to delete document');
+        }
+
+        await get().fetchDocuments(get().searchStore?.searchParams?.includeHidden || false);
+
+        set({ loading: false });
+
+        Swal.fire({
+          title: 'Deleted!',
+          text: 'Document has been deleted successfully.',
+          icon: 'success',
+          confirmButtonColor: '#992525',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete document:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to delete document'
+      });
+      
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to delete document',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+    }
   },
 
-  handleHideDocument: (id) => {
-    const { documents } = get();
-    const updatedDocuments = documents.map((document) =>
-      document.id === id
-        ? { ...document, isHidden: !document.isHidden }
-        : document
-    );
-    set({
-      documents: updatedDocuments
-    });
+  // Toggle document visibility
+  handleHideDocument: async (id) => {
+    try {
+      const document = get().documents.find(doc => doc.id === id);
+      if (!document) return;
 
-    const searchStore = useManageDocumentsSearchStore.getState();
-    searchStore.updateData(updatedDocuments);
+      set({ loading: true, error: null });
+
+      const newIsActive = document.isHidden;
+      const response = await documentApi.templates.toggleVisibility(id, newIsActive);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to update document visibility');
+      }
+
+      const searchStore = useManageDocumentsSearchStore.getState();
+      const includeHidden = searchStore.searchParams?.includeHidden || false;
+      
+      // Fetch fresh data from API immediately
+      await get().fetchDocuments(includeHidden);
+      
+      set({ loading: false });
+
+      const wasHidden = document.isHidden;
+      let successMessage = `Document has been ${wasHidden ? 'shown' : 'hidden'} successfully.`;
+      
+      if (!wasHidden && !includeHidden) {
+        successMessage += ' The document is now hidden from this list. Check "Include Hidden" to see it.';
+      }
+
+      Swal.fire({
+        title: 'Success!',
+        text: successMessage,
+        icon: 'success',
+        confirmButtonColor: '#992525',
+      });
+    } catch (error) {
+      console.error('Failed to update document visibility:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to update document visibility'
+      });
+      
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to update document visibility',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+    }
   },
 
   resetStore: () => {
     set({
-      documents: [...sampleDocuments],
+      documents: [],
       showAddDocumentModal: false,
       showEditDocumentModal: false,
-      selectedDocument: null
+      selectedDocument: null,
+      loading: false,
+      error: null
     });
   }
 }));

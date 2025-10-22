@@ -1,84 +1,91 @@
 import React, { useState, useEffect } from "react";
 import DocumentForm from "../../form/DocumentForm";
+import { useManageDocumentsStore } from "../../../stores/manageDocumentsStore";
 import Swal from 'sweetalert2';
 
-const AddNewDocumentModal = ({ isOpen, onClose, onAddDocument }) => {
+const AddNewDocumentModal = ({ isOpen, onClose }) => {
+    const { handleAddDocumentSubmit, loading, error } = useManageDocumentsStore();
+    
     const [formData, setFormData] = useState({
         documentName: "",
         description: "",
-        privacy: "Teacher's Only",
-        requestBasis: "Yes",
-        downloadable: "Yes",
-        price: "Free",
+        privacy: "teacher_only",
+        requestBasis: true,
+        downloadable: true,
+        price: "free",
         amount: "",
-        uploadedFile: null,
     });
-
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    
+    const [uploadedFile, setUploadedFile] = useState(null);
+    const [localError, setLocalError] = useState("");
 
     useEffect(() => {
         if (!isOpen) {
             setFormData({
                 documentName: "",
                 description: "",
-                privacy: "Teacher's Only",
-                requestBasis: "Yes",
-                downloadable: "Yes",
-                price: "Free",
+                privacy: "teacher_only",
+                requestBasis: true,
+                downloadable: true,
+                price: "free",
                 amount: "",
-                uploadedFile: null,
             });
-            setError("");
+            setUploadedFile(null);
+            setLocalError("");
         }
     }, [isOpen]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        
+        let processedValue = value;
+        if (type === 'checkbox') {
+            processedValue = checked;
+        } else if (name === 'price' && value === 'free') {
+            // Reset amount when switching to free
+            setFormData(prev => ({ ...prev, amount: "" }));
+        }
+        
+        setFormData((prev) => ({ ...prev, [name]: processedValue }));
 
-        if (error) setError("");
+        if (localError) setLocalError("");
     };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        setFormData((prev) => ({ ...prev, uploadedFile: file }));
-        if (error) setError("");
+        setUploadedFile(file);
+        if (localError) setLocalError("");
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Basic validation
+        if (!formData.documentName.trim()) {
+            setLocalError("Document name is required");
+            return;
+        }
+
+        if (formData.price === "paid" && (!formData.amount || parseFloat(formData.amount) <= 0)) {
+            setLocalError("Amount is required for paid documents");
+            return;
+        }
+
         try {
-            setLoading(true);
-
-            let amountValue = "";
-            if (formData.price === "Paid") {
-                const parsedAmount = parseFloat(formData.amount || 0);
-                if (!isNaN(parsedAmount)) {
-                    amountValue = parsedAmount.toFixed(2);
-                }
-            }
-
             const documentData = {
-                documentName: formData.documentName,
-                description: formData.description,
+                documentName: formData.documentName.trim(),
+                description: formData.description.trim(),
                 privacy: formData.privacy,
                 requestBasis: formData.requestBasis,
                 downloadable: formData.downloadable,
                 price: formData.price,
-                amount: amountValue,
-                uploadFile: formData.uploadedFile ? formData.uploadedFile.name : "",
+                amount: formData.price === "paid" ? parseFloat(formData.amount) : null,
             };
 
-            if (onAddDocument && typeof onAddDocument === "function") {
-                await onAddDocument(documentData);
-            }
-
+            await handleAddDocumentSubmit(documentData, uploadedFile);
             onClose();
         } catch (error) {
-            setError(error.message || "Failed to add document. Please try again.");
-        } finally {
-            setLoading(false);
+            setLocalError(error.message || "Failed to add document. Please try again.");
         }
     };
 
@@ -86,7 +93,7 @@ const AddNewDocumentModal = ({ isOpen, onClose, onAddDocument }) => {
         return formData.documentName.trim() !== "" ||
             formData.description.trim() !== "" ||
             formData.amount.trim() !== "" ||
-            formData.uploadedFile !== null;
+            uploadedFile !== null;
     };
 
     const handleClose = () => {
@@ -138,9 +145,9 @@ const AddNewDocumentModal = ({ isOpen, onClose, onAddDocument }) => {
                         </button>
                     </div>
 
-                    {error && (
+                    {(error || localError) && (
                         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                            {error}
+                            {error || localError}
                         </div>
                     )}
 
@@ -151,6 +158,7 @@ const AddNewDocumentModal = ({ isOpen, onClose, onAddDocument }) => {
                             handleFileChange={handleFileChange}
                             loading={loading}
                             isEditing={false}
+                            uploadedFile={uploadedFile}
                         />
                     </form>
                 </div>

@@ -1,13 +1,15 @@
 import React, { useEffect } from "react";
 import SearchFormVertical from "../../components/common/SearchFormVertical";
 import Pagination from "../../components/common/Pagination";
+import Spinner from "../../components/common/Spinner";
 import UpdateDocumentRequestModal from "../../components/modals/documents/UpdateRequestModal";
 import ViewRequestDetailsModal from "../../components/modals/documents/ViewRequestDetailsModal";
 import { useDocumentRequestSearchStore, useDocumentRequestStore } from "../../stores/documentRequestStore";
 
 function DocumentRequests() {
   const searchStore = useDocumentRequestSearchStore();
-  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
+  const { resetSearch } = searchStore;
+  const [documentTemplates, setDocumentTemplates] = React.useState([]);
 
   const {
     selectedRequest,
@@ -15,6 +17,9 @@ function DocumentRequests() {
     viewDetailsModal,
     updateStatus,
     updateRemarks,
+    loading,
+    error,
+    fetchDocumentRequests,
     handleRequestSelect,
     viewRequestDetails,
     closeUpdateModal,
@@ -26,13 +31,25 @@ function DocumentRequests() {
   } = useDocumentRequestStore();
 
   useEffect(() => {
-    initializeSearch();
-    performSearch();
+    fetchDocumentRequests();
+    fetchDocumentTemplates();
     return () => {
       resetStore();
       resetSearch();
     };
-  }, [initializeSearch, performSearch, resetStore, resetSearch]);
+  }, [fetchDocumentRequests, resetStore, resetSearch]);
+
+  const fetchDocumentTemplates = async () => {
+    try {
+      const documentApi = (await import('../../utils/documentApi')).default;
+      const response = await documentApi.templates.getAll(false);
+      if (!response.error) {
+        setDocumentTemplates(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch document templates:', error);
+    }
+  };
 
   const searchFormConfig = {
     title: "SEARCH",
@@ -49,10 +66,10 @@ function DocumentRequests() {
         type: "select",
         options: [
           { value: "", label: "All" },
-          { value: "Certificate of Good Moral", label: "Certificate of Good Moral" },
-          { value: "Form 138", label: "Form 138" },
-          { value: "Certificate of Enrollment", label: "Certificate of Enrollment" },
-          { value: "Transcript of Records", label: "Transcript of Records" }
+          ...documentTemplates.map(template => ({
+            value: template.documentName,
+            label: template.documentName
+          }))
         ]
       },
       {
@@ -83,7 +100,7 @@ function DocumentRequests() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    performSearch();
+    searchStore.performSearch();
   };
 
   const handleStatusChange = (e) => {
@@ -130,10 +147,27 @@ function DocumentRequests() {
             Document Requests
           </p>
 
-          <div className="pt-2">
-            <div className="overflow-x-auto w-full">
-              <div className="w-full align-middle">
-                <table className="w-full table-auto">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              <p>{error}</p>
+              <button
+                onClick={() => fetchDocumentRequests()}
+                className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <Spinner size="large" />
+            </div>
+          ) : (
+            <div className="pt-2">
+              <div className="overflow-x-auto w-full">
+                <div className="w-full align-middle">
+                  <table className="w-full table-auto">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
                       <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base whitespace-nowrap">
@@ -255,10 +289,12 @@ function DocumentRequests() {
                 onItemsPerPageChange={searchStore.handleItemsPerPageChange}
                 totalItems={searchStore.totalItems}
                 itemName="requests"
+                itemsPerPageOptions={[5, 10, 25, 50]}
                 showItemsPerPageSelector={true}
               />
             </div>
           </div>
+          )}
         </div>
       </div>
 
