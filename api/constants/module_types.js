@@ -1,4 +1,4 @@
-export const ModuleTypes = {
+export const MODULE_TYPES = {
   UNCATEGORIZED: "UNCATEGORIZED",
   AUTH: "AUTH",
   ENROLLMENTS: "ENROLLMENTS",

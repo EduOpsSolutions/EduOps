@@ -2,7 +2,8 @@ import admin from "firebase-admin";
 import { randomUUID } from "crypto";
 import { filePaths } from "../constants/file_paths.js";
 import { PrismaClient } from "@prisma/client";
-import { logUserActivity, logError, ModuleTypes } from "./logger.js";
+import { logUserActivity, logError } from "./logger.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -32,7 +33,7 @@ if (!admin.apps.length) {
         "File Storage - No Firebase credentials found",
         new Error("No Firebase credentials found"),
         null,
-        ModuleTypes.SYSTEM
+        MODULE_TYPES.SYSTEM
       );
       throw new Error(
         "No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT (JSON) or FIREBASE_CREDENTIALS_PATH."
@@ -47,7 +48,7 @@ if (!admin.apps.length) {
       "File Storage - Failed to initialize Firebase Admin credentials",
       e,
       null,
-      ModuleTypes.SYSTEM
+      MODULE_TYPES.SYSTEM
     );
     throw e;
   }
@@ -95,7 +96,7 @@ export const uploadFile = async (file, directory) => {
         file_dir = "payment-proofs";
         break;
       case filePaths.grades:
-        file_dir = 'grades';
+        file_dir = "grades";
         break;
       case filePaths.uncategorized:
       default:
@@ -131,7 +132,7 @@ export const uploadFile = async (file, directory) => {
     logUserActivity(
       "File Storage - File uploaded successfully",
       null,
-      ModuleTypes.SYSTEM,
+      MODULE_TYPES.SYSTEM,
       `File ${file.originalname} uploaded successfully URL: ${downloadURL}`
     );
 
@@ -148,7 +149,7 @@ export const uploadFile = async (file, directory) => {
       "File Storage - Error uploading file",
       error,
       null,
-      ModuleTypes.SYSTEM
+      MODULE_TYPES.SYSTEM
     );
     throw new Error(`Upload failed: ${error.message}`);
   }
@@ -159,7 +160,7 @@ export const uploadMultipleFiles = async (files, directory) => {
     logUserActivity(
       "File Storage - Uploading multiple files",
       null,
-      ModuleTypes.SYSTEM,
+      MODULE_TYPES.SYSTEM,
       `Uploading ${files.length} files to ${directory}`
     );
     const uploadedFiles = [];
@@ -171,7 +172,7 @@ export const uploadMultipleFiles = async (files, directory) => {
           "File Storage - Error uploading file",
           error,
           null,
-          ModuleTypes.SYSTEM
+          MODULE_TYPES.SYSTEM
         );
       });
       if (result.success === true) {
@@ -179,7 +180,7 @@ export const uploadMultipleFiles = async (files, directory) => {
         logUserActivity(
           "File Storage - File uploaded successfully",
           null,
-          ModuleTypes.SYSTEM,
+          MODULE_TYPES.SYSTEM,
           `File ${file.originalname} uploaded successfully`
         );
       } else {
@@ -188,7 +189,7 @@ export const uploadMultipleFiles = async (files, directory) => {
           "File Storage - File upload failed",
           error,
           null,
-          ModuleTypes.SYSTEM
+          MODULE_TYPES.SYSTEM
         );
       }
     }
@@ -203,7 +204,7 @@ export const uploadMultipleFiles = async (files, directory) => {
       "File Storage - Error uploading multiple files",
       error,
       null,
-      ModuleTypes.SYSTEM
+      MODULE_TYPES.SYSTEM
     );
     throw new Error(`Upload failed: ${error.message}`);
   }

@@ -10,7 +10,8 @@ import { sendEmail } from "../utils/mailer.js";
 import crypto from "crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
-import { createLog, logSecurityEvent, ModuleTypes } from "../utils/logger.js";
+import { createLog, logSecurityEvent } from "../utils/logger.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const bcryptSalt = parseInt(process.env.BCRYPT_SALT) || 11;
 const prisma = new PrismaClient();
@@ -314,15 +315,28 @@ const requestResetPassword = async (req, res) => {
       await logSecurityEvent(
         "Reset Password Request",
         updatedUser.userId,
-        "Reset password request sent to email: " + email
+        MODULE_TYPES.AUTH,
+        `Reset password request sent to email: ${email}`
       );
       res
         .status(200)
         .json({ error: false, message: "Reset link sent successfully" });
     } else {
+      await logSecurityEvent(
+        "Reset Password Request Error",
+        updatedUser.userId,
+        MODULE_TYPES.AUTH,
+        `Error sending email to ${email}`
+      );
       res.status(500).json({ error: true, message: "Error sending email" });
     }
   } catch (error) {
+    await logSecurityEvent(
+      "Reset Password Request Error",
+      null,
+      MODULE_TYPES.AUTH,
+      `Error resetting password: ${error.message}`
+    );
     res.status(500).json({
       error: true,
       message: "Error resetting password",

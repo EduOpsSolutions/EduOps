@@ -1,7 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { uploadFile } from "../utils/fileStorage.js";
 import { filePaths } from "../constants/file_paths.js";
-import { logUserActivity, logError, ModuleTypes } from "../utils/logger.js";
+import { logUserActivity, logError } from "../utils/logger.js"
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -68,7 +69,7 @@ export const getPosts = async (req, res) => {
       "Posts - Get Posts Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -160,7 +161,7 @@ export const createPost = async (req, res) => {
     await logUserActivity(
       "Posts - Created New Post",
       post.user.userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Created post: "${title}" with tag: ${tag}`
     );
 
@@ -175,7 +176,7 @@ export const createPost = async (req, res) => {
       "Posts - Create Post Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -252,7 +253,7 @@ export const updatePost = async (req, res) => {
     await logUserActivity(
       "Posts - Updated Post",
       userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Updated post: ${id}, Fields: ${Object.keys(updateData).join(", ")}`
     );
 
@@ -267,7 +268,7 @@ export const updatePost = async (req, res) => {
       "Posts - Update Post Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -340,7 +341,7 @@ export const archivePost = async (req, res) => {
     await logUserActivity(
       "Posts - Archived Post",
       userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Archived post: ${id}`
     );
 
@@ -355,7 +356,7 @@ export const archivePost = async (req, res) => {
       "Posts - Archive Post Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -428,7 +429,7 @@ export const unarchivePost = async (req, res) => {
     await logUserActivity(
       "Posts - Unarchived Post",
       userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Unarchived post: ${id}`
     );
 
@@ -443,7 +444,7 @@ export const unarchivePost = async (req, res) => {
       "Posts - Unarchive Post Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -491,7 +492,7 @@ export const deletePost = async (req, res) => {
     await logUserActivity(
       "Posts - Deleted Post",
       userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Deleted post: ${id}`
     );
 
@@ -505,7 +506,7 @@ export const deletePost = async (req, res) => {
       "Posts - Delete Post Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -611,7 +612,7 @@ export const addFilesToPost = async (req, res) => {
     await logUserActivity(
       "Posts - Added Files to Post",
       userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Added ${uploadedFiles.length} file(s) to post: ${id}`
     );
 
@@ -626,7 +627,7 @@ export const addFilesToPost = async (req, res) => {
       "Posts - Add Files Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,
@@ -675,7 +676,7 @@ export const deletePostFile = async (req, res) => {
     await logUserActivity(
       "Posts - Deleted File from Post",
       userId,
-      ModuleTypes.CONTENTS,
+      MODULE_TYPESCONTENTS,
       `Deleted file ${fileId} from post: ${postId}`
     );
 
@@ -689,7 +690,7 @@ export const deletePostFile = async (req, res) => {
       "Posts - Delete File Error",
       err,
       req.user?.data?.id || null,
-      ModuleTypes.CONTENTS
+      MODULE_TYPESCONTENTS
     );
     res.status(500).json({
       error: true,

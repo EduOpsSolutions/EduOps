@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -16,28 +17,28 @@ const prisma = new PrismaClient();
  * @returns {Promise<Object>} Result object with success status and log data
  */
 export const createLog = async (logData) => {
-    try {
-        // Validate required fields
-        if (!logData.title) {
-            throw new Error('Log title is required');
-        }
-
-        const log = await prisma.logs.create({
-            data: {
-                title: logData.title,
-                content: logData.content || null,
-                reqBody: logData.reqBody || null,
-                userId: logData.userId || null,
-                moduleType: logData.moduleType || 'UNCATEGORIZED',
-                type: logData.type || 'user_activity'
-            }
-        });
-
-        return { success: true, log };
-    } catch (err) {
-        console.error('Create log error:', err);
-        return { success: false, error: err.message };
+  try {
+    // Validate required fields
+    if (!logData.title) {
+      throw new Error("Log title is required");
     }
+
+    const log = await prisma.logs.create({
+      data: {
+        title: logData.title,
+        content: logData.content || null,
+        reqBody: logData.reqBody || null,
+        userId: logData.userId || null,
+        moduleType: logData.moduleType || "UNCATEGORIZED",
+        type: logData.type || "user_activity",
+      },
+    });
+
+    return { success: true, log };
+  } catch (err) {
+    console.error("Create log error:", err);
+    return { success: false, error: err.message };
+  }
 };
 
 /**
@@ -48,14 +49,19 @@ export const createLog = async (logData) => {
  * @param {string} [moduleType] - Module type
  * @param {string} [content] - Additional content
  */
-export const logUserActivity = async (title, userId, moduleType = 'UNCATEGORIZED', content = null) => {
-    return createLog({
-        title,
-        userId,
-        moduleType,
-        content,
-        type: 'user_activity'
-    });
+export const logUserActivity = async (
+  title,
+  userId,
+  moduleType = "UNCATEGORIZED",
+  content = null
+) => {
+  return createLog({
+    title,
+    userId,
+    moduleType,
+    content,
+    type: "user_activity",
+  });
 };
 
 /**
@@ -65,13 +71,17 @@ export const logUserActivity = async (title, userId, moduleType = 'UNCATEGORIZED
  * @param {string} [moduleType] - Module type
  * @param {string} [content] - Additional content
  */
-export const logSystemActivity = async (title, moduleType = 'SYSTEM', content = null) => {
-    return createLog({
-        title,
-        moduleType,
-        content,
-        type: 'system_activity'
-    });
+export const logSystemActivity = async (
+  title,
+  moduleType = "SYSTEM",
+  content = null
+) => {
+  return createLog({
+    title,
+    moduleType,
+    content,
+    type: "system_activity",
+  });
 };
 
 /**
@@ -82,19 +92,24 @@ export const logSystemActivity = async (title, moduleType = 'SYSTEM', content = 
  * @param {string} [userId] - User ID
  * @param {string} [moduleType] - Module type
  */
-export const logApiResponse = async (title, req, userId = null, moduleType = 'UNCATEGORIZED') => {
-    return createLog({
-        title,
-        userId,
-        moduleType,
-        reqBody: JSON.stringify({
-            method: req.method,
-            path: req.path,
-            query: req.query,
-            body: req.body
-        }),
-        type: 'api_response'
-    });
+export const logApiResponse = async (
+  title,
+  req,
+  userId = null,
+  moduleType = "UNCATEGORIZED"
+) => {
+  return createLog({
+    title,
+    userId,
+    moduleType,
+    reqBody: JSON.stringify({
+      method: req.method,
+      path: req.path,
+      query: req.query,
+      body: req.body,
+    }),
+    type: "api_response",
+  });
 };
 
 /**
@@ -105,18 +120,23 @@ export const logApiResponse = async (title, req, userId = null, moduleType = 'UN
  * @param {string} [userId] - User ID
  * @param {string} [moduleType] - Module type
  */
-export const logError = async (title, error, userId = null, moduleType = 'UNCATEGORIZED') => {
-    return createLog({
-        title,
-        userId,
-        moduleType,
-        content: JSON.stringify({
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        }),
-        type: 'error_log'
-    });
+export const logError = async (
+  title,
+  error,
+  userId = null,
+  moduleType = "UNCATEGORIZED"
+) => {
+  return createLog({
+    title,
+    userId,
+    moduleType,
+    content: JSON.stringify({
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    }),
+    type: "error_log",
+  });
 };
 
 /**
@@ -126,40 +146,44 @@ export const logError = async (title, error, userId = null, moduleType = 'UNCATE
  * @param {string} [userId] - User ID
  * @param {string} [content] - Additional content
  */
-export const logSecurityEvent = async (title, userId = null, content = null) => {
-    return createLog({
-        title,
-        userId,
-        moduleType: 'AUTH',
-        content,
-        type: 'security_log'
-    });
+export const logSecurityEvent = async (
+  title,
+  userId = null,
+  content = null
+) => {
+  return createLog({
+    title,
+    userId,
+    ModuleType: MODULE_TYPES.AUTH,
+    content,
+    type: "security_log",
+  });
 };
 
 /**
  * Log types available in the system
  */
 export const LogTypes = {
-    USER_ACTIVITY: 'user_activity',
-    SYSTEM_ACTIVITY: 'system_activity',
-    API_RESPONSE: 'api_response',
-    ERROR_LOG: 'error_log',
-    SECURITY_LOG: 'security_log',
-    OTHER: 'other'
+  USER_ACTIVITY: "user_activity",
+  SYSTEM_ACTIVITY: "system_activity",
+  API_RESPONSE: "api_response",
+  ERROR_LOG: "error_log",
+  SECURITY_LOG: "security_log",
+  OTHER: "other",
 };
 
 /**
  * Module types available in the system
  */
-export const ModuleTypes = {
-    UNCATEGORIZED: 'UNCATEGORIZED',
-    AUTH: 'AUTH',
-    ENROLLMENTS: 'ENROLLMENTS',
-    SCHEDULES: 'SCHEDULES',
-    GRADING: 'GRADING',
-    DOCUMENTS: 'DOCUMENTS',
-    PAYMENTS: 'PAYMENTS',
-    REPORTS: 'REPORTS',
-    CONTENTS: 'CONTENTS',
-    SYSTEM: 'SYSTEM'
-};
+// export const ModuleTypes = {
+//     UNCATEGORIZED: 'UNCATEGORIZED',
+//     AUTH: 'AUTH',
+//     ENROLLMENTS: 'ENROLLMENTS',
+//     SCHEDULES: 'SCHEDULES',
+//     GRADING: 'GRADING',
+//     DOCUMENTS: 'DOCUMENTS',
+//     PAYMENTS: 'PAYMENTS',
+//     REPORTS: 'REPORTS',
+//     CONTENTS: 'CONTENTS',
+//     SYSTEM: 'SYSTEM'
+// };

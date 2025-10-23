@@ -5,7 +5,7 @@ import {
   logUserActivity,
   logSystemActivity,
 } from "../utils/logger.js";
-import { ModuleTypes } from "../constants/module_types.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -95,7 +95,7 @@ async function getSchedulingContext() {
     });
     await logSystemActivity(
       "AI: Scheduling Context Fetched",
-      ModuleTypes.SCHEDULES,
+      MODULE_TYPES.SCHEDULES,
       JSON.stringify(schedules)
     );
     context.schedules = schedules;
@@ -218,7 +218,7 @@ async function getSafeReportContext() {
 
     await logSystemActivity(
       "AI: Safe Report Context Fetched",
-      ModuleTypes.REPORTS,
+      MODULE_TYPES.REPORTS,
       JSON.stringify(context)
     );
     return context;
@@ -237,7 +237,7 @@ export const generateAIReport = async (req, res) => {
         "AI: Generate Report Error - Missing API Key",
         new Error("GEMINI_API_KEY is missing"),
         req.user?.data?.userId || null,
-        ModuleTypes.REPORTS
+        MODULE_TYPES.REPORTS
       );
       return res
         .status(500)
@@ -250,7 +250,7 @@ export const generateAIReport = async (req, res) => {
         "AI: Generate Report Error - Invalid Prompt",
         new Error("prompt is required"),
         req.user?.data?.userId || null,
-        ModuleTypes.REPORTS
+        MODULE_TYPES.REPORTS
       );
       return res
         .status(400)
@@ -629,7 +629,7 @@ ${JSON.stringify(aiContext, null, 2)}`;
         const logResult = await logUserActivity(
           "AI: Ask Gemini (Schedule)",
           userId,
-          ModuleTypes.SCHEDULES,
+          MODULE_TYPES.SCHEDULES,
           JSON.stringify({
             prompt,
             context,
