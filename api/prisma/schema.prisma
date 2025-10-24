@@ -75,7 +75,9 @@ model enrollment_request {
   paymentProofPath String?  @db.LongText
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  periodId         String?
 
+  period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
   // Relations
   payments payments[]
 }
@@ -187,6 +189,7 @@ model academic_period {
   schedules   schedule[]
   enrollments student_enrollment[]      @relation("PeriodEnrollments")
   payments    payments[]
+  enrollment_request enrollment_request[]
 }
 
 model academic_period_courses {
