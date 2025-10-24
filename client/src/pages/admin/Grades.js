@@ -130,8 +130,8 @@ function Grades() {
                                                     onClick={() => handleGradeStudents(schedule)}
                                                 >
                                                     <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                                                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={schedule.course?.name}>
-                                                            {schedule.course?.name}
+                                                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={schedule.courseName}>
+                                                            {schedule.courseName}
                                                         </div>
                                                     </td>
                                                     <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">

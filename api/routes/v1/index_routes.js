@@ -13,6 +13,8 @@ import { router as ai } from "./ai_routes.js";
 import payments from "./payment_routes.js";
 import documents from "./document_routes.js";
 import {router as grades} from './grades_routes.js';
+import { router as assessment } from "./assessment_routes.js";
+import { router as feeRoutes } from './fees_routes.js';
 
 const router = express.Router();
 router.get("/", function (req, res) {
@@ -35,5 +37,7 @@ router.use("/ai", ai);
 router.use("/payments", payments);
 router.use("/documents", documents);
 router.use('/grades', grades);
+router.use('/assessment', assessment);
+router.use('/fees', feeRoutes);
 
 export default router;
