@@ -16,6 +16,14 @@ export const getCourseById = (id) => {
     select: {
       id: true,
       name: true,
+      price: true,
+      // adviser: {
+      //     select: {
+      //         id: true,
+      //         firstName: true,
+      //         lastName: true
+      //     }
+      // }
     },
   });
 };

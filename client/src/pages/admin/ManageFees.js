@@ -8,6 +8,9 @@ import { useFeesSearchStore, useFeesStore } from "../../stores/feesStore";
 import SearchForm from "../../components/common/SearchFormHorizontal";
 import SearchResults from "../../components/common/SearchResults";
 import FeesTable from "../../components/tables/EditFeesDetailsTable";
+import { getCookieItem } from "../../utils/jwt";
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 function ManageFees() {
   // Search store
@@ -25,7 +28,8 @@ function ManageFees() {
     showDiscardModal,
     showSaveModal,
     showSaveNotifyModal,
-    
+    showDeleteModal,
+    feeToDelete,
     // Actions
     handleEditFees,
     handleAddFees,
@@ -41,14 +45,35 @@ function ManageFees() {
     handleCancelDiscard,
     handleFieldUndo,
     hasFieldChanged,
+    openDeleteModal,
+    closeDeleteModal,
+    confirmDeleteFee,
     handleDeleteFee,
     handleCancelEdit,
     resetStore
   } = useFeesStore();
 
   useEffect(() => {
-    initializeSearch();
-    performSearch();
+    async function fetchCourseBatches() {
+      const token = getCookieItem('token'); // Always get latest token
+      const res = await fetch(`${API_BASE_URL}/fees/course-batches`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        // Handle error response (e.g., unauthorized or server error)
+        console.error('Error fetching course-batches:', data.error || data);
+        searchStore.setData([]); // Set empty data to avoid .filter error
+        return;
+      }
+      searchStore.setData(data);
+      initializeSearch();
+      performSearch();
+    }
+    fetchCourseBatches();
     return () => {
       resetStore();
       resetSearch();
@@ -91,8 +116,8 @@ function ManageFees() {
   };
 
   const searchResultsColumns = [
-    { key: "name", header: "Course" },
-    { key: "batch", header: "Batch" },
+    { key: "courseName", header: "Course" },
+    { key: "batchName", header: "Batch" },
     { key: "year", header: "Year" }
   ];
 
@@ -110,7 +135,37 @@ function ManageFees() {
 
   // Event handlers
   const handleSearch = () => performSearch();
-  const handleCourseClick = (course) => searchStore.handleSelectItem(course);
+  const feesStore = useFeesStore();
+  const [baseFee, setBaseFee] = React.useState(null);
+  const [selectedCourseId, setSelectedCourseId] = React.useState(null);
+  const [selectedBatchId, setSelectedBatchId] = React.useState(null);
+  const handleCourseClick = async (course) => {
+    searchStore.handleSelectItem(course);
+    setSelectedCourseId(course.courseId || null);
+    setSelectedBatchId(course.batchId || null);
+    const token = getCookieItem('token'); // Always get latest token
+    // Fetch base fee for selected course
+    if (course.courseId) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/courses/${course.courseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const courseData = await res.json();
+        setBaseFee(courseData.baseFee || courseData.price || null);
+      } catch (err) {
+        setBaseFee(null);
+      }
+    } else {
+      setBaseFee(null);
+    }
+    // Fetch additional fees for selected course-batch
+    if (course.courseId && course.batchId) {
+      await feesStore.fetchFees(course.courseId, course.batchId);
+    }
+  };
   const handleBackToResults = () => {
     if (isEditMode) {
       handleCancelEdit(); 
@@ -147,14 +202,32 @@ function ManageFees() {
               <p className="text-center text-sm sm:text-base">{searchStore.selectedItem.name}</p>
             </div>
 
+            {/* Fees Table with Base Fee as First Row */}
             <div className="mb-6 sm:mb-8">
               <FeesTable
-                fees={isEditMode ? editedFees : fees}
+                fees={(() => {
+                  const baseFeeRow = baseFee !== null ? [{
+                    description: 'Course Fee',
+                    price: baseFee,
+                    dueDate: '',
+                    isBaseFee: true
+                  }] : [];
+                  // Map backend fee data to table property names
+                  const feeRows = (isEditMode ? editedFees : fees).map(fee => ({
+                    ...fee,
+                    description: fee.name || fee.description || '',
+                    amount: fee.price || fee.amount || '',
+                    dueDate: isEditMode 
+                        ? fee.dueDate 
+                        : (fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '')
+                  }));
+                  return [...baseFeeRow, ...feeRows];
+                })()}
                 isEditMode={isEditMode}
                 onInputChange={handleInputChange}
                 onFieldUndo={handleFieldUndo}
                 hasFieldChanged={hasFieldChanged}
-                onDelete={handleDeleteFee}
+                onDelete={openDeleteModal}
               />
             </div>
 
@@ -197,12 +270,21 @@ function ManageFees() {
         )}
       </div>
 
-      {/* Modals */}
+  {/* Modals */}
+      {showDeleteModal && (
+        <SaveChangesModal
+          show={showDeleteModal}
+          onConfirm={confirmDeleteFee}
+          onCancel={closeDeleteModal}
+        />
+      )}
       {showAddFeeModal && (
         <AddFeeModal
           isOpen={showAddFeeModal}
           onClose={handleCloseAddFeeModal}
           onAddFee={handleAddFee}
+          courseId={selectedCourseId}
+          batchId={selectedBatchId}
         />
       )}
 

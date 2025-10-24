@@ -24,35 +24,36 @@ const FeesTable = ({
             </tr>
           </thead>
           <tbody>
-            {fees.map((fee) => (
+            {fees.map((fee, idx) => (
               <tr
-                key={fee.id}
+                key={fee.id ? fee.id : fee.description === 'Course Fee' || fee.description === 'Base Fee' ? 'base-fee' : idx}
                 className="border-b border-[rgb(137,14,7,.3)] hover:bg-gray-50"
               >
                 <td className="py-4 px-4 sm:px-6 uppercase text-sm sm:text-base">
-                  {isEditMode ? (
+                  {(isEditMode && fee.isBaseFee) ? (
+                    fee.description
+                  ) : isEditMode ? (
                     <div className="flex items-center gap-3">
                       <input
                         type="text"
                         value={fee.description}
-                        onChange={(e) =>
-                          onInputChange(
-                            fee.id,
-                            "description",
-                            e.target.value.toUpperCase()
-                          )
-                        }
-                        className="flex-1 min-w-0 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2 transition-colors text-sm sm:text-base"
+                        onChange={(e) => {
+                          const value = e.target.value.toUpperCase();
+                          if (value.trim() !== "") {
+                            onInputChange(fee.id, "name", value);
+                          }
+                        }}
+                        className={`flex-1 min-w-0 px-3 py-2.5 border ${fee.description.trim() === "" ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2 transition-colors text-sm sm:text-base`}
                         placeholder="Enter description"
                       />
                       <button
-                        onClick={() => onFieldUndo(fee.id, "description")}
-                        className={`flex-shrink-0 p-2 rounded-md transition-all duration-200 ${hasFieldChanged(fee.id, "description")
+                        onClick={() => onFieldUndo(fee.id, "name")}
+                        className={`flex-shrink-0 p-2 rounded-md transition-all duration-200 ${hasFieldChanged(fee.id, "name")
                             ? "text-dark-red-2 hover:text-white hover:bg-dark-red-2 focus:outline-none focus:ring-2 focus:ring-dark-red-2"
                             : "text-gray-400 cursor-not-allowed"
                           }`}
                         title="Undo changes to description"
-                        disabled={!hasFieldChanged(fee.id, "description")}
+                        disabled={!hasFieldChanged(fee.id, "name")}
                       >
                         <svg
                           className="w-4 h-4"
@@ -74,29 +75,30 @@ const FeesTable = ({
                   )}
                 </td>
                 <td className="py-4 px-4 sm:px-6 text-center text-sm sm:text-base">
-                  {isEditMode ? (
+                  {(isEditMode && fee.isBaseFee) ? (
+                    fee.price
+                  ) : isEditMode ? (
                     <div className="flex items-center justify-center gap-2">
                       <input
                         type="text"
-                        value={fee.amount}
-                        onChange={(e) =>
-                          onInputChange(
-                            fee.id,
-                            "amount",
-                            e.target.value
-                          )
-                        }
-                        className="w-28 sm:w-32 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2 transition-colors text-center text-sm sm:text-base"
+                        value={fee.price}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            onInputChange(fee.id, "price", value);
+                          }
+                        }}
+                        className={`w-28 sm:w-32 px-3 py-2.5 border ${fee.price === "" ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2 transition-colors text-center text-sm sm:text-base`}
                         placeholder="0.00"
                       />
                       <button
-                        onClick={() => onFieldUndo(fee.id, "amount")}
-                        className={`flex-shrink-0 p-2 rounded-md transition-all duration-200 ${hasFieldChanged(fee.id, "amount")
+                        onClick={() => onFieldUndo(fee.id, "price")}
+                        className={`flex-shrink-0 p-2 rounded-md transition-all duration-200 ${hasFieldChanged(fee.id, "price")
                             ? "text-dark-red-2 hover:text-white hover:bg-dark-red-2 focus:outline-none focus:ring-2 focus:ring-dark-red-2"
                             : "text-gray-400 cursor-not-allowed"
                           }`}
                         title="Undo changes to amount"
-                        disabled={!hasFieldChanged(fee.id, "amount")}
+                        disabled={!hasFieldChanged(fee.id, "price")}
                       >
                         <svg
                           className="w-4 h-4"
@@ -114,22 +116,27 @@ const FeesTable = ({
                       </button>
                     </div>
                   ) : (
-                    fee.amount
+                    fee.price
                   )}
                 </td>
                 <td className="py-4 px-4 sm:px-6 text-center text-sm sm:text-base">
-                  {isEditMode ? (
+                  {(isEditMode && fee.isBaseFee) ? (
+                    fee.dueDate
+                  ) : isEditMode ? (
                     <div className="flex items-center justify-center gap-2">
                       <input
-                        type="text"
-                        value={fee.dueDate}
-                        onChange={(e) =>
+                        type="date"
+                        value={fee.dueDate ? fee.dueDate.slice(0, 10) : ''}
+                        onChange={(e) => {
+                          const dateStr = e.target.value;
+                          // Always set as UTC midnight ISO string
+                          const isoDate = dateStr ? `${dateStr}T00:00:00.000Z` : '';
                           onInputChange(
                             fee.id,
                             "dueDate",
-                            e.target.value
-                          )
-                        }
+                            isoDate
+                          );
+                        }}
                         className="w-36 sm:w-40 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2 transition-colors text-center text-sm sm:text-base"
                         placeholder="YYYY-MM-DD"
                       />
@@ -161,7 +168,7 @@ const FeesTable = ({
                     fee.dueDate
                   )}
                 </td>
-                {isEditMode && onDelete && (
+                {(isEditMode && fee.isBaseFee) ? null : (isEditMode && onDelete && (
                   <td className="py-4 px-4 sm:px-6 text-center">
                     <button
                       onClick={() => onDelete(fee.id)}
@@ -171,7 +178,7 @@ const FeesTable = ({
                       Delete
                     </button>
                   </td>
-                )}
+                ))}
               </tr>
             ))}
           </tbody>
