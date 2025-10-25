@@ -143,7 +143,8 @@ function EnrollmentRequests() {
         confirmButtonColor: '#890E07',
         cancelButtonColor: '#6B7280',
         confirmButtonText: 'Yes, end enrollment',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
       });
 
       if (!result.isConfirmed) return;
