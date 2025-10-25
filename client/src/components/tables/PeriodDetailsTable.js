@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import ThinRedButton from '../buttons/ThinRedButton';
 import CreateEditScheduleModal from '../modals/schedule/CreateEditScheduleModal';
 import axiosInstance from '../../utils/axios';
@@ -164,7 +165,7 @@ function PeriodDetailsTable({
 
       <div className="mt-4">
         <p className="text-lg sm:text-xl uppercase text-center mb-4">
-          Batch {selectedPeriod.batchName} (
+        {selectedPeriod.batchName} (
           {new Date(selectedPeriod.startAt).getFullYear()})
         </p>
 
@@ -239,7 +240,30 @@ function PeriodDetailsTable({
                     <td className="py-2 sm:py-3 text-center">
                       <button
                         className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
-                        onClick={() => onDeleteCourse(course.id)}
+                        onClick={async () => {
+                          const result = await Swal.fire({
+                            title: 'Delete Course?',
+                            text: 'Are you sure you want to remove this course from the period?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Yes, delete',
+                            cancelButtonText: 'Cancel',
+                            confirmButtonColor: '#992525',
+                            cancelButtonColor: '#6b7280',
+                            reverseButtons: true
+                          });
+                          if (result.isConfirmed) {
+                            await onDeleteCourse(course.id);
+                            await Swal.fire({
+                              title: 'Deleted!',
+                              text: 'The course has been removed from the period.',
+                              icon: 'success',
+                              confirmButtonColor: '#890E07',
+                              timer: 2000,
+                              showConfirmButton: false
+                            });
+                          }
+                        }}
                         aria-label="Delete course"
                       >
                         Delete

@@ -43,6 +43,8 @@ const createSearchStore = (config) => {
       set((state) => ({
         searchParams: { ...state.searchParams, [name]: value }
       }));
+      // Live search while typing
+      get().performSearch();
     },
 
     performSearch: () => {
