@@ -75,6 +75,7 @@ const EditDocumentModal = ({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const changed = hasChanges();
         try {
             setLoading(true);
 
@@ -102,6 +103,16 @@ const EditDocumentModal = ({
                 await onUpdateDocument(documentData);
             }
 
+            if (changed) {
+                Swal.fire({
+                    title: 'Saved!',
+                    text: 'Your changes have been saved successfully.',
+                    icon: 'success',
+                    confirmButtonColor: '#890E07',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
             onClose();
         } catch (error) {
             setError(error.message || "Failed to update document. Please try again.");

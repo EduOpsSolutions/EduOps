@@ -74,7 +74,8 @@ function EditCourseModal({
 
     if (!validateForm()) return;
 
-    if (hasChanges()) {
+    const changed = hasChanges();
+    if (changed) {
       const result = await Swal.fire({
         title: "Save Changes?",
         text: "Do you want to save your edits to this course?",
@@ -106,14 +107,16 @@ function EditCourseModal({
       console.log("Course updated:", response.data);
 
       await fetchCourses();
-      Swal.fire({
-        title: "Saved!",
-        text: "Your changes have been saved successfully.",
-        icon: "success",
-        confirmButtonColor: "#890E07",
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      if (changed) {
+        Swal.fire({
+          title: "Saved!",
+          text: "Your changes have been saved successfully.",
+          icon: "success",
+          confirmButtonColor: "#890E07",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
       setEditCourseModal(false);
     } catch (error) {
       console.error(

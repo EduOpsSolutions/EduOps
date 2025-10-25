@@ -252,32 +252,35 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const result = await Swal.fire({
-            title: 'Save Changes?',
-            text: 'Do you want to save your edits to this post?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#890E07',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Yes, save',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-        });
-
-        if (result.isConfirmed) {
-            const success = await updatePost(postData.id, () => {
-                setEditPostModal(false);
+        const changed = hasChanges();
+        if (changed) {
+            const result = await Swal.fire({
+                title: 'Save Changes?',
+                text: 'Do you want to save your edits to this post?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#890E07',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, save',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
             });
-            if (success) {
-                Swal.fire({
-                    title: 'Saved!',
-                    text: 'Your changes have been saved successfully.',
-                    icon: 'success',
-                    confirmButtonColor: '#890E07',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
+
+            if (!result.isConfirmed) return;
+        }
+
+        const success = await updatePost(postData.id, () => {
+            setEditPostModal(false);
+        });
+        if (changed && success) {
+            Swal.fire({
+                title: 'Saved!',
+                text: 'Your changes have been saved successfully.',
+                icon: 'success',
+                confirmButtonColor: '#890E07',
+                timer: 2000,
+                showConfirmButton: false
+            });
         }
     };
 

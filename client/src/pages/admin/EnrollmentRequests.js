@@ -154,7 +154,7 @@ function EnrollmentRequests() {
       if (endResult.success) {
         await Swal.fire({
           title: 'Enrollment Ended',
-          text: `Enrollment for ${selectedPeriod.periodName} - ${selectedPeriod.batchName} has been successfully ended.`,
+          text: `Enrollment for ${selectedPeriod.batchName} has been successfully ended.`,
           icon: 'success',
           confirmButtonColor: '#890E07'
         });
