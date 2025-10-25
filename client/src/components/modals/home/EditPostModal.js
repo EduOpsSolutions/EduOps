@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import PostTagButton from '../../buttons/PostTagButton';
 import EmojiPicker from 'emoji-picker-react';
 import usePostsStore from '../../../stores/postsStore';
+import Swal from 'sweetalert2';
 
 const MODAL_THEME = {
     modal: {
@@ -251,17 +252,66 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const success = await updatePost(postData.id, () => {
-            setEditPostModal(false);
+        const result = await Swal.fire({
+            title: 'Save Changes?',
+            text: 'Do you want to save your edits to this post?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#890E07',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, save',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
         });
 
-        if (!success) {
+        if (result.isConfirmed) {
+            const success = await updatePost(postData.id, () => {
+                setEditPostModal(false);
+            });
+            if (success) {
+                Swal.fire({
+                    title: 'Saved!',
+                    text: 'Your changes have been saved successfully.',
+                    icon: 'success',
+                    confirmButtonColor: '#890E07',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
         }
     };
 
+    const hasChanges = () => {
+        return (
+            formData.title !== postData.title ||
+            formData.content !== postData.content ||
+            formData.selectedImages.length > 0 ||
+            formData.selectedFiles.length > 0
+        );
+    };
+
     const handleClose = () => {
-        resetForm();
-        setEditPostModal(false);
+        if (hasChanges()) {
+            Swal.fire({
+                title: 'Discard Changes?',
+                text: 'You have unsaved changes. Do you want to discard them?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, discard',
+                cancelButtonText: 'No, keep editing',
+                confirmButtonColor: '#992525',
+                cancelButtonColor: '#6b7280',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    resetForm();
+                    setEditPostModal(false);
+                }
+            });
+        } else {
+            resetForm();
+            setEditPostModal(false);
+        }
     };
 
     const attachmentsExist = hasAttachments();

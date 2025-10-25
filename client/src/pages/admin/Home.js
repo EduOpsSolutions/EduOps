@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Pagination from '../../components/common/Pagination';
 import { useNavigate } from "react-router-dom";
 import CreatePostModal from "../../components/modals/home/CreatePostModal";
 import PostCard from "../../components/post/PostCard";
@@ -54,6 +55,15 @@ function Home() {
   }, [fetchPosts]);
 
   const visiblePosts = getVisiblePosts("admin");
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const totalPages = Math.ceil(visiblePosts.length / itemsPerPage);
+  const paginatedPosts = visiblePosts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
 
   const handleHidePost = (postId) => {
     hidePost(postId);
@@ -191,38 +201,49 @@ function Home() {
                     </p>
                   </div>
                 ) : (
-                  visiblePosts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      id={post.id}
-                      profilePic={post.profilePic}
-                      postedBy={post.postedBy}
-                      department={post.department}
-                      title={post.title}
-                      content={post.content}
-                      tag={post.tag}
-                      status={post.status}
-                      createdAt={post.createdAt}
-                      updatedAt={post.updatedAt}
-                      isArchived={post.isArchived}
-                      files={post.files} // Add files prop
-                      onHidePost={handleHidePost}
-                      onUnhidePost={handleUnhidePost}
-                      onDeletePost={handleDeletePost}
-                      onEditPost={handleEditPost}
-                      showKebabMenu={true}
+                  <>
+                    {paginatedPosts.map((post) => (
+                      <PostCard
+                        key={post.id}
+                        id={post.id}
+                        profilePic={post.profilePic}
+                        postedBy={post.postedBy}
+                        department={post.department}
+                        title={post.title}
+                        content={post.content}
+                        tag={post.tag}
+                        status={post.status}
+                        createdAt={post.createdAt}
+                        updatedAt={post.updatedAt}
+                        isArchived={post.isArchived}
+                        files={post.files} // Add files prop
+                        onHidePost={handleHidePost}
+                        onUnhidePost={handleUnhidePost}
+                        onDeletePost={handleDeletePost}
+                        onEditPost={handleEditPost}
+                        showKebabMenu={true}
+                      />
+                    ))}
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      itemsPerPage={itemsPerPage}
+                      onItemsPerPageChange={setItemsPerPage}
+                      totalItems={visiblePosts.length}
+                      itemName="posts"
                     />
-                  ))
+                  </>
                 )}
               </>
             )}
+            <CreatePostModal
+              create_post_modal={create_post_modal}
+              setCreatePostModal={setCreatePostModal}
+            />
           </div>
         </div>
       </div>
-      <CreatePostModal
-        create_post_modal={create_post_modal}
-        setCreatePostModal={setCreatePostModal}
-      />
     </div>
   );
 }
