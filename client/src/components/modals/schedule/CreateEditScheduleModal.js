@@ -236,6 +236,7 @@ function CreateEditScheduleModal({
           cancelButtonText: "Cancel",
           confirmButtonColor: "#992525",
           cancelButtonColor: "#6B7280",
+          reverseButtons: true,
         }).then((result) => {
           if (!result.isConfirmed) return;
           // Continue with validation
@@ -254,6 +255,7 @@ function CreateEditScheduleModal({
           cancelButtonText: "Cancel",
           confirmButtonColor: "#992525",
           cancelButtonColor: "#6B7280",
+          reverseButtons: true,
         }).then((result) => {
           if (!result.isConfirmed) return;
           // Continue with validation
@@ -385,6 +387,7 @@ function CreateEditScheduleModal({
       cancelButtonText: "Cancel",
       confirmButtonColor: "#992525",
       cancelButtonColor: "#6B7280",
+      reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
         // Show loading
@@ -1017,6 +1020,7 @@ function CreateEditScheduleModal({
             cancelButtonText: "Cancel",
             confirmButtonColor: "#992525",
             cancelButtonColor: "#6B7280",
+            reverseButtons: true,
           }).then((result) => {
             if (result.isConfirmed) {
               // Show loading

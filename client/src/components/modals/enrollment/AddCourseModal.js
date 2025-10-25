@@ -192,15 +192,6 @@ function AddCourseModal({
                     Course Name
                   </th>
                   <th className="text-center py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
-                    Population
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
-                    Schedule
-                  </th>
-                  <th className="text-left py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
-                    Adviser
-                  </th>
-                  <th className="text-center py-3 px-4 font-semibold border-t-2 border-b-2 border-dark-red-2">
                     Action
                   </th>
                 </tr>
@@ -209,7 +200,7 @@ function AddCourseModal({
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="3"
                       className="py-8 text-center text-gray-500 border-t border-b border-dark-red-2"
                     >
                       Loading courses...
@@ -218,7 +209,7 @@ function AddCourseModal({
                 ) : filteredCourses.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="3"
                       className="py-8 text-center text-gray-500 border-t border-b border-dark-red-2"
                     >
                       No courses found
@@ -235,25 +226,6 @@ function AddCourseModal({
                       </td>
                       <td className="py-3 px-4 border-t border-b border-dark-red-2">
                         {course.name}
-                      </td>
-                      <td className="py-3 px-4 text-center border-t border-b border-dark-red-2">
-                        {course.maxNumber}/10
-                      </td>
-                      <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                        {course.schedule
-                          ? `${course.schedule.days || ""} ${
-                              course.schedule.time || ""
-                            }`.trim() || "N/A"
-                          : "N/A"}
-                      </td>
-                      <td className="py-3 px-4 border-t border-b border-dark-red-2">
-                        {course.adviser
-                          ? `${course.adviser.firstName} ${
-                              course.adviser.middleName
-                                ? course.adviser.middleName + " "
-                                : ""
-                            }${course.adviser.lastName}`
-                          : "N/A"}
                       </td>
                       <td className="py-3 px-4 text-center border-t border-b border-dark-red-2">
                         <button

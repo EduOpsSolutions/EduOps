@@ -180,7 +180,7 @@ function PeriodDetailsTable({
                   Schedules
                 </th>
                 <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
-                  No. of Students Enrolled
+                  Capacity
                 </th>
                 <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
                   Action
