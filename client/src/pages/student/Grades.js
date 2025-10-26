@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { getCookieItem, decodeToken } from "../../utils/jwt";
-import GradeNotReadyModal from "../../components/modals/grades/GradeNotReadyModal";
 import CommonModal from "../../components/modals/common/CommonModal";
 import Swal from "sweetalert2";
 
 function Grades() {
-  const [grade_not_ready_modal, setGradeNotReadyModal] = useState(false);
   const [gradesData, setGradesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,29 +22,54 @@ function Grades() {
       setError(null);
       try {
         const apiUrl = process.env.REACT_APP_API_URL;
-        const res = await fetch(`${apiUrl}/grades/student/${studentId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+        
+        // Fetch all courses and student grades in parallel
+        const [coursesRes, gradesRes] = await Promise.all([
+          fetch(`${apiUrl}/courses`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }),
+          fetch(`${apiUrl}/grades/student/${studentId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          })
+        ]);
+
+        if (!coursesRes.ok) throw new Error("Failed to fetch courses");
+        if (!gradesRes.ok) throw new Error("Failed to fetch grades");
+
+        const coursesData = await coursesRes.json();
+        const gradesData = await gradesRes.json();
+
+        // Sort courses alphabetically (A1, A2, B1, B2, etc.)
+        const sortedCourses = coursesData.sort((a, b) => a.name.localeCompare(b.name));
+
+        // Create a map of student grades by courseId for quick lookup
+        const gradesMap = {};
+        gradesData.forEach(grade => {
+          gradesMap[grade.courseId] = grade;
         });
-        if (!res.ok) throw new Error("Failed to fetch grades");
-        const data = await res.json();
-        // Map backend grade values to display values, and keep files array
-        const mapped = (data || []).map((g) => ({
-          id: g.id,
-          courseName: g.course?.name || "Unknown",
-          status:
-            g.grade === "Pass"
-              ? "PASS"
-              : g.grade === "Fail"
-              ? "FAIL"
+
+        // Map all courses with student grades (if any)
+        const mapped = sortedCourses.map(course => {
+          const grade = gradesMap[course.id];
+          return {
+            id: grade?.id || course.id,
+            courseName: course.name,
+            status: grade 
+              ? (grade.grade === "Pass" ? "PASS" : grade.grade === "Fail" ? "FAIL" : "NO GRADE")
               : "NO GRADE",
-          completedDate: g.updatedAt || null,
-          courseId: g.courseId,
-          studentId: g.studentId,
-          files: g.files || [],
-        }));
+            completedDate: grade?.updatedAt || null,
+            courseId: course.id,
+            studentId: studentId,
+            files: grade?.files || [],
+          };
+        });
+
         setGradesData(mapped);
       } catch (err) {
         setError(err.message || "Failed to fetch grades");
@@ -87,7 +110,13 @@ function Grades() {
 
   const handleViewDetails = (grade) => {
     if (grade.status === "NO GRADE") {
-      setGradeNotReadyModal(true);
+      Swal.fire({
+        title: 'You haven\'t taken this course',
+        text: 'If you think this is a mistake please contact your instructor or administrator.',
+        icon: 'info',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#992525'
+      });
     } else {
       // Open the latest file if available
       if (grade.files && grade.files.length > 0) {
@@ -266,10 +295,6 @@ function Grades() {
         </div>
       </div>
 
-      <GradeNotReadyModal
-        grade_not_ready_modal={grade_not_ready_modal}
-        setGradeNotReadyModal={setGradeNotReadyModal}
-      />
 
       <CommonModal
         title={previewFile.title}

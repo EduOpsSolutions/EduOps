@@ -38,7 +38,11 @@ function StudyLoad() {
           if (currentPeriod) {
             setSearchParams(prev => ({ ...prev, batch: currentPeriod.batchName }));
             setSelectedPeriod(currentPeriod);
-            setResults(schedulesData);
+            // Only show courses for the current batch
+            const currentBatchSchedules = schedulesData.filter(schedule => 
+              schedule.academicPeriodId === currentPeriodId
+            );
+            setResults(currentBatchSchedules);
           }
         }
       } catch (e) {
