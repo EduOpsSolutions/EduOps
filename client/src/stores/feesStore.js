@@ -3,12 +3,13 @@ import createSearchStore from './searchStore';
 import { getCookieItem } from '../utils/jwt';
 
 
-const token = getCookieItem('token');
+// const token = getCookieItem('token'); // Removed stale token retrieval
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 // Fetch course-batch pairs
 const fetchCourseBatchPairs = async () => {
   try {
+    const token = getCookieItem('token');
     const response = await fetch(`${API_BASE_URL}/fees/course-batches`, {
       headers: {
         Authorization: `Bearer ${token}`
