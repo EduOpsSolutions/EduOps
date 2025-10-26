@@ -219,10 +219,14 @@ const PaymentPage = () => {
               {paymentData.studentInfo && (
                 <div className="pt-3 border-t border-blue-200">
                   <p className="text-gray-700 font-medium mb-2">Student Information:</p>
-                  <p className="text-sm text-gray-800">
-                    <strong>{paymentData.studentInfo.firstName} {paymentData.studentInfo.lastName}</strong>
+                  <p className="text-sm text-gray-600">
+                    <strong>Name: </strong>{paymentData.studentInfo.firstName} {paymentData.studentInfo.lastName}
                   </p>
-                  <p className="text-sm text-gray-600">{paymentData.studentInfo.email}</p>
+                  {paymentData.studentInfo.studentId && (
+                    <p className="text-sm text-gray-600"><strong>Student ID: </strong> {paymentData.studentInfo.studentId}</p>
+                  )}
+                  <p className="text-sm text-gray-600"><strong>Email: </strong> {paymentData.studentInfo.email}</p>
+                  
                 </div>
               )}
 
