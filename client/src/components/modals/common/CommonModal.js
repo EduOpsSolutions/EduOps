@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { FaTimes, FaDownload, FaFile } from 'react-icons/fa';
 import {
   getFileType,
@@ -75,8 +76,8 @@ export default function CommonModal({
     return children;
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999] p-4">
       <div
         className={`bg-white-yellow-tone rounded-lg ${className} relative max-h-[90vh] overflow-y-auto flex flex-col`}
       >
@@ -93,6 +94,7 @@ export default function CommonModal({
         </div>
         <div className="p-6">{renderFileContent()}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

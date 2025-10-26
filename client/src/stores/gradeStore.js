@@ -78,25 +78,63 @@ const useGradeStore = create((set, get) => ({
   ],
 
 
-  getStudentGrade: (studentGradeId) => {
+  getStudentGrade: (studentGradeId, userId) => {
     const { localGrades, students } = get();
-    const localGrade = localGrades.find(item => item.studentGradeId === studentGradeId);
-    if (localGrade) return localGrade.grade;
+    
+    // If studentGradeId is null, prioritize userId lookup
+    if (!studentGradeId || studentGradeId === null) {
+      if (userId) {
+        const localGradeByUser = localGrades.find(item => item.userId === userId);
+        if (localGradeByUser) {
+          return localGradeByUser.grade;
+        }
+      }
+    } else {
+      // Only try studentGradeId lookup if it's not null
+      const localGrade = localGrades.find(item => item.studentGradeId === studentGradeId);
+      if (localGrade) {
+        return localGrade.grade;
+      }
+    }
+    
     const student = students.find(s => s.studentGradeId === studentGradeId);
     return student ? student.grade : null;
   },
 
-  // Handle grade changes - updates local state only, using studentGradeId
-  handleGradeChange: (studentGradeId, grade) => {
+  // Handle grade changes - updates local state only, using studentGradeId and userId
+  handleGradeChange: (studentGradeId, grade, userId) => {
     set(state => {
-      const existingIndex = state.localGrades.findIndex(item => item.studentGradeId === studentGradeId);
-      let updatedGrades;
-      if (existingIndex >= 0) {
-        updatedGrades = [...state.localGrades];
-        updatedGrades[existingIndex].grade = grade;
+      if (!studentGradeId || studentGradeId === null) {
+        if (userId) {
+          const existingByUserIndex = state.localGrades.findIndex(item => item.userId === userId);
+          if (existingByUserIndex >= 0) {
+            const updatedGrades = [...state.localGrades];
+            updatedGrades[existingByUserIndex].grade = grade;
+            return { localGrades: updatedGrades, changesMade: true };
+          }
+          
+          // Add new grade with userId
+          const newGrade = { studentGradeId, userId, grade };
+          const updatedGrades = [...state.localGrades, newGrade];
+          return { localGrades: updatedGrades, changesMade: true };
+        }
       } else {
-        updatedGrades = [...state.localGrades, { studentGradeId, grade }];
+        const existingIndex = state.localGrades.findIndex(item => item.studentGradeId === studentGradeId);
+        
+        if (existingIndex >= 0) {
+          // Update existing grade
+          const updatedGrades = [...state.localGrades];
+          updatedGrades[existingIndex].grade = grade;
+          return { localGrades: updatedGrades, changesMade: true };
+        }
       }
+      
+      // Add new grade with both identifiers
+      const newGrade = { studentGradeId, grade };
+      if (userId) {
+        newGrade.userId = userId;
+      }
+      const updatedGrades = [...state.localGrades, newGrade];
       return { localGrades: updatedGrades, changesMade: true };
     });
   },
@@ -117,27 +155,13 @@ const useGradeStore = create((set, get) => ({
     set({ saving: true });
 
     try {
-      if (localGrades.length > 0) {
-        set(state => {
-          const updatedStudents = state.students.map(student => {
-            const localGrade = localGrades.find(item => item.studentId === student.id);
-            if (localGrade) {
-              return { ...student, grade: localGrade.grade };
-            }
-            return student;
-          });
-
-          return { students: updatedStudents };
-        });
-      }
-
+      // Don't update students array until after successful save
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const freshState = get();
-      const updatedStudents = freshState.students;
 
       if (scheduleId) {
-        const persistStudents = JSON.parse(JSON.stringify(updatedStudents));
+        const persistStudents = JSON.parse(JSON.stringify(freshState.students));
 
         set(state => {
           const updatedData = {
@@ -155,6 +179,29 @@ const useGradeStore = create((set, get) => ({
       }
 
       await get().saveGrades();
+
+      // Only update students array after successful backend save
+      if (localGrades.length > 0) {
+        set(state => {
+          const updatedStudents = state.students.map(student => {
+            let localGrade = null;
+            
+            if (!student.studentGradeId || student.studentGradeId === null) {
+              const userId = student.user?.id || student.userId;
+              localGrade = localGrades.find(item => item.userId === userId);
+            } else {
+              localGrade = localGrades.find(item => item.studentGradeId === student.studentGradeId);
+            }
+            
+            if (localGrade) {
+              return { ...student, grade: localGrade.grade };
+            }
+            return student;
+          });
+
+          return { students: updatedStudents };
+        });
+      }
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -177,20 +224,6 @@ const useGradeStore = create((set, get) => ({
 
   setChangesMade: (value) => set({ changesMade: value }),
 
-  bulkUpdateGrades: (localGrades) => {
-    set(state => {
-      const updatedStudents = state.students.map(student => {
-        const localGrade = localGrades.find(item => item.studentId === student.id);
-        if (localGrade) {
-          return { ...student, grade: localGrade.grade };
-        }
-        return student;
-      });
-
-      return { students: updatedStudents };
-    });
-  },
-
   saveGrades: async () => {
     const state = get();
     const { localGrades, selectedSchedule, students } = state;
@@ -206,10 +239,18 @@ const useGradeStore = create((set, get) => ({
     };
     // Prepare batch payload
     const payload = localGrades.map(lg => {
-      // Find the student object by studentGradeId
-      const student = students.find(s => s.studentGradeId === lg.studentGradeId);
+      let student = null;
+      
+      if (!lg.studentGradeId || lg.studentGradeId === null) {
+        if (lg.userId) {
+          student = students.find(s => (s.user?.id || s.userId) === lg.userId);
+        }
+      } else {
+        student = students.find(s => s.studentGradeId === lg.studentGradeId);
+      }
+      
       return {
-        studentId: student?.user?.id || student?.userId || student?.id,
+        studentId: student?.user?.id || student?.userId || student?.id || lg.userId,
         courseId,
         periodId,
         grade: mapGradeValue(lg.grade)
