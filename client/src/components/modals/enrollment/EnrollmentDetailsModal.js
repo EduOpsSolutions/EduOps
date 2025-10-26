@@ -15,6 +15,7 @@ export default function EnrollmentDetailsModal({
   show,
   handleClose,
   handleSave,
+  onEnrollmentUpdate = null, 
 }) {
   const [formData, setFormData] = useState(data);
   const [originalData, setOriginalData] = useState(data);
@@ -139,6 +140,13 @@ export default function EnrollmentDetailsModal({
           // Update form data to reflect account creation
           setFormData(prev => ({ ...prev, userId: response.data.userId }));
           
+          // Update email exists state immediately
+          setEmailExists(true);
+          
+          if (onEnrollmentUpdate) {
+            onEnrollmentUpdate();
+          }
+          
           try {
             const enrollmentResponse = await trackEnrollment(formData.enrollmentId, formData.preferredEmail);
             if (!enrollmentResponse.error) {
@@ -185,18 +193,24 @@ export default function EnrollmentDetailsModal({
   };
 
   const getStatusBadgeColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return "bg-amber-50 text-amber-700 border border-amber-200";
+      case "verified":
+        return "bg-sky-50 text-sky-700 border border-sky-200";
+      case "payment_pending":
+        return "bg-orange-50 text-orange-700 border border-orange-200";
       case "approved":
-        return "bg-green-100 text-green-800 border border-green-200";
+        return "bg-violet-50 text-violet-700 border border-violet-200";
+      case "completed":
+        return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+      case "rejected":
+        return "bg-rose-50 text-rose-700 border border-rose-200";
       case "archived":
       case "cancelled":
-        return "bg-gray-100 text-gray-800 border border-gray-200";
-      case "rejected":
-        return "bg-red-100 text-red-800 border border-red-200";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+        return "bg-slate-50 text-slate-700 border border-slate-200";
       default:
-        return "bg-gray-100 text-gray-800 border border-gray-200";
+        return "bg-slate-50 text-slate-700 border border-slate-200";
     }
   };
 
@@ -247,6 +261,11 @@ export default function EnrollmentDetailsModal({
       
       // Update local form data
       setFormData(updatedFormData);
+      
+      // Notify parent component to refresh table data
+      if (onEnrollmentUpdate) {
+        onEnrollmentUpdate();
+      }
       
       // Refresh enrollment data
       try {
@@ -363,19 +382,24 @@ export default function EnrollmentDetailsModal({
         }
       );
       
-      await handleSave(formData);
-      
-      // Show success message
-      Swal.fire({
-        title: 'Changes Saved!',
-        text: 'Enrollment details have been updated successfully.',
-        icon: 'success',
-        confirmButtonColor: '#992525'
-      });
-      
-      // Reset change tracking
-      setOriginalData(formData);
-      setHasChanges(false);
+        await handleSave(formData);
+        
+        // Notify parent component to refresh table data
+        if (onEnrollmentUpdate) {
+          onEnrollmentUpdate();
+        }
+        
+        // Show success message
+        Swal.fire({
+          title: 'Changes Saved!',
+          text: 'Enrollment details have been updated successfully.',
+          icon: 'success',
+          confirmButtonColor: '#992525'
+        });
+        
+        // Reset change tracking
+        setOriginalData(formData);
+        setHasChanges(false);
     } catch (error) {
       console.error("Error saving form data:", error);
       Swal.fire({
@@ -591,11 +615,11 @@ export default function EnrollmentDetailsModal({
                     value={formData?.enrollmentStatus || "Pending"}
                     onChange={handleInputChange}
                     options={[
-                      { value: "pending", label: "Pending" },
-                      { value: "verified", label: "Verified" },
-                      { value: "payment_pending", label: "Payment Pending" },
-                      { value: "approved", label: "Approved" },
-                      { value: "completed", label: "Completed" },
+                      { value: "pending", label: "1. Pending Admin Review" },
+                      { value: "verified", label: "2. Verified (Account Created)" },
+                      { value: "payment_pending", label: "3. Payment Pending" },
+                      { value: "approved", label: "4. Payment Verified" },
+                      { value: "completed", label: "5. Enrollment Complete" },
                       { value: "rejected", label: "Rejected" },
                     ]}
                   />

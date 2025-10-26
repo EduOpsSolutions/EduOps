@@ -188,7 +188,16 @@ function EnrollmentRequests() {
           setShowEnrollmentDetailsModal(false);
           setSelectedEnrollmentRequest(null);
         }}
-        handleSave={() => {}}
+        handleSave={(updatedData) => {
+          // Update the local state with the new data
+          setEnrollmentRequests(prev => 
+            prev.map(request => 
+              request.id === updatedData.id ? updatedData : request
+            )
+          );
+          setShowEnrollmentDetailsModal(false);
+        }}
+        onEnrollmentUpdate={fetchEnrollmentRequests}
       />
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
