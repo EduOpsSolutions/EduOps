@@ -196,8 +196,19 @@ async function resetPassword(req, res) {
 
 async function register(req, res) {
   try {
-    const token = await signJWT(payload);
-    res.json({ token });
+    // TODO: Implement registration logic
+    // This function needs to:
+    // 1. Extract user data from req.body
+    // 2. Validate the data
+    // 3. Hash the password
+    // 4. Create the user in the database
+    // 5. Generate a token
+    // 6. Return the token
+
+    res.status(501).json({
+      error: true,
+      message: "Registration not implemented yet",
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

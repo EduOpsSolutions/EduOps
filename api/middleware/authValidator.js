@@ -215,14 +215,14 @@ const validateUserRole = (allowedRoles) => {
     if (!userRole) {
       return res.status(401).json({
         error: true,
-        message: 'User role not found',
+        message: "User role not found",
       });
     }
 
     if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({
         error: true,
-        message: `Access denied. Required roles: ${allowedRoles.join(', ')}`,
+        message: `Access denied. Required roles: ${allowedRoles.join(", ")}`,
       });
     }
 
@@ -230,7 +230,7 @@ const validateUserRole = (allowedRoles) => {
   };
 };
 
-const validateDocumentAccess = (operation = 'read') => {
+const validateDocumentAccess = (operation = "read") => {
   return async (req, res, next) => {
     try {
       const userRole = req.user?.data?.role;
@@ -239,26 +239,26 @@ const validateDocumentAccess = (operation = 'read') => {
       if (!documentId) {
         return res.status(400).json({
           error: true,
-          message: 'Document ID is required',
+          message: "Document ID is required",
         });
       }
 
       const { default: DocumentModel } = await import(
-        '../model/document_model.js'
+        "../model/document_model.js"
       );
       const document = await DocumentModel.getDocumentTemplateById(documentId);
 
       if (!document) {
         return res.status(404).json({
           error: true,
-          message: 'Document not found',
+          message: "Document not found",
         });
       }
 
       const accessRules = {
-        admin: ['public', 'student', 'teacher', 'admin'],
-        teacher: ['public', 'teacher'],
-        student: ['public', 'student'],
+        admin: ["public", "student", "teacher", "admin"],
+        teacher: ["public", "teacher"],
+        student: ["public", "student"],
       };
 
       const userAccess = accessRules[userRole] || accessRules.student;
@@ -267,17 +267,17 @@ const validateDocumentAccess = (operation = 'read') => {
         return res.status(403).json({
           error: true,
           message:
-            'Access denied. Insufficient permissions to access this document.',
+            "Access denied. Insufficient permissions to access this document.",
         });
       }
 
       req.document = document;
       next();
     } catch (error) {
-      console.error('Document access validation error:', error);
+      console.error("Document access validation error:", error);
       res.status(500).json({
         error: true,
-        message: 'Failed to validate document access',
+        message: "Failed to validate document access",
       });
     }
   };

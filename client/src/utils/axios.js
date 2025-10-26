@@ -1,22 +1,23 @@
-import axios from 'axios';
-import useAuthStore from '../stores/authStore';
-import { getCookieItem, isTokenExpired } from './jwt';
-import Swal from 'sweetalert2';
+import axios from "axios";
+import useAuthStore from "../stores/authStore";
+import { getCookieItem, isTokenExpired } from "./jwt";
+import Swal from "sweetalert2";
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'NOT SET',
+  baseURL: process.env.REACT_APP_API_URL || "NOT SET",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-console.log('AXIOS INSTANCE', process.env.REACT_APP_API_URL);
+console.log("AXIOS INSTANCE", process.env.REACT_APP_API_URL);
 
 // Add request interceptor to set Authorization header dynamically and check token validity
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = getCookieItem('token');
+    console.log("loggingin");
+    const token = getCookieItem("token");
 
     // Check if token exists and is valid
     if (token) {
@@ -27,25 +28,25 @@ axiosInstance.interceptors.request.use(
 
         // Show expiration message
         Swal.fire({
-          title: 'Session Expired',
-          text: 'Your session has expired. Please login again.',
-          icon: 'warning',
+          title: "Session Expired",
+          text: "Your session has expired. Please login again.",
+          icon: "warning",
           timer: 5000,
           allowOutsideClick: false,
           showConfirmButton: false,
         }).then((res) => {
           // Navigate to login page
-          window.location.href = '/login';
+          window.location.href = "/login";
         });
 
         // Reject the request
-        return Promise.reject(new Error('Token expired'));
+        return Promise.reject(new Error("Token expired"));
       }
 
       // Token is valid, add to headers
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers["Authorization"] = `Bearer ${token}`;
     } else {
-      delete config.headers['Authorization'];
+      delete config.headers["Authorization"];
     }
 
     return config;
@@ -64,14 +65,14 @@ axiosInstance.interceptors.response.use(
       error.response &&
       (error.response.status === 401 || error.response.status === 403)
     ) {
-      const errorMessage = error.response.data?.message || '';
+      const errorMessage = error.response.data?.message || "";
 
       // Check if it's a token-related error
       const isTokenError =
-        errorMessage.toLowerCase().includes('token') ||
-        errorMessage.toLowerCase().includes('unauthorized') ||
-        errorMessage.toLowerCase().includes('expired') ||
-        errorMessage.toLowerCase().includes('login');
+        errorMessage.toLowerCase().includes("token") ||
+        errorMessage.toLowerCase().includes("unauthorized") ||
+        errorMessage.toLowerCase().includes("expired") ||
+        errorMessage.toLowerCase().includes("login");
 
       // Only logout and show alert for token-related errors
       // This prevents logout for other 403 errors (like insufficient permissions)
@@ -82,13 +83,13 @@ axiosInstance.interceptors.response.use(
         if (isAuthenticated) {
           logout();
           Swal.fire({
-            title: 'Session Expired',
-            text: 'Your session has expired. Please login again.',
-            icon: 'warning',
-            confirmButtonColor: '#DE0000',
+            title: "Session Expired",
+            text: "Your session has expired. Please login again.",
+            icon: "warning",
+            confirmButtonColor: "#DE0000",
           }).then(() => {
             // Redirect to login page
-            window.location.href = '/login';
+            window.location.href = "/login";
           });
         }
       }
