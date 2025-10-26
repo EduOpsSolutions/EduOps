@@ -58,7 +58,7 @@ function StudentsGradeModal(props) {
     };
 
     // Upload handler: sends file to backend
-    const handleDocumentUpload = async (studentId, file) => {
+    const handleDocumentUpload = async (studentId, file, userId) => {
         const apiUrl = process.env.REACT_APP_API_URL;
         const token = getCookieItem('token');
         const formData = new FormData();
@@ -66,7 +66,7 @@ function StudentsGradeModal(props) {
 
         Swal.fire({
             title: 'Uploading...',
-            text: `Uploading "${file.name}" for student ID: ${studentId}`,
+            text: `Uploading "${file.name}" for ${userId || 'student'}`,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -85,7 +85,7 @@ function StudentsGradeModal(props) {
             if (!res.ok) throw new Error('Upload failed');
             Swal.fire({
                 title: 'Success!',
-                text: `Document "${file.name}" uploaded successfully for student ID: ${studentId}`,
+                text: `Document "${file.name}" uploaded successfully for ${userId || 'student'}`,
                 icon: 'success',
                 confirmButtonColor: '#992525',
             });
@@ -101,7 +101,6 @@ function StudentsGradeModal(props) {
         }
     };
 
-    // View document handler: fetches file(s) for the studentGradeId and shows in a modal
     const handleViewDocument = async (studentGradeId) => {
         const apiUrl = process.env.REACT_APP_API_URL;
         const token = getCookieItem('token');

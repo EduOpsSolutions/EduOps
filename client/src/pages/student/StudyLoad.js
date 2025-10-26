@@ -8,31 +8,50 @@ function StudyLoad() {
   const [searchParams, setSearchParams] = useState({ batch: '' });
   const [periods, setPeriods] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [results, setResults] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const { user } = useAuthStore();
 
-  // Load all academic periods to derive year and batch options
+  // Load all academic periods and current student schedules
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const resp = await axiosInstance.get('/academic-periods');
-        const data = Array.isArray(resp.data) ? resp.data : [];
+        setLoading(true);
+        
+        // Load academic periods
+        const periodsResp = await axiosInstance.get('/academic-periods');
+        const periodsData = Array.isArray(periodsResp.data) ? periodsResp.data : [];
         if (!mounted) return;
-        setPeriods(data.filter((p) => !p.deletedAt));
-        // No year selection anymore
+        setPeriods(periodsData.filter((p) => !p.deletedAt));
+
+        // Load current student schedules to determine current batch
+        const schedulesResp = await axiosInstance.get('/schedules/mine');
+        const schedulesData = Array.isArray(schedulesResp.data) ? schedulesResp.data : [];
+        
+        if (schedulesData.length > 0) {
+          // Get the most recent academic period from schedules
+          const currentPeriodId = schedulesData[0].academicPeriodId;
+          const currentPeriod = periodsData.find(p => p.id === currentPeriodId);
+          
+          if (currentPeriod) {
+            setSearchParams(prev => ({ ...prev, batch: currentPeriod.batchName }));
+            setSelectedPeriod(currentPeriod);
+            setResults(schedulesData);
+          }
+        }
       } catch (e) {
+        console.error('Error loading data:', e);
         setPeriods([]);
       } finally {
+        setLoading(false);
       }
     })();
     return () => {
       mounted = false;
     };
   }, []);
-
-  // no year options
 
   const batchOptions = useMemo(() => {
     const batches = periods.map((p) => p.batchName).filter(Boolean);
@@ -82,15 +101,15 @@ function StudyLoad() {
     }
   };
 
-  // Auto-select first available batch when list loads
-  useEffect(() => {
-    const nonPlaceholder = batchOptions.filter((o) => o.value);
-    if (!searchParams.batch && nonPlaceholder.length > 0) {
-      setSearchParams((prev) => ({ ...prev, batch: nonPlaceholder[0].value }));
-    }
-  }, [searchParams.batch, batchOptions]);
 
   const renderBody = () => {
+    if (loading) {
+      return (
+        <div className="py-8">
+          <Spinner size="lg" color="text-dark-red-2" message="Loading your study load..." />
+        </div>
+      );
+    }
     if (searching) {
       return (
         <div className="py-8">
@@ -101,7 +120,7 @@ function StudyLoad() {
     if (!selectedPeriod) {
       return (
         <div className="py-6 text-sm text-gray-600">
-          Select a year and batch, then click Search to view your study load.
+          Select a batch to view your study load.
         </div>
       );
     }
@@ -194,16 +213,18 @@ function StudyLoad() {
   };
 
   return (
-    <div className="bg-white-yellow-tone w-full box-border flex flex-col px-4 sm:px-8 md:px-12 lg:px-20 overflow-x-hidden">
-      <div className="w-full max-w-screen-xl mx-auto mt-8 mb-8">
-        <SearchForm
-          searchLogic={searchLogic}
-          fields={searchFields}
-          onSearch={handleSearch}
-        />
+    <div className="bg_custom bg-white-yellow-tone min-h-screen px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
+      <div className="w-full max-w-7xl mx-auto">
+        <div className="mb-6 md:mb-8">
+          <SearchForm
+            searchLogic={searchLogic}
+            fields={searchFields}
+            onSearch={handleSearch}
+          />
+        </div>
 
-        <div className="flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-5">
-          <div className="flex flex-row gap-7 items-center pb-4 border-b-2 border-dark-red-2">
+        <div className="bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8">
+          <div className="flex flex-row gap-7 items-center pb-4 border-b-2 border-dark-red-2 mb-4">
             <p className="text-xl uppercase grow">
               {user?.lastName
                 ? `${user.lastName}, ${user.firstName}`

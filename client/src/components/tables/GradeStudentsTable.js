@@ -23,7 +23,10 @@ function GradeStudentsTable({
   const onFileChange = (studentGradeId, e) => {
     const file = e.target.files[0];
     if (file) {
-      handleDocumentUpload(studentGradeId, file);
+      // Find the student to get the readable user ID
+      const student = students.find(s => s.studentGradeId === studentGradeId);
+      const userId = student?.user?.userId || student?.userId || 'student';
+      handleDocumentUpload(studentGradeId, file, userId);
     }
   };
 
