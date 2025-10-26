@@ -7,6 +7,8 @@ import ModalSelectField from "../../form/ModalSelectField";
 import PrimaryButton from "../../buttons/PrimaryButton";
 import { FaEye } from "react-icons/fa";
 import CommonModal from "../common/CommonModal";
+import { trackEnrollment } from "../../../utils/enrollmentApi";
+import useEnrollmentStore from "../../../stores/enrollmentProgressStore";
 
 export default function EnrollmentDetailsModal({
   data,
@@ -15,17 +17,23 @@ export default function EnrollmentDetailsModal({
   handleSave,
 }) {
   const [formData, setFormData] = useState(data);
+  const [originalData, setOriginalData] = useState(data);
+  const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewFile, setPreviewFile] = useState({ url: null, title: "" });
   const [emailCheckLoading, setEmailCheckLoading] = useState(true);
   const [emailExists, setEmailExists] = useState(false);
   const debounceRef = useRef();
+  const { setEnrollmentData } = useEnrollmentStore();
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   // Set form data only when modal is opened or new data is passed
   useEffect(() => {
     if (show && data) {
       setFormData(data);
+      setOriginalData(data);
+      setHasChanges(false);
     }
   }, [data, show]);
 
@@ -88,18 +96,24 @@ export default function EnrollmentDetailsModal({
     } else {
       setFormData({ ...formData, [name]: value });
     }
+    
+    // Check if there are changes
+    const newData = { ...formData, [name]: value };
+    const hasFormChanges = JSON.stringify(newData) !== JSON.stringify(originalData);
+    setHasChanges(hasFormChanges);
   };
 
   const handleCreateAccount = () => {
     Swal.fire({
       title: "Create Account",
       text: "Are you sure you want to create an account for this enrollment request?",
-      icon: "warning",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Create Account",
+      confirmButtonText: "Yes, create account",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#dc2626",
+      confirmButtonColor: "#992525",
       cancelButtonColor: "#6b7280",
+      reverseButtons: true
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
@@ -121,19 +135,32 @@ export default function EnrollmentDetailsModal({
               },
             }
           );
+          
+          // Update form data to reflect account creation
+          setFormData(prev => ({ ...prev, userId: response.data.userId }));
+          
+          try {
+            const enrollmentResponse = await trackEnrollment(formData.enrollmentId, formData.preferredEmail);
+            if (!enrollmentResponse.error) {
+              setEnrollmentData(enrollmentResponse.data);
+            }
+          } catch (refreshError) {
+            console.error('Failed to refresh enrollment data:', refreshError);
+          }
+          
           Swal.fire({
-            title: "Account Created",
-            text: response.message,
+            title: "Account Created Successfully!",
+            text: "Student account has been created successfully.",
             icon: "success",
-            confirmButtonColor: "#dc2626",
+            confirmButtonColor: "#992525"
           });
         } catch (error) {
           console.error(error);
           Swal.fire({
-            title: "Error",
-            text: error.response.data.message || "An error occurred",
+            title: "Account Creation Failed",
+            text: error.response?.data?.message || "Failed to create account. Please try again.",
             icon: "error",
-            confirmButtonColor: "#dc2626",
+            confirmButtonColor: "#992525"
           });
         }
       }
@@ -175,7 +202,7 @@ export default function EnrollmentDetailsModal({
 
   if (!show) return null;
 
-  const handleCloseModal = () => {
+  const handleClosePreview = () => {
     setShowPreview(false);
     setPreviewFile({ url: null, title: "" });
   };
@@ -183,6 +210,82 @@ export default function EnrollmentDetailsModal({
   const handlePreviewFile = (fileUrl, title) => {
     setPreviewFile({ url: fileUrl, title: title });
     setShowPreview(true);
+  };
+
+  const handleVerifyPayment = async () => {
+    const result = await Swal.fire({
+      title: 'Verify Payment?',
+      text: 'Are you sure you want to verify this payment and approve the enrollment?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, verify payment',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true,
+      customClass: {
+        container: 'swal-z-index-fix'
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    setIsVerifyingPayment(true);
+    try {
+      // Update enrollment status to approved
+      const updatedFormData = { ...formData, enrollmentStatus: 'approved' };
+      
+      await axiosInstance.put(
+        `/enrollment/enroll/${formData.enrollmentId}`,
+        updatedFormData,
+        {
+          headers: {
+            Authorization: `Bearer ${getCookieItem("token")}`,
+          },
+        }
+      );
+      
+      // Update local form data
+      setFormData(updatedFormData);
+      
+      // Refresh enrollment data
+      try {
+        const enrollmentResponse = await trackEnrollment(formData.enrollmentId, formData.preferredEmail);
+        if (!enrollmentResponse.error) {
+          setEnrollmentData(enrollmentResponse.data);
+        }
+      } catch (refreshError) {
+        console.error('Failed to refresh enrollment data:', refreshError);
+      }
+      
+      // Close preview modal
+      setShowPreview(false);
+      setPreviewFile({ url: null, title: "" });
+      
+      Swal.fire({
+        title: 'Payment Verified!',
+        text: 'Payment has been verified and enrollment status updated to Approved.',
+        icon: 'success',
+        confirmButtonColor: '#992525',
+        customClass: {
+          container: 'swal-z-index-fix'
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      Swal.fire({
+        title: 'Verification Failed',
+        text: error.response?.data?.message || 'Failed to verify payment. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+        customClass: {
+          container: 'swal-z-index-fix'
+        }
+      });
+    } finally {
+      setIsVerifyingPayment(false);
+    }
   };
 
   const handlePreviewPaymentProof = () => {
@@ -199,7 +302,54 @@ export default function EnrollmentDetailsModal({
     handlePreviewFile(formData.paymentProofPath, "Proof of Payment Preview");
   };
 
+  const handleCloseModal = async () => {
+    if (!hasChanges) {
+      handleClose();
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Discard Changes?',
+      text: 'You have unsaved changes. Do you want to discard them?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, discard',
+      cancelButtonText: 'No, keep editing',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+      handleClose();
+    }
+  };
+
   const handleFormSave = async () => {
+    if (!hasChanges) {
+      Swal.fire({
+        title: 'No Changes',
+        text: 'No changes have been made to save.',
+        icon: 'info',
+        confirmButtonColor: '#992525'
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Save Changes?',
+      text: 'Are you sure you want to save the changes made to this enrollment?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, save changes',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
     setLoading(true);
     try {
       // Send all form data to the new backend endpoint
@@ -212,9 +362,28 @@ export default function EnrollmentDetailsModal({
           },
         }
       );
+      
       await handleSave(formData);
+      
+      // Show success message
+      Swal.fire({
+        title: 'Changes Saved!',
+        text: 'Enrollment details have been updated successfully.',
+        icon: 'success',
+        confirmButtonColor: '#992525'
+      });
+      
+      // Reset change tracking
+      setOriginalData(formData);
+      setHasChanges(false);
     } catch (error) {
       console.error("Error saving form data:", error);
+      Swal.fire({
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#992525'
+      });
     } finally {
       setLoading(false);
     }
@@ -224,10 +393,13 @@ export default function EnrollmentDetailsModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <CommonModal
         title={previewFile.title}
-        handleClose={handleCloseModal}
+        handleClose={handleClosePreview}
         show={showPreview}
         fileUrl={previewFile.url}
         className="w-full h-[90%]"
+        showVerifyPayment={previewFile.title === "Proof of Payment Preview"}
+        onVerifyPayment={handleVerifyPayment}
+        isVerifying={isVerifyingPayment}
       />
       <div className="bg-white-yellow-tone rounded-lg w-full max-w-4xl relative max-h-[90vh] overflow-y-auto flex flex-col">
         <div className="flex items-start justify-between mb-4 sm:mb-6 p-6 sticky top-0 bg-white-yellow-tone z-10 border-b ">
@@ -236,7 +408,7 @@ export default function EnrollmentDetailsModal({
           </h2>
           <button
             className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
-            onClick={handleClose}
+            onClick={handleCloseModal}
           >
             <svg
               className="h-5 w-5"
@@ -564,8 +736,12 @@ export default function EnrollmentDetailsModal({
         <div className="flex justify-center mt-6 sticky bottom-0 bg-white-yellow-tone p-4 border-t">
           <button
             onClick={handleFormSave}
-            disabled={loading}
-            className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !hasChanges}
+            className={`px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
+              hasChanges 
+                ? 'bg-dark-red-2 hover:bg-dark-red-5 text-white' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             {loading ? (
               <div className="flex items-center">
@@ -573,7 +749,7 @@ export default function EnrollmentDetailsModal({
                 <span>Saving...</span>
               </div>
             ) : (
-              "Save Changes"
+              hasChanges ? "Save Changes" : "No Changes"
             )}
           </button>
         </div>
