@@ -4,8 +4,8 @@ import * as jose from "jose";
 import { createLog } from "../utils/logger.js";
 
 const loginSchema = Joi.object({
-  email: Joi.string().email(),
-  password: Joi.string().min(8).max(100),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).max(100).required(),
 });
 
 const changePasswordSchema = Joi.object({
@@ -23,8 +23,8 @@ const validateLogin = (req, res, next) => {
   if (error) {
     createLog({
       title: "Validation Error - ValidateLogin - Invalid email or password",
-      content: `User is ${JSON.stringify(req.body, null, 2)}`,
-      userId: req.body.id,
+      content: `Request body: ${JSON.stringify(req.body, null, 2)}`,
+      userId: null,
       moduleType: "AUTH",
       type: "error_log",
     });
@@ -156,8 +156,8 @@ const verifyToken = async (req, res, next) => {
     if (!token) {
       createLog({
         title: "Validation Error - VerifyToken - No token provided",
-        content: `User is ${JSON.stringify(decoded.payload.data, null, 2)}`,
-        userId: decoded.payload.data.id,
+        content: `Request: ${req.method} ${req.path}`,
+        userId: null,
         moduleType: "AUTH",
         type: "error_log",
       });
@@ -176,8 +176,8 @@ const verifyToken = async (req, res, next) => {
   } catch (error) {
     createLog({
       title: "Validation Error - VerifyToken - Invalid or expired token",
-      content: `User is ${JSON.stringify(req.user, null, 2)}`,
-      userId: req.user?.id || null,
+      content: `Request: ${req.method} ${req.path} - Error: ${error.message}`,
+      userId: null,
       moduleType: "AUTH",
       type: "error_log",
     });

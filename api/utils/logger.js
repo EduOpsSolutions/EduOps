@@ -144,17 +144,19 @@ export const logError = async (
  *
  * @param {string} title - Security event title
  * @param {string} [userId] - User ID
+ * @param {string} [moduleType] - Module type
  * @param {string} [content] - Additional content
  */
 export const logSecurityEvent = async (
   title,
   userId = null,
+  moduleType = MODULE_TYPES.AUTH,
   content = null
 ) => {
   return createLog({
     title,
     userId,
-    ModuleType: MODULE_TYPES.AUTH,
+    moduleType,
     content,
     type: "security_log",
   });
