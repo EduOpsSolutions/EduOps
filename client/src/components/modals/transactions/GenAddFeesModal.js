@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import DiscardChangesModal from "../common/DiscardChangesModal";
 import ModalTextField from "../../form/ModalTextField";
 
-const GenAddFeesModal = ({ isOpen, onClose, onAddFee }) => {
+const GenAddFeesModal = ({ isOpen, onClose, onAddFee, courseId, batchId }) => {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
+    type: "down_payment",
     dueDate: "",
   });
 
@@ -19,6 +20,8 @@ const GenAddFeesModal = ({ isOpen, onClose, onAddFee }) => {
       setFormData({
         description: "",
         amount: "",
+        batchId: "",
+        courseId: "",
         dueDate: "",
       });
       setError("");
@@ -42,23 +45,23 @@ const GenAddFeesModal = ({ isOpen, onClose, onAddFee }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true); 
-      
+      setLoading(true);
       const feeData = {
-        description: formData.description,
-        amount: parseFloat(formData.amount).toFixed(2),
-        dueDate: formatDate(formData.dueDate), 
+        courseId,
+        batchId,
+        name: formData.description,
+        price: parseFloat(formData.amount).toFixed(2),
+        type: formData.type,
+        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
       };
-
       if (onAddFee && typeof onAddFee === "function") {
-        await onAddFee(feeData); 
+        await onAddFee(feeData);
       }
-      
-      onClose(); 
+      onClose();
     } catch (error) {
       setError(error.message || "Failed to add fee. Please try again.");
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
@@ -156,6 +159,34 @@ const GenAddFeesModal = ({ isOpen, onClose, onAddFee }) => {
               onChange={handleChange}
               required
             />
+
+            {/* Fee Type Dropdown */}
+            <div className="mb-4">
+              <label htmlFor="type" className="block font-medium mb-1">Fee Type</label>
+              <select
+                name="type"
+                id="type"
+                value={formData.type}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2 text-sm"
+                required
+              >
+                <option value="down_payment">Down Payment</option>
+                <option value="tuition_fee">Tuition Fee</option>
+                <option value="document_fee">Document Fee</option>
+                <option value="book_fee">Book Fee</option>
+              </select>
+            </div>
+
+            {/* Due Date */}
+            {/* <ModalTextField
+              label="Due Date"
+              name="dueDate"
+              type="date"
+              value={formData.dueDate}
+              onChange={handleChange}
+              required
+            /> */}
 
             {/* Submit Button */}
             <div className="flex justify-center mt-6">
