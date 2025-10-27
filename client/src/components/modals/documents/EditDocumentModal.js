@@ -11,60 +11,66 @@ const EditDocumentModal = ({
     const [formData, setFormData] = useState({
         documentName: "",
         description: "",
-        privacy: "Teacher's Only",
-        requestBasis: "Yes",
-        downloadable: "Yes",
-        price: "Free",
+        privacy: "teacher_only",
+        requestBasis: true,
+        downloadable: true,
+        price: "free",
         amount: "",
         uploadFile: "",
     });
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [uploadedFile, setUploadedFile] = useState(null);
 
     useEffect(() => {
         if (isOpen && selectedDocument) {
-            let priceValue = "Free";
+            let priceValue = "free";
             let amountValue = "";
 
             const amount = selectedDocument.amount;
-            if (amount) {
-                let cleanAmount = amount;
-                if (typeof amount === 'string') {
-                    cleanAmount = amount.replace(/[^0-9.-]+/g, '');
-                }
-
-                const parsedAmount = parseFloat(cleanAmount);
-
+            if (amount && selectedDocument.price === "paid") {
+                const parsedAmount = parseFloat(amount);
                 if (!isNaN(parsedAmount) && parsedAmount > 0) {
-                    priceValue = "Paid";
-                    amountValue = parsedAmount.toFixed(2);
+                    priceValue = "paid";
+                    amountValue = parsedAmount.toString();
                 }
             }
 
             setFormData({
                 documentName: selectedDocument.documentName || "",
                 description: selectedDocument.description || "",
-                privacy: selectedDocument.privacy || "Teacher's Only",
-                requestBasis: selectedDocument.requestBasis || "Yes",
-                downloadable: selectedDocument.downloadable || "Yes",
+                privacy: selectedDocument.privacy || "teacher_only",
+                requestBasis: selectedDocument.requestBasis || true,
+                downloadable: selectedDocument.downloadable || true,
                 price: priceValue,
                 amount: amountValue,
                 uploadFile: selectedDocument.uploadFile || "",
             });
+            setUploadedFile(null);
             setError("");
         }
     }, [isOpen, selectedDocument]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        
+        let processedValue = value;
+        if (type === 'checkbox') {
+            processedValue = checked;
+        } else if (name === 'price' && value === 'free') {
+            // Reset amount when switching to free
+            setFormData(prev => ({ ...prev, amount: "" }));
+        }
+        
+        setFormData((prev) => ({ ...prev, [name]: processedValue }));
 
         if (error) setError("");
     };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
+        setUploadedFile(file);
         if (file) {
             setFormData(prev => ({
                 ...prev,
@@ -78,28 +84,20 @@ const EditDocumentModal = ({
         try {
             setLoading(true);
 
-            let amountValue = "";
-            if (formData.price === "Paid") {
-                const parsedAmount = parseFloat(formData.amount || 0);
-                if (!isNaN(parsedAmount)) {
-                    amountValue = parsedAmount.toFixed(2);
-                }
-            }
-
             const documentData = {
                 ...selectedDocument,
-                documentName: formData.documentName,
-                description: formData.description,
+                documentName: formData.documentName.trim(),
+                description: formData.description.trim(),
                 privacy: formData.privacy,
                 requestBasis: formData.requestBasis,
                 downloadable: formData.downloadable,
                 price: formData.price,
-                amount: amountValue,
+                amount: formData.price === "paid" ? parseFloat(formData.amount) : null,
                 uploadFile: formData.uploadFile,
             };
 
             if (onUpdateDocument && typeof onUpdateDocument === "function") {
-                await onUpdateDocument(documentData);
+                await onUpdateDocument(documentData, uploadedFile);
             }
 
             onClose();

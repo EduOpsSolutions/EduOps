@@ -96,9 +96,13 @@ export const createDocumentTemplate = async (req, res) => {
 
   } catch (error) {
     console.error('Create document template error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    console.error('Request file:', req.file);
     res.status(500).json({
       error: true,
-      message: 'Failed to create document template'
+      message: error.message || 'Failed to create document template',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
@@ -196,8 +200,8 @@ export const updateDocumentTemplate = async (req, res) => {
     
     // Handle file upload if present
     if (req.file) {
-      const fileResult = await uploadFile(req.file, filePaths.documents);  // Changed from saveFile to uploadFile
-      updateData.uploadFile = fileResult.downloadURL;  // Changed from url to downloadURL
+      const fileResult = await uploadFile(req.file, filePaths.documents);
+      updateData.uploadFile = fileResult.downloadURL;
     }
 
     // Convert string booleans to actual booleans
@@ -284,7 +288,7 @@ export const toggleDocumentVisibility = async (req, res) => {
       });
     }
 
-    const updatedDocument = await DocumentModel.hideDocumentTemplate(id, !isActive);
+    const updatedDocument = await DocumentModel.hideDocumentTemplate(id, isActive);
 
     res.json({
       error: false,

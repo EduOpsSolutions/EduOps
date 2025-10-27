@@ -30,6 +30,7 @@ const createSearchStore = (config) => {
     showDetails: false,
     isLoading: false,
     error: null,
+    hasSearched: showResultsOnLoad,
 
     // Actions
     updateSearchParams: (params) => {
@@ -39,9 +40,10 @@ const createSearchStore = (config) => {
     },
 
     handleInputChange: (e) => {
-      const { name, value } = e.target;
+      const { name, value, type, checked } = e.target;
+      const inputValue = type === 'checkbox' ? checked : value;
       set((state) => ({
-        searchParams: { ...state.searchParams, [name]: value }
+        searchParams: { ...state.searchParams, [name]: inputValue }
       }));
     },
 
@@ -78,7 +80,8 @@ const createSearchStore = (config) => {
         totalPages,
         currentItems,
         showResults: true,
-        showDetails: false
+        showDetails: false,
+        hasSearched: true
       });
     },
 
