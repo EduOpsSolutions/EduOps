@@ -24,10 +24,10 @@ class DocumentModel {
         documentName: data.documentName,
         description: data.description,
         privacy: data.privacy || 'public',
-        requestBasis: data.requestBasis || true,
-        downloadable: data.downloadable || false,
+        requestBasis: data.requestBasis !== undefined ? Boolean(data.requestBasis) : true,
+        downloadable: data.downloadable !== undefined ? Boolean(data.downloadable) : false,
         price: data.price || 'free',
-        amount: data.price === 'paid' ? parseFloat(data.amount) : null,
+        amount: data.price === 'paid' ? parseFloat(data.amount) : 0,
         uploadFile: data.uploadFile || null
       }
     });
@@ -48,13 +48,28 @@ class DocumentModel {
   }
 
   static async updateDocumentTemplate(id, data) {
+    const updateData = { ...data };
+    
+    // Ensure boolean fields are properly converted
+    if (updateData.requestBasis !== undefined) {
+      updateData.requestBasis = Boolean(updateData.requestBasis);
+    }
+    if (updateData.downloadable !== undefined) {
+      updateData.downloadable = Boolean(updateData.downloadable);
+    }
+    
+    // Handle amount properly
+    if (updateData.price === 'paid' && updateData.amount) {
+      updateData.amount = parseFloat(updateData.amount);
+    } else if (updateData.price === 'free') {
+      updateData.amount = 0;
+    }
+    
+    updateData.updatedAt = new Date();
+    
     return await prisma.document_template.update({
       where: { id },
-      data: {
-        ...data,
-        amount: data.price === 'paid' ? parseFloat(data.amount) : null,
-        updatedAt: new Date()
-      }
+      data: updateData
     });
   }
 

@@ -71,19 +71,28 @@ export const createDocumentTemplate = async (req, res) => {
     // Handle file upload if present
     let uploadFileUrl = null;
     if (req.file) {
-      const fileResult = await uploadFile(req.file, filePaths.documents);  // Changed from saveFile to uploadFile
-      uploadFileUrl = fileResult.downloadURL;  // Changed from url to downloadURL based on your fileStorage response
+      const fileResult = await uploadFile(req.file, filePaths.documents);
+      uploadFileUrl = fileResult.downloadURL;
     }
+
+    // Parse boolean values properly from FormData
+    const parseBoolean = (value) => {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+      }
+      return Boolean(value);
+    };
 
     const documentData = {
       documentName,
       description: description || '',
       privacy: privacy.toLowerCase(),
-      requestBasis: requestBasis === 'true' || requestBasis === true,
-      downloadable: downloadable === 'true' || downloadable === true,
+      requestBasis: parseBoolean(requestBasis),
+      downloadable: parseBoolean(downloadable),
       price: price || 'free',
-      amount: price === 'paid' ? amount : null,
-      uploadFile: uploadFileUrl  // Changed variable name to avoid confusion
+      amount: price === 'paid' ? amount : 0,
+      uploadFile: uploadFileUrl
     };
 
     const document = await DocumentModel.createDocumentTemplate(documentData);
@@ -196,6 +205,15 @@ export const updateDocumentTemplate = async (req, res) => {
       });
     }
 
+    // Parse boolean values properly from FormData
+    const parseBoolean = (value) => {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+      }
+      return Boolean(value);
+    };
+
     const updateData = { ...req.body };
     
     // Handle file upload if present
@@ -204,12 +222,12 @@ export const updateDocumentTemplate = async (req, res) => {
       updateData.uploadFile = fileResult.downloadURL;
     }
 
-    // Convert string booleans to actual booleans
+    // Convert boolean fields properly
     if (updateData.requestBasis !== undefined) {
-      updateData.requestBasis = updateData.requestBasis === 'true' || updateData.requestBasis === true;
+      updateData.requestBasis = parseBoolean(updateData.requestBasis);
     }
     if (updateData.downloadable !== undefined) {
-      updateData.downloadable = updateData.downloadable === 'true' || updateData.downloadable === true;
+      updateData.downloadable = parseBoolean(updateData.downloadable);
     }
 
     const updatedDocument = await DocumentModel.updateDocumentTemplate(id, updateData);

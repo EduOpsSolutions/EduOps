@@ -133,15 +133,19 @@ function Documents() {
                             </td>
                             <td className="py-4 px-4">{row.documentName}</td>
                             <td className="py-4 px-4 text-center">
-                              {row.downloadable && row.uploadFile ? (
-                                <DownloadButton onClick={() => handleDownload(row)} />
-                              ) : row.requestBasis ? (
-                                <RequestButton
-                                  onClick={() => handleRequestDocument(row)}
-                                />
-                              ) : (
-                                <span className="text-gray-500 text-sm">Not Available</span>
-                              )}
+                              <div className="flex justify-center gap-2">
+                                {row.downloadable && row.uploadFile && (
+                                  <DownloadButton onClick={() => handleDownload(row)} />
+                                )}
+                                {row.requestBasis && (
+                                  <RequestButton
+                                    onClick={() => handleRequestDocument(row)}
+                                  />
+                                )}
+                                {!row.downloadable && !row.requestBasis && (
+                                  <span className="text-gray-500 text-sm">Not Available</span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-4 px-4">{row.description || 'No description'}</td>
                           </tr>
