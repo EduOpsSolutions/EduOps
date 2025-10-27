@@ -173,7 +173,7 @@ export const documentHelpers = {
     return {
       ...request,
       name,
-      document: documentName,
+      documentName: documentName,
       displayDate: new Date(request.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -187,9 +187,9 @@ export const documentHelpers = {
   // Check if user can access document based on role and privacy
   canAccessDocument: (document, userRole) => {
     const accessRules = {
-      admin: ['public', 'student', 'teacher', 'admin'],
-      teacher: ['public', 'teacher'],
-      student: ['public', 'student']
+      admin: ['public', 'student_only', 'teacher_only'],
+      teacher: ['public', 'teacher_only'],
+      student: ['public', 'student_only']
     };
     
     const allowedPrivacyLevels = accessRules[userRole] || accessRules.student;

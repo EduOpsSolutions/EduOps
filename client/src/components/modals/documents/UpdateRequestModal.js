@@ -142,7 +142,7 @@ function UpdateDocumentRequestModal({
                   <span className="font-medium">Student:</span> {selectedRequest.name}
                 </p>
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Document:</span> {selectedRequest.document}
+                  <span className="font-medium">Document:</span> {selectedRequest.documentName || selectedRequest.document?.documentName || 'Unknown Document'}
                 </p>
                 <p className="text-sm text-gray-600">
                   <span className="font-medium">Date Requested:</span> {selectedRequest.displayDate}

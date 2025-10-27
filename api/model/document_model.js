@@ -160,7 +160,7 @@ class DocumentModel {
 
   static async getDocumentRequestsByStudent(studentId) {
     return await prisma.document_request.findMany({
-      where: { studentId },
+      where: { userId: studentId },
       include: {
         document: true
       },

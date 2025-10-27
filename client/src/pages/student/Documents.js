@@ -21,12 +21,11 @@ function Documents() {
   
   const searchStore = useManageDocumentsSearchStore();
   const { fetchDocuments, loading, error } = useManageDocumentsStore();
-  const { viewDetailsModal, closeViewDetailsModal } = useDocumentRequestStore();
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     // Fetch documents available to students
-    fetchDocuments(false); // Don't include hidden documents
+    fetchDocuments(false);
   }, [fetchDocuments]);
 
   const handleDownload = async (document) => {
@@ -191,10 +190,7 @@ function Documents() {
           setDocRequestsModal={setDocRequestsModal}
         />
 
-        <ViewRequestDetailsModal
-          viewDetailsModal={viewDetailsModal}
-          closeViewDetailsModal={closeViewDetailsModal}
-        />
+        <ViewRequestDetailsModal />
       </div>
     </div>
   );
