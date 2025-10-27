@@ -1,17 +1,17 @@
-import { signJWT, verifyJWT } from "../utils/jwt.js";
-import dotenv from "dotenv";
+import { signJWT, verifyJWT } from '../utils/jwt.js';
+import dotenv from 'dotenv';
 dotenv.config();
 import {
   getUserByEmail as getStudentByEmail,
   updateUserPassword,
-} from "../model/user_model.js";
-import { getUserByToken } from "../model/user_model.js";
-import { sendEmail } from "../utils/mailer.js";
-import crypto from "crypto";
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
-import { createLog, logSecurityEvent } from "../utils/logger.js";
-import { MODULE_TYPES } from "../constants/module_types.js";
+} from '../model/user_model.js';
+import { getUserByToken } from '../model/user_model.js';
+import { sendEmail } from '../utils/mailer.js';
+import crypto from 'crypto';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { createLog, logSecurityEvent } from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 const bcryptSalt = parseInt(process.env.BCRYPT_SALT) || 11;
 const prisma = new PrismaClient();
@@ -23,35 +23,35 @@ async function login(req, res) {
     if (!user || user.error) {
       return res
         .status(401)
-        .json({ error: true, message: "Incorrect email or password" });
+        .json({ error: true, message: 'Incorrect email or password' });
     }
 
     try {
       const isValidPassword = bcrypt.compareSync(password, user.data?.password);
       if (!isValidPassword) {
         createLog({
-          title: "Authentication Error - Login - Incorrect email or password",
+          title: 'Authentication Error - Login - Incorrect email or password',
           content: `Attempted login with email: ${email}`,
-          moduleType: "AUTH",
-          type: "security_log",
+          moduleType: MODULE_TYPES.AUTH,
+          type: 'security_log',
         });
         return res.status(401).json({
           error: true,
-          message: "Incorrect email or password",
+          message: 'Incorrect email or password',
         });
       }
     } catch (bcryptError) {
       console.log(password, user.password);
-      console.error("Password comparison error:", bcryptError);
+      console.error('Password comparison error:', bcryptError);
       return res.status(500).json({
         error: true,
-        message: "Something went wrong, please try again later.",
+        message: 'Something went wrong, please try again later.',
       });
     }
     let { data } = user;
     delete data.password;
 
-    if (data.status !== "active") {
+    if (data.status !== 'active') {
       return res.status(401).json({
         error: true,
         message: `User is ${data.status}. Please contact the administrator.`,
@@ -63,13 +63,13 @@ async function login(req, res) {
     };
 
     const token = await signJWT(payload);
-    res.cookie("token", token, {
+    res.cookie('token', token, {
       httpOnly: true,
       // secure: process.env.NODE_ENV === "production",
       maxAge: 10, //10 seconds
       // maxAge: 24 * 60 * 60 * 1000,
     });
-    res.status(200).json({ token, error: false, message: "Login successful" });
+    res.status(200).json({ token, error: false, message: 'Login successful' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -77,7 +77,7 @@ async function login(req, res) {
 
 async function forgotPassword(req, res) {
   const { email } = req.body;
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = crypto.randomBytes(32).toString('hex');
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
   const html = `
         <h3>You requested a password reset</h3>
@@ -86,16 +86,16 @@ async function forgotPassword(req, res) {
         <p>If you didn't request this, please ignore this email</p>
       `;
   try {
-    const isSent = await sendEmail(email, "Forgot Password", html);
+    const isSent = await sendEmail(email, 'Forgot Password', html);
     if (isSent) {
       res
         .status(200)
-        .json({ error: false, message: "Reset link sent successfully" });
+        .json({ error: false, message: 'Reset link sent successfully' });
     } else {
-      res.status(500).json({ error: true, message: "Error sending email" });
+      res.status(500).json({ error: true, message: 'Error sending email' });
     }
   } catch (error) {
-    res.status(500).json({ error: true, message: "Error sending email" });
+    res.status(500).json({ error: true, message: 'Error sending email' });
   }
 }
 
@@ -104,7 +104,7 @@ async function adminResetPassword(req, res) {
   if (!id) {
     return res
       .status(400)
-      .json({ error: true, message: "User ID is required" });
+      .json({ error: true, message: 'User ID is required' });
   }
   const user = await prisma.users.findUnique({
     where: {
@@ -112,7 +112,7 @@ async function adminResetPassword(req, res) {
     },
   });
   if (!user) {
-    return res.status(401).json({ error: true, message: "User not found" });
+    return res.status(401).json({ error: true, message: 'User not found' });
   }
 
   const password = `${user.firstName.slice(0, 3).toLowerCase()}${user.lastName
@@ -130,8 +130,8 @@ async function adminResetPassword(req, res) {
   });
   await sendEmail(
     user.email,
-    "Password Reset",
-    "",
+    'Password Reset',
+    '',
     `
     <h3>Your account password has been reset</h3>
     <p>Please use the following instructions to login. Your account password is "&lt;First Name (first 3 letters)&gt;&lt;Last Name (first 2 letters)&gt;&lt;Birthmonth&gt;&lt;Birthdate&gt;&lt;Birthyear&gt;" All in lowercase. You might be prompted to change your password on your next login.</p>
@@ -140,7 +140,7 @@ async function adminResetPassword(req, res) {
   if (updated) {
     res
       .status(200)
-      .json({ error: false, message: "Password updated successfully" });
+      .json({ error: false, message: 'Password updated successfully' });
   }
 }
 
@@ -149,7 +149,7 @@ async function resetPassword(req, res) {
   if (!token || !password) {
     return res
       .status(400)
-      .json({ error: true, message: "Token and password are required" });
+      .json({ error: true, message: 'Token and password are required' });
   }
   try {
     if (token && password) {
@@ -158,21 +158,21 @@ async function resetPassword(req, res) {
         return res.status(401).json({ error: true, message: user.message });
       }
       if (!user) {
-        return res.status(401).json({ error: true, message: "User not found" });
+        return res.status(401).json({ error: true, message: 'User not found' });
       }
       if (!user.data.resetToken) {
         return res
           .status(401)
-          .json({ error: true, message: "Invalid or expired token" });
+          .json({ error: true, message: 'Invalid or expired token' });
       }
       if (
         user.data.resetTokenExpiry &&
         user.data.resetTokenExpiry < new Date()
       ) {
-        return res.status(401).json({ error: true, message: "Token expired" });
+        return res.status(401).json({ error: true, message: 'Token expired' });
       }
       if (user.data.resetToken !== token) {
-        return res.status(401).json({ error: true, message: "Invalid token" });
+        return res.status(401).json({ error: true, message: 'Invalid token' });
       }
 
       const saltRounds = parseInt(process.env.BCRYPT_SALT) || 11;
@@ -181,13 +181,13 @@ async function resetPassword(req, res) {
       if (updated) {
         res
           .status(200)
-          .json({ error: false, message: "Password updated successfully" });
+          .json({ error: false, message: 'Password updated successfully' });
       }
     }
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: "Error resetting password",
+      message: 'Error resetting password',
       error_message: error.message,
       error_info: error,
     });
@@ -207,7 +207,7 @@ async function register(req, res) {
 
     res.status(501).json({
       error: true,
-      message: "Registration not implemented yet",
+      message: 'Registration not implemented yet',
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -217,16 +217,16 @@ async function register(req, res) {
 async function changePassword(req, res) {
   try {
     const { oldPassword, newPassword, email } = req.body;
-    const token = req.headers.authorization.split(" ")[1];
+    const token = req.headers.authorization.split(' ')[1];
     const decoded = await verifyJWT(token);
     if (decoded.payload.data.email !== email)
-      return res.status(401).json({ error: true, message: "Unauthorized" });
+      return res.status(401).json({ error: true, message: 'Unauthorized' });
 
     // Validate input
     if (!oldPassword || !newPassword || !email) {
       return res.status(400).json({
         error: true,
-        message: "Old password, new password, and email are required",
+        message: 'Old password, new password, and email are required',
       });
     }
 
@@ -235,13 +235,13 @@ async function changePassword(req, res) {
     if (!user || user.error) {
       return res.status(404).json({
         error: true,
-        message: "User not found",
+        message: 'User not found',
       });
     }
     if (user.data.email !== decoded.payload.data.email) {
       return res.status(401).json({
         error: true,
-        message: "Unauthorized",
+        message: 'Unauthorized',
       });
     }
 
@@ -257,32 +257,32 @@ async function changePassword(req, res) {
     if (isTheSamePassword) {
       return res.status(401).json({
         error: true,
-        message: "New password cannot be the same as the old password",
+        message: 'New password cannot be the same as the old password',
       });
     }
 
     if (!isValidPassword) {
       return res.status(401).json({
         error: true,
-        message: "Current password is incorrect",
+        message: 'Current password is incorrect',
       });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, bcryptSalt);
 
-    console.log("hashedPassword", hashedPassword);
+    console.log('hashedPassword', hashedPassword);
     // Add a function in your user_model.js to update the password
     const updated = await updateUserPassword(email, hashedPassword);
 
     if (updated) {
       res.status(200).json({
         error: false,
-        message: "Password updated successfully",
+        message: 'Password updated successfully',
       });
     } else {
       res.status(500).json({
         error: true,
-        message: "Failed to update password",
+        message: 'Failed to update password',
       });
     }
   } catch (error) {
@@ -293,15 +293,15 @@ async function changePassword(req, res) {
 const requestResetPassword = async (req, res) => {
   const prisma = new PrismaClient();
   const { email } = req.body;
-  console.log("requestResetPassword", email);
+  console.log('requestResetPassword', email);
   try {
     const user = await getStudentByEmail(email);
     if (!user || user.error) {
-      return res.status(200).json({ error: true, message: "User not found" });
+      return res.status(200).json({ error: true, message: 'User not found' });
     }
 
     const token = await signJWT({ email });
-    console.log("token", token);
+    console.log('token', token);
     const updatedUser = await prisma.users.update({
       where: { email },
       data: {
@@ -321,36 +321,36 @@ const requestResetPassword = async (req, res) => {
         <p>This link will expire in 30 minutes</p>
         <p>If you didn't request this, please ignore this email</p>
       `;
-    const isSent = await sendEmail(email, "Reset Password", "", html);
+    const isSent = await sendEmail(email, 'Reset Password', '', html);
     if (isSent) {
       await logSecurityEvent(
-        "Reset Password Request",
+        'Reset Password Request',
         updatedUser.userId,
         MODULE_TYPES.AUTH,
         `Reset password request sent to email: ${email}`
       );
       res
         .status(200)
-        .json({ error: false, message: "Reset link sent successfully" });
+        .json({ error: false, message: 'Reset link sent successfully' });
     } else {
       await logSecurityEvent(
-        "Reset Password Request Error",
+        'Reset Password Request Error',
         updatedUser.userId,
         MODULE_TYPES.AUTH,
         `Error sending email to ${email}`
       );
-      res.status(500).json({ error: true, message: "Error sending email" });
+      res.status(500).json({ error: true, message: 'Error sending email' });
     }
   } catch (error) {
     await logSecurityEvent(
-      "Reset Password Request Error",
+      'Reset Password Request Error',
       null,
       MODULE_TYPES.AUTH,
       `Error resetting password: ${error.message}`
     );
     res.status(500).json({
       error: true,
-      message: "Error resetting password",
+      message: 'Error resetting password',
       error_message: error.message,
       error_info: error,
     });

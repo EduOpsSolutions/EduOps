@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -15,15 +15,15 @@ export const getLogs = async (req, res) => {
       limit = 50,
     } = req.query;
 
-    const whereClause = {
-      deletedAt: null,
-    };
+    let whereClause = {};
+
+    whereClause.deletedAt = null;
 
     // Apply filters
     // Handle multiple types (comma-separated)
     if (type) {
-      if (type.includes(",")) {
-        whereClause.type = { in: type.split(",").map((t) => t.trim()) };
+      if (type.includes(',')) {
+        whereClause.type = { in: type.split(',').map((t) => t.trim()) };
       } else {
         whereClause.type = type;
       }
@@ -59,7 +59,17 @@ export const getLogs = async (req, res) => {
     // Fetch logs with user information
     const logs = await prisma.logs.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        reqBody: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        userId: true,
+        moduleType: true,
+        type: true,
         user: {
           select: {
             id: true,
@@ -72,7 +82,7 @@ export const getLogs = async (req, res) => {
         },
       },
       orderBy: {
-        id: "asc",
+        id: 'asc',
       },
       skip,
       take,
@@ -90,10 +100,10 @@ export const getLogs = async (req, res) => {
       limit: take,
     });
   } catch (err) {
-    console.error("Get logs error:", err);
+    console.error('Get logs error:', err);
     res.status(500).json({
       error: true,
-      message: "Failed to get logs",
+      message: 'Failed to get logs',
     });
   }
 };
@@ -125,7 +135,7 @@ export const getLogById = async (req, res) => {
     if (!log) {
       return res.status(404).json({
         error: true,
-        message: "Log not found",
+        message: 'Log not found',
       });
     }
 
@@ -134,10 +144,10 @@ export const getLogById = async (req, res) => {
       data: log,
     });
   } catch (err) {
-    console.error("Get log by ID error:", err);
+    console.error('Get log by ID error:', err);
     res.status(500).json({
       error: true,
-      message: "Failed to get log",
+      message: 'Failed to get log',
     });
   }
 };
@@ -159,7 +169,7 @@ export const updateLog = async (req, res) => {
     if (!existingLog) {
       return res.status(404).json({
         error: true,
-        message: "Log not found",
+        message: 'Log not found',
       });
     }
 
@@ -174,7 +184,7 @@ export const updateLog = async (req, res) => {
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         error: true,
-        message: "No fields to update",
+        message: 'No fields to update',
       });
     }
 
@@ -198,13 +208,13 @@ export const updateLog = async (req, res) => {
     res.json({
       error: false,
       data: updatedLog,
-      message: "Log updated successfully",
+      message: 'Log updated successfully',
     });
   } catch (err) {
-    console.error("Update log error:", err);
+    console.error('Update log error:', err);
     res.status(500).json({
       error: true,
-      message: "Failed to update log",
+      message: 'Failed to update log',
     });
   }
 };
@@ -225,7 +235,7 @@ export const deleteLog = async (req, res) => {
     if (!existingLog) {
       return res.status(404).json({
         error: true,
-        message: "Log not found",
+        message: 'Log not found',
       });
     }
 
@@ -238,13 +248,13 @@ export const deleteLog = async (req, res) => {
 
     res.json({
       error: false,
-      message: "Log deleted successfully",
+      message: 'Log deleted successfully',
     });
   } catch (err) {
-    console.error("Delete log error:", err);
+    console.error('Delete log error:', err);
     res.status(500).json({
       error: true,
-      message: "Failed to delete log",
+      message: 'Failed to delete log',
     });
   }
 };
@@ -258,7 +268,7 @@ export const bulkDeleteLogs = async (req, res) => {
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({
         error: true,
-        message: "Invalid or empty IDs array",
+        message: 'Invalid or empty IDs array',
       });
     }
 
@@ -268,7 +278,7 @@ export const bulkDeleteLogs = async (req, res) => {
     if (logIds.length === 0) {
       return res.status(400).json({
         error: true,
-        message: "No valid IDs provided",
+        message: 'No valid IDs provided',
       });
     }
 
@@ -288,10 +298,10 @@ export const bulkDeleteLogs = async (req, res) => {
       deletedCount: result.count,
     });
   } catch (err) {
-    console.error("Bulk delete logs error:", err);
+    console.error('Bulk delete logs error:', err);
     res.status(500).json({
       error: true,
-      message: "Failed to delete logs",
+      message: 'Failed to delete logs',
     });
   }
 };
@@ -301,17 +311,17 @@ export const createLog = async (logData) => {
   try {
     const log = await prisma.logs.create({
       data: {
-        title: logData.title || "No title",
-        content: logData.content || "No content",
-        reqBody: logData.reqBody || "No request body",
+        title: logData.title || 'No title',
+        content: logData.content || 'No content',
+        reqBody: logData.reqBody || 'No request body',
         userId: logData.userId || null,
-        moduleType: logData.moduleType || "UNCATEGORIZED",
-        type: logData.type || "user_activity",
+        moduleType: logData.moduleType || 'UNCATEGORIZED',
+        type: logData.type || 'user_activity',
       },
     });
     return { success: true, log };
   } catch (err) {
-    console.error("Create log error:", err);
+    console.error('Create log error:', err);
     return { success: false, error: err.message };
   }
 };
