@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
-import { uploadFile } from "../utils/fileStorage.js";
-import { filePaths } from "../constants/file_paths.js";
-import { logUserActivity, logError } from "../utils/logger.js"
-import { MODULE_TYPES } from "../constants/module_types.js";
+import { PrismaClient } from '@prisma/client';
+import { uploadFile } from '../utils/fileStorage.js';
+import { filePaths } from '../constants/file_paths.js';
+import { logUserActivity, logError } from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 const prisma = new PrismaClient();
 
@@ -14,20 +14,20 @@ export const getPosts = async (req, res) => {
     const whereClause = { deletedAt: null };
 
     // Role-based filtering
-    if (userRole === "admin") {
-    } else if (userRole === "teacher") {
-      whereClause.OR = [{ tag: "global" }, { tag: "teacher" }];
-    } else if (userRole === "student") {
-      whereClause.OR = [{ tag: "global" }, { tag: "student" }];
+    if (userRole === 'admin') {
+    } else if (userRole === 'teacher') {
+      whereClause.OR = [{ tag: 'global' }, { tag: 'teacher' }];
+    } else if (userRole === 'student') {
+      whereClause.OR = [{ tag: 'global' }, { tag: 'student' }];
     } else {
-      whereClause.tag = "global";
+      whereClause.tag = 'global';
     }
 
     if (tag) whereClause.tag = tag;
     if (status) whereClause.status = status;
     if (userId) whereClause.userId = userId;
     if (isArchived !== undefined)
-      whereClause.isArchived = isArchived === "true";
+      whereClause.isArchived = isArchived === 'true';
 
     const posts = await prisma.posts.findMany({
       where: whereClause,
@@ -43,7 +43,7 @@ export const getPosts = async (req, res) => {
         },
         files: {
           where: {
-            status: "visible",
+            status: 'visible',
           },
           select: {
             id: true,
@@ -55,7 +55,7 @@ export const getPosts = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        createdAt: 'desc',
       },
     });
 
@@ -64,16 +64,16 @@ export const getPosts = async (req, res) => {
       data: posts,
     });
   } catch (err) {
-    console.error("Get posts error:", err);
+    console.error('Get posts error:', err);
     await logError(
-      "Posts - Get Posts Error",
+      'Posts - Get Posts Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to get posts",
+      message: 'Failed to get posts',
     });
   }
 };
@@ -81,14 +81,14 @@ export const getPosts = async (req, res) => {
 // Create a new post with optional file uploads
 export const createPost = async (req, res) => {
   try {
-    const { title, content, tag = "global" } = req.body;
+    const { title, content, tag = 'global' } = req.body;
     const userId = req.user.data.id;
 
     // Validate required fields
     if (!title || !content) {
       return res.status(400).json({
         error: true,
-        message: "Title and content are required",
+        message: 'Title and content are required',
       });
     }
 
@@ -108,10 +108,10 @@ export const createPost = async (req, res) => {
           }
         }
       } catch (uploadError) {
-        console.error("File upload error:", uploadError);
+        console.error('File upload error:', uploadError);
         return res.status(500).json({
           error: true,
-          message: "Failed to upload files",
+          message: 'Failed to upload files',
         });
       }
     }
@@ -145,7 +145,7 @@ export const createPost = async (req, res) => {
         },
         files: {
           where: {
-            status: "visible",
+            status: 'visible',
           },
           select: {
             id: true,
@@ -159,28 +159,28 @@ export const createPost = async (req, res) => {
     });
 
     await logUserActivity(
-      "Posts - Created New Post",
+      'Posts - Created New Post',
       post.user.userId,
-      MODULE_TYPESCONTENTS,
+      MODULE_TYPES.CONTENTS,
       `Created post: "${title}" with tag: ${tag}`
     );
 
     res.status(201).json({
       error: false,
       data: post,
-      message: "Post created successfully",
+      message: 'Post created successfully',
     });
   } catch (err) {
-    console.error("Create post error:", err);
+    console.error('Create post error:', err);
     await logError(
-      "Posts - Create Post Error",
+      'Posts - Create Post Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to create post",
+      message: 'Failed to create post',
     });
   }
 };
@@ -190,7 +190,7 @@ export const updatePost = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, tag, status } = req.body;
-    const userId = req.user.data.id;
+    const userId = req.user.data.userId;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -203,15 +203,15 @@ export const updatePost = async (req, res) => {
     if (!existingPost) {
       return res.status(404).json({
         error: true,
-        message: "Post not found",
+        message: 'Post not found',
       });
     }
 
     // Check ownership (unless user is admin)
-    if (existingPost.userId !== userId && req.user.data.role !== "admin") {
+    if (existingPost.userId !== userId && req.user.data.role !== 'admin') {
       return res.status(403).json({
         error: true,
-        message: "Not authorized to update this post",
+        message: 'Not authorized to update this post',
       });
     }
 
@@ -237,7 +237,7 @@ export const updatePost = async (req, res) => {
         },
         files: {
           where: {
-            status: "visible",
+            status: 'visible',
           },
           select: {
             id: true,
@@ -251,28 +251,28 @@ export const updatePost = async (req, res) => {
     });
 
     await logUserActivity(
-      "Posts - Updated Post",
+      'Posts - Updated Post',
       userId,
-      MODULE_TYPESCONTENTS,
-      `Updated post: ${id}, Fields: ${Object.keys(updateData).join(", ")}`
+      MODULE_TYPES.CONTENTS,
+      `Updated post: ${id}, Fields: ${Object.keys(updateData).join(', ')}`
     );
 
     res.json({
       error: false,
       data: updatedPost,
-      message: "Post updated successfully",
+      message: 'Post updated successfully',
     });
   } catch (err) {
-    console.error("Update post error:", err);
+    console.error('Update post error:', err);
     await logError(
-      "Posts - Update Post Error",
+      'Posts - Update Post Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to update post",
+      message: 'Failed to update post',
     });
   }
 };
@@ -294,15 +294,15 @@ export const archivePost = async (req, res) => {
     if (!existingPost) {
       return res.status(404).json({
         error: true,
-        message: "Post not found",
+        message: 'Post not found',
       });
     }
 
     // Check ownership (unless user is admin)
-    if (existingPost.userId !== userId && req.user.data.role !== "admin") {
+    if (existingPost.userId !== userId && req.user.data.role !== 'admin') {
       return res.status(403).json({
         error: true,
-        message: "Not authorized to archive this post",
+        message: 'Not authorized to archive this post',
       });
     }
 
@@ -325,7 +325,7 @@ export const archivePost = async (req, res) => {
         },
         files: {
           where: {
-            status: "visible",
+            status: 'visible',
           },
           select: {
             id: true,
@@ -339,28 +339,28 @@ export const archivePost = async (req, res) => {
     });
 
     await logUserActivity(
-      "Posts - Archived Post",
+      'Posts - Archived Post',
       userId,
-      MODULE_TYPESCONTENTS,
+      MODULE_TYPES.CONTENTS,
       `Archived post: ${id}`
     );
 
     res.json({
       error: false,
       data: updatedPost,
-      message: "Post archived successfully",
+      message: 'Post archived successfully',
     });
   } catch (err) {
-    console.error("Archive post error:", err);
+    console.error('Archive post error:', err);
     await logError(
-      "Posts - Archive Post Error",
+      'Posts - Archive Post Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to archive post",
+      message: 'Failed to archive post',
     });
   }
 };
@@ -382,15 +382,15 @@ export const unarchivePost = async (req, res) => {
     if (!existingPost) {
       return res.status(404).json({
         error: true,
-        message: "Post not found",
+        message: 'Post not found',
       });
     }
 
     // Check ownership (unless user is admin)
-    if (existingPost.userId !== userId && req.user.data.role !== "admin") {
+    if (existingPost.userId !== userId && req.user.data.role !== 'admin') {
       return res.status(403).json({
         error: true,
-        message: "Not authorized to unarchive this post",
+        message: 'Not authorized to unarchive this post',
       });
     }
 
@@ -413,7 +413,7 @@ export const unarchivePost = async (req, res) => {
         },
         files: {
           where: {
-            status: "visible",
+            status: 'visible',
           },
           select: {
             id: true,
@@ -427,28 +427,28 @@ export const unarchivePost = async (req, res) => {
     });
 
     await logUserActivity(
-      "Posts - Unarchived Post",
+      'Posts - Unarchived Post',
       userId,
-      MODULE_TYPESCONTENTS,
+      MODULE_TYPES.CONTENTS,
       `Unarchived post: ${id}`
     );
 
     res.json({
       error: false,
       data: updatedPost,
-      message: "Post unarchived successfully",
+      message: 'Post unarchived successfully',
     });
   } catch (err) {
-    console.error("Unarchive post error:", err);
+    console.error('Unarchive post error:', err);
     await logError(
-      "Posts - Unarchive Post Error",
+      'Posts - Unarchive Post Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to unarchive post",
+      message: 'Failed to unarchive post',
     });
   }
 };
@@ -470,15 +470,15 @@ export const deletePost = async (req, res) => {
     if (!existingPost) {
       return res.status(404).json({
         error: true,
-        message: "Post not found",
+        message: 'Post not found',
       });
     }
 
     // Check ownership (unless user is admin)
-    if (existingPost.userId !== userId && req.user.data.role !== "admin") {
+    if (existingPost.userId !== userId && req.user.data.role !== 'admin') {
       return res.status(403).json({
         error: true,
-        message: "Not authorized to delete this post",
+        message: 'Not authorized to delete this post',
       });
     }
 
@@ -490,27 +490,27 @@ export const deletePost = async (req, res) => {
     });
 
     await logUserActivity(
-      "Posts - Deleted Post",
+      'Posts - Deleted Post',
       userId,
-      MODULE_TYPESCONTENTS,
+      MODULE_TYPES.CONTENTS,
       `Deleted post: ${id}`
     );
 
     res.json({
       error: false,
-      message: "Post deleted successfully",
+      message: 'Post deleted successfully',
     });
   } catch (err) {
-    console.error("Delete post error:", err);
+    console.error('Delete post error:', err);
     await logError(
-      "Posts - Delete Post Error",
+      'Posts - Delete Post Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to delete post",
+      message: 'Failed to delete post',
     });
   }
 };
@@ -532,15 +532,15 @@ export const addFilesToPost = async (req, res) => {
     if (!existingPost) {
       return res.status(404).json({
         error: true,
-        message: "Post not found",
+        message: 'Post not found',
       });
     }
 
     // Check ownership (unless user is admin)
-    if (existingPost.userId !== userId && req.user.data.role !== "admin") {
+    if (existingPost.userId !== userId && req.user.data.role !== 'admin') {
       return res.status(403).json({
         error: true,
-        message: "Not authorized to modify this post",
+        message: 'Not authorized to modify this post',
       });
     }
 
@@ -548,7 +548,7 @@ export const addFilesToPost = async (req, res) => {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         error: true,
-        message: "No files to upload",
+        message: 'No files to upload',
       });
     }
 
@@ -568,10 +568,10 @@ export const addFilesToPost = async (req, res) => {
         }
       }
     } catch (uploadError) {
-      console.error("File upload error:", uploadError);
+      console.error('File upload error:', uploadError);
       return res.status(500).json({
         error: true,
-        message: "Failed to upload files",
+        message: 'Failed to upload files',
       });
     }
 
@@ -596,7 +596,7 @@ export const addFilesToPost = async (req, res) => {
         },
         files: {
           where: {
-            status: "visible",
+            status: 'visible',
           },
           select: {
             id: true,
@@ -610,28 +610,28 @@ export const addFilesToPost = async (req, res) => {
     });
 
     await logUserActivity(
-      "Posts - Added Files to Post",
+      'Posts - Added Files to Post',
       userId,
-      MODULE_TYPESCONTENTS,
+      MODULE_TYPES.CONTENTS,
       `Added ${uploadedFiles.length} file(s) to post: ${id}`
     );
 
     res.json({
       error: false,
       data: updatedPost,
-      message: "Files added successfully",
+      message: 'Files added successfully',
     });
   } catch (err) {
-    console.error("Add files error:", err);
+    console.error('Add files error:', err);
     await logError(
-      "Posts - Add Files Error",
+      'Posts - Add Files Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to add files to post",
+      message: 'Failed to add files to post',
     });
   }
 };
@@ -653,48 +653,48 @@ export const deletePostFile = async (req, res) => {
     if (!existingPost) {
       return res.status(404).json({
         error: true,
-        message: "Post not found",
+        message: 'Post not found',
       });
     }
 
     // Check ownership (unless user is admin)
-    if (existingPost.userId !== userId && req.user.data.role !== "admin") {
+    if (existingPost.userId !== userId && req.user.data.role !== 'admin') {
       return res.status(403).json({
         error: true,
-        message: "Not authorized to modify this post",
+        message: 'Not authorized to modify this post',
       });
     }
 
     await prisma.post_files.update({
       where: { id: fileId },
       data: {
-        status: "deleted",
+        status: 'deleted',
         updatedAt: new Date(),
       },
     });
 
     await logUserActivity(
-      "Posts - Deleted File from Post",
+      'Posts - Deleted File from Post',
       userId,
-      MODULE_TYPESCONTENTS,
+      MODULE_TYPES.CONTENTS,
       `Deleted file ${fileId} from post: ${postId}`
     );
 
     res.json({
       error: false,
-      message: "File deleted successfully",
+      message: 'File deleted successfully',
     });
   } catch (err) {
-    console.error("Delete file error:", err);
+    console.error('Delete file error:', err);
     await logError(
-      "Posts - Delete File Error",
+      'Posts - Delete File Error',
       err,
       req.user?.data?.id || null,
-      MODULE_TYPESCONTENTS
+      MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
       error: true,
-      message: "Failed to delete file",
+      message: 'Failed to delete file',
     });
   }
 };
