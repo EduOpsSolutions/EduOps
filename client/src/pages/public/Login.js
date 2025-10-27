@@ -126,7 +126,7 @@ function Login() {
                   id="email"
                   name="email"
                   className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
-                  placeholder="User ID or Email"
+                  placeholder="Email"
                   onChange={handleEmailChange}
                 />
               </div>
