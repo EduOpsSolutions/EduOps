@@ -342,6 +342,7 @@ model fees {
   name      String
   type      FeeType
   isActive  Boolean  @default(true)
+  dueDate   DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
