@@ -250,17 +250,21 @@ export const documentHelpers = {
   // Download file helper
   downloadFile: async (url, filename) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      
-      const downloadUrl = window.URL.createObjectURL(blob);
+      if (!url) {
+        console.error('No URL provided for download');
+        return false;
+      }
+
+      // For Firebase URLs or external URLs, open in new tab
+      // This avoids CORS issues with direct blob downloads
       const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
+      link.href = url;
+      link.download = filename || 'download';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
       
       return true;
     } catch (error) {
