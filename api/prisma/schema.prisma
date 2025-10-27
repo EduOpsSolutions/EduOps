@@ -415,6 +415,7 @@ model document_template {
   downloadable Boolean           @default(true)
   price        DocumentPriceType @default(free)
   amount       Decimal?          @db.Decimal(10, 2)
+  uploadFile   String?           @db.LongText
   isActive     Boolean           @default(true)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
