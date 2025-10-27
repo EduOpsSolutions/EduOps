@@ -1,24 +1,24 @@
-import { create } from 'zustand';
-import createSearchStore from './searchStore';
-import { getCookieItem } from '../utils/jwt';
+import { create } from "zustand";
+import createSearchStore from "./searchStore";
+import { getCookieItem } from "../utils/jwt";
 
-
-const token = getCookieItem('token');
+// const token = getCookieItem('token'); // Removed stale token retrieval
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 // Fetch course-batch pairs
 const fetchCourseBatchPairs = async () => {
   try {
+    const token = getCookieItem("token");
     const response = await fetch(`${API_BASE_URL}/fees/course-batches`, {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching course-batch pairs:', error);
+    console.error("Error fetching course-batch pairs:", error);
     throw error;
   }
 };
@@ -26,16 +26,19 @@ const fetchCourseBatchPairs = async () => {
 // Fetch fees for a specific course and batch
 const fetchFees = async (courseId, batchId) => {
   try {
-    const token = getCookieItem('token');
-    const response = await fetch(`${API_BASE_URL}/fees?courseId=${courseId}&batchId=${batchId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    const token = getCookieItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/fees?courseId=${courseId}&batchId=${batchId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
-    });
-    if (!response.ok) throw new Error('Network response was not ok');
+    );
+    if (!response.ok) throw new Error("Network response was not ok");
     return await response.json();
   } catch (error) {
-    console.error('Error fetching fees:', error);
+    console.error("Error fetching fees:", error);
     throw error;
   }
 };
@@ -43,19 +46,19 @@ const fetchFees = async (courseId, batchId) => {
 // Edit a fee by ID
 const editFee = async (id, updatedData) => {
   try {
-    const token = getCookieItem('token');
+    const token = getCookieItem("token");
     const response = await fetch(`${API_BASE_URL}/fees/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(updatedData)
+      body: JSON.stringify(updatedData),
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) throw new Error("Network response was not ok");
     return await response.json();
   } catch (error) {
-    console.error('Error editing fee:', error);
+    console.error("Error editing fee:", error);
     throw error;
   }
 };
@@ -63,17 +66,17 @@ const editFee = async (id, updatedData) => {
 // Delete fee by ID
 const deleteFee = async (id) => {
   try {
-    const token = getCookieItem('token');
+    const token = getCookieItem("token");
     const response = await fetch(`${API_BASE_URL}/fees/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) throw new Error("Network response was not ok");
     return await response.json();
   } catch (error) {
-    console.error('Error deleting fee:', error);
+    console.error("Error deleting fee:", error);
     throw error;
   }
 };
@@ -83,22 +86,24 @@ const useFeesSearchStore = createSearchStore({
   defaultSearchParams: {
     courseName: "",
     batch: "",
-    year: ""
+    year: "",
   },
   searchableFields: ["name"],
   exactMatchFields: ["batch", "year"],
   initialItemsPerPage: 10,
   filterFunction: (data, params) => {
-    return data.filter(course => {
+    return data.filter((course) => {
       return (
-        (params.courseName === "" || 
-          course.name.toLowerCase().includes(params.courseName.toLowerCase())) &&
+        (params.courseName === "" ||
+          course.name
+            .toLowerCase()
+            .includes(params.courseName.toLowerCase())) &&
         (params.batch === "" || course.batch === params.batch) &&
         (params.year === "" || course.year === params.year)
       );
     });
   },
-  fetchData: fetchCourseBatchPairs
+  fetchData: fetchCourseBatchPairs,
 });
 
 const useFeesStore = create((set, get) => ({
@@ -115,7 +120,7 @@ const useFeesStore = create((set, get) => ({
 
   fetchFees: async (courseId, batchId) => {
     const fees = await fetchFees(courseId, batchId);
-    set({fees, originalFees: [...fees], editedFees: [...fees]});
+    set({ fees, originalFees: [...fees], editedFees: [...fees] });
   },
 
   openDeleteModal: (id) => set({ showDeleteModal: true, feeToDelete: id }),
@@ -134,7 +139,7 @@ const useFeesStore = create((set, get) => ({
     set({
       isEditMode: true,
       editedFees: [...fees],
-      originalFees: [...fees]
+      originalFees: [...fees],
     });
   },
 
@@ -147,33 +152,33 @@ const useFeesStore = create((set, get) => ({
   },
 
   handleAddFee: async (newFee) => {
-    const token = getCookieItem('token');
+    const token = getCookieItem("token");
     try {
       const response = await fetch(`${API_BASE_URL}/fees`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(newFee)
+        body: JSON.stringify(newFee),
       });
-      if (!response.ok) throw new Error('Failed to add fee');
+      if (!response.ok) throw new Error("Failed to add fee");
       const createdFee = await response.json();
       set((state) => ({
         fees: [...state.fees, createdFee],
-        showAddFeeModal: false
+        showAddFeeModal: false,
       }));
     } catch (error) {
-      console.error('Error adding fee:', error);
+      console.error("Error adding fee:", error);
       // Optionally, handle error state here
     }
   },
 
   handleInputChange: (id, field, value) => {
     set((state) => ({
-      editedFees: state.editedFees.map((fee) => 
+      editedFees: state.editedFees.map((fee) =>
         fee.id === id ? { ...fee, [field]: value } : fee
-      )
+      ),
     }));
   },
 
@@ -181,30 +186,30 @@ const useFeesStore = create((set, get) => ({
     set({ showSaveModal: true });
   },
 
-handleConfirmSave: async () => {
-  const { editedFees, originalFees } = get();
-  const token = getCookieItem('token');
-  try {
-    // Only update fees that have changed
-    for (const fee of editedFees) {
-      const payload = {
-        name: fee.name,
-        price: fee.price,
-        dueDate: fee.dueDate
-      };
-      await editFee(fee.id, payload);
+  handleConfirmSave: async () => {
+    const { editedFees, originalFees } = get();
+    const token = getCookieItem("token");
+    try {
+      // Only update fees that have changed
+      for (const fee of editedFees) {
+        const payload = {
+          name: fee.name,
+          price: fee.price,
+          dueDate: fee.dueDate,
+        };
+        await editFee(fee.id, payload);
+      }
+      set({
+        fees: [...editedFees],
+        isEditMode: false,
+        showSaveModal: false,
+        showSaveNotifyModal: true,
+        originalFees: [...editedFees],
+      });
+    } catch (error) {
+      console.error("Error saving fees:", error);
     }
-    set({
-      fees: [...editedFees],
-      isEditMode: false,
-      showSaveModal: false,
-      showSaveNotifyModal: true,
-      originalFees: [...editedFees]
-    });
-  } catch (error) {
-    console.error('Error saving fees:', error);
-  }
-},
+  },
 
   handleCancelSave: () => {
     set({ showSaveModal: false });
@@ -223,7 +228,7 @@ handleConfirmSave: async () => {
     set({
       editedFees: [...originalFees],
       isEditMode: false,
-      showDiscardModal: false
+      showDiscardModal: false,
     });
   },
 
@@ -234,12 +239,12 @@ handleConfirmSave: async () => {
   handleFieldUndo: (id, field) => {
     const { fees } = get();
     const originalFee = fees.find((fee) => fee.id === id);
-    
+
     if (originalFee) {
       set((state) => ({
         editedFees: state.editedFees.map((fee) =>
           fee.id === id ? { ...fee, [field]: originalFee[field] } : fee
-        )
+        ),
       }));
     }
   },
@@ -253,19 +258,19 @@ handleConfirmSave: async () => {
 
   handleDeleteFee: async (id) => {
     const { isEditMode } = get();
-    try{
+    try {
       await deleteFee(id);
       if (isEditMode) {
-      set((state) => ({
-        editedFees: state.editedFees.filter((fee) => fee.id !== id)
-      }));
-    } else {
-      set((state) => ({
-        fees: state.fees.filter((fee) => fee.id !== id)
-      }));
-    }
+        set((state) => ({
+          editedFees: state.editedFees.filter((fee) => fee.id !== id),
+        }));
+      } else {
+        set((state) => ({
+          fees: state.fees.filter((fee) => fee.id !== id),
+        }));
+      }
     } catch (error) {
-      console.error('Error deleting fee:', error);
+      console.error("Error deleting fee:", error);
     }
   },
 
@@ -277,7 +282,7 @@ handleConfirmSave: async () => {
       showAddFeeModal: false,
       showDiscardModal: false,
       showSaveModal: false,
-      showSaveNotifyModal: false
+      showSaveNotifyModal: false,
     });
   },
 
@@ -290,9 +295,9 @@ handleConfirmSave: async () => {
       showAddFeeModal: false,
       showDiscardModal: false,
       showSaveModal: false,
-      showSaveNotifyModal: false
+      showSaveNotifyModal: false,
     });
-  }
+  },
 }));
 
 export { useFeesSearchStore, useFeesStore };
