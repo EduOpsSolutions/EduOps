@@ -11,11 +11,9 @@ function EnrollmentProgressBar({
     'Enrollment Form',
     'Verification',
     'Payment',
-    'Verification',
-    ''
+    'Payment Verification',
+    'Complete'
   ];
-
-  const step4Completed = isStepCompleted(4);
 
   return (
     <div className="flex flex-col w-full max-w-5xl mx-auto">
@@ -38,8 +36,8 @@ function EnrollmentProgressBar({
           <div className={`hidden sm:block absolute top-5 lg:top-6 left-10 lg:left-12 right-0 h-1 bg-green-100 z-0`}></div>
         </li>
 
-        {/* Steps 2-4 */}
-        {[2, 3, 4].map(stepNumber => (
+        {/* Steps 2-5 */}
+        {[2, 3, 4, 5].map(stepNumber => (
           <li key={stepNumber} className="flex items-start gap-x-4 sm:block sm:shrink relative pb-2 sm:pb-0 sm:flex-1">
             <div className="flex-shrink-0">
               <div className={`w-10 h-10 flex items-center justify-center rounded-full lg:h-12 lg:w-12 relative z-10 ${(stepNumber === 2 || stepNumber === 4) && isStepRejected && isStepRejected(stepNumber) ? 'bg-red-100' :
@@ -78,34 +76,12 @@ function EnrollmentProgressBar({
             {stepNumber < 5 && (
               <div className={`hidden sm:block absolute top-5 lg:top-6 left-10 lg:left-12 right-0 h-1 ${stepNumber === 2 ? (isStepCurrent(3) || isStepCompleted(3) ? 'bg-green-100' : 'bg-gray-300') :
                 stepNumber === 3 ? (isStepCurrent(4) || isStepCompleted(4) ? 'bg-green-100' : 'bg-gray-300') :
-                  stepNumber === 4 ? (isStepCompleted(4) ? 'bg-green-100' : 'bg-gray-300') :
+                  stepNumber === 4 ? (isStepCurrent(5) || isStepCompleted(5) ? 'bg-green-100' : 'bg-gray-300') :
                     'bg-gray-300'
                 } z-0`}></div>
             )}
           </li>
         ))}
-
-        {/* Step 5 */}
-        <li className="flex items-start gap-x-4 sm:block sm:shrink relative">
-          <div className="flex-shrink-0">
-            <div className={`w-10 h-10 flex items-center justify-center rounded-full lg:h-12 lg:w-12 relative z-10 ${(step4Completed || isStepCompleted(5)) ? 'bg-green-100' :
-              isStepCurrent(5) ? 'bg-yellow-100' : 'bg-gray-100'
-              }`}>
-              <EnrollmentStepIcon
-                stepNumber={5}
-                isCompleted={step4Completed || isStepCompleted(5)}
-                isCurrent={isStepCurrent(5)}
-              />
-            </div>
-          </div>
-          <div className="flex-1 sm:mt-2.5">
-            <span className={`block text-sm font-medium ${(step4Completed || isStepCompleted(5)) ? 'text-green-600' :
-              isStepCurrent(5) ? 'text-yellow-600' : 'text-gray-500'
-              }`}>
-              Complete
-            </span>
-          </div>
-        </li>
       </ol>
     </div>
   );

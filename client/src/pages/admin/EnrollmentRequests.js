@@ -189,12 +189,14 @@ function EnrollmentRequests() {
           setSelectedEnrollmentRequest(null);
         }}
         handleSave={(updatedData) => {
-          // Update the local state with the new data
           setEnrollmentRequests(prev => 
             prev.map(request => 
               request.id === updatedData.id ? updatedData : request
             )
           );
+          if (selectedEnrollmentRequest?.id === updatedData.id) {
+            setSelectedEnrollmentRequest(updatedData);
+          }
           setShowEnrollmentDetailsModal(false);
         }}
         onEnrollmentUpdate={fetchEnrollmentRequests}

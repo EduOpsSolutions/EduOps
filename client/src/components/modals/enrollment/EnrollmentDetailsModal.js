@@ -2,13 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../../../utils/axios";
 import Swal from "sweetalert2";
 import { getCookieItem } from "../../../utils/jwt";
-import ModalTextField from "../../form/ModalTextField";
-import ModalSelectField from "../../form/ModalSelectField";
-import PrimaryButton from "../../buttons/PrimaryButton";
-import { FaEye } from "react-icons/fa";
 import CommonModal from "../common/CommonModal";
 import { trackEnrollment } from "../../../utils/enrollmentApi";
 import useEnrollmentStore from "../../../stores/enrollmentProgressStore";
+import EnrollmentFormFields from "./EnrollmentFormFields";
 
 export default function EnrollmentDetailsModal({
   data,
@@ -88,6 +85,44 @@ export default function EnrollmentDetailsModal({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Validate enrollment status changes before updating form data
+    if (name === "enrollmentStatus") {
+      const currentStatus = formData?.enrollmentStatus || "pending";
+      const newStatus = value;
+      
+      // Define step progression order
+      const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
+      const currentIndex = statusOrder.indexOf(currentStatus);
+      const newIndex = statusOrder.indexOf(newStatus);
+      
+      // Check if trying to advance to step 2 onwards without account
+      if (newIndex >= 1 && !(formData?.userId || formData?.studentId || emailExists) && newStatus !== "rejected") {
+        Swal.fire({
+          title: "Account Required",
+          text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
+          icon: "warning",
+          confirmButtonColor: "#992525"
+        });
+        return;
+      }
+      
+      // Prevent skipping steps - must follow sequential order (1-5)
+      if (newIndex > currentIndex + 1 && newStatus !== "rejected") {
+        const currentStep = currentIndex + 1;
+        const nextStep = currentIndex + 2;
+        const targetStep = newIndex + 1;
+        
+        Swal.fire({
+          title: "Cannot Skip Steps",
+          text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
+          icon: "warning",
+          confirmButtonColor: "#992525"
+        });
+        return;
+      }
+    }
+    
     if (name === "status" && value === "deleted") {
       setFormData({
         ...formData,
@@ -175,17 +210,6 @@ export default function EnrollmentDetailsModal({
     });
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const getUserInitials = (firstName, lastName) => {
     return `${firstName?.charAt(0) || ""}${
       lastName?.charAt(0) || ""
@@ -246,7 +270,6 @@ export default function EnrollmentDetailsModal({
 
     setIsVerifyingPayment(true);
     try {
-      // Update enrollment status to approved
       const updatedFormData = { ...formData, enrollmentStatus: 'approved' };
       
       await axiosInstance.put(
@@ -262,12 +285,10 @@ export default function EnrollmentDetailsModal({
       // Update local form data
       setFormData(updatedFormData);
       
-      // Notify parent component to refresh table data
       if (onEnrollmentUpdate) {
         onEnrollmentUpdate();
       }
       
-      // Refresh enrollment data
       try {
         const enrollmentResponse = await trackEnrollment(formData.enrollmentId, formData.preferredEmail);
         if (!enrollmentResponse.error) {
@@ -277,7 +298,6 @@ export default function EnrollmentDetailsModal({
         console.error('Failed to refresh enrollment data:', refreshError);
       }
       
-      // Close preview modal
       setShowPreview(false);
       setPreviewFile({ url: null, title: "" });
       
@@ -345,6 +365,7 @@ export default function EnrollmentDetailsModal({
   };
 
   const handleFormSave = async () => {
+    
     if (!hasChanges) {
       Swal.fire({
         title: 'No Changes',
@@ -353,6 +374,41 @@ export default function EnrollmentDetailsModal({
         confirmButtonColor: '#992525'
       });
       return;
+    }
+
+    // Validate step progression before saving
+    const currentStatus = originalData?.enrollmentStatus || "pending";
+    const newStatus = formData?.enrollmentStatus;
+    
+    if (newStatus && newStatus !== "rejected") {
+      const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
+      const currentIndex = statusOrder.indexOf(currentStatus);
+      const newIndex = statusOrder.indexOf(newStatus);
+      
+      // Check if trying to skip steps
+      if (newIndex > currentIndex + 1) {
+        const currentStep = currentIndex + 1;
+        const nextStep = currentIndex + 2;
+        const targetStep = newIndex + 1;
+        
+        Swal.fire({
+          title: "Cannot Skip Steps",
+          text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
+          icon: "warning",
+          confirmButtonColor: "#992525"
+        });
+        return;
+      }
+      
+      if (newIndex >= 1 && !(formData?.userId || formData?.studentId || emailExists)) {
+        Swal.fire({
+          title: "Account Required",
+          text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
+          icon: "warning",
+          confirmButtonColor: "#992525"
+        });
+        return;
+      }
     }
 
     const result = await Swal.fire({
@@ -382,9 +438,20 @@ export default function EnrollmentDetailsModal({
         }
       );
       
-        await handleSave(formData);
+      // Fetch the updated enrollment data to get the latest status
+      const updatedResponse = await axiosInstance.post('/enrollment/track', {
+        enrollmentId: formData.enrollmentId
+      }, {
+        headers: {
+          Authorization: `Bearer ${getCookieItem("token")}`,
+        },
+      });
+      
+      // Use the updated data from the API response
+      const updatedEnrollmentData = updatedResponse.data?.data || updatedResponse.data;
+      
+        await handleSave(updatedEnrollmentData);
         
-        // Notify parent component to refresh table data
         if (onEnrollmentUpdate) {
           onEnrollmentUpdate();
         }
@@ -505,256 +572,14 @@ export default function EnrollmentDetailsModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Edit Information Form */}
-            <div className="xl:col-span-2">
-              <h3 className="text-lg font-semibold mb-4">
-                Personal Information
-              </h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="First Name"
-                    name="firstName"
-                    value={formData?.firstName || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <ModalTextField
-                    label="Middle Name"
-                    name="middleName"
-                    value={formData?.middleName || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="Last Name"
-                    name="lastName"
-                    value={formData?.lastName || ""}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="Preferred Email Address"
-                    name="preferredEmail"
-                    type="email"
-                    value={formData?.preferredEmail || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <ModalTextField
-                    label="Alternative Email Address"
-                    name="altEmail"
-                    type="email"
-                    value={formData?.altEmail || ""}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="Preferred Contact Number"
-                    name="contactNumber"
-                    type="string"
-                    value={formData?.contactNumber || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <ModalTextField
-                    label="Alternative Contact Number"
-                    name="altContactNumber"
-                    type="string"
-                    value={formData?.altContactNumber || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="Address"
-                    name="address"
-                    type="text"
-                    value={formData?.address || ""}
-                    onChange={handleInputChange}
-                  />
-                  <ModalTextField
-                    label="Birthday"
-                    name="birthday"
-                    type="date"
-                    value={
-                      formData?.birthDate &&
-                      !isNaN(new Date(formData.birthDate).getTime())
-                        ? new Date(formData.birthDate)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    onChange={handleInputChange}
-                  />
-                  <ModalTextField
-                    label="Gender"
-                    name="gender"
-                    type="option"
-                    value={formData?.gender || ""}
-                    onChange={handleInputChange}
-                    required
-                    options={[
-                      { value: "male", label: "Male" },
-                      { value: "female", label: "Female" },
-                    ]}
-                  />
-                  <ModalSelectField
-                    label="Enrollment Status"
-                    name="enrollmentStatus"
-                    value={formData?.enrollmentStatus || "Pending"}
-                    onChange={handleInputChange}
-                    options={[
-                      { value: "pending", label: "1. Pending Admin Review" },
-                      { value: "verified", label: "2. Verified (Account Created)" },
-                      { value: "payment_pending", label: "3. Payment Pending" },
-                      { value: "approved", label: "4. Payment Verified" },
-                      { value: "completed", label: "5. Enrollment Complete" },
-                      { value: "rejected", label: "Rejected" },
-                    ]}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="Father's Name"
-                    name="fatherName"
-                    type="string"
-                    value={formData?.fatherName || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <ModalTextField
-                    label="Father's Contact Number"
-                    name="fatherContact"
-                    type="string"
-                    value={formData?.fatherContact || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModalTextField
-                    label="Mother's Maiden Name"
-                    name="motherName"
-                    type="string"
-                    value={formData?.motherName || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <ModalTextField
-                    label="Mother's Contact Number"
-                    name="motherContact"
-                    type="string"
-                    value={formData?.motherContact || ""}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Account Information */}
-            <div className="xl:col-span-1">
-              <h3 className="text-lg font-semibold mb-4">
-                Enrollment Information
-              </h3>
-              <div className="space-y-3">
-                <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                  <label className="text-sm font-medium text-gray-600">
-                    Enrollment ID
-                  </label>
-                  <p className="text-xs sm:text-sm font-mono break-all">
-                    {formData?.enrollmentId}
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                  <label className="text-sm font-medium text-gray-600">
-                    Created
-                  </label>
-                  <p className="text-xs sm:text-sm break-words">
-                    {formatDate(formData?.createdAt)}
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                  <label className="text-sm font-medium text-gray-600">
-                    Updated
-                  </label>
-                  <p className="text-xs sm:text-sm break-words">
-                    {formatDate(formData?.updatedAt)}
-                  </p>
-                </div>
-                {formData?.deletedAt && (
-                  <div className="bg-red-50 rounded p-3 border border-red-200">
-                    <label className="text-sm font-medium text-red-600">
-                      Deleted
-                    </label>
-                    <p className="text-xs sm:text-sm text-red-700 break-words">
-                      {formatDate(formData?.deletedAt)}
-                    </p>
-                  </div>
-                )}
-
-                <div className="bg-gray-50 rounded p-3 border border-gray-200">
-                  <label className="text-sm font-medium text-gray-600">
-                    Documents
-                  </label>
-                  <div className="flex flex-row space-x-4 items-center my-2">
-                    <PrimaryButton
-                      className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
-                      onClick={() =>
-                        handlePreviewFile(
-                          formData?.validIdPath,
-                          "Valid ID Preview"
-                        )
-                      }
-                      disabled={!formData?.validIdPath}
-                    >
-                      <FaEye />
-                    </PrimaryButton>
-                    <p>Valid ID</p>
-                  </div>
-
-                  <div className="flex flex-row space-x-4 items-center my-2">
-                    <PrimaryButton
-                      className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
-                      onClick={() =>
-                        handlePreviewFile(
-                          formData?.idPhotoPath,
-                          "ID Photo Preview"
-                        )
-                      }
-                      disabled={!formData?.idPhotoPath}
-                    >
-                      <FaEye />
-                    </PrimaryButton>
-                    <p>ID Photo</p>
-                  </div>
-
-                  <div className="flex flex-row space-x-4 items-center my-2">
-                    <PrimaryButton
-                      className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
-                      onClick={handlePreviewPaymentProof}
-                    >
-                      <FaEye />
-                    </PrimaryButton>
-                    <p>Proof of Payment</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <EnrollmentFormFields
+            formData={formData}
+            originalData={originalData}
+            emailExists={emailExists}
+            onInputChange={handleInputChange}
+            onPreviewFile={handlePreviewFile}
+            onPreviewPaymentProof={handlePreviewPaymentProof}
+          />
         </div>
 
         <div className="flex justify-center mt-6 sticky bottom-0 bg-white-yellow-tone p-4 border-t">
