@@ -145,26 +145,30 @@ function PaymentForm() {
         });
 
         if (successResult.isConfirmed) {
-          const paymentData = preparePaymentData();
-          const feeLabel = getFeeTypeLabel(paymentData.feeType);
-          const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
-
-          localStorage.setItem("totalPayment", paymentData.amount.toString());
-          
-          // Navigate to the custom payment page
-          navigate("/payment", {
-            state: {
-              amount: paymentData.amount,
-              description: description,
-              studentInfo: {
-                firstName: paymentData.firstName,
-                lastName: paymentData.lastName,
-                email: paymentData.email,
-                phone: paymentData.phoneNumber,
-                studentId: paymentData.studentId
+          const paymentId = result?.data?.data?.paymentId;
+          if (paymentId) {
+            const checkoutUrl = `${window.location.origin}/payment?paymentId=${paymentId}`;
+            window.open(checkoutUrl, '_blank');
+          } else {
+  
+            const paymentData = preparePaymentData();
+            const feeLabel = getFeeTypeLabel(paymentData.feeType);
+            const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
+            localStorage.setItem("totalPayment", paymentData.amount.toString());
+            navigate("/payment", {
+              state: {
+                amount: paymentData.amount,
+                description: description,
+                studentInfo: {
+                  firstName: paymentData.firstName,
+                  lastName: paymentData.lastName,
+                  email: paymentData.email,
+                  phone: paymentData.phoneNumber,
+                  studentId: paymentData.studentId
+                }
               }
-            }
-          });
+            });
+          }
         }
         
         resetForm();

@@ -276,8 +276,7 @@ const sendPaymentLinkEmail = async (req, res) => {
     
     if (result.success) {
       return sendSuccess(res, { 
-        checkoutID: result.checkoutID,
-        checkoutUrl: result.checkoutUrl 
+        paymentId: result.paymentId
       }, result.message, 200);
     } else {
       return sendError(res, result.message, 500, result.error);

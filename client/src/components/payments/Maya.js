@@ -1,16 +1,23 @@
 import React, { useState } from "react";
 import styles from "../../styles/Payment.module.css";
 
-const Maya = ({ amount, description, userId, firstName, lastName, userEmail, onPaymentSuccess, onPaymentError }) => {
+const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isLocked, onPaymentSuccess, onPaymentError }) => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const onSubmit = async (event) => {
     event.preventDefault();
+    if (isLocked) return;
     setIsProcessing(true);
+    if (!phone || phone.length < 11) {
+      setIsProcessing(false);
+      setPhoneError("Phone number must be at least 11 digits.");
+      return;
+    }
     
     try {
       console.log('Starting Maya payment with traditional PIPM workflow...');
@@ -161,10 +168,20 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, onP
             id="phone"
             placeholder="09xxxxxxxxx"
             className={styles.input}
+            type="tel"
+            inputMode="numeric"
+            maxLength="15"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 15);
+              setPhone(digits);
+              if (digits.length >= 11) setPhoneError("");
+            }}
             required
           />
+          {phoneError && (
+            <small style={{ color: '#b71c1c' }}>{phoneError}</small>
+          )}
         </div>
         <div className={styles.formField}>
           <label htmlFor="email">Email:</label>
@@ -178,8 +195,8 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, onP
             required
           />
         </div>
-        <button type="submit" className={styles.payButton} disabled={isProcessing}>
-          {isProcessing ? "Processing..." : "Pay with Maya"}
+        <button type="submit" className={styles.payButton} disabled={isProcessing || isLocked}>
+          {isLocked ? "Payment Locked" : isProcessing ? "Processing..." : "Pay with Maya"}
         </button>
         <p>{paymentStatus}</p>
       </form>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import styles from "../../styles/Payment.module.css";
 
-const CreditCard = ({ amount, description, userId, firstName, lastName, userEmail, onPaymentSuccess, onPaymentError }) => {
+const CreditCard = ({ amount, description, userId, firstName, lastName, userEmail, isLocked, onPaymentSuccess, onPaymentError }) => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -214,6 +214,7 @@ const CreditCard = ({ amount, description, userId, firstName, lastName, userEmai
 
   const onSubmit = async (event) => {
     event.preventDefault();
+    if (isLocked) return;
     setIsProcessing(true);
     
     try {
@@ -356,8 +357,8 @@ const CreditCard = ({ amount, description, userId, firstName, lastName, userEmai
             required
           />
         </div>
-        <button type="submit" className={styles.payButton} disabled={isProcessing}>
-          {isProcessing ? "Processing..." : "Pay with Card"}
+        <button type="submit" className={styles.payButton} disabled={isProcessing || isLocked}>
+          {isLocked ? "Payment Locked" : isProcessing ? "Processing..." : "Pay with Card"}
         </button>
         <p>{paymentStatus}</p>
       </form>
