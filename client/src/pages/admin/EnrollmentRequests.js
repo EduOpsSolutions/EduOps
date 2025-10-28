@@ -68,20 +68,21 @@ function EnrollmentRequests() {
       const response = await axiosInstance.get('/academic-periods');
       const now = new Date();
       
-      const ongoingPeriods = response.data.filter(period => {
-        const now = new Date();
-        const startDate = new Date(period.enrollmentOpenAt);
-        const endDate = new Date(period.enrollmentCloseAt);
-        return !period.isEnrollmentClosed && now >= startDate && now <= endDate;
-        //return period.status !== 'ended' && now >= startDate && now <= endDate;
+      // Only periods with enrollmentStatus 'open' and not closed
+      const openPeriods = response.data.filter(period => {
+        return (
+          (period.enrollmentStatus && period.enrollmentStatus.toLowerCase() === 'open') &&
+          !period.isEnrollmentClosed
+        );
       });
-      
+      setActivePeriods(openPeriods);
+
+      // All periods for info display
       const allPeriods = response.data
         .filter(period => !period.deletedAt)
         .map(period => {
           const startDate = new Date(period.startAt);
           const endDate = new Date(period.endAt);
-          
           let status;
           if (period.status === 'ended') {
             status = 'Ended';
@@ -92,18 +93,19 @@ function EnrollmentRequests() {
           } else {
             status = 'Ended';
           }
-          
           return { ...period, calculatedStatus: status };
         })
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      
-      // Set the most recent period as current info
-      if (allPeriods.length > 0) {
-        const currentPeriod = allPeriods.find(p => p.calculatedStatus === 'Ongoing') || allPeriods[0];
-        setCurrentPeriodInfo(currentPeriod);
+
+      // Set the next available open period as current info
+      if (openPeriods.length > 0) {
+        setCurrentPeriodInfo(openPeriods[0]);
+      } else if (allPeriods.length > 0) {
+        // fallback to most recent period
+        setCurrentPeriodInfo(allPeriods[0]);
+      } else {
+        setCurrentPeriodInfo(null);
       }
-      
-      setActivePeriods(ongoingPeriods);
     } catch (error) {
       console.error('Error fetching active periods:', error);
     }
@@ -432,9 +434,9 @@ function EnrollmentRequests() {
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.courses || 'N/A'}
+                                title={request.coursesToEnroll || 'N/A'}
                               >
-                                {request.courses || 'N/A'}
+                                {request.coursesToEnroll || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
@@ -464,9 +466,9 @@ function EnrollmentRequests() {
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.phoneNumber || 'N/A'}
+                                title={request.contactNumber || 'N/A'}
                               >
-                                {request.phoneNumber || 'N/A'}
+                                {request.contactNumber || 'N/A'}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">

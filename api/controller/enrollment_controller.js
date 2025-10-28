@@ -693,6 +693,27 @@ const updateEnrollmentStatus = async (req, res) => {
   }
 };
 
+// Public: Check if email exists in enrollment requests
+const checkEmailExists = async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.status(400).json({ exists: false, error: 'Missing email parameter' });
+  }
+  try {
+    const found = await prisma.enrollment_request.findFirst({
+      where: {
+        OR: [
+          { preferredEmail: email },
+          { altEmail: email }
+        ]
+      }
+    });
+    res.json({ exists: !!found });
+  } catch (e) {
+    res.status(500).json({ exists: false, error: 'Failed to check email' });
+  }
+};
+
 // Helper function to update enrollment progress based on status
 const trackEnrollmentProgress = async (enrollmentRequest) => {
   const { enrollmentStatus } = enrollmentRequest;
@@ -881,4 +902,5 @@ export {
   updateEnrollmentPaymentProof,
   updateEnrollmentStatus,
   updateEnrollment,
+  checkEmailExists,
 };
