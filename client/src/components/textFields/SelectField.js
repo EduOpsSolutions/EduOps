@@ -19,7 +19,7 @@ const SelectField = ({ name, id, label, required, options, onChange, defaultValu
                     Select an option
                 </option>
                 {options.map((option, index) => (
-                    <option key={index} value={option.value}>
+                    <option key={index} value={option.value} disabled={option.disabled}>
                         {option.label}
                     </option>
                 ))}
