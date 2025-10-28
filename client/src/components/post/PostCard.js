@@ -239,8 +239,8 @@ const PostCard = ({
             text: 'Are you sure you want to delete this post? This action cannot be undone.',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
+            confirmButtonColor: '#992525', 
+            cancelButtonColor: '#6b7280', 
             confirmButtonText: 'Yes, delete it!',
             cancelButtonText: 'Cancel',
             reverseButtons: true
@@ -252,6 +252,7 @@ const PostCard = ({
                 title: 'Deleted!',
                 text: 'The post has been deleted successfully.',
                 icon: 'success',
+                confirmButtonColor: '#890E07', 
                 timer: 2000,
                 showConfirmButton: false
             });

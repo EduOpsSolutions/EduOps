@@ -81,6 +81,7 @@ const EditDocumentModal = ({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const changed = hasChanges();
         try {
             setLoading(true);
 
@@ -100,6 +101,16 @@ const EditDocumentModal = ({
                 await onUpdateDocument(documentData, uploadedFile);
             }
 
+            if (changed) {
+                Swal.fire({
+                    title: 'Saved!',
+                    text: 'Your changes have been saved successfully.',
+                    icon: 'success',
+                    confirmButtonColor: '#890E07',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
             onClose();
         } catch (error) {
             setError(error.message || "Failed to update document. Please try again.");
@@ -148,8 +159,8 @@ const EditDocumentModal = ({
                 showCancelButton: true,
                 confirmButtonText: 'No, Keep Editing',
                 cancelButtonText: 'Yes, Discard Changes',
-                confirmButtonColor: '#6b7280',
-                cancelButtonColor: '#992525',
+                confirmButtonColor: '#992525',
+                cancelButtonColor: '#6B7280',
             }).then((result) => {
                 if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
                     onClose();

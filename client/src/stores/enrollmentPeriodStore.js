@@ -4,25 +4,21 @@ import createSearchStore from './searchStore';
 
 export const useEnrollmentPeriodSearchStore = createSearchStore({
   defaultSearchParams: {
-    periodName: '',
     batch: '',
     year: '',
-    status: '',
+    batchStatus: '',
+    enrollmentStatus: '',
   },
   initialItemsPerPage: 10,
   showResultsOnLoad: true,
   filterFunction: (data, searchParams) => {
     return data.filter((period) => {
-      return (
-        (searchParams.batch === '' ||
-          period.batchName.includes(searchParams.batch)) &&
-        (searchParams.year === '' ||
-          new Date(period.startAt)
-            .getFullYear()
-            .toString()
-            .includes(searchParams.year)) &&
-        (searchParams.status === '' || period.status === searchParams.status)
-      );
+      // AND logic: all non-empty fields must match
+      if (searchParams.batch && !(period.batchName || '').toLowerCase().includes(searchParams.batch.toLowerCase())) return false;
+      if (searchParams.year && !(period.year || '').toString().includes(searchParams.year.toString())) return false;
+      if (searchParams.batchStatus && (period.status || '').toLowerCase() !== searchParams.batchStatus.toLowerCase()) return false;
+      if (searchParams.enrollmentStatus && (period.enrollmentStatus || '').toLowerCase() !== searchParams.enrollmentStatus.toLowerCase()) return false;
+      return true;
     });
   },
 });
@@ -170,21 +166,18 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
 
   deleteCourse: async (courseId) => {
     const { selectedPeriod, fetchPeriodCourses } = get();
-
-    if (window.confirm('Are you sure you want to delete this course?')) {
-      try {
-        set({ loading: true });
-        await axiosInstance.delete(
-          `/academic-period-courses/${selectedPeriod.id}/courses/${courseId}`
-        );
-        await fetchPeriodCourses();
-        set({ error: '' });
-      } catch (error) {
-        console.error('Failed to delete course:', error);
-        set({ error: 'Failed to delete course. Please try again.' });
-      } finally {
-        set({ loading: false });
-      }
+    try {
+      set({ loading: true });
+      await axiosInstance.delete(
+        `/academic-period-courses/${selectedPeriod.id}/courses/${courseId}`
+      );
+      await fetchPeriodCourses();
+      set({ error: '' });
+    } catch (error) {
+      console.error('Failed to delete course:', error);
+      set({ error: 'Failed to delete course. Please try again.' });
+    } finally {
+      set({ loading: false });
     }
   },
 

@@ -160,7 +160,8 @@ function PaymentForm() {
                 firstName: paymentData.firstName,
                 lastName: paymentData.lastName,
                 email: paymentData.email,
-                phone: paymentData.phoneNumber
+                phone: paymentData.phoneNumber,
+                studentId: paymentData.studentId
               }
             }
           });

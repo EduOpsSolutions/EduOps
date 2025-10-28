@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axiosInstance from '../../../utils/axios';
-import DiscardChangesModal from '../common/DiscardChangesModal';
-import ModalTextField from '../../form/ModalTextField';
-import ModalSelectField from '../../form/ModalSelectField';
+import React, { useState, useEffect } from "react";
+import axiosInstance from "../../../utils/axios";
+import Swal from "sweetalert2";
+import ModalTextField from "../../form/ModalTextField";
+import ModalSelectField from "../../form/ModalSelectField";
 
 function CreateCourseModal({
   setCreateCourseModal,
@@ -11,54 +11,22 @@ function CreateCourseModal({
   isLocked = false,
 }) {
   const [formData, setFormData] = useState({
-    name: '',
-    maxNumber: 30,
-    visibility: 'hidden',
-    description: '',
-    price: '',
-    scheduleDays: [],
-    scheduleTime: '',
+    name: "",
+    visibility: "hidden",
+    price: "",
   });
 
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [isDaysDropdownOpen, setIsDaysDropdownOpen] = useState(false);
-  const daysDropdownRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        daysDropdownRef.current &&
-        !daysDropdownRef.current.contains(event.target)
-      ) {
-        setIsDaysDropdownOpen(false);
-      }
-    };
-
-    if (isDaysDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isDaysDropdownOpen]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!create_course_modal) {
-      setShowDiscardModal(false);
       setFormData({
-        name: '',
-        maxNumber: 30,
-        visibility: 'hidden',
-        description: '',
-        price: '',
-        scheduleDays: [],
-        scheduleTime: '',
+        name: "",
+        visibility: "hidden",
+        price: "",
       });
-      setError('');
+      setError("");
     }
   }, [create_course_modal]);
 
@@ -66,45 +34,18 @@ function CreateCourseModal({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'maxNumber' ? parseInt(value) || 0 : value,
+      [name]: value,
     }));
-    if (error) setError('');
-  };
-
-  // Helper function to sort days by week order
-  const sortDaysByWeekOrder = (days) => {
-    const weekOrder = ['M', 'T', 'W', 'TH', 'F', 'SAT', 'SUN'];
-    return [...days].sort(
-      (a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b)
-    );
-  };
-
-  // Handle day selection with auto-sorting
-  const handleDayToggle = (day) => {
-    setFormData((prev) => {
-      const currentDays = prev.scheduleDays || [];
-      const newDays = currentDays.includes(day)
-        ? currentDays.filter((d) => d !== day)
-        : [...currentDays, day];
-      return {
-        ...prev,
-        scheduleDays: sortDaysByWeekOrder(newDays),
-      };
-    });
-    if (error) setError('');
+    if (error) setError("");
   };
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError('Course name is required');
-      return false;
-    }
-    if (formData.maxNumber <= 0) {
-      setError('Number of students must be greater than 0');
+      setError("Course name is required");
       return false;
     }
     if (!formData.price || parseFloat(formData.price) < 0) {
-      setError('Valid price is required');
+      setError("Valid price is required");
       return false;
     }
     return true;
@@ -115,40 +56,52 @@ function CreateCourseModal({
 
     if (!validateForm()) return;
 
+    if (hasChanges()) {
+      const result = await Swal.fire({
+        title: "Create Course?",
+        text: "Do you want to create this course?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#890E07",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Yes, create",
+        cancelButtonText: "Cancel",
+        reverseButtons: true,
+      });
+      if (!result.isConfirmed) return;
+    }
+
     try {
       setLoading(true);
-      setError('');
-
-      const scheduleDaysString = formData.scheduleDays.join('');
+      setError("");
 
       const payload = {
         name: formData.name.trim(),
-        maxNumber: parseInt(formData.maxNumber),
         visibility: formData.visibility,
-        description: formData.description.trim(),
         price: parseFloat(formData.price),
-        schedule:
-          scheduleDaysString && formData.scheduleTime.trim()
-            ? {
-                days: scheduleDaysString,
-                time: formData.scheduleTime.trim(),
-              }
-            : null,
       };
 
-      const response = await axiosInstance.post('/courses/create', payload);
-      console.log('Course created:', response.data);
+      const response = await axiosInstance.post("/courses/create", payload);
+      console.log("Course created:", response.data);
 
       await fetchCourses();
+      Swal.fire({
+        title: "Created!",
+        text: "The course has been created successfully.",
+        icon: "success",
+        confirmButtonColor: "#890E07",
+        timer: 2000,
+        showConfirmButton: false,
+      });
       setCreateCourseModal(false);
     } catch (error) {
       console.error(
-        'Failed to create course: ',
+        "Failed to create course: ",
         error.response?.data || error.message
       );
       setError(
         error.response?.data?.message ||
-          'Failed to create course. Please try again.'
+          "Failed to create course. Please try again."
       );
     } finally {
       setLoading(false);
@@ -157,35 +110,38 @@ function CreateCourseModal({
 
   const hasChanges = () => {
     return Object.entries(formData).some(([key, value]) => {
-      if (key === 'maxNumber') return value !== 30;
-      if (key === 'visibility') return value !== 'hidden';
-      if (key === 'scheduleDays') return value.length > 0;
-      return value.toString().trim() !== '';
+      if (key === "visibility") return value !== "hidden";
+      return value.toString().trim() !== "";
     });
   };
 
   const handleClose = () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      Swal.fire({
+        title: "Discard Changes?",
+        text: "You have unsaved changes. Do you want to discard them?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, discard",
+        cancelButtonText: "No, keep editing",
+        confirmButtonColor: "#992525",
+        cancelButtonColor: "#6b7280",
+        reverseButtons: true,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setCreateCourseModal(false);
+        }
+      });
     } else {
       setCreateCourseModal(false);
     }
   };
 
-  const handleDiscardChanges = () => {
-    setShowDiscardModal(false);
-    setCreateCourseModal(false);
-  };
-
-  const handleCancelDiscard = () => {
-    setShowDiscardModal(false);
-  };
-
   if (!create_course_modal) return null;
 
   const visibilityOptions = [
-    { value: 'visible', label: 'Visible' },
-    { value: 'hidden', label: 'Hidden' },
+    { value: "visible", label: "Visible" },
+    { value: "hidden", label: "Hidden" },
   ];
 
   return (
@@ -234,19 +190,8 @@ function CreateCourseModal({
               required
             />
 
-            {/* Row 1: Students, Visibility, Price */}
+            {/* Row: Visibility, Price */}
             <div className="flex flex-row justify-center items-center gap-4">
-              <ModalTextField
-                label="# of Students"
-                name="maxNumber"
-                type="number"
-                value={formData.maxNumber}
-                onChange={handleInputChange}
-                min="1"
-                required
-                className="w-1/3"
-              />
-
               {!isLocked && (
                 <ModalSelectField
                   label="Visibility"
@@ -254,7 +199,7 @@ function CreateCourseModal({
                   value={formData.visibility}
                   onChange={handleInputChange}
                   options={visibilityOptions}
-                  className="w-1/3"
+                  className="w-1/2"
                 />
               )}
 
@@ -268,104 +213,12 @@ function CreateCourseModal({
                 placeholder="0.00"
                 min="0"
                 required
-                className={isLocked ? 'w-1/2' : 'w-1/3'}
+                className={isLocked ? "w-full" : "w-1/2"}
               >
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
                   ₱
                 </span>
               </ModalTextField>
-            </div>
-
-            {/* Description */}
-            <ModalTextField
-              label="Description"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Enter course description"
-            />
-
-            {/* Schedule Fields */}
-            <div className="flex flex-row justify-center items-center gap-4">
-              {/* Schedule Days Multi-Select Dropdown */}
-              <div className="w-1/2 relative" ref={daysDropdownRef}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Schedule Days
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsDaysDropdownOpen(!isDaysDropdownOpen)}
-                  className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-left flex justify-between items-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2"
-                >
-                  <span
-                    className={
-                      formData.scheduleDays.length > 0
-                        ? 'text-gray-900'
-                        : 'text-gray-400'
-                    }
-                  >
-                    {formData.scheduleDays.length > 0
-                      ? formData.scheduleDays.join('')
-                      : 'Select days'}
-                  </span>
-                  <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${
-                      isDaysDropdownOpen ? 'transform rotate-180' : ''
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-
-                {/* Floating Dropdown */}
-                {isDaysDropdownOpen && (
-                  <div className="absolute z-[80] w-full bottom-full mb-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                    <div className="p-2 space-y-1">
-                      {[
-                        { value: 'M', label: 'Monday' },
-                        { value: 'T', label: 'Tuesday' },
-                        { value: 'W', label: 'Wednesday' },
-                        { value: 'TH', label: 'Thursday' },
-                        { value: 'F', label: 'Friday' },
-                        { value: 'SAT', label: 'Saturday' },
-                        { value: 'SUN', label: 'Sunday' },
-                      ].map((day) => (
-                        <label
-                          key={day.value}
-                          className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.scheduleDays.includes(day.value)}
-                            onChange={() => handleDayToggle(day.value)}
-                            className="w-4 h-4 text-dark-red-2 border-gray-300 rounded focus:ring-dark-red-2"
-                          />
-                          <span className="text-sm text-gray-700">
-                            {day.label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <ModalTextField
-                label="Schedule Time"
-                name="scheduleTime"
-                value={formData.scheduleTime}
-                onChange={handleInputChange}
-                placeholder="e.g. 6:30AM - 7:30AM"
-                className="w-1/2"
-              />
             </div>
 
             {/* Submit Button */}
@@ -381,19 +234,13 @@ function CreateCourseModal({
                     <span>Creating...</span>
                   </div>
                 ) : (
-                  'Submit'
+                  "Submit"
                 )}
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      <DiscardChangesModal
-        show={showDiscardModal}
-        onConfirm={handleDiscardChanges}
-        onCancel={handleCancelDiscard}
-      />
     </>
   );
 }

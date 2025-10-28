@@ -82,6 +82,18 @@ function EnrollmentPeriod() {
           { value: 'Upcoming', label: 'Upcoming' },
         ],
       },
+      {
+        name: 'enrollmentStatus',
+        label: 'Enrollment Status',
+        type: 'select',
+        options: [
+          { value: '', label: 'All Statuses' },
+          { value: 'Open', label: 'Open' },
+          { value: 'Closed', label: 'Closed' },
+          { value: 'Upcoming', label: 'Upcoming' },
+          { value: 'Ended', label: 'Ended' },
+        ],
+      },
     ],
   };
 

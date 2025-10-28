@@ -1,5 +1,6 @@
 import React from 'react';
-import { FaTimes, FaDownload, FaFile } from 'react-icons/fa';
+import ReactDOM from 'react-dom';
+import { FaTimes, FaDownload, FaFile, FaCheck } from 'react-icons/fa';
 import {
   getFileType,
   getFileNameFromUrl,
@@ -13,6 +14,9 @@ export default function CommonModal({
   show,
   fileUrl = null,
   className = 'w-full max-w-4xl',
+  showVerifyPayment = false,
+  onVerifyPayment = null,
+  isVerifying = false,
 }) {
   if (!show) return null;
 
@@ -41,13 +45,34 @@ export default function CommonModal({
               e.target.src = '';
             }}
           />
-          <button
-            onClick={handleDownload}
-            className="mt-4 bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors duration-150"
-          >
-            <FaDownload />
-            Download Image
-          </button>
+          <div className="mt-4 flex gap-3">
+            <button
+              onClick={handleDownload}
+              className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors duration-150"
+            >
+              <FaDownload />
+              Download Image
+            </button>
+            {showVerifyPayment && onVerifyPayment && (
+              <button
+                onClick={onVerifyPayment}
+                disabled={isVerifying}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded flex items-center gap-2 transition-colors duration-150"
+              >
+                {isVerifying ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <FaCheck />
+                    Verify Payment
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       );
     } else if (fileType === 'document' || fileType === 'unknown') {
@@ -75,8 +100,8 @@ export default function CommonModal({
     return children;
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999] p-4">
       <div
         className={`bg-white-yellow-tone rounded-lg ${className} relative max-h-[90vh] overflow-y-auto flex flex-col`}
       >
@@ -93,6 +118,7 @@ export default function CommonModal({
         </div>
         <div className="p-6">{renderFileContent()}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

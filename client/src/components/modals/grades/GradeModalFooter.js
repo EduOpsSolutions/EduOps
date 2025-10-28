@@ -15,8 +15,6 @@ function GradeModalFooter({
   const handleCSVUpload = (file) => {
     if (!file) return;
 
-    console.log("CSV file selected:", file.name);
-
     Swal.fire({
       title: 'Processing CSV...',
       text: 'Please wait while we process the CSV file.',
@@ -103,8 +101,8 @@ function GradeModalFooter({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between mt-3 sm:mt-6 w-full gap-3 sm:gap-0">
-      <div className="flex flex-col xs:flex-row sm:flex-row items-center w-full sm:w-auto gap-3">
+    <div className="flex flex-col sm:flex-row items-center justify-between -mt-4 w-full gap-1 sm:gap-2">
+      <div className="flex flex-col xs:flex-row sm:flex-row items-center w-full sm:w-auto gap-1 sm:gap-2">
         <div className="flex items-center">
           <label htmlFor="inline-checkbox" className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-300">
             Visibility:
@@ -114,16 +112,16 @@ function GradeModalFooter({
             type="checkbox"
             checked={isVisible}
             onChange={(e) => handleVisibilityToggle(e.target.checked)}
-            className="w-3 h-3 sm:w-4 sm:h-4 ml-2 sm:ml-4 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-dark-red-2 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            className="w-3 h-3 sm:w-4 sm:h-4 ml-2 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-dark-red-2 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
           />
         </div>
-        <div className="w-full sm:w-auto sm:ml-4">
+        <div className="w-full sm:w-auto">
           <div className="cursor-pointer">
             <ThinRedButton
               color="bg-grey"
               hoverColor="bg-grey-2"
               onClick={() => csvFileInputRef.current.click()}
-              className="w-full sm:w-auto text-xs sm:text-sm"
+              className="w-full sm:w-auto text-xs sm:text-sm px-3 py-1"
             >
               Upload CSV
             </ThinRedButton>
@@ -149,7 +147,7 @@ function GradeModalFooter({
           color="bg-dark-red-2"
           hoverColor="bg-dark-red-5"
           disabled={saving}
-          className="w-full sm:w-auto text-xs sm:text-sm"
+          className="w-full sm:w-auto text-xs sm:text-sm px-3 py-1"
         >
           {saving ? 'Saving...' : 'Save Grades'}
         </ThinRedButton>

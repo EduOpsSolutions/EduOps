@@ -1,25 +1,27 @@
 import React from 'react';
 
 function GradeStatusModalButton({ status, name, id, options, defaultValue, onChange }) {
-    const getSelectStyle = (value) => {
-        if (value === 'pass') return 'bg-green-500 text-white';
-        if (value === 'fail') return 'bg-red-400 text-white';
-        return 'bg-gray-300 text-gray-800';
+    const getButtonStyle = (value) => {
+        if (value === 'pass') return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-300';
+        if (value === 'fail') return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-300';
+        return 'bg-gray-200 text-gray-600 hover:bg-gray-300 border-gray-300';
     };
+
+    const currentValue = defaultValue || status?.toLowerCase() || "ng";
 
     return (
         <div className='flex justify-center items-center w-full'>
             <select
                 name={name}
                 id={id}
-                className={`${getSelectStyle(defaultValue || status?.toLowerCase())} text-xs sm:text-sm md:text-base text-center w-full max-w-[100px] h-7 py-1 focus:ring-grey-2 leading-tight border-none appearance-none rounded-sm focus:outline-none transition-colors duration-200`}
-                value={defaultValue || status?.toLowerCase() || "ng"}
+                className={`${getButtonStyle(currentValue)} px-2 py-1 rounded border text-xs sm:text-sm md:text-base text-center w-full max-w-[80px] sm:max-w-[90px] md:max-w-[100px] h-6 sm:h-7 md:h-8 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none transition-colors duration-200 appearance-none cursor-pointer`}
+                value={currentValue}
                 onChange={onChange}
             >
                 {options?.map((option, index) => {
-                    let optionClass = 'bg-gray-300 text-gray-800';
-                    if (option.value === 'pass') optionClass = 'bg-green-500 text-white';
-                    if (option.value === 'fail') optionClass = 'bg-red-400 text-white';
+                    let optionClass = 'bg-gray-200 text-gray-600';
+                    if (option.value === 'pass') optionClass = 'bg-green-100 text-green-800';
+                    if (option.value === 'fail') optionClass = 'bg-red-100 text-red-800';
 
                     return (
                         <option key={index} value={option.value} className={optionClass}>
