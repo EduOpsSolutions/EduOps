@@ -173,7 +173,7 @@ export const documentHelpers = {
     return {
       ...request,
       name,
-      document: documentName,
+      documentName: documentName,
       displayDate: new Date(request.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -187,9 +187,9 @@ export const documentHelpers = {
   // Check if user can access document based on role and privacy
   canAccessDocument: (document, userRole) => {
     const accessRules = {
-      admin: ['public', 'student', 'teacher', 'admin'],
-      teacher: ['public', 'teacher'],
-      student: ['public', 'student']
+      admin: ['public', 'student_only', 'teacher_only'],
+      teacher: ['public', 'teacher_only'],
+      student: ['public', 'student_only']
     };
     
     const allowedPrivacyLevels = accessRules[userRole] || accessRules.student;
@@ -250,17 +250,21 @@ export const documentHelpers = {
   // Download file helper
   downloadFile: async (url, filename) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      
-      const downloadUrl = window.URL.createObjectURL(blob);
+      if (!url) {
+        console.error('No URL provided for download');
+        return false;
+      }
+
+      // For Firebase URLs or external URLs, open in new tab
+      // This avoids CORS issues with direct blob downloads
       const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
+      link.href = url;
+      link.download = filename || 'download';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
       
       return true;
     } catch (error) {
