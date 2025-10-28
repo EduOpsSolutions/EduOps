@@ -1,4 +1,3 @@
-import * as AcademicPeriodCourses from '../model/academic_period_courses.js';
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -6,7 +5,6 @@ const prisma = new PrismaClient();
 export const getCoursesForPeriod = async (req, res) => {
     try {
         const { periodId } = req.params;
-        
         if (!periodId) {
             return res.status(400).json({ error: 'Period ID is required' });
         }
@@ -17,13 +15,28 @@ export const getCoursesForPeriod = async (req, res) => {
                 deletedAt: null
             }
         });
-
         if (!periodExists) {
             return res.status(404).json({ error: 'Academic period not found' });
         }
 
-        const courses = await AcademicPeriodCourses.getCoursesForPeriod(periodId);
-        
+        const courses = await prisma.academic_period_courses.findMany({
+            where: {
+                academicperiodId: periodId,
+                deletedAt: null,
+                course: {
+                    deletedAt: null
+                }
+            },
+            include: {
+                course: {
+                    select: {
+                        name: true,
+                        schedule: true,
+                        maxNumber: true
+                    }
+                }
+            }
+        });
         res.json(courses);
     } catch (err) {
         console.error("Error fetching courses for period:", err);
@@ -39,41 +52,51 @@ export const addCourseToPeriod = async (req, res) => {
         if (!periodId) {
             return res.status(400).json({ error: 'Period ID is required' });
         }
-
         if (!courseId) {
             return res.status(400).json({ error: 'Course ID is required' });
         }
 
-        const period = await prisma.academic_period.findUnique({
-            where: { 
+        const period = await prisma.academic_period.findFirst({
+            where: {
                 id: periodId,
                 deletedAt: null
             }
         });
-
         if (!period) {
             return res.status(404).json({ error: 'Academic period not found' });
         }
 
-        const course = await prisma.course.findUnique({
-            where: { 
+        const course = await prisma.course.findFirst({
+            where: {
                 id: courseId,
                 deletedAt: null
             }
         });
-
         if (!course) {
             return res.status(404).json({ error: 'Course not found' });
         }
 
-        const existingCourses = await AcademicPeriodCourses.getCoursesForPeriod(periodId);
-        const courseExists = existingCourses.some(pc => pc.courseId === courseId && !pc.deletedAt);
-        
-        if (courseExists) {
+        const existingEntry = await prisma.academic_period_courses.findFirst({
+            where: {
+                academicperiodId: periodId,
+                courseId,
+                deletedAt: null
+            }
+        });
+        if (existingEntry) {
             return res.status(400).json({ error: 'This course is already added to this period' });
         }
 
-        const periodCourse = await AcademicPeriodCourses.addCourseToPeriod(periodId, courseId);
+        const periodCourse = await prisma.academic_period_courses.create({
+            data: {
+                academicperiodId: periodId,
+                courseId
+            },
+            include: {
+                course: true,
+                academicPeriods: true
+            }
+        });
         res.status(201).json(periodCourse);
     } catch (err) {
         console.error("Error adding course to period:", err);
@@ -90,7 +113,10 @@ export const addCourseToPeriod = async (req, res) => {
 export const removeCourseFromPeriod = async (req, res) => {
     try {
         const { id } = req.params;
-        const periodCourse = await AcademicPeriodCourses.removeCourseFromPeriod(id);
+        const periodCourse = await prisma.academic_period_courses.update({
+            where: { id },
+            data: { deletedAt: new Date() }
+        });
         res.json({ message: 'Course removed from period', periodCourse });
     } catch (err) {
         console.error("Error removing course from period:", err);
