@@ -42,3 +42,8 @@
   background: #ff0000 !important;
   color: #fff !important;
 }
+
+/* Fix SweetAlert z-index to appear above modals */
+.swal-z-index-fix {
+  z-index: 99999 !important;
+}

@@ -162,7 +162,7 @@ function Assessment() {
             <div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-5 gap-2 sm:gap-0">
                 <p className="font-bold text-base sm:text-lg text-center sm:text-left">
-                  {selectedStudent.course}: {selectedStudent.batch} | {selectedStudent.year}
+                  {selectedStudent.course} : {selectedStudent.batch}
                 </p>
                 <button
                   onClick={handleBackToResults}

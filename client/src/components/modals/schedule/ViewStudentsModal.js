@@ -164,6 +164,7 @@ function ViewStudentsModal({
       confirmButtonText: 'Yes, remove',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#992525',
+      reverseButtons: true,
     });
     if (!result.isConfirmed) return;
     try {

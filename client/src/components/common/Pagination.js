@@ -37,8 +37,8 @@ const Pagination = ({
 
   return (
     <div className={cn('flex flex-col gap-4 mt-6', className)}>
-      {showItemsPerPageSelector && (
-        <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between w-full">
+        {showItemsPerPageSelector && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Items per page</span>
             <select
@@ -53,18 +53,11 @@ const Pagination = ({
               ))}
             </select>
           </div>
-          <span className="text-sm text-gray-600">
-            {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalItems)} of{' '}
-            {totalItems} {itemName}
-          </span>
-        </div>
-      )}
-
-      {totalPages > 1 && (
-        <div className="flex justify-center">
+        )}
+        <div className="flex-1 flex justify-center">
           <FlowbitePagination
             currentPage={currentPage}
-            totalPages={totalPages}
+            totalPages={Math.max(1, totalPages)}
             onPageChange={onPageChange}
             showIcons
             previousLabel="Previous"
@@ -73,7 +66,11 @@ const Pagination = ({
             className="flex items-center"
           />
         </div>
-      )}
+        <span className="text-sm text-gray-600">
+          {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalItems)} of{' '}
+          {totalItems} {itemName}
+        </span>
+      </div>
     </div>
   );
 };

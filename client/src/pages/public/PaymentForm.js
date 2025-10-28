@@ -1,11 +1,14 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
 import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
+import Swal from "sweetalert2";
 
 function PaymentForm() {
+  const navigate = useNavigate();
   const {
     formData,
     loading,
@@ -13,9 +16,30 @@ function PaymentForm() {
     nameError,
     feesOptions,
     updateFormField,
-    handleSubmit,
     validateAndFetchStudentByID,
+    validateRequiredFields,
+    validatePhoneNumber,
+    preparePaymentData,
+    showDialog,
+    resetForm,
+    sendPaymentLinkEmail
   } = usePaymentStore();
+
+  // Helper function to get proper fee type label
+  const getFeeTypeLabel = (feeType) => {
+    const feeTypeMap = {
+      'down_payment': 'Down Payment',
+      'tuition_fee': 'Tuition Fee',
+      'document_fee': 'Document Fee',
+      'book_fee': 'Book Fee',
+    };
+    
+    if (!feeType) {
+      return 'Payment';
+    }
+    
+    return feeTypeMap[feeType] || feeType.replace('_', ' ');
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -31,8 +55,138 @@ function PaymentForm() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    await handleSubmit();
+    
+    if (!validateRequiredFields()) {
+      await showDialog({
+        icon: "warning",
+        title: "Missing Required Fields",
+        text: "Please fill in all required fields before submitting.",
+        confirmButtonColor: "#b71c1c",
+      });
+      return;
+    }
+
+    if (!validatePhoneNumber()) return;
+
+    const feeLabel = getFeeTypeLabel(formData.fee);
+
+
+    const confirmResult = await Swal.fire({
+      title: 'Confirm Payment',
+      html: `
+        <div style="text-align: center;">
+          <p style="margin-bottom: 15px; font-size: 1.1rem; color: #333;">Are you sure you want to pay <strong>₱${formData.amount}</strong> for <strong>${feeLabel}</strong>?</p>
+          <p style="margin: 0; font-size: 0.9rem; color: #6B7280;">
+            Payment link will be sent to: <strong>${formData.email_address}</strong>
+          </p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, I\'m sure',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#890E07',
+      cancelButtonColor: '#6B7280',
+      reverseButtons: true
+    });
+
+    if (!confirmResult.isConfirmed) {
+      return; 
+    }
+
+    try {
+      const paymentData = preparePaymentData();
+      const feeLabel = getFeeTypeLabel(paymentData.feeType);
+      const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
+      const emailData = {
+        email: paymentData.email,
+        firstName: paymentData.firstName,
+        lastName: paymentData.lastName,
+        amount: paymentData.amount,
+        description: description,
+        feeType: paymentData.feeType,
+        userId: paymentData.userId
+      };
+
+      Swal.fire({
+        title: 'Processing...',
+        text: 'Sending payment link to your email...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const result = await sendPaymentLinkEmail(emailData);
+
+      if (result.success) {
+        const successResult = await Swal.fire({
+          title: 'Email Sent Successfully!',
+          html: `
+            <div style="text-align: center;">
+              <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+                <p style="margin: 0; color: #155724; font-weight: 500;">
+                  <i class="fas fa-envelope mr-2"></i>
+                  A payment link has been sent to <strong>${paymentData.email}</strong>
+                </p>
+              </div>
+              <p style="margin: 15px 0; color: #6B7280;">
+                You can complete your payment using the link in your email, or click "Pay Now" to proceed immediately.
+              </p>
+            </div>
+          `,
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonText: '<i class="fas fa-credit-card mr-2"></i>Pay Now',
+          cancelButtonText: '<i class="fas fa-times mr-2"></i>Close',
+          confirmButtonColor: '#890E07',
+          cancelButtonColor: '#6B7280',
+          reverseButtons: true
+        });
+
+        if (successResult.isConfirmed) {
+          const paymentData = preparePaymentData();
+          const feeLabel = getFeeTypeLabel(paymentData.feeType);
+          const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
+
+          localStorage.setItem("totalPayment", paymentData.amount.toString());
+          
+          // Navigate to the custom payment page
+          navigate("/payment", {
+            state: {
+              amount: paymentData.amount,
+              description: description,
+              studentInfo: {
+                firstName: paymentData.firstName,
+                lastName: paymentData.lastName,
+                email: paymentData.email,
+                phone: paymentData.phoneNumber,
+                studentId: paymentData.studentId
+              }
+            }
+          });
+        }
+        
+        resetForm();
+      } else {
+        await Swal.fire({
+          title: 'Error',
+          text: result.error || 'Failed to send payment link. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#890E07'
+        });
+      }
+    } catch (error) {
+      console.error('Error sending payment link:', error);
+      await Swal.fire({
+        title: 'Error',
+        text: 'An unexpected error occurred. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#890E07'
+      });
+    }
   };
+
 
   return (
     <div className="bg_custom bg-white-yellow-tone">

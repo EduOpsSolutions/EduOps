@@ -1,18 +1,20 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getCookieItem } from '../../../utils/jwt';
 import GradeStudentsTable from "../../tables/GradeStudentsTable";
 import GradeModalFooter from "./GradeModalFooter";
 import useGradeStore from "../../../stores/gradeStore";
 import Swal from 'sweetalert2';
+import CommonModal from '../common/CommonModal';
 
 // To customize measurements of header 
 const customModalTheme = {
     modal: {
         "root": {
-            "base": "fixed inset-0 z-50 h-screen w-screen overflow-y-auto overflow-x-hidden transition-opacity",
+            "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
             "show": {
-                "on": "flex justify-center items-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-                "off": "hidden ease-out"
+            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
+            "off": "hidden ease-out"
             },
         },
         "header": {
@@ -20,14 +22,17 @@ const customModalTheme = {
             "popup": "border-b-0 p-2",
             "title": "text-xl font-medium text-gray-900 dark:text-white text-center",
             "close": {
-                "base": "ml-auto mr-2 inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white",
+                "base": "ml-auto mr-2 inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150",
                 "icon": "h-5 w-5"
             }
         },
-    }
+    }  
 };
 
 function StudentsGradeModal(props) {
+    // File preview modal state
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewFile, setPreviewFile] = useState({ url: null, title: '' });
     const {
         students,
         gradesVisible,
@@ -40,7 +45,9 @@ function StudentsGradeModal(props) {
         saveGradeChanges,
         resetGradeChanges,
         setChangesMade,
-        setLocalGrades
+        setLocalGrades,
+        handleGradeStudents,
+        selectedSchedule
     } = useGradeStore();
 
     const courseInfo = {
@@ -50,36 +57,76 @@ function StudentsGradeModal(props) {
         courseRoom: props.course ? props.course.room : ''
     };
 
-    const handleDocumentUpload = (studentId) => {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
-        fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                Swal.fire({
-                    title: 'Uploading...',
-                    text: `Uploading "${file.name}" for student ID: ${studentId}`,
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+    // Upload handler: sends file to backend
+    const handleDocumentUpload = async (studentId, file, userId) => {
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const token = getCookieItem('token');
+        const formData = new FormData();
+        formData.append('file', file);
 
-                setTimeout(() => {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: `Document "${file.name}" uploaded successfully for student ID: ${studentId}`,
-                        icon: 'success',
-                        confirmButtonColor: '#992525',
-                    });
-
-                    setChangesMade(true);
-                }, 1000);
+        Swal.fire({
+            title: 'Uploading...',
+            text: `Uploading "${file.name}" for ${userId || 'student'}`,
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
             }
-        };
+        });
 
-        fileInput.click();
+        try {
+            const res = await fetch(`${apiUrl}/grades/${studentId}/files`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    // Do NOT set Content-Type for FormData
+                },
+                body: formData,
+            });
+            if (!res.ok) throw new Error('Upload failed');
+            Swal.fire({
+                title: 'Success!',
+                text: `Document "${file.name}" uploaded successfully for ${userId || 'student'}`,
+                icon: 'success',
+                confirmButtonColor: '#992525',
+            });
+            setChangesMade(true);
+            // Optionally: refresh students list or update state here
+        } catch (err) {
+            Swal.fire({
+                title: 'Error!',
+                text: 'File upload failed: ' + (err.message || 'Unknown error'),
+                icon: 'error',
+                confirmButtonColor: '#992525',
+            });
+        }
+    };
+
+    const handleViewDocument = async (studentGradeId) => {
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const token = getCookieItem('token');
+        try {
+            const res = await fetch(`${apiUrl}/grades/${studentGradeId}/files`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error('Failed to fetch file(s)');
+            let files = await res.json();
+            if (files && files.length > 0) {
+                // Sort files by uploadedAt descending (latest first)
+                files = files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+                if (files[0].url) {
+                    setPreviewFile({ url: files[0].url, title: 'Uploaded File Preview' });
+                    setShowPreview(true);
+                } else {
+                    Swal.fire('No File', 'No file has been uploaded for this student.', 'info');
+                }
+            } else {
+                Swal.fire('No File', 'No file has been uploaded for this student.', 'info');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Failed to fetch or open file: ' + (err.message || 'Unknown error'), 'error');
+        }
     };
 
     const handleVisibilityToggle = (visible) => {
@@ -97,6 +144,7 @@ function StudentsGradeModal(props) {
                 cancelButtonText: 'Cancel',
                 confirmButtonColor: '#992525',
                 cancelButtonColor: '#6b7280',
+                reverseButtons: true,
             });
 
             if (result.isConfirmed) {
@@ -110,6 +158,11 @@ function StudentsGradeModal(props) {
                 });
 
                 await saveGradeChanges();
+
+                // Immediately refresh students list after saving
+                if (selectedSchedule && handleGradeStudents) {
+                    await handleGradeStudents(selectedSchedule);
+                }
 
                 Swal.fire({
                     title: 'Success!',
@@ -139,6 +192,7 @@ function StudentsGradeModal(props) {
                 cancelButtonText: 'Cancel',
                 confirmButtonColor: '#992525',
                 cancelButtonColor: '#6b7280',
+                reverseButtons: true,
             });
 
             if (result.isConfirmed) {
@@ -157,55 +211,44 @@ function StudentsGradeModal(props) {
     }, [props.students_grade_modal, students, gradesVisible, setChangesMade]);
 
     return (
-        <Flowbite theme={{ theme: customModalTheme }}>
-            <Modal
-                dismissible
-                show={props.students_grade_modal}
-                size="7xl"
-                onClose={() => handleModalClose()}
-                popup
-                className="transition duration-150 ease-out"
-                theme={{
-                    root: {
-                        base: "fixed inset-0 z-50 h-screen w-screen overflow-y-auto overflow-x-hidden transition-opacity",
-                        show: {
-                            on: "flex justify-center items-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-                            off: "hidden ease-out"
-                        }
-                    },
-                    content: {
-                        base: "relative w-full p-4 h-auto",
-                        inner: "bg-transparent relative rounded-lg max-h-[90vh] overflow-y-auto"
-                    }
-                }}
-            >
-                <div className="py-4 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
-                    <Modal.Header className="z-10 transition ease-in-out duration-300" />
-
-                    <p className="font-bold -mt-8 sm:-mt-10 mx-4 sm:ml-6 mb-2 sm:mb-4 text-left text-lg sm:text-xl md:text-2xl transition ease-in-out duration-300 break-words">
-                        <span className="block md:inline">{courseInfo.courseName}</span>
-                        <span className="hidden md:inline"> | </span>
-                        <span className="block md:inline">{courseInfo.courseSchedule} {courseInfo.courseTime}</span>
-                        {courseInfo.courseRoom && (
-                            <>
-                                <span className="hidden md:inline"> | </span>
-                                <span className="block md:inline">{courseInfo.courseRoom}</span>
-                            </>
-                        )}
-                    </p>
-
-                    <Modal.Body>
-                        <div className="h-[400px] sm:h-[450px] md:h-[500px] max-h-[65vh]">
-                            <div className="h-[85%] sm:h-[90%] border-y-dark-red-2 border-y-2 overflow-y-auto">
-                                <GradeStudentsTable
-                                    students={students}
-                                    gradeStatusOptions={gradeStatusOptions}
-                                    getStudentGrade={getStudentGrade}
-                                    handleGradeChange={handleGradeChange}
-                                    handleDocumentUpload={handleDocumentUpload}
-                                />
+        <>
+            <Flowbite theme={{ theme: customModalTheme }}>
+                <Modal
+                    dismissible
+                    show={props.students_grade_modal}
+                    size="7xl"
+                    onClose={() => handleModalClose()}
+                    popup
+                    className="transition duration-150 ease-out"
+                >
+                <div className="pt-6 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
+                    <Modal.Header className="z-10 transition ease-in-out duration-300 " />
+                        <p className="font-bold -mt-10 ml-6 mb-4 text-left text-2xl transition ease-in-out duration-300 break-words">
+                            <span className="block md:inline">{courseInfo.courseName}</span>
+                            <span className="block md:inline">{props.schedule?.teacherName ? ` | ${props.schedule.teacherName}` : ''}</span>
+                            <span className="block md:inline">{courseInfo.courseSchedule} {courseInfo.courseTime}</span>
+                            {courseInfo.courseRoom && (
+                                <>
+                                    <span className="block md:inline"> | </span>
+                                    <span className="block md:inline">{courseInfo.courseRoom}</span>
+                                </>
+                            )}
+                        </p>
+                        <Modal.Body>
+                            <div class="h-[450px]"> 
+                                <div className="h-[85%] border-y-dark-red-2 border-y-2 overflow-y-auto">
+                                    <GradeStudentsTable
+                                        students={students}
+                                        gradeStatusOptions={gradeStatusOptions}
+                                        getStudentGrade={getStudentGrade}
+                                        handleGradeChange={handleGradeChange}
+                                        handleDocumentUpload={handleDocumentUpload}
+                                        handleViewDocument={handleViewDocument}
+                                        teacherName={props.schedule?.teacherName}
+                                    />
+                                </div>
                             </div>
-
+                            
                             <GradeModalFooter
                                 isVisible={gradesVisible}
                                 handleVisibilityToggle={handleVisibilityToggle}
@@ -214,11 +257,20 @@ function StudentsGradeModal(props) {
                                 setLocalGrades={setLocalGrades}
                                 setChangesMade={setChangesMade}
                             />
-                        </div>
-                    </Modal.Body>
-                </div>
-            </Modal>
-        </Flowbite>
+                        </Modal.Body>
+                    </div>
+                </Modal>
+            </Flowbite>
+            <CommonModal
+                title={previewFile.title}
+                handleClose={() => {
+                    setShowPreview(false);
+                    setPreviewFile({ url: null, title: '' });
+                }}
+                show={showPreview}
+                fileUrl={previewFile.url}
+            />
+        </>
     );
 }
 

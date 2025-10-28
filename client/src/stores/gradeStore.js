@@ -1,17 +1,18 @@
 import { create } from 'zustand';
+import { getCookieItem } from '../utils/jwt';
 
 export const useGradeSearchStore = create((set, get) => ({
   searchTerm: '',
   currentPage: 1,
   itemsPerPage: 5,
-  filteredCourses: [],
+  filteredSchedules: [],
   totalItems: 0,
   totalPages: 0,
 
   setSearchTerm: (term) => {
     set({ searchTerm: term, currentPage: 1 });
     const store = get();
-    store.filterCourses();
+    store.filterSchedules();
   },
 
   setCurrentPage: (page) => set({ currentPage: page }),
@@ -19,25 +20,25 @@ export const useGradeSearchStore = create((set, get) => ({
   setItemsPerPage: (itemsPerPage) => {
     set({ itemsPerPage, currentPage: 1 });
     const store = get();
-    store.filterCourses();
+    store.filterSchedules();
   },
 
-  filterCourses: () => {
+  filterSchedules: () => {
     const { searchTerm, itemsPerPage } = get();
-    const { courses } = useGradeStore.getState();
+    const { schedules } = useGradeStore.getState();
 
-    const filtered = courses.filter(course =>
-      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.schedule.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.time.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.room.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = schedules.filter(schedule =>
+      schedule.course?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.days.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${schedule.time_start} - ${schedule.time_end}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (schedule.location || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const totalItems = filtered.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     set({
-      filteredCourses: filtered,
+      filteredSchedules: filtered,
       totalItems,
       totalPages
     });
@@ -50,16 +51,16 @@ export const useGradeSearchStore = create((set, get) => ({
       itemsPerPage: 5
     });
     const store = get();
-    store.filterCourses();
+    store.filterSchedules();
   }
 }));
 
 const useGradeStore = create((set, get) => ({
   loading: false,
   error: null,
-  courses: [],
+  schedules: [],
   students: [],
-  selectedCourse: null,
+  selectedSchedule: null,
   gradeNotReadyModal: false,
   gradeDetailsModal: false,
   studentsGradeModal: false,
@@ -76,29 +77,64 @@ const useGradeStore = create((set, get) => ({
     { value: 'fail', label: 'FAIL', color: 'bg-red-400' },
   ],
 
-  getStudentGrade: (studentId) => {
+
+  getStudentGrade: (studentGradeId, userId) => {
     const { localGrades, students } = get();
-
-    const localGrade = localGrades.find(item => item.studentId === studentId);
-    if (localGrade) return localGrade.grade;
-
-    const student = students.find(s => s.id === studentId);
+    
+    // If studentGradeId is null, prioritize userId lookup
+    if (!studentGradeId || studentGradeId === null) {
+      if (userId) {
+        const localGradeByUser = localGrades.find(item => item.userId === userId);
+        if (localGradeByUser) {
+          return localGradeByUser.grade;
+        }
+      }
+    } else {
+      // Only try studentGradeId lookup if it's not null
+      const localGrade = localGrades.find(item => item.studentGradeId === studentGradeId);
+      if (localGrade) {
+        return localGrade.grade;
+      }
+    }
+    
+    const student = students.find(s => s.studentGradeId === studentGradeId);
     return student ? student.grade : null;
   },
 
-  // Handle grade changes - updates local state only
-  handleGradeChange: (studentId, grade) => {
+  // Handle grade changes - updates local state only, using studentGradeId and userId
+  handleGradeChange: (studentGradeId, grade, userId) => {
     set(state => {
-      const existingIndex = state.localGrades.findIndex(item => item.studentId === studentId);
-      let updatedGrades;
-
-      if (existingIndex >= 0) {
-        updatedGrades = [...state.localGrades];
-        updatedGrades[existingIndex].grade = grade;
+      if (!studentGradeId || studentGradeId === null) {
+        if (userId) {
+          const existingByUserIndex = state.localGrades.findIndex(item => item.userId === userId);
+          if (existingByUserIndex >= 0) {
+            const updatedGrades = [...state.localGrades];
+            updatedGrades[existingByUserIndex].grade = grade;
+            return { localGrades: updatedGrades, changesMade: true };
+          }
+          
+          // Add new grade with userId
+          const newGrade = { studentGradeId, userId, grade };
+          const updatedGrades = [...state.localGrades, newGrade];
+          return { localGrades: updatedGrades, changesMade: true };
+        }
       } else {
-        updatedGrades = [...state.localGrades, { studentId, grade }];
+        const existingIndex = state.localGrades.findIndex(item => item.studentGradeId === studentGradeId);
+        
+        if (existingIndex >= 0) {
+          // Update existing grade
+          const updatedGrades = [...state.localGrades];
+          updatedGrades[existingIndex].grade = grade;
+          return { localGrades: updatedGrades, changesMade: true };
+        }
       }
-
+      
+      // Add new grade with both identifiers
+      const newGrade = { studentGradeId, grade };
+      if (userId) {
+        newGrade.userId = userId;
+      }
+      const updatedGrades = [...state.localGrades, newGrade];
       return { localGrades: updatedGrades, changesMade: true };
     });
   },
@@ -113,16 +149,50 @@ const useGradeStore = create((set, get) => ({
 
   saveGradeChanges: async () => {
     const state = get();
-    const { localGrades, selectedCourse, gradesVisible } = state;
-    const courseId = selectedCourse?.id;
+    const { localGrades, selectedSchedule, gradesVisible } = state;
+    const scheduleId = selectedSchedule?.id;
 
     set({ saving: true });
 
     try {
+      // Don't update students array until after successful save
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const freshState = get();
+
+      if (scheduleId) {
+        const persistStudents = JSON.parse(JSON.stringify(freshState.students));
+
+        set(state => {
+          const updatedData = {
+            _persistentStudentData: {
+              ...state._persistentStudentData,
+              [scheduleId]: persistStudents
+            },
+            _persistentVisibility: {
+              ...state._persistentVisibility,
+              [scheduleId]: gradesVisible
+            }
+          };
+          return updatedData;
+        });
+      }
+
+      await get().saveGrades();
+
+      // Only update students array after successful backend save
       if (localGrades.length > 0) {
         set(state => {
           const updatedStudents = state.students.map(student => {
-            const localGrade = localGrades.find(item => item.studentId === student.id);
+            let localGrade = null;
+            
+            if (!student.studentGradeId || student.studentGradeId === null) {
+              const userId = student.user?.id || student.userId;
+              localGrade = localGrades.find(item => item.userId === userId);
+            } else {
+              localGrade = localGrades.find(item => item.studentGradeId === student.studentGradeId);
+            }
+            
             if (localGrade) {
               return { ...student, grade: localGrade.grade };
             }
@@ -132,31 +202,6 @@ const useGradeStore = create((set, get) => ({
           return { students: updatedStudents };
         });
       }
-
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      const freshState = get();
-      const updatedStudents = freshState.students;
-
-      if (courseId) {
-        const persistStudents = JSON.parse(JSON.stringify(updatedStudents));
-
-        set(state => {
-          const updatedData = {
-            _persistentStudentData: {
-              ...state._persistentStudentData,
-              [courseId]: persistStudents
-            },
-            _persistentVisibility: {
-              ...state._persistentVisibility,
-              [courseId]: gradesVisible
-            }
-          };
-          return updatedData;
-        });
-      }
-
-      await get().saveGrades();
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -179,123 +224,106 @@ const useGradeStore = create((set, get) => ({
 
   setChangesMade: (value) => set({ changesMade: value }),
 
-  bulkUpdateGrades: (localGrades) => {
-    set(state => {
-      const updatedStudents = state.students.map(student => {
-        const localGrade = localGrades.find(item => item.studentId === student.id);
-        if (localGrade) {
-          return { ...student, grade: localGrade.grade };
-        }
-        return student;
-      });
-
-      return { students: updatedStudents };
-    });
-  },
-
   saveGrades: async () => {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve();
-      }, 1000);
+    const state = get();
+    const { localGrades, selectedSchedule, students } = state;
+    if (!selectedSchedule) return;
+    const courseId = selectedSchedule.courseId;
+    const periodId = selectedSchedule.academicPeriodId;
+    const token = getCookieItem('token');
+    // Map frontend grade values to Prisma enum values
+    const mapGradeValue = (grade) => {
+      if (grade === 'pass') return 'Pass';
+      if (grade === 'fail') return 'Fail';
+      return 'NoGrade';
+    };
+    // Prepare batch payload
+    const payload = localGrades.map(lg => {
+      let student = null;
+      
+      if (!lg.studentGradeId || lg.studentGradeId === null) {
+        if (lg.userId) {
+          student = students.find(s => (s.user?.id || s.userId) === lg.userId);
+        }
+      } else {
+        student = students.find(s => s.studentGradeId === lg.studentGradeId);
+      }
+      
+      return {
+        studentId: student?.user?.id || student?.userId || student?.id || lg.userId,
+        courseId,
+        periodId,
+        grade: mapGradeValue(lg.grade)
+      };
     });
+  const apiUrl = process.env.REACT_APP_API_URL;
+  const res = await fetch(`${apiUrl}/grades/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to save grades');
+    return await res.json();
   },
 
   closeGradeDetailsModal: () => set({ gradeDetailsModal: false }),
   closeGradeNotReadyModal: () => set({ gradeNotReadyModal: false }),
   closeStudentsGradeModal: () => set({ studentsGradeModal: false }),
 
-  fetchCourses: async () => {
+  fetchSchedules: async () => {
     try {
       set({ loading: true, error: null });
-
-      const sampleCourses = [
-        {
-          id: 1,
-          name: 'A1',
-          schedule: 'TTh',
-          time: '6:30AM - 7:30AM',
-          room: 'Room 01'
+      const token = getCookieItem('token');
+  const apiUrl = process.env.REACT_APP_API_URL;
+  const res = await fetch(`${apiUrl}/schedules?includeCourse=true`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        {
-          id: 2,
-          name: 'A1',
-          schedule: 'TTh',
-          time: '9:30AM - 10:30AM',
-          room: 'VR 02'
-        },
-      ];
-
-      setTimeout(() => {
-        set({
-          loading: false,
-          courses: sampleCourses
-        });
-        useGradeSearchStore.getState().filterCourses();
-      }, 500);
+      });
+      if (!res.ok) throw new Error('Failed to fetch schedules');
+      const data = await res.json();
+      set({ loading: false, schedules: data });
+      useGradeSearchStore.getState().filterSchedules();
     } catch (error) {
       set({
         loading: false,
-        error: error.message || 'Failed to fetch courses'
+        error: error.message || 'Failed to fetch schedules'
       });
     }
   },
 
-  handleGradeStudents: (course) => {
-    set({ selectedCourse: course });
-
-    const state = get();
-    const courseId = course?.id;
-
-    const SampleStudents = [
-      {
-        id: 2012923,
-        name: 'Juan Dela Cruz',
-        email: 'juan.delacruz@example.com',
-        enrollmentDate: '2024-09-01',
-        grade: 'ng',
-        hasDoc: false
-      },
-      {
-        id: 2102312,
-        name: 'Marsa Fe',
-        email: 'marsa.fe@example.com',
-        enrollmentDate: '2024-09-02',
-        grade: 'ng',
-        hasDoc: true
-      },
-    ];
-
-    const hasSavedData = !!(courseId &&
-      state._persistentStudentData &&
-      state._persistentStudentData[courseId]);
-
-    let currentStudents;
+  handleGradeStudents: async (schedule) => {
+    set({ selectedSchedule: schedule });
+    set({ loading: true, error: null });
     try {
-      if (hasSavedData) {
-        currentStudents = JSON.parse(JSON.stringify(state._persistentStudentData[courseId]));
-      } else {
-        currentStudents = JSON.parse(JSON.stringify(SampleStudents));
-      }
-    } catch (err) {
-      currentStudents = JSON.parse(JSON.stringify(SampleStudents));
+      const token = getCookieItem('token');
+  const apiUrl = process.env.REACT_APP_API_URL;
+  const res = await fetch(`${apiUrl}/grades/schedule/${schedule.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error('Failed to fetch students for schedule');
+      const data = await res.json();
+      set({
+        students: data.students || [],
+        studentsGradeModal: true,
+        gradesVisible: true,
+        localGrades: [],
+        changesMade: false,
+        loading: false
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error.message || 'Failed to fetch students for schedule'
+      });
     }
-
-    const hasSavedVisibility = !!(courseId &&
-      state._persistentVisibility &&
-      state._persistentVisibility[courseId] !== undefined);
-
-    const currentVisibility = hasSavedVisibility
-      ? state._persistentVisibility[courseId]
-      : true;
-
-    set({
-      students: currentStudents,
-      studentsGradeModal: true,
-      gradesVisible: currentVisibility,
-      localGrades: [],
-      changesMade: false
-    });
   },
 
   setLocalGrades: (grades) => {
@@ -308,7 +336,7 @@ const useGradeStore = create((set, get) => ({
     const persistentVisibility = currentState._persistentVisibility;
 
     set({
-      selectedCourse: null,
+      selectedSchedule: null,
       gradeNotReadyModal: false,
       gradeDetailsModal: false,
       studentsGradeModal: false,

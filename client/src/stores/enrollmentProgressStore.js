@@ -4,7 +4,8 @@ import Swal from "sweetalert2";
 
 const useEnrollmentStore = create((set, get) => ({
   enrollmentId: null,
-  enrollmentStatus: "Pending",
+  studentId: null,
+  enrollmentStatus: "pending",
   remarkMsg: "Please track your enrollment to view progress.",
   fullName: "",
   email: "",
@@ -33,6 +34,7 @@ const useEnrollmentStore = create((set, get) => ({
 
     set({
       enrollmentId: data.enrollmentId,
+      studentId: data.studentId,
       enrollmentStatus: data.status,
       currentStep,
       completedSteps,
@@ -51,7 +53,8 @@ const useEnrollmentStore = create((set, get) => ({
   clearEnrollmentData: () => {
     set({
       enrollmentId: null,
-      enrollmentStatus: "Pending",
+      studentId: null,
+      enrollmentStatus: "pending",
       remarkMsg: "Please track your enrollment to view progress.",
       fullName: "",
       email: "",
@@ -76,6 +79,7 @@ const useEnrollmentStore = create((set, get) => ({
     console.log('Enrollment data already available in store');
   },
 
+
   advanceToNextStep: () => {
     const { currentStep, paymentProof, hasPaymentProof, coursePrice } = get();
 
@@ -88,24 +92,33 @@ const useEnrollmentStore = create((set, get) => ({
 
     const statusUpdates = {
       2: {
-        enrollmentStatus: 'Enrollment Form Verified',
+        enrollmentStatus: 'verified',
         remarkMsg: `Please pay the Downpayment of ₱3000 or the full amount of ₱${coursePrice || 'TBA'} to proceed with your enrollment.`,
       },
       3: {
-        enrollmentStatus: 'Payment Pending',
+        enrollmentStatus: 'payment_pending',
         remarkMsg: 'Your payment is being verified. This may take 1-2 business days.',
       },
       4: {
-        enrollmentStatus: 'Completed',
-        remarkMsg: 'Congratulations! Your enrollment is complete.',
+        enrollmentStatus: 'approved',
+        remarkMsg: 'Your payment has been verified. Enrollment is being processed.',
       },
     };
 
-    set((state) => ({
-      completedSteps: [...state.completedSteps, currentStep],
-      currentStep: currentStep + 1,
-      ...statusUpdates[currentStep],
-    }));
+    set((state) => {
+      let newCompletedSteps = [...state.completedSteps, currentStep];
+      if (currentStep === 4) {
+        if (!newCompletedSteps.includes(5)) {
+          newCompletedSteps.push(5);
+        }
+      }
+
+      return {
+        completedSteps: newCompletedSteps,
+        currentStep: currentStep + 1,
+        ...statusUpdates[currentStep],
+      };
+    });
   },
 
   setPaymentProof: (file) => set({ paymentProof: file }),
@@ -113,6 +126,23 @@ const useEnrollmentStore = create((set, get) => ({
   uploadPaymentProof: async () => {
     const { paymentProof, enrollmentId } = get();
     if (!paymentProof) return null;
+    
+    const confirmResult = await Swal.fire({
+      title: 'Confirm Payment Proof Upload',
+      text: 'Are you sure you want to upload this payment proof? Please make sure it\'s the correct receipt.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, upload it',
+      cancelButtonText: 'No, let me check',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
+      reverseButtons: true
+    });
+
+    if (!confirmResult.isConfirmed) {
+      return null; 
+    }
+
     set({ isUploadingPaymentProof: true });
 
     try {
@@ -126,8 +156,9 @@ const useEnrollmentStore = create((set, get) => ({
         throw new Error("Failed to upload file to storage");
       }
 
+      const apiUrl = process.env.REACT_APP_API_URL;
       const apiResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/enrollment/payment-proof`,
+        `${apiUrl}/enrollment/payment-proof`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -145,8 +176,12 @@ const useEnrollmentStore = create((set, get) => ({
       Swal.fire({
         icon: "success",
         title: "Success",
-        text: "Payment proof uploaded successfully",
+        text: "Payment proof uploaded successfully. Proceeding to payment verification.",
+        confirmButtonColor: '#992525'
       });
+
+      const { advanceToNextStep } = get();
+      await advanceToNextStep();
 
       return downloadURL;
     } catch (error) {

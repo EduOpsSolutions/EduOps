@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import UserNavbar from "../../components/navbars/UserNav";
 import useEnrollmentStore from "../../stores/enrollmentProgressStore";
 import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
+import Swal from "sweetalert2";
 
 function Enrollment() {
   const navigate = useNavigate();
   const {
     enrollmentId,
-    userId,
+    studentId,
     enrollmentStatus,
     remarkMsg,
     currentStep,
@@ -20,7 +21,6 @@ function Enrollment() {
     fetchEnrollmentData,
     setPaymentProof,
     uploadPaymentProof,
-    advanceToNextStep,
     fullName,
     coursesToEnroll,
     createdAt,
@@ -72,6 +72,38 @@ function Enrollment() {
     );
   };
 
+  // Handle Pay Now - redirect to payment form to create PayMongo link
+  const handlePayNow = () => {
+    navigate("/paymentForm");
+  };
+
+  // Copy Student ID to clipboard
+  const copyToClipboard = async (studentId) => {
+    try {
+      await navigator.clipboard.writeText(studentId);
+      Swal.fire({
+        icon: 'success',
+        title: 'Copied!',
+        text: 'Student ID copied to clipboard',
+        timer: 1500,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Copy Failed',
+        text: 'Please copy manually',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    }
+  };
+
   // Payment proof status logic
   const getPaymentProofStatus = () => {
     if (isUploadingPaymentProof) {
@@ -91,9 +123,6 @@ function Enrollment() {
   
   // Show payment button when user needs to pay
   const shouldShowPaymentButton = currentStep === 3 && !paymentProof && !hasPaymentProof && !isUploadingPaymentProof;
-  
-  // Show next step button when payment proof is ready
-  const shouldShowNextStepButton = currentStep === 3 && (paymentProof || hasPaymentProof) && !isUploadingPaymentProof;
 
   // No enrollment data state
   if (!enrollmentId) {
@@ -190,18 +219,22 @@ function Enrollment() {
                   <span className="text-gray-600 font-medium">Status:</span>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      enrollmentStatus === "COMPLETED"
-                        ? "bg-green-100 text-green-800 border border-green-200"
-                        : enrollmentStatus === "APPROVED"
-                        ? "bg-blue-100 text-blue-800 border border-blue-200"
-                        : enrollmentStatus === "VERIFIED"
-                        ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                        : enrollmentStatus === "REJECTED"
-                        ? "bg-red-100 text-red-800 border border-red-200"
-                        : "bg-gray-100 text-gray-800 border border-gray-200"
+                      enrollmentStatus?.toLowerCase() === "pending"
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : enrollmentStatus?.toLowerCase() === "verified"
+                        ? "bg-sky-50 text-sky-700 border border-sky-200"
+                        : enrollmentStatus?.toLowerCase() === "payment_pending"
+                        ? "bg-orange-50 text-orange-700 border border-orange-200"
+                        : enrollmentStatus?.toLowerCase() === "approved"
+                        ? "bg-violet-50 text-violet-700 border border-violet-200"
+                        : enrollmentStatus?.toLowerCase() === "completed"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : enrollmentStatus?.toLowerCase() === "rejected"
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
+                        : "bg-slate-50 text-slate-700 border border-slate-200"
                     }`}
                   >
-                    {enrollmentStatus}
+                    {enrollmentStatus?.replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>
                 {createdAt && (
@@ -315,6 +348,43 @@ function Enrollment() {
                     </h3>
 
                     <div className="space-y-2 text-sm text-blue-700">
+                      <div className="flex items-center">
+                        <svg
+                          className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span>Student ID:&nbsp;</span>
+                        <strong className="mr-2">{studentId || 'Pending...'}</strong>
+                        {studentId && (
+                          <button
+                            onClick={() => copyToClipboard(studentId)}
+                            className="inline-flex items-center px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs transition-colors duration-150"
+                            title="Copy Student ID"
+                          >
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                            Copy
+                          </button>
+                        )}
+                      </div>
                       <p className="flex items-center">
                         <svg
                           className="h-4 w-4 mr-2 text-blue-500"
@@ -327,8 +397,7 @@ function Enrollment() {
                             clipRule="evenodd"
                           />
                         </svg>
-                        Remember your&nbsp; 
-                        <strong>  Student ID: {userId}</strong>
+                        Use this Student ID in the payment form
                       </p>
                       <p className="flex items-center">
                         <svg
@@ -368,9 +437,7 @@ function Enrollment() {
             <div className="flex justify-center my-6">
               {shouldShowPaymentButton && (
                   <button
-                    onClick={() => {
-                      navigate("/paymentForm");
-                    }}
+                    onClick={handlePayNow}
                     className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
                   >
                     <span>
@@ -394,32 +461,7 @@ function Enrollment() {
                   </button>
                 )}
 
-              {/* Proceed to Next Step Button - Step 3 (after payment proof upload) */}
-              {shouldShowNextStepButton && (
-                  <button
-                    onClick={() => {
-                      advanceToNextStep();
-                    }}
-                    className="px-6 py-2.5 bg-german-red hover:bg-dark-red text-white font-medium rounded-md transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center whitespace-nowrap"
-                  >
-                    <span>Proceed to Next Step</span>
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      ></path>
-                    </svg>
-                  </button>
-                )}
-              {/* Temporary Next Button for Demo */}
+              {/* Temporary Next Button for Demo
               <button
                 onClick={() => {
                   advanceToNextStep();
@@ -427,7 +469,7 @@ function Enrollment() {
                 className="fixed bottom-4 right-4 px-4 py-2 bg-german-red text-white rounded shadow-md hover:bg-dark-red"
               >
                 Next
-              </button>
+              </button> */}
             </div>
 
             {/* Contact Information Footer */}
