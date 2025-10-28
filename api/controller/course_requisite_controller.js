@@ -3,13 +3,23 @@ const prisma = new PrismaClient();
 
 // List all requisites for a course
 export const listRequisites = async (req, res) => {
-  const { courseId } = req.query;
+  const { courseId, courseIds } = req.query;
   try {
-    if (!courseId) {
-      return res.status(400).json({ error: 'Missing courseId query parameter.' });
+    let where = {};
+    if (courseIds) {
+      // Support comma-separated list
+      const ids = courseIds.split(',').map(id => id.trim()).filter(Boolean);
+      if (ids.length === 0) {
+        return res.status(400).json({ error: 'No valid courseIds provided.' });
+      }
+      where.courseId = { in: ids };
+    } else if (courseId) {
+      where.courseId = courseId;
+    } else {
+      return res.status(400).json({ error: 'Missing courseId or courseIds query parameter.' });
     }
     const requisites = await prisma.course_requisite.findMany({
-      where: { courseId },
+      where,
       include: {
         requisiteCourse: true,
       },

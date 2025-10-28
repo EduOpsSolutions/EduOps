@@ -10,9 +10,6 @@ import express from 'express';
 const router = express.Router();
 
 router.get('/', 
-    verifyToken, 
-    validateIsActiveUser, 
-    validateUserIsAdmin,
     courseRequisiteController.listRequisites
 );
 
