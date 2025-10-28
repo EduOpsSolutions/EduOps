@@ -1,26 +1,26 @@
-import React, { useState, useRef, useEffect } from "react";
-import usePostsStore from "../../stores/postsStore";
-import PostTagButton from "../buttons/PostTagButton";
-import EditPostModal from "../modals/home/EditPostModal";
-import Swal from "sweetalert2";
+import React, { useState, useRef, useEffect } from 'react';
+import usePostsStore from '../../stores/postsStore';
+import PostTagButton from '../buttons/PostTagButton';
+import EditPostModal from '../modals/home/EditPostModal';
+import Swal from 'sweetalert2';
 
 // Modal for viewing images in full size
 const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
     }
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "unset";
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
 
@@ -54,7 +54,7 @@ const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
 
         <img
           src={imageUrl}
-          alt={imageName || "Full size image"}
+          alt={imageName || 'Full size image'}
           className="max-w-full max-h-full object-contain"
           onClick={(e) => e.stopPropagation()}
         />
@@ -70,7 +70,7 @@ const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
 
 // Component to render individual file attachments
 const FileAttachment = ({ file, onImageClick }) => {
-  const isImage = file.fileType?.startsWith("image/");
+  const isImage = file.fileType?.startsWith('image/');
 
   if (isImage) {
     return (
@@ -81,7 +81,7 @@ const FileAttachment = ({ file, onImageClick }) => {
         >
           <img
             src={file.url}
-            alt={file.fileName || "Post image"}
+            alt={file.fileName || 'Post image'}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
           />
         </div>
@@ -120,10 +120,10 @@ const FileAttachment = ({ file, onImageClick }) => {
       </div>
       <div className="ml-3 flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 truncate">
-          {file.fileName || "Download file"}
+          {file.fileName || 'Download file'}
         </p>
         <p className="text-xs text-gray-500">
-          {file.fileType}{" "}
+          {file.fileType}{' '}
           {file.fileSize && `• ${(file.fileSize / 1024 / 1024).toFixed(2)} MB`}
         </p>
       </div>
@@ -159,9 +159,9 @@ const PostAttachments = ({ files }) => {
 
   if (!files || files.length === 0) return null;
 
-  const images = files.filter((file) => file.fileType?.startsWith("image/"));
+  const images = files.filter((file) => file.fileType?.startsWith('image/'));
   const documents = files.filter(
-    (file) => !file.fileType?.startsWith("image/")
+    (file) => !file.fileType?.startsWith('image/')
   );
 
   const handleImageClick = (imageUrl, imageName) => {
@@ -181,12 +181,12 @@ const PostAttachments = ({ files }) => {
         <div
           className={`grid gap-3 mb-4 justify-start ${
             images.length === 1
-              ? "grid-cols-1 max-w-48"
+              ? 'grid-cols-1 max-w-48'
               : images.length === 2
-              ? "grid-cols-2"
+              ? 'grid-cols-2'
               : images.length === 3
-              ? "grid-cols-3"
-              : "grid-cols-2 md:grid-cols-3"
+              ? 'grid-cols-3'
+              : 'grid-cols-2 md:grid-cols-3'
           }`}
         >
           {images.map((file, index) => (
@@ -246,13 +246,13 @@ const PostCard = ({
 
   // Extract initials from postedBy name
   const getInitials = (name) => {
-    if (!name) return "";
-    const nameParts = name.trim().split(" ");
+    if (!name) return '';
+    const nameParts = name.trim().split(' ');
     if (nameParts.length === 1) {
-      return nameParts[0][0]?.toUpperCase() || "";
+      return nameParts[0][0]?.toUpperCase() || '';
     }
-    const firstInitial = nameParts[0][0] || "";
-    const lastInitial = nameParts[nameParts.length - 1][0] || "";
+    const firstInitial = nameParts[0][0] || '';
+    const lastInitial = nameParts[nameParts.length - 1][0] || '';
     return (firstInitial + lastInitial).toUpperCase();
   };
 
@@ -282,11 +282,11 @@ const PostCard = ({
     };
 
     if (showMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showMenu]);
 
@@ -299,23 +299,24 @@ const PostCard = ({
 
   const handleDeletePost = async () => {
     const result = await Swal.fire({
-      title: "Delete Post",
-      text: "Are you sure you want to delete this post? This action cannot be undone.",
-      icon: "warning",
+      title: 'Delete Post',
+      text: 'Are you sure you want to delete this post? This action cannot be undone.',
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
       reverseButtons: true,
     });
 
     if (result.isConfirmed) {
       if (onDeletePost) onDeletePost(id);
       Swal.fire({
-        title: "Deleted!",
-        text: "The post has been deleted successfully.",
-        icon: "success",
+        title: 'Deleted!',
+        text: 'The post has been deleted successfully.',
+        icon: 'success',
+        confirmButtonColor: '#890E07',
         timer: 2000,
         showConfirmButton: false,
       });
@@ -327,9 +328,9 @@ const PostCard = ({
     if (onHidePost) {
       await onHidePost(id);
       Swal.fire({
-        title: "Post Hidden",
-        text: "The post has been hidden successfully.",
-        icon: "success",
+        title: 'Post Hidden',
+        text: 'The post has been hidden successfully.',
+        icon: 'success',
         timer: 2000,
         showConfirmButton: false,
       });
@@ -341,9 +342,9 @@ const PostCard = ({
     if (onUnhidePost) {
       await onUnhidePost(id);
       Swal.fire({
-        title: "Post Unhidden",
-        text: "The post is now visible again.",
-        icon: "success",
+        title: 'Post Unhidden',
+        text: 'The post is now visible again.',
+        icon: 'success',
         timer: 2000,
         showConfirmButton: false,
       });

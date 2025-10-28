@@ -111,8 +111,8 @@ const ResetPasswordModal = ({
         showCancelButton: true,
         confirmButtonText: 'No, Keep Editing',
         cancelButtonText: 'Yes, Discard Changes',
-        confirmButtonColor: '#6b7280',
-        cancelButtonColor: '#992525',
+        confirmButtonColor: '#992525',
+        cancelButtonColor: '#6B7280',
       }).then((result) => {
         if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
           setNewPassword('');

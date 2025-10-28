@@ -22,7 +22,12 @@ const ModalSelectField = ({
                 {...props}
             >
                 {options.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <option 
+                        key={option.value} 
+                        value={option.value}
+                        disabled={option.disabled}
+                        className={option.className || ''}
+                    >
                         {option.label}
                     </option>
                 ))}

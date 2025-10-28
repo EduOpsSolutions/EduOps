@@ -143,7 +143,8 @@ function EnrollmentRequests() {
         confirmButtonColor: '#890E07',
         cancelButtonColor: '#6B7280',
         confirmButtonText: 'Yes, end enrollment',
-        cancelButtonText: 'Cancel'
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
       });
 
       if (!result.isConfirmed) return;
@@ -153,7 +154,7 @@ function EnrollmentRequests() {
       if (endResult.success) {
         await Swal.fire({
           title: 'Enrollment Ended',
-          text: `Enrollment for ${selectedPeriod.periodName} - ${selectedPeriod.batchName} has been successfully ended.`,
+          text: `Enrollment for ${selectedPeriod.batchName} has been successfully ended.`,
           icon: 'success',
           confirmButtonColor: '#890E07'
         });
@@ -187,7 +188,18 @@ function EnrollmentRequests() {
           setShowEnrollmentDetailsModal(false);
           setSelectedEnrollmentRequest(null);
         }}
-        handleSave={() => {}}
+        handleSave={(updatedData) => {
+          setEnrollmentRequests(prev => 
+            prev.map(request => 
+              request.id === updatedData.id ? updatedData : request
+            )
+          );
+          if (selectedEnrollmentRequest?.id === updatedData.id) {
+            setSelectedEnrollmentRequest(updatedData);
+          }
+          setShowEnrollmentDetailsModal(false);
+        }}
+        onEnrollmentUpdate={fetchEnrollmentRequests}
       />
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-7xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">

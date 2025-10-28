@@ -254,6 +254,7 @@ function AdminSchedule() {
       confirmButtonColor: '#992525',
       cancelButtonText: 'Cancel',
       cancelButtonColor: '#6b7280',
+      reverseButtons: true,
     }).then(async (result) => {
       if (!result.isConfirmed) return;
 

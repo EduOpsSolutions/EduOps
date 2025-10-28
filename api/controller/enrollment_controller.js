@@ -384,7 +384,6 @@ const createEnrollmentRequest = async (req, res) => {
       </html>
       `
     );
-    console.log("email", email);
 
     res.status(201).json({
       error: false,
@@ -539,12 +538,6 @@ const trackEnrollment = async (req, res) => {
       "Your enrollment form has been submitted and is pending verification by an administrator.";
 
     const coursePrice = course ? parseFloat(course.price) : null;
-    console.log("Enrollment request data:", {
-      courseTablePrice: course?.price,
-      finalCoursePrice: coursePrice,
-      courseName: enrollmentRequest.coursesToEnroll,
-      foundCourse: course,
-    });
 
     const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : "";
 
@@ -552,7 +545,7 @@ const trackEnrollment = async (req, res) => {
       case "PENDING":
         currentStep = 2;
         completedSteps = [1];
-        remarkMsg = `Your enrollment form has been submitted and is pending verification by an administrator.${priceText}`;
+        remarkMsg = `Your enrollment form has been submitted and is pending verification by an administrator.`;
         break;
       case "VERIFIED":
         currentStep = 3;
@@ -562,23 +555,32 @@ const trackEnrollment = async (req, res) => {
       case "PAYMENT_PENDING":
         currentStep = 4;
         completedSteps = [1, 2, 3];
-        remarkMsg = `Your payment is being verified. This may take 1-2 business days.${priceText}`;
+        remarkMsg = `Your payment is being verified. This may take 1-2 business days.`;
         break;
       case "APPROVED":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4];
-        remarkMsg = `Congratulations! Your enrollment has been approved.${priceText}`;
+        remarkMsg = `Congratulations! Your enrollment has been approved.`;
         break;
       case "COMPLETED":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4, 5];
-        remarkMsg = `Congratulations! Your enrollment is complete.${priceText}`;
+        remarkMsg = `Congratulations! Your enrollment is complete.`;
         break;
       case "REJECTED":
-        currentStep = 1;
-        completedSteps = [];
-        remarkMsg =
-          "Your enrollment request has been rejected. Please contact our admissions office for more information.";
+        const hasPaymentProof = enrollmentRequest.paymentProofPath && enrollmentRequest.paymentProofPath.trim() !== "";
+        
+        if (hasPaymentProof) {
+          // If payment proof exists, it was likely a payment rejection - go back to payment step
+          currentStep = 3;
+          completedSteps = [1, 2];
+          remarkMsg = "Your payment has been rejected. Please upload a new payment proof and try again.";
+        } else {
+          // If no payment proof, it was a form rejection - go back to form verification
+          currentStep = 2;
+          completedSteps = [1];
+          remarkMsg = "Your enrollment form has been rejected. Please contact our admissions office for more information.";
+        }
         break;
       default:
         currentStep = 1;
@@ -691,6 +693,68 @@ const updateEnrollmentStatus = async (req, res) => {
   }
 };
 
+// Helper function to update enrollment progress based on status
+const trackEnrollmentProgress = async (enrollmentRequest) => {
+  const { enrollmentStatus } = enrollmentRequest;
+  let currentStep = 1;
+  let completedSteps = [];
+  let remarkMsg = "";
+
+  switch (enrollmentStatus.toUpperCase()) {
+    case "PENDING":
+      currentStep = 1;
+      completedSteps = [];
+      remarkMsg = "Your enrollment form has been submitted and is pending verification by an administrator.";
+      break;
+    case "VERIFIED":
+      currentStep = 2;
+      completedSteps = [1];
+      remarkMsg = "Your enrollment form has been verified. Please proceed with payment.";
+      break;
+    case "PAYMENT_PENDING":
+      currentStep = 3;
+      completedSteps = [1, 2];
+      remarkMsg = "Your payment is being verified. This may take 1-2 business days.";
+      break;
+    case "APPROVED":
+      currentStep = 4;
+      completedSteps = [1, 2, 3, 5];
+      remarkMsg = "Your payment has been verified. Enrollment is being processed.";
+      break;
+    case "COMPLETED":
+      currentStep = 5;
+      completedSteps = [1, 2, 3, 4, 5];
+      remarkMsg = "Congratulations! Your enrollment is complete.";
+      break;
+    case "REJECTED":
+      // Determine where to go back based on what was previously verified
+      const hasPaymentProof = enrollmentRequest.paymentProofPath && enrollmentRequest.paymentProofPath.trim() !== "";
+      
+      if (hasPaymentProof) {
+        // If payment proof exists, it was likely a payment rejection - go back to payment step
+        currentStep = 3;
+        completedSteps = [1, 2];
+        remarkMsg = "Your payment has been rejected. Please upload a new payment proof and try again.";
+        // Return payment_pending status instead of rejected so the student can resubmit
+        enrollmentStatus = "payment_pending";
+      } else {
+        // If no payment proof, it was a form rejection - go back to form verification
+        currentStep = 2;
+        completedSteps = [1];
+        remarkMsg = "Your enrollment form has been rejected. Please contact our admissions office for more information.";
+        // Return verified status so the student can resubmit
+        enrollmentStatus = "verified";
+      }
+      break;
+    default:
+      currentStep = 1;
+      completedSteps = [];
+      remarkMsg = "Your enrollment form has been submitted and is pending verification by an administrator.";
+  }
+
+  return { currentStep, completedSteps, remarkMsg, enrollmentStatus };
+};
+
 // Update all fields of an enrollment request
 const updateEnrollment = async (req, res) => {
   const { enrollmentId } = req.params;
@@ -747,14 +811,49 @@ const updateEnrollment = async (req, res) => {
   if (idPhotoPath !== undefined) updateData.idPhotoPath = idPhotoPath;
   if (paymentProofPath !== undefined)
     updateData.paymentProofPath = paymentProofPath;
-  if (enrollmentStatus !== undefined)
-    updateData.enrollmentStatus = enrollmentStatus;
+  if (enrollmentStatus !== undefined) {
+    // If status is being set to rejected, convert it to the appropriate status for resubmission
+    if (enrollmentStatus.toUpperCase() === "REJECTED") {
+      // Get the current enrollment to check previous status
+      const currentEnrollment = await prisma.enrollment_request.findUnique({
+        where: { enrollmentId }
+      });
+      
+      if (currentEnrollment) {
+        const currentStatus = currentEnrollment.enrollmentStatus.toUpperCase();
+        // Determine the appropriate status to set
+        if (currentStatus === "PAYMENT_PENDING" || currentStatus === "APPROVED") {
+          // If currently in payment verification, go back to payment pending
+          updateData.enrollmentStatus = "payment_pending";
+        } else {
+          // For all other cases, go back to verified
+          updateData.enrollmentStatus = "verified";
+        }
+      }
+    } else {
+      updateData.enrollmentStatus = enrollmentStatus;
+    }
+  }
 
   try {
     const updated = await prisma.enrollment_request.update({
       where: { enrollmentId },
       data: updateData,
     });
+
+    // If enrollment status was changed, also update the enrollment progress
+    if (enrollmentStatus !== undefined) {
+      // Call the trackEnrollment function to update progress
+      const enrollmentRequest = await prisma.enrollment_request.findUnique({
+        where: { enrollmentId }
+      });
+      
+      if (enrollmentRequest) {
+        // Update the progress based on the new status
+        const progressData = await trackEnrollmentProgress(enrollmentRequest);
+      }
+    }
+
     res.status(200).json({
       message: "Enrollment updated successfully",
       data: updated,

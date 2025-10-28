@@ -1,19 +1,20 @@
 import { Flowbite, Modal } from "flowbite-react";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getCookieItem } from '../../../utils/jwt';
 import GradeStudentsTable from "../../tables/GradeStudentsTable";
 import GradeModalFooter from "./GradeModalFooter";
 import useGradeStore from "../../../stores/gradeStore";
 import Swal from 'sweetalert2';
+import CommonModal from '../common/CommonModal';
 
 // To customize measurements of header 
 const customModalTheme = {
     modal: {
         "root": {
-            "base": "fixed inset-0 z-50 h-screen w-screen overflow-y-auto overflow-x-hidden transition-opacity",
+            "base": "fixed inset-x-0 top-0 z-50 h-screen overflow-y-auto overflow-x-hidden md:inset-0 md:h-full transition-opacity",
             "show": {
-                "on": "flex justify-center items-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-                "off": "hidden ease-out"
+            "on": "flex bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
+            "off": "hidden ease-out"
             },
         },
         "header": {
@@ -21,14 +22,17 @@ const customModalTheme = {
             "popup": "border-b-0 p-2",
             "title": "text-xl font-medium text-gray-900 dark:text-white text-center",
             "close": {
-                "base": "ml-auto mr-2 inline-flex items-center rounded-lg p-1.5 text-sm text-black hover:bg-grey-1 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white",
+                "base": "ml-auto mr-2 inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150",
                 "icon": "h-5 w-5"
             }
         },
-    }
+    }  
 };
 
 function StudentsGradeModal(props) {
+    // File preview modal state
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewFile, setPreviewFile] = useState({ url: null, title: '' });
     const {
         students,
         gradesVisible,
@@ -54,7 +58,7 @@ function StudentsGradeModal(props) {
     };
 
     // Upload handler: sends file to backend
-    const handleDocumentUpload = async (studentId, file) => {
+    const handleDocumentUpload = async (studentId, file, userId) => {
         const apiUrl = process.env.REACT_APP_API_URL;
         const token = getCookieItem('token');
         const formData = new FormData();
@@ -62,7 +66,7 @@ function StudentsGradeModal(props) {
 
         Swal.fire({
             title: 'Uploading...',
-            text: `Uploading "${file.name}" for student ID: ${studentId}`,
+            text: `Uploading "${file.name}" for ${userId || 'student'}`,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -81,7 +85,7 @@ function StudentsGradeModal(props) {
             if (!res.ok) throw new Error('Upload failed');
             Swal.fire({
                 title: 'Success!',
-                text: `Document "${file.name}" uploaded successfully for student ID: ${studentId}`,
+                text: `Document "${file.name}" uploaded successfully for ${userId || 'student'}`,
                 icon: 'success',
                 confirmButtonColor: '#992525',
             });
@@ -97,7 +101,6 @@ function StudentsGradeModal(props) {
         }
     };
 
-    // View document handler: fetches file(s) for the studentGradeId and opens the first file's URL
     const handleViewDocument = async (studentGradeId) => {
         const apiUrl = process.env.REACT_APP_API_URL;
         const token = getCookieItem('token');
@@ -113,7 +116,8 @@ function StudentsGradeModal(props) {
                 // Sort files by uploadedAt descending (latest first)
                 files = files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
                 if (files[0].url) {
-                    window.open(files[0].url, '_blank', 'noopener');
+                    setPreviewFile({ url: files[0].url, title: 'Uploaded File Preview' });
+                    setShowPreview(true);
                 } else {
                     Swal.fire('No File', 'No file has been uploaded for this student.', 'info');
                 }
@@ -140,6 +144,7 @@ function StudentsGradeModal(props) {
                 cancelButtonText: 'Cancel',
                 confirmButtonColor: '#992525',
                 cancelButtonColor: '#6b7280',
+                reverseButtons: true,
             });
 
             if (result.isConfirmed) {
@@ -187,6 +192,7 @@ function StudentsGradeModal(props) {
                 cancelButtonText: 'Cancel',
                 confirmButtonColor: '#992525',
                 cancelButtonColor: '#6b7280',
+                reverseButtons: true,
             });
 
             if (result.isConfirmed) {
@@ -205,57 +211,44 @@ function StudentsGradeModal(props) {
     }, [props.students_grade_modal, students, gradesVisible, setChangesMade]);
 
     return (
-        <Flowbite theme={{ theme: customModalTheme }}>
-            <Modal
-                dismissible
-                show={props.students_grade_modal}
-                size="7xl"
-                onClose={() => handleModalClose()}
-                popup
-                className="transition duration-150 ease-out"
-                theme={{
-                    root: {
-                        base: "fixed inset-0 z-50 h-screen w-screen overflow-y-auto overflow-x-hidden transition-opacity",
-                        show: {
-                            on: "flex justify-center items-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80 ease-in",
-                            off: "hidden ease-out"
-                        }
-                    },
-                    content: {
-                        base: "relative w-full p-4 h-auto",
-                        inner: "bg-transparent relative rounded-lg max-h-[90vh] overflow-y-auto"
-                    }
-                }}
-            >
-                <div className="py-4 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
-                    <Modal.Header className="z-10 transition ease-in-out duration-300" />
-
-                    <p className="font-bold -mt-8 sm:-mt-10 mx-4 sm:ml-6 mb-2 sm:mb-4 text-left text-lg sm:text-xl md:text-2xl transition ease-in-out duration-300 break-words">
-                        <span className="block md:inline">{courseInfo.courseName}</span>
-                        <span className="hidden md:inline">{props.schedule?.teacherName ? ` | ${props.schedule.teacherName}` : ''}</span>
-                        <span className="block md:inline">{courseInfo.courseSchedule} {courseInfo.courseTime}</span>
-                        {courseInfo.courseRoom && (
-                            <>
-                                <span className="hidden md:inline"> | </span>
-                                <span className="block md:inline">{courseInfo.courseRoom}</span>
-                            </>
-                        )}
-                    </p>
-
-                    <Modal.Body>
-                        <div className="h-[400px] sm:h-[450px] md:h-[500px] max-h-[65vh]">
-                            <div className="h-[85%] sm:h-[90%] border-y-dark-red-2 border-y-2 overflow-y-auto">
-                                <GradeStudentsTable
-                                    students={students}
-                                    gradeStatusOptions={gradeStatusOptions}
-                                    getStudentGrade={getStudentGrade}
-                                    handleGradeChange={handleGradeChange}
-                                    handleDocumentUpload={handleDocumentUpload}
-                                    handleViewDocument={handleViewDocument}
-                                    teacherName={props.schedule?.teacherName}
-                                />
+        <>
+            <Flowbite theme={{ theme: customModalTheme }}>
+                <Modal
+                    dismissible
+                    show={props.students_grade_modal}
+                    size="7xl"
+                    onClose={() => handleModalClose()}
+                    popup
+                    className="transition duration-150 ease-out"
+                >
+                <div className="pt-6 flex flex-col bg-white-yellow-tone rounded-lg transition duration-150 ease-out">
+                    <Modal.Header className="z-10 transition ease-in-out duration-300 " />
+                        <p className="font-bold -mt-10 ml-6 mb-4 text-left text-2xl transition ease-in-out duration-300 break-words">
+                            <span className="block md:inline">{courseInfo.courseName}</span>
+                            <span className="block md:inline">{props.schedule?.teacherName ? ` | ${props.schedule.teacherName}` : ''}</span>
+                            <span className="block md:inline">{courseInfo.courseSchedule} {courseInfo.courseTime}</span>
+                            {courseInfo.courseRoom && (
+                                <>
+                                    <span className="block md:inline"> | </span>
+                                    <span className="block md:inline">{courseInfo.courseRoom}</span>
+                                </>
+                            )}
+                        </p>
+                        <Modal.Body>
+                            <div class="h-[450px]"> 
+                                <div className="h-[85%] border-y-dark-red-2 border-y-2 overflow-y-auto">
+                                    <GradeStudentsTable
+                                        students={students}
+                                        gradeStatusOptions={gradeStatusOptions}
+                                        getStudentGrade={getStudentGrade}
+                                        handleGradeChange={handleGradeChange}
+                                        handleDocumentUpload={handleDocumentUpload}
+                                        handleViewDocument={handleViewDocument}
+                                        teacherName={props.schedule?.teacherName}
+                                    />
+                                </div>
                             </div>
-
+                            
                             <GradeModalFooter
                                 isVisible={gradesVisible}
                                 handleVisibilityToggle={handleVisibilityToggle}
@@ -264,11 +257,20 @@ function StudentsGradeModal(props) {
                                 setLocalGrades={setLocalGrades}
                                 setChangesMade={setChangesMade}
                             />
-                        </div>
-                    </Modal.Body>
-                </div>
-            </Modal>
-        </Flowbite>
+                        </Modal.Body>
+                    </div>
+                </Modal>
+            </Flowbite>
+            <CommonModal
+                title={previewFile.title}
+                handleClose={() => {
+                    setShowPreview(false);
+                    setPreviewFile({ url: null, title: '' });
+                }}
+                show={showPreview}
+                fileUrl={previewFile.url}
+            />
+        </>
     );
 }
 

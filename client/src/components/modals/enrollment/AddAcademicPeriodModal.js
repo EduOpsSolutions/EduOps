@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../../utils/axios';
-import DiscardChangesModal from '../common/DiscardChangesModal';
+import Swal from 'sweetalert2';
 import ModalTextField from '../../form/ModalTextField';
 
 function AcademicPeriodModal({
@@ -14,13 +14,11 @@ function AcademicPeriodModal({
     endAt: '',
   });
 
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!addAcademicPeriodModal) {
-      setShowDiscardModal(false);
       setFormData({
         batchName: '',
         startAt: '',
@@ -78,6 +76,19 @@ function AcademicPeriodModal({
 
     if (!validateForm()) return;
 
+    const result = await Swal.fire({
+      title: 'Create Batch?',
+      text: 'Do you want to create this batch?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#890E07',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, create',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    });
+    if (!result.isConfirmed) return;
+
     try {
       setLoading(true);
       setError('');
@@ -127,6 +138,14 @@ function AcademicPeriodModal({
       console.log('Academic Period created:', response.data);
 
       await fetchPeriods();
+      await Swal.fire({
+        title: 'Created!',
+        text: 'The batch has been created successfully.',
+        icon: 'success',
+        confirmButtonColor: '#890E07',
+        timer: 2000,
+        showConfirmButton: false
+      });
       setAddAcademicPeriodModal(false);
     } catch (error) {
       console.error(
@@ -148,19 +167,24 @@ function AcademicPeriodModal({
 
   const handleClose = () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      Swal.fire({
+        title: 'Discard Changes?',
+        text: 'You have unsaved changes. Do you want to discard them?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, discard',
+        cancelButtonText: 'No, keep editing',
+        confirmButtonColor: '#992525',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setAddAcademicPeriodModal(false);
+        }
+      });
     } else {
       setAddAcademicPeriodModal(false);
     }
-  };
-
-  const handleDiscardChanges = () => {
-    setShowDiscardModal(false);
-    setAddAcademicPeriodModal(false);
-  };
-
-  const handleCancelDiscard = () => {
-    setShowDiscardModal(false);
   };
 
   if (!addAcademicPeriodModal) return null;
@@ -212,6 +236,28 @@ function AcademicPeriodModal({
 
             {/* Removed Period Name: using batch and dates only */}
 
+            <div className="flex flex-row justify-center items-center gap-4">
+              <ModalTextField
+                label="Enrollment Open Date"
+                name="enrollmentOpenAt"
+                type="date"
+                value={formData.enrollmentOpenAt}
+                onChange={handleInputChange}
+                required
+                className="w-1/2"
+              />
+
+              <ModalTextField
+                label="Enrollment Close Date"
+                name="enrollmentCloseAt"
+                type="date"
+                value={formData.enrollmentCloseAt}
+                onChange={handleInputChange}
+                required
+                className="w-1/2"
+              />
+            </div>
+
             {/* Date Range */}
             <div className="flex flex-row justify-center items-center gap-4">
               <ModalTextField
@@ -229,28 +275,6 @@ function AcademicPeriodModal({
                 name="endAt"
                 type="date"
                 value={formData.endAt}
-                onChange={handleInputChange}
-                required
-                className="w-1/2"
-              />
-            </div>
-
-            <div className="flex flex-row justify-center items-center gap-4">
-              <ModalTextField
-                label="Enrollment Open Date"
-                name="enrollmentOpenAt"
-                type="date"
-                value={formData.enrollmentOpenAt}
-                onChange={handleInputChange}
-                required
-                className="w-1/2"
-              />
-
-              <ModalTextField
-                label="Enrollment Close Date"
-                name="enrollmentCloseAt"
-                type="date"
-                value={formData.enrollmentCloseAt}
                 onChange={handleInputChange}
                 required
                 className="w-1/2"
@@ -277,12 +301,6 @@ function AcademicPeriodModal({
           </form>
         </div>
       </div>
-
-      <DiscardChangesModal
-        show={showDiscardModal}
-        onConfirm={handleDiscardChanges}
-        onCancel={handleCancelDiscard}
-      />
     </>
   );
 }
