@@ -317,15 +317,15 @@ const createPaymentIntent = async (req, res) => {
         const customTransactionId = await generatePaymentId();
         
         let finalUserId = userId;
-        if (typeof userId === 'string' && userId.length > 20) {
+        if (typeof userId === 'string' && userId.length <= 20) {
           try {
             const user = await prisma.users.findUnique({
-              where: { id: userId },
-              select: { id: true, student_id: true }
+              where: { userId: userId },
+              select: { id: true }
             });
-            
-            if (user && user.student_id) {
-              finalUserId = user.student_id;
+
+            if (user) {
+              finalUserId = user.id;
             }
           } catch (userError) {
             console.error('Error finding user:', userError);
@@ -461,7 +461,7 @@ const checkPaymentStatus = async (req, res) => {
         try {
           const customTransactionId = await generatePaymentId();
           
-          let userId = 'student001';
+          let userId = null;
           let feeType = 'unknown';
           let remarks = 'Payment created from PayMongo data';
           
@@ -490,10 +490,10 @@ const checkPaymentStatus = async (req, res) => {
             remarks = recentPayments[0].remarks || description;
           } else {
             const existingUser = await prisma.users.findFirst({
-              select: { id: true, student_id: true }
+              select: { id: true }
             });
             if (existingUser) {
-              userId = existingUser.student_id || existingUser.id;
+              userId = existingUser.id;
             }
           }
           

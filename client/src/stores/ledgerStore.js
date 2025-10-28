@@ -1,39 +1,7 @@
 import { create } from 'zustand';
-import createSearchStore from './searchStore';
 
-// Sample data
-const sampleStudents = [
-  {
-    id: 1,
-    name: "Polano Dolor",
-    course: "A1 German Basic Course",
-    batch: "Batch 1",
-    year: "2024",
-  },
-  {
-    id: 2,
-    name: "Juan Dela Cruz",
-    course: "A2 German Intermediate Course",
-    batch: "Batch 2",
-    year: "2023",
-  },
-  {
-    id: 3,
-    name: "Maria Santos",
-    course: "B1 German Advanced Course",
-    batch: "Batch 3",
-    year: "2022",
-  },
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: i + 4,
-    name: `Student ${i + 4}`,
-    course: `${["A1", "A2", "B1", "B2"][i % 4]} German ${
-      ["Basic", "Intermediate", "Advanced"][i % 3]
-    } Course`,
-    batch: `Batch ${(i % 3) + 1}`,
-    year: `${2024 - (i % 3)}`,
-  })),
-];
+import createSearchStore from './searchStore';
+import axios from 'axios';
 
 // Initial ledger entries
 const initialLedgerEntries = [
@@ -51,7 +19,7 @@ const initialLedgerEntries = [
 ];
 
 const useLedgerSearchStore = createSearchStore({
-  initialData: sampleStudents,
+  initialData: [],
   defaultSearchParams: {
     studentName: "",
     course: "",
@@ -61,16 +29,26 @@ const useLedgerSearchStore = createSearchStore({
   searchableFields: ["name"],
   exactMatchFields: ["course", "batch", "year"],
   initialItemsPerPage: 10,
-  filterFunction: (data, params) => {
-    return data.filter(student => {
-      return (
-        (params.studentName === "" || 
-          student.name.toLowerCase().includes(params.studentName.toLowerCase())) &&
-        (params.course === "" || student.course.includes(params.course)) &&
-        (params.batch === "" || student.batch.includes(params.batch)) &&
-        (params.year === "" || student.year.includes(params.year))
-      );
-    });
+  
+  fetchFunction: async (params) => {
+    // Fetch real student data from /api/v1/assessment
+    const res = await axios.get('/api/v1/assessment');
+    let students = res.data || [];
+    console.log('[LedgerStore] fetchFunction got students:', students);
+    // Filter client-side for now (can be optimized server-side if needed)
+    if (params.studentName) {
+      students = students.filter(s => s.name.toLowerCase().includes(params.studentName.toLowerCase()));
+    }
+    if (params.course) {
+      students = students.filter(s => s.course === params.course);
+    }
+    if (params.batch) {
+      students = students.filter(s => s.batch === params.batch);
+    }
+    if (params.year) {
+      students = students.filter(s => String(s.year) === String(params.year));
+    }
+    return students;
   }
 });
 

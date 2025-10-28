@@ -91,7 +91,7 @@ const transformPaymentForFrontend = (payment, _options) => {
     paidAt: payment.paidAt || null,
     createdAt: payment.createdAt,
     updatedAt: payment.updatedAt,
-    userId: payment.user ? payment.user.userId : null, 
+    userId: payment.user ? payment.user.id : null, 
     studentId: payment.user ? payment.user.userId : null, 
     firstName: payment.user ? payment.user.firstName : null,
     lastName: payment.user ? payment.user.lastName : null,

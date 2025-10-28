@@ -49,15 +49,15 @@ const SearchResults = ({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <tr
-                key={item.id}
+                key={item.id || item._id || item.studentId || item.name || index}
                 className="cursor-pointer transition-colors duration-200 hover:bg-dark-red-2 hover:text-white"
                 onClick={() => onItemClick(item)}
               >
                 {columns.map((column) => (
                   <td 
-                    key={`${item.id}-${column.key}`} 
+                    key={`${item.id || item._id || item.studentId || item.name || index}-${column.key}`} 
                     className="py-2 sm:py-3 px-2 sm:px-4 border-t border-b border-dark-red-2 text-sm sm:text-base w-1/3"
                   >
                     {columnRenderers[column.key] 
