@@ -32,29 +32,44 @@ const SearchFormVertical = ({ searchLogic, fields, onSearch }) => {
 
         {fields.formFields.map((field) => (
           <div key={field.name}>
-            <p className="mb-1 text-sm sm:text-base">{field.label}</p>
-            {field.type === "select" ? (
-              <select
-                name={field.name}
-                value={searchLogic.searchParams[field.name] || ""}
-                onChange={searchLogic.handleInputChange}
-                className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base"
-              >
-                {field.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            {field.type === "checkbox" ? (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name={field.name}
+                  checked={searchLogic.searchParams[field.name] || false}
+                  onChange={field.onChange || searchLogic.handleInputChange}
+                  className="w-4 h-4 text-dark-red-2 border-gray-300 rounded focus:ring-dark-red-2 focus:ring-2 cursor-pointer"
+                />
+                <span className="text-sm sm:text-base">{field.label}</span>
+              </label>
             ) : (
-              <input
-                type={field.type || "text"}
-                name={field.name}
-                value={searchLogic.searchParams[field.name] || ""}
-                onChange={searchLogic.handleInputChange}
-                placeholder={field.placeholder}
-                className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base"
-              />
+              <>
+                <p className="mb-1 text-sm sm:text-base">{field.label}</p>
+                {field.type === "select" ? (
+                  <select
+                    name={field.name}
+                    value={searchLogic.searchParams[field.name] || ""}
+                    onChange={searchLogic.handleInputChange}
+                    className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base"
+                  >
+                    {field.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={field.type || "text"}
+                    name={field.name}
+                    value={searchLogic.searchParams[field.name] || ""}
+                    onChange={searchLogic.handleInputChange}
+                    placeholder={field.placeholder}
+                    className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base"
+                  />
+                )}
+              </>
             )}
           </div>
         ))}

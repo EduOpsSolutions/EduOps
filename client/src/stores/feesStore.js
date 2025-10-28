@@ -1,82 +1,145 @@
-import { create } from 'zustand';
-import createSearchStore from './searchStore';
+import { create } from "zustand";
+import createSearchStore from "./searchStore";
+import { getCookieItem } from "../utils/jwt";
 
-// Sample data
-const sampleCourses = [
-  {
-    id: 1,
-    name: "A1 German Basic Course",
-    batch: "Batch 1",
-    year: "2024",
-  },
-  {
-    id: 2,
-    name: "A2 German Intermediate Course",
-    batch: "Batch 2",
-    year: "2023",
-  },
-  {
-    id: 3,
-    name: "B1 German Advanced Course",
-    batch: "Batch 3",
-    year: "2022",
-  },
-];
+// const token = getCookieItem('token'); // Removed stale token retrieval
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
-// Initial fees data
-const initialFeesData = [
-  {
-    id: 1,
-    description: "COURSE FEE",
-    amount: "25,850.00",
-    dueDate: "May 30, 2024",
-  },
-  {
-    id: 2,
-    description: "BOOKS",
-    amount: "2,800.00",
-    dueDate: "May 30, 2024",
-  },
-];
+// Fetch course-batch pairs
+const fetchCourseBatchPairs = async () => {
+  try {
+    const token = getCookieItem("token");
+    const response = await fetch(`${API_BASE_URL}/fees/course-batches`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error("Network response was not ok");
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching course-batch pairs:", error);
+    throw error;
+  }
+};
+
+// Fetch fees for a specific course and batch
+const fetchFees = async (courseId, batchId) => {
+  try {
+    const token = getCookieItem("token");
+    const response = await fetch(
+      `${API_BASE_URL}/fees?courseId=${courseId}&batchId=${batchId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    if (!response.ok) throw new Error("Network response was not ok");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching fees:", error);
+    throw error;
+  }
+};
+
+// Edit a fee by ID
+const editFee = async (id, updatedData) => {
+  try {
+    const token = getCookieItem("token");
+    const response = await fetch(`${API_BASE_URL}/fees/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedData),
+    });
+    if (!response.ok) throw new Error("Network response was not ok");
+    return await response.json();
+  } catch (error) {
+    console.error("Error editing fee:", error);
+    throw error;
+  }
+};
+
+// Delete fee by ID
+const deleteFee = async (id) => {
+  try {
+    const token = getCookieItem("token");
+    const response = await fetch(`${API_BASE_URL}/fees/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error("Network response was not ok");
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting fee:", error);
+    throw error;
+  }
+};
 
 const useFeesSearchStore = createSearchStore({
-  initialData: sampleCourses,
+  initialData: [],
   defaultSearchParams: {
     courseName: "",
     batch: "",
-    year: ""
+    year: "",
   },
   searchableFields: ["name"],
   exactMatchFields: ["batch", "year"],
   initialItemsPerPage: 10,
   filterFunction: (data, params) => {
-    return data.filter(course => {
+    return data.filter((course) => {
       return (
-        (params.courseName === "" || 
-          course.name.toLowerCase().includes(params.courseName.toLowerCase())) &&
+        (params.courseName === "" ||
+          course.name
+            .toLowerCase()
+            .includes(params.courseName.toLowerCase())) &&
         (params.batch === "" || course.batch === params.batch) &&
         (params.year === "" || course.year === params.year)
       );
     });
-  }
+  },
+  fetchData: fetchCourseBatchPairs,
 });
 
 const useFeesStore = create((set, get) => ({
-  fees: [...initialFeesData],
+  fees: [],
   isEditMode: false,
   editedFees: [],
-  originalFees: [...initialFeesData],
+  originalFees: [],
   showAddFeeModal: false,
   showDiscardModal: false,
   showSaveModal: false,
   showSaveNotifyModal: false,
+  showDeleteModal: false,
+  feeToDelete: null,
+
+  fetchFees: async (courseId, batchId) => {
+    const fees = await fetchFees(courseId, batchId);
+    set({ fees, originalFees: [...fees], editedFees: [...fees] });
+  },
+
+  openDeleteModal: (id) => set({ showDeleteModal: true, feeToDelete: id }),
+  closeDeleteModal: () => set({ showDeleteModal: false, feeToDelete: null }),
+
+  confirmDeleteFee: async () => {
+    const { feeToDelete, handleDeleteFee, closeDeleteModal } = get();
+    if (feeToDelete) {
+      await handleDeleteFee(feeToDelete);
+      closeDeleteModal();
+    }
+  },
 
   handleEditFees: () => {
     const { fees } = get();
     set({
       isEditMode: true,
       editedFees: [...fees],
-      originalFees: [...fees]
+      originalFees: [...fees],
     });
   },
 
@@ -88,39 +151,34 @@ const useFeesStore = create((set, get) => ({
     set({ showAddFeeModal: false });
   },
 
-  handleAddFee: (newFee) => {
-    const { fees } = get();
-    
-    const formatDate = (dateString) => {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
+  handleAddFee: async (newFee) => {
+    const token = getCookieItem("token");
+    try {
+      const response = await fetch(`${API_BASE_URL}/fees`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newFee),
       });
-    };
-
-    const formattedFee = {
-      ...newFee,
-      id: Math.max(...fees.map((f) => f.id), 0) + 1,
-      amount: parseFloat(newFee.amount).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-      dueDate: formatDate(newFee.dueDate),
-    };
-
-    set((state) => ({
-      fees: [...state.fees, formattedFee],
-      showAddFeeModal: false
-    }));
+      if (!response.ok) throw new Error("Failed to add fee");
+      const createdFee = await response.json();
+      set((state) => ({
+        fees: [...state.fees, createdFee],
+        showAddFeeModal: false,
+      }));
+    } catch (error) {
+      console.error("Error adding fee:", error);
+      // Optionally, handle error state here
+    }
   },
 
   handleInputChange: (id, field, value) => {
     set((state) => ({
-      editedFees: state.editedFees.map((fee) => 
+      editedFees: state.editedFees.map((fee) =>
         fee.id === id ? { ...fee, [field]: value } : fee
-      )
+      ),
     }));
   },
 
@@ -128,15 +186,29 @@ const useFeesStore = create((set, get) => ({
     set({ showSaveModal: true });
   },
 
-  handleConfirmSave: () => {
-    const { editedFees } = get();
-    set({
-      fees: [...editedFees],
-      isEditMode: false,
-      showSaveModal: false,
-      showSaveNotifyModal: true,
-      originalFees: [...editedFees]
-    });
+  handleConfirmSave: async () => {
+    const { editedFees, originalFees } = get();
+    const token = getCookieItem("token");
+    try {
+      // Only update fees that have changed
+      for (const fee of editedFees) {
+        const payload = {
+          name: fee.name,
+          price: fee.price,
+          dueDate: fee.dueDate,
+        };
+        await editFee(fee.id, payload);
+      }
+      set({
+        fees: [...editedFees],
+        isEditMode: false,
+        showSaveModal: false,
+        showSaveNotifyModal: true,
+        originalFees: [...editedFees],
+      });
+    } catch (error) {
+      console.error("Error saving fees:", error);
+    }
   },
 
   handleCancelSave: () => {
@@ -156,7 +228,7 @@ const useFeesStore = create((set, get) => ({
     set({
       editedFees: [...originalFees],
       isEditMode: false,
-      showDiscardModal: false
+      showDiscardModal: false,
     });
   },
 
@@ -167,12 +239,12 @@ const useFeesStore = create((set, get) => ({
   handleFieldUndo: (id, field) => {
     const { fees } = get();
     const originalFee = fees.find((fee) => fee.id === id);
-    
+
     if (originalFee) {
       set((state) => ({
         editedFees: state.editedFees.map((fee) =>
           fee.id === id ? { ...fee, [field]: originalFee[field] } : fee
-        )
+        ),
       }));
     }
   },
@@ -184,17 +256,21 @@ const useFeesStore = create((set, get) => ({
     return originalFee && editedFee && originalFee[field] !== editedFee[field];
   },
 
-  handleDeleteFee: (id) => {
+  handleDeleteFee: async (id) => {
     const { isEditMode } = get();
-    
-    if (isEditMode) {
-      set((state) => ({
-        editedFees: state.editedFees.filter((fee) => fee.id !== id)
-      }));
-    } else {
-      set((state) => ({
-        fees: state.fees.filter((fee) => fee.id !== id)
-      }));
+    try {
+      await deleteFee(id);
+      if (isEditMode) {
+        set((state) => ({
+          editedFees: state.editedFees.filter((fee) => fee.id !== id),
+        }));
+      } else {
+        set((state) => ({
+          fees: state.fees.filter((fee) => fee.id !== id),
+        }));
+      }
+    } catch (error) {
+      console.error("Error deleting fee:", error);
     }
   },
 
@@ -206,22 +282,22 @@ const useFeesStore = create((set, get) => ({
       showAddFeeModal: false,
       showDiscardModal: false,
       showSaveModal: false,
-      showSaveNotifyModal: false
+      showSaveNotifyModal: false,
     });
   },
 
   resetStore: () => {
     set({
-      fees: [...initialFeesData],
+      fees: [],
       isEditMode: false,
       editedFees: [],
-      originalFees: [...initialFeesData],
+      originalFees: [],
       showAddFeeModal: false,
       showDiscardModal: false,
       showSaveModal: false,
-      showSaveNotifyModal: false
+      showSaveNotifyModal: false,
     });
-  }
+  },
 }));
 
 export { useFeesSearchStore, useFeesStore };

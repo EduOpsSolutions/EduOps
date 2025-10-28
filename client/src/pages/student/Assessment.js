@@ -1,113 +1,190 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import ThinRedButton from '../../components/buttons/ThinRedButton';
 import TransactionHistoryModal from '../../components/modals/common/TransactionHistoryModal';
+import { getCookieItem } from '../../utils/jwt';
 
 function Assessment() {
     const [transaction_history_modal, setTransactionHistoryModal] = useState(false);
+    const [enrollments, setEnrollments] = useState([]);
+    const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+    const token = getCookieItem('token');
+    let studentId = null;
+    if (token) {
+        try {
+            const decoded = require('../../utils/jwt').decodeToken(token);
+            studentId = decoded?.data?.id || null;
+        } catch (err) {
+            console.error('Error decoding token for studentId:', err);
+        }
+    }
+    console.log('Assessment.js - studentId from decoded token (primary key id):', studentId);
 
+    useEffect(() => {
+        async function fetchAssessments() {
+            try {
+                const token = getCookieItem('token');
+                const url = `${process.env.REACT_APP_API_URL}/assessment/${studentId}`;
+                const res = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                });
+                const data = await res.json();
+                // If the response is a single assessment object, wrap it in an array for consistency
+                if (data && data.studentId && data.course && data.batch) {
+                    setEnrollments([
+                        {
+                            course: data.course.name,
+                            batch: data.batch.batchName,
+                            year: data.batch.year,
+                            netAssessment: Number(data.netAssessment).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                            totalPayments: Number(data.totalPayments).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                            remainingBalance: Number(data.remainingBalance).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                            fees: [
+                                {
+                                    description: `COURSE FEE${data.course.name ? ` (${data.course.name})` : ''}`,
+                                    amount: Number(data.course.price).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                                    dueDate: ''
+                                },
+                                ...(data.fees || []).map(fee => ({
+                                    description: fee.name,
+                                    amount: Number(fee.price).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                                    dueDate: fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-US') : ''
+                                }))
+                            ]
+                        }
+                    ]);
+                } else if (Array.isArray(data)) {
+                    setEnrollments(data);
+                } else {
+                    setEnrollments([]);
+                }
+            } catch (err) {
+                setEnrollments([]);
+            }
+        }
+        fetchAssessments();
+    }, [studentId]);
     return (
         <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
             <div className="flex flex-col lg:flex-row gap-4 sm:gap-8 lg:gap-16 lg:items-start">
-                <div className="w-full lg:w-80 lg:flex-shrink-0 lg:self-start bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-7">
-                    <form className="flex flex-col gap-4 sm:gap-6 lg:gap-7">
-                        <div className='flex flex-row gap-2 items-center'>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className='size-6'>
-                                <path d="M12.75 12.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM7.5 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM8.25 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM9.75 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM10.5 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM12.75 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM14.25 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM15 17.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM16.5 15.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM15 12.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM16.5 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" />
-                                <path fillRule="evenodd" d="M6.75 2.25A.75.75 0 0 1 7.5 3v1.5h9V3A.75.75 0 0 1 18 3v1.5h.75a3 3 0 0 1 3 3v11.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V7.5a3 3 0 0 1 3-3H6V3a.75.75 0 0 1 .75-.75Zm13.5 9a1.5 1.5 0 0 0-1.5-1.5H5.25a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5v-7.5Z" clipRule="evenodd" />
-                            </svg>
-                            <p className='font-semibold'>SEARCH TUITION FEE ASSESSMENT</p>
-                        </div>
+                <div className="w-full lg:w-80 lg:flex-shrink-0 lg:self-start"></div>
+                <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
+                    <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-3 sm:mb-5">
+                        Tuition Fee Assessment
+                    </p>
+                    {/* List View */}
+                    {!selectedEnrollment ? (
+                        <>
+                            <p className="font-semibold mb-3 text-sm sm:text-base">
+                                {enrollments.length === 0 ? "No assessments found." : `Your Assessments (${enrollments.length})`}
+                            </p>
+                            <div className="space-y-2 mb-5">
+                                {enrollments.map((enroll, idx) => (
+                                    <div
+                                        key={idx}
+                                        onClick={() => setSelectedEnrollment(enroll)}
+                                        className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                                    >
+                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                                            <div>
+                                                <p className="font-semibold text-sm sm:text-base">{enroll.course}</p>
+                                                <p className="text-xs sm:text-sm text-gray-600">
+                                                    {enroll.batch} | {enroll.year}
+                                                </p>
+                                            </div>
+                                            <div className="text-left sm:text-right">
+                                                <p className="text-xs sm:text-sm text-gray-600">Remaining Balance:</p>
+                                                <p className="font-semibold text-sm sm:text-base">{enroll.remainingBalance}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
                         <div>
-                            <p className="mb-1 text-sm sm:text-base">Course</p>
-                            <select name="course" id="course" className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base">
-                                <option value="A1">A1 German Basic Course</option>
-                                <option value="A2">A2 German Basic Course</option>
-                                <option value="A3">A3 German Basic Course</option>
-                            </select>
-                        </div>
-                        <div>
-                            <p className="mb-1 text-sm sm:text-base">Batch</p>
-                            <select name="batch" id="batch" className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base">
-                                <option value="B1">Batch 1</option>
-                                <option value="B1">Batch 2</option>
-                                <option value="B1">Batch 3</option>
-                            </select>
-                        </div>
-                        <div>
-                            <p className="mb-1 text-sm sm:text-base">Year</p>
-                            <select name="year" id="year" className="w-full border-black focus:outline-dark-red-2 focus:ring-dark-red-2 focus:border-black rounded p-2 text-sm sm:text-base">
-                                <option value="Y1">2024</option>
-                                <option value="Y2">2023</option>
-                                <option value="Y3">2022</option>
-                            </select>
-                        </div>
-                        <div className="flex justify-end">
-                            <button type="submit" className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-md px-10 py-1.5 text-center shadow-sm shadow-black ease-in duration-150 w-full sm:w-auto">
-                                Search
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                <div className='basis-9/12 bg-white border-dark-red-2 border-2 rounded-lg p-10'>
-                    <p className='font-bold text-lg text-center mb-5'>A1: Batch 1 | 2024</p>
-                    <div className='flex flex-row items-end pb-3 border-b-2 border-dark-red-2'>
-                        <p className='uppercase grow'>Dolor, Polano I</p>
-                        <div className='m-0'>
-                            <ThinRedButton onClick={() => { setTransactionHistoryModal(true) }}>Transaction History</ThinRedButton>
-                            <span className='mx-2'></span>
-                            <Link to='/student/ledger' state={{ status: "fromAssessment" }}>
-                                <ThinRedButton>Ledger</ThinRedButton>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-5 gap-2 sm:gap-0">
+                                <p className="font-bold text-base sm:text-lg text-center sm:text-left">
+                                    {selectedEnrollment.course}: {selectedEnrollment.batch} | {selectedEnrollment.year}
+                                </p>
+                                <button
+                                    onClick={() => setSelectedEnrollment(null)}
+                                    className="text-dark-red-2 hover:text-dark-red-5 font-semibold text-sm sm:text-base w-full sm:w-auto text-left sm:text-right"
+                                >
+                                    Back to List
+                                </button>
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-end pb-3 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
+                                <p className="uppercase grow text-base sm:text-lg font-semibold text-left">Student</p>
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+                                    <ThinRedButton onClick={() => { setTransactionHistoryModal(true) }}>
+                                        Transaction History
+                                    </ThinRedButton>
+                                    <span className="hidden sm:inline mx-2"></span>
+                                    <Link to="/student/ledger" state={{ status: "fromAssessment" }}>
+                                        <ThinRedButton>Ledger</ThinRedButton>
+                                    </Link>
+                                </div>
+                            </div>
+                            <p className="font-bold text-base sm:text-lg text-center mt-6 sm:mt-9 mb-1">FEES</p>
+                            <div className="overflow-x-auto mb-5">
+                                <table className="min-w-full">
+                                    <thead>
+                                        <tr className="border-b-2 border-dark-red-2">
+                                            <th className="py-2 font-bold text-start text-xs sm:text-sm lg:text-base">
+                                                Description
+                                            </th>
+                                            <th className="py-2 font-bold text-center text-xs sm:text-sm lg:text-base">Amount</th>
+                                            <th className="py-2 font-bold text-center text-xs sm:text-sm lg:text-base">Due date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedEnrollment.fees?.map((fee, i) => (
+                                            <tr key={i} className="border-b-2 border-[rgb(137,14,7,.49)]">
+                                                <td className="uppercase py-2 text-xs sm:text-sm lg:text-base">{fee.description || fee.name}</td>
+                                                <td className="py-2 text-center text-xs sm:text-sm lg:text-base">{fee.amount || fee.price}</td>
+                                                <td className="py-2 text-center text-xs sm:text-sm lg:text-base">{
+                                                    fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-US') : ''
+                                                }</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="w-full pt-3 border-t-2 border-dark-red-2">
+                                <div className="flex flex-col gap-2 text-xs sm:text-sm lg:text-base">
+                                    <div className="flex justify-between">
+                                        <p className="font-bold">Net Assessment</p>
+                                        <p>{selectedEnrollment.netAssessment}</p>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <p className="font-bold">Total Payments</p>
+                                        <p>{selectedEnrollment.totalPayments}</p>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <p className="font-bold">Remaining Balance</p>
+                                        <p>{selectedEnrollment.remainingBalance}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <Link to="" className="flex flex-row justify-end mt-10">
+                                <span className="m-0">
+                                    <ThinRedButton>Proceed to Payment</ThinRedButton>
+                                </span>
                             </Link>
+                            <TransactionHistoryModal
+                                transaction_history_modal={transaction_history_modal}
+                                setTransactionHistoryModal={setTransactionHistoryModal}
+                            />
                         </div>
-                    </div>
-                    <p className='font-bold text-lg text-center mt-9 mb-1'>FEES</p>
-                    <table className='w-full mb-16'>
-                        <thead>
-                            <tr className='border-b-2 border-dark-red-2'>
-                                <th className='py-2 font-bold w-[70%] text-start'>Description</th>
-                                <th className='py-2 font-bold w-[15%]'>Amount</th>
-                                <th className='py-2 font-bold w-[15%]'>Due date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr className='border-b-2 border-[rgb(137,14,7,.49)]'>
-                                <td className='uppercase py-2'>Course Fee</td>
-                                <td className='py-2 text-center'>30,000.00</td>
-                                <td className='py-2 text-center'>May 30, 2024</td>
-                            </tr>
-                            <tr className='border-b-2 border-[rgb(137,14,7,.49)]'>
-                                <td className='uppercase py-2'>Book Fee</td>
-                                <td className='py-2 text-center'>2,800.00</td>
-                                <td className='py-2 text-center'>May 30, 2024</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div className='w-full pt-3 border-t-2 border-dark-red-2 grid grid-rows-4 grid-flow-col gap-3'>
-                        <div className='grid grid-rows-subgrid row-span-2'>
-                            <p className='row-start-2 font-bold'>Net Assessment</p>
-                        </div>
-                        <p className='font-bold'>Total Payments</p>
-                        <p className='font-bold'>Remaining Balance</p>
-                        <p className='font-bold text-center'>Amount</p>
-                        <p className='text-center'>28,650.00</p>
-                        <p className='text-center'>0.00</p>
-                        <p className='text-center'>28,650.00</p>
-                    </div>
-                    <Link to='' className='flex flex-row justify-end mt-10'>
-                        <span className='m-0'>
-                            <ThinRedButton>Proceed to Payment</ThinRedButton>
-                        </span>
-                    </Link>
+                    )}
                 </div>
             </div>
-
-            <TransactionHistoryModal
-                transaction_history_modal={transaction_history_modal}
-                setTransactionHistoryModal={setTransactionHistoryModal}
-            />
         </div>
-    )
+    );
 }
 
-export default Assessment
+export default Assessment;

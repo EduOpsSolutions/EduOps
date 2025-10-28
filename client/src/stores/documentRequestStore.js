@@ -1,90 +1,19 @@
 import { create } from 'zustand';
 import createSearchStore from './searchStore';
-
-const sampleDocumentRequests = [
-  {
-    id: 1,
-    date: "2024-04-16",
-    displayDate: "April 16, 2024",
-    name: "Arthur Morgan",
-    document: "Certificate of Good Moral",
-    status: "Delivered",
-    remarks: "Done",
-    email: "arthur.morgan@example.com",
-    phone: "555-123-4567",
-    mode: "delivery",
-    paymentMethod: "Cash on Delivery",
-    address: "2861 Valentine Ave, Valentine, TX 78814",
-    city: "Valentine",
-    state: "TX",
-    zipCode: "78814",
-    country: "United States",
-    purpose: "Employment Application",
-    additionalNotes: "Please expedite if possible"
-  },
-  {
-    id: 2,
-    date: "2023-07-16",
-    displayDate: "July 16, 2023",
-    name: "John Marston",
-    document: "Form 138",
-    status: "Delivered",
-    remarks: "Done",
-    email: "john.marston@example.com",
-    phone: "555-234-5678",
-    mode: "pickup",
-    paymentMethod: "Cash (Pay upon Pickup)",
-    purpose: "School Transfer",
-    additionalNotes: "Need for enrollment at new school"
-  },
-  {
-    id: 3,
-    date: "2024-05-20",
-    displayDate: "May 20, 2024",
-    name: "Polano Dolor",
-    document: "Certificate of Enrollment",
-    status: "In Transit",
-    remarks: "Processing",
-    email: "polano.dolor@example.com",
-    phone: "555-345-6789",
-    mode: "delivery",
-    paymentMethod: "Online (Maya)",
-    address: "1478 Saint Denis St, Lemoyne, LA 70130",
-    city: "Lemoyne",
-    state: "LA",
-    zipCode: "70130",
-    country: "United States",
-    purpose: "Scholarship Application",
-    additionalNotes: "Required for scholarship submission"
-  },
-  {
-    id: 4,
-    date: "2024-03-10",
-    displayDate: "March 10, 2024",
-    name: "John Doe",
-    document: "Transcript of Records",
-    status: "In Process",
-    remarks: "Under review",
-    email: "john.doe@example.com",
-    phone: "555-456-7890",
-    mode: "pickup",
-    paymentMethod: "Cash (Pay upon Pickup)",
-    purpose: "Graduate Studies Application",
-    additionalNotes: "Need certified copy"
-  },
-];
+import documentApi from '../utils/documentApi';
+import Swal from 'sweetalert2';
 
 const useDocumentRequestSearchStore = createSearchStore({
-  initialData: sampleDocumentRequests,
+  initialData: [],
   defaultSearchParams: {
     name: "",
     document: "",
     status: "",
     sortBy: "descending"
   },
-  searchableFields: ["name"],
-  exactMatchFields: ["document", "status"],
-  initialItemsPerPage: 10,
+  searchableFields: ["name", "document"],
+  exactMatchFields: ["status"],
+  initialItemsPerPage: 5,
   filterFunction: (data, params) => {
     let filteredResults = [...data];
 
@@ -94,9 +23,9 @@ const useDocumentRequestSearchStore = createSearchStore({
       );
     }
 
-    if (params.document) {
+    if (params.document?.trim()) {
       filteredResults = filteredResults.filter(request =>
-        request.document === params.document
+        request.document.toLowerCase().includes(params.document.toLowerCase())
       );
     }
 
@@ -107,8 +36,8 @@ const useDocumentRequestSearchStore = createSearchStore({
     }
 
     filteredResults.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
 
       if (params.sortBy === "ascending") {
         return dateA - dateB;
@@ -126,8 +55,110 @@ const useDocumentRequestStore = create((set, get) => ({
   selectedRequest: null,
   updateModal: false,
   viewDetailsModal: false,
-  updateStatus: "In Transit",
+  updateStatus: "in_process",
   updateRemarks: "",
+  loading: false,
+  error: null,
+
+  // Fetch all document requests
+  fetchDocumentRequests: async () => {
+    try {
+      set({ loading: true, error: null });
+      const response = await documentApi.requests.getAll();
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to fetch document requests');
+      }
+
+      const formattedRequests = response.data.map(request => 
+        documentApi.helpers.formatDocumentRequest(request)
+      );
+
+      const searchStore = useDocumentRequestSearchStore.getState();
+      searchStore.setData(formattedRequests);
+      searchStore.initializeSearch();
+      
+      set({ loading: false });
+    } catch (error) {
+      console.error('Failed to fetch document requests:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to fetch document requests'
+      });
+    }
+  },
+
+  // Search document requests
+  searchDocumentRequests: async (filters = {}) => {
+    try {
+      set({ loading: true, error: null });
+      const response = await documentApi.requests.search(filters);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to search document requests');
+      }
+
+      const formattedRequests = response.data.map(request => 
+        documentApi.helpers.formatDocumentRequest(request)
+      );
+
+      const searchStore = useDocumentRequestSearchStore.getState();
+      searchStore.setData(formattedRequests);
+      
+      set({ loading: false });
+    } catch (error) {
+      console.error('Failed to search document requests:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to search document requests'
+      });
+    }
+  },
+
+  // Create new document request
+  createDocumentRequest: async (requestData) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const validation = documentApi.helpers.validateDocumentRequest(requestData);
+      if (!validation.isValid) {
+        throw new Error('Please fill in all required fields correctly');
+      }
+
+      const response = await documentApi.requests.create(requestData);
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to create document request');
+      }
+
+      await get().fetchDocumentRequests(); // Refresh the list
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Document request submitted successfully',
+        icon: 'success',
+        confirmButtonColor: '#992525',
+      });
+
+      set({ loading: false });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create document request:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to create document request'
+      });
+      
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to create document request',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+      
+      throw error;
+    }
+  },
 
   handleRequestSelect: (request) => {
     set({
@@ -153,7 +184,7 @@ const useDocumentRequestStore = create((set, get) => ({
     set({
       updateModal: false,
       selectedRequest: null,
-      updateStatus: "In Transit",
+      updateStatus: "in_process",
       updateRemarks: ""
     });
   },
@@ -173,27 +204,61 @@ const useDocumentRequestStore = create((set, get) => ({
     set({ updateRemarks: remarks });
   },
 
-  handleSubmitStatusUpdate: () => {
+  // Update document request status (admin only)
+  handleSubmitStatusUpdate: async () => {
     const { selectedRequest, updateStatus, updateRemarks } = get();
 
     if (!selectedRequest) return;
 
-    const searchStore = useDocumentRequestSearchStore.getState();
-    const updatedData = searchStore.data.map(request => {
-      if (request.id === selectedRequest.id) {
-        return {
-          ...request,
-          status: updateStatus,
-          remarks: updateRemarks
-        };
+    try {
+      set({ loading: true, error: null });
+      
+      // Convert display status to database enum format
+      const statusMap = {
+        'In Process': 'in_process',
+        'In Transit': 'in_transit',
+        'Delivered': 'delivered',
+        'Failed': 'failed',
+        'Fulfilled': 'fulfilled',
+      };
+      
+      const dbStatus = statusMap[updateStatus] || updateStatus.toLowerCase().replace(/ /g, '_');
+      
+      const response = await documentApi.requests.updateStatus(
+        selectedRequest.id, 
+        dbStatus, 
+        updateRemarks
+      );
+      
+      if (response.error) {
+        throw new Error(response.message || 'Failed to update request status');
       }
-      return request;
-    });
 
-    searchStore.updateData(updatedData);
-    searchStore.handleSearch();
+      await get().fetchDocumentRequests(); // Refresh the list
 
-    get().closeUpdateModal();
+      Swal.fire({
+        title: 'Success!',
+        text: 'Request status updated successfully',
+        icon: 'success',
+        confirmButtonColor: '#992525',
+      });
+
+      get().closeUpdateModal();
+      set({ loading: false });
+    } catch (error) {
+      console.error('Failed to update request status:', error);
+      set({ 
+        loading: false, 
+        error: error.message || 'Failed to update request status'
+      });
+      
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to update request status',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+    }
   },
 
   resetStore: () => {
@@ -201,8 +266,10 @@ const useDocumentRequestStore = create((set, get) => ({
       selectedRequest: null,
       updateModal: false,
       viewDetailsModal: false,
-      updateStatus: "In Transit",
-      updateRemarks: ""
+      updateStatus: "in_process",
+      updateRemarks: "",
+      loading: false,
+      error: null
     });
   }
 }));
