@@ -95,7 +95,8 @@ model course {
   price       Decimal    @db.Decimal(10, 2)
   schedule    Json?
 
-  courseRequisite course_requisite[]
+  courseRequisite course_requisite[] @relation("CourseMain")
+  requisiteFor    course_requisite[] @relation("CourseRequisite")
   academicPeriods academic_period_courses[]
   schedules       schedule[]
   payments        payments[]
@@ -163,14 +164,16 @@ enum EnrollmentStatus {
 }
 
 model course_requisite {
-  id        String        @id @default(cuid())
-  ruleName  String
-  type      RequisiteType
-  courseId  String
-  course    course        @relation(fields: [courseId], references: [id])
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  deletedAt DateTime?
+  id                String   @id @default(cuid())
+  ruleName          String
+  type              RequisiteType
+  courseId          String
+  requisiteCourseId String
+  course            course   @relation("CourseMain", fields: [courseId], references: [id])
+  requisiteCourse   course   @relation("CourseRequisite", fields: [requisiteCourseId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
 }
 
 model academic_period {
