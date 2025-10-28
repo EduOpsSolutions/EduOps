@@ -59,19 +59,49 @@ function SignUp() {
   const fetchCourses = async () => {
     try {
       setCoursesLoading(true);
+      let visibleCourses = [];
+      let academicPeriodCourseIds = [];
+      // If there is an open batch, fetch academic_period_courses for that period
+      if (enrollmentPeriodCheck.currentPeriod && enrollmentPeriodCheck.currentPeriod.id) {
+        const apcRes = await axiosInstance.get(`/academic-period-courses/${enrollmentPeriodCheck.currentPeriod.id}/courses`);
+        academicPeriodCourseIds = apcRes.data.map(apc => apc.courseId);
+      }
+      // Fetch all courses
       const response = await axiosInstance.get('/courses');
-      const visibleCourses = response.data.filter(
+      visibleCourses = response.data.filter(
         (course) => course.visibility === 'visible'
       );
-
-      // Store full course data for later use
+      // If we have academic period course IDs, filter to only those
+      if (academicPeriodCourseIds.length > 0) {
+        visibleCourses = visibleCourses.filter(course => academicPeriodCourseIds.includes(course.id));
+      }
       setCoursesData(visibleCourses);
-
       const courseOptions = visibleCourses.map((course) => ({
         value: course.id,
         label: course.name,
         price: course.price,
+        disabled: false,
       }));
+      // Fetch course requisites for all visible courses
+      if (visibleCourses.length > 0) {
+        try {
+          const courseIds = visibleCourses.map(c => c.id);
+          const res = await axiosInstance.get(`/course-requisites?courseIds=${courseIds.join(',')}`);
+          const requisitesMap = {};
+          res.data.forEach(r => {
+            requisitesMap[r.courseId] = true;
+          });
+          // Update disabled property and label for options with requisites
+          courseOptions.forEach(opt => {
+            if (requisitesMap[opt.value]) {
+              opt.disabled = true;
+              opt.label = `${opt.label} (Requires prerequisite)`;
+            }
+          });
+        } catch (e) {
+          // If error, just skip disabling
+        }
+      }
       setCourseOptions(courseOptions);
     } catch (error) {
       console.error('Failed to fetch courses:', error);
@@ -133,6 +163,16 @@ function SignUp() {
     initializePage();
   }, []);
 
+  useEffect(() => {
+    // Refetch courses whenever the open enrollment period changes
+    if (enrollmentPeriodCheck.hasOngoingPeriod && enrollmentPeriodCheck.currentPeriod) {
+      fetchCourses();
+    } else {
+      setCourseOptions([]);
+      setCoursesData([]);
+    }
+  }, [enrollmentPeriodCheck.currentPeriod]);
+
   const [validId, setValidId] = useState(null);
   const [idPhoto, setIdPhoto] = useState(null);
   const [validIdUploading, setValidIdUploading] = useState(false);
@@ -191,6 +231,39 @@ function SignUp() {
     } finally {
       setValidIdUploading(false);
       setIdPhotoUploading(false);
+    }
+  };
+
+  const [emailError, setEmailError] = useState("");
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // Email format validator (simple regex)
+  const isValidEmailFormat = (email) => {
+    // Basic email regex
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  // Async email validator using new public endpoint, only if format is valid
+  const validateEmailUnique = async (email) => {
+    setEmailError("");
+    if (!isValidEmailFormat(email)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setCheckingEmail(true);
+    try {
+      const res = await axiosInstance.get(`/enrollment/check-email`, {
+        params: { email },
+      });
+      if (res.data && res.data.exists) {
+        setEmailError("This email is already used in an enrollment request.");
+      } else {
+        setEmailError("");
+      }
+    } catch (e) {
+      setEmailError("Could not validate email. Try again later.");
+    } finally {
+      setCheckingEmail(false);
     }
   };
 
@@ -600,14 +673,22 @@ function SignUp() {
                     />
                   </div>
                   <div className="grid md:grid-cols-2 md:gap-6">
-                    <LabelledInputField
-                      name="preferredEmail"
-                      id="preferred_email"
-                      label="Preferred Email Address*"
-                      type="email"
-                      required={true}
-                      placeholder="johndoe@gmail.com"
-                    />
+                    <div className="flex flex-col">
+                      <LabelledInputField
+                        name="preferredEmail"
+                        id="preferred_email"
+                        label="Preferred Email Address*"
+                        type="email"
+                        required={true}
+                        placeholder="johndoe@gmail.com"
+                        onBlur={e => validateEmailUnique(e.target.value)}
+                        onChange={e => { handleContactNumberChange(e); setEmailError(""); }}
+                        error={emailError}
+                      />
+                      {emailError && (
+                        <div className="text-red-600 text-sm mt-1 mb-2">{emailError}</div>
+                      )}
+                    </div>
                     <LabelledInputField
                       name="altEmail"
                       id="alt_email"
@@ -723,7 +804,7 @@ function SignUp() {
                   <SmallButton
                     type="submit"
                     disabled={
-                      isSubmitting || validIdUploading || idPhotoUploading
+                      isSubmitting || validIdUploading || idPhotoUploading || !!emailError || checkingEmail
                     }
                   >
                     {isSubmitting
