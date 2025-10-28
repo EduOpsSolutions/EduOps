@@ -5,6 +5,7 @@ import CreditCard from "../../components/payments/CreditCard";
 import GCash from "../../components/payments/GCash";
 import Maya from "../../components/payments/Maya";
 import Swal from "sweetalert2";
+import axiosInstance from "../../utils/axios";
 
 const PaymentPage = () => {
   const [paymentOption, setPaymentOption] = useState(0);
@@ -13,6 +14,8 @@ const PaymentPage = () => {
     description: "",
     studentInfo: null
   });
+  const [isLocked, setIsLocked] = useState(false);
+  const [currentPaymentId, setCurrentPaymentId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,44 +41,119 @@ const PaymentPage = () => {
   ];
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const stateData = location.state;
-    
-    const amount = urlParams.get('amount') || 
-                  stateData?.amount || 
-                  localStorage.getItem("totalPayment");
-    
-    const description = urlParams.get('description') || 
-                       stateData?.description || 
-                       "EduOps Payment";
+    const persist = (amount, studentInfo) => {
+      const amountStr = String(amount);
+      localStorage.setItem("totalPayment", amountStr);
+      sessionStorage.setItem("totalPayment", amountStr);
+      if (studentInfo) {
+        const infoStr = JSON.stringify(studentInfo);
+        localStorage.setItem("studentInfo", infoStr);
+        sessionStorage.setItem("studentInfo", infoStr);
+      }
+    };
 
-    const studentInfo = stateData?.studentInfo || 
-                       JSON.parse(localStorage.getItem("studentInfo") || "null");
+    const checkPaymentStatus = async (paymentId) => {
+      if (!paymentId) return;
+      try {
+        const resp = await axiosInstance.get(`/payments/${paymentId}/status`);
+        const payment = resp?.data?.data;
+        if (payment && (payment.status === 'paid' || payment.status === 'cancelled' || payment.status === 'refunded')) {
+          setIsLocked(true);
+        }
+      } catch (_e) {
+      }
+    };
 
+    const loadFromPaymentId = async (paymentId) => {
+      const resp = await axiosInstance.get(`/payments/${paymentId}`);
+      const payment = resp?.data?.data;
+      if (!payment) throw new Error('Payment not found');
 
-    if (!amount || amount === "0") {
-      Swal.fire({
-        icon: "error",
-        title: "Invalid Payment",
-        text: "No payment amount specified. Redirecting to payment form.",
-        confirmButtonColor: "#890E07"
-      }).then(() => {
-        navigate("/paymentForm");
-      });
-      return;
-    }
+      const amount = Number(payment.amount);
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid amount');
 
-    setPaymentData({
-      amount: parseFloat(amount),
-      description,
-      studentInfo
-    });
+      const description = payment.remarks || 'EduOps Payment';
+      const user = payment.users || payment.user || null;
+      const studentInfo = user ? {
+        userId: user.userId || user.id || null,
+        id: user.id || null,
+        studentId: user.studentId || user.userId || null,
+        firstName: user.firstName || user.first_name || '',
+        lastName: user.lastName || user.last_name || '',
+        email: user.email || ''
+      } : null;
 
-    // Store data in localStorage for persistence
-    localStorage.setItem("totalPayment", amount);
-    if (studentInfo) {
-      localStorage.setItem("studentInfo", JSON.stringify(studentInfo));
-    }
+      setPaymentData({ amount, description, studentInfo });
+      persist(amount, studentInfo);
+    };
+
+    const loadFromContext = (urlParams, stateData) => {
+      const amountCandidate =
+        urlParams.get('amount') ??
+        (stateData?.amount != null ? String(stateData.amount) : null) ??
+        sessionStorage.getItem("totalPayment") ??
+        localStorage.getItem("totalPayment");
+      const amount = amountCandidate != null ? Number(amountCandidate) : NaN;
+      const description = urlParams.get('description') || stateData?.description || "EduOps Payment";
+      const studentInfo = stateData?.studentInfo || 
+        JSON.parse(sessionStorage.getItem("studentInfo") || "null") ||
+        JSON.parse(localStorage.getItem("studentInfo") || "null");
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        Swal.fire({
+          icon: "error",
+          title: "Invalid Payment",
+          text: "No payment amount specified. Redirecting to payment form.",
+          confirmButtonColor: "#890E07"
+        }).then(() => navigate("/paymentForm"));
+        return false;
+      }
+
+      setPaymentData({ amount, description, studentInfo });
+      persist(amount, studentInfo);
+      return true;
+    };
+
+    const run = async () => {
+      const urlParams = new URLSearchParams(location.search);
+      const stateData = location.state;
+      const paymentId = urlParams.get('paymentId');
+
+      if (paymentId) {
+        try {
+          await loadFromPaymentId(paymentId);
+          setCurrentPaymentId(paymentId);
+          await checkPaymentStatus(paymentId);
+          return;
+        } catch (error) {
+          await Swal.fire({
+            icon: "error",
+            title: "Invalid or expired link",
+            text: error?.response?.data?.message || error.message || "Unable to load payment details.",
+            confirmButtonColor: "#890E07"
+          });
+          navigate("/paymentForm");
+          return;
+        }
+      }
+
+      loadFromContext(urlParams, stateData);
+    };
+
+    run();
+
+    const onVisibility = async () => {
+      if (document.visibilityState === 'visible' && currentPaymentId) {
+        await checkPaymentStatus(currentPaymentId);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    const intervalId = currentPaymentId ? setInterval(() => checkPaymentStatus(currentPaymentId), 3000) : null;
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [location, navigate]);
 
   const handlePaymentSuccess = async (paymentResult) => {
@@ -173,6 +251,7 @@ const PaymentPage = () => {
         firstName={paymentData.studentInfo?.firstName || ''}
         lastName={paymentData.studentInfo?.lastName || ''}
         userEmail={paymentData.studentInfo?.email || ''}
+        isLocked={isLocked}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
       />
@@ -199,6 +278,11 @@ const PaymentPage = () => {
 
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-5xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden shadow-lg">
+          {isLocked && (
+            <div className="mb-4 p-4 rounded border border-green-300 bg-green-50 text-green-800">
+              This payment has already been completed. Payment form is locked.
+            </div>
+          )}
           {/* Header */}
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-3xl font-bold text-gray-800">Complete Your Payment</h1>

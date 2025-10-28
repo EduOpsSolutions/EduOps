@@ -513,7 +513,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
   // Use dynamic baseUrl for production and development
   const isProd = process.env.ENVIRONMENT === 'production';
   const baseUrl = isProd
-    ? process.env.PRODUCTION_CLIENT_URL || 'https://preprod-eduops.danred-server.uk/login'
+    ? process.env.PRODUCTION_CLIENT_URL || 'https://preprod-eduops.danred-server.uk'
     : process.env.CLIENT_URL || 'http://localhost:3000';
   const checkoutUrl = `${baseUrl}/payment?paymentId=${payment.id}`;
 
@@ -536,7 +536,6 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       return {
         success: true,
         message: "Payment link sent to your email successfully!",
-        checkoutUrl,
         paymentId: payment.id
       };
     } else {
