@@ -1,12 +1,10 @@
 import React from "react";
+import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 
-function ViewRequestDetailsModal({
-  isOpen,
-  onClose,
-  requestDetails,
-  onUpdate
-}) {
-  if (!isOpen || !requestDetails) return null;
+function ViewRequestDetailsModal() {
+  const { viewDetailsModal, closeViewDetailsModal, selectedRequest } = useDocumentRequestStore();
+
+  if (!viewDetailsModal || !selectedRequest) return null;
 
   const getStatusBadgeColor = (status) => {
     switch (status) {
@@ -32,7 +30,7 @@ function ViewRequestDetailsModal({
           <h2 className="text-xl sm:text-2xl font-bold pr-4">Request Details</h2>
           <button
             className="inline-flex bg-dark-red-2 rounded-lg px-4 py-1.5 text-white hover:bg-dark-red-5 ease-in duration-150"
-            onClick={onClose}
+            onClick={closeViewDetailsModal}
           >
             <svg
               className="h-5 w-5"
@@ -55,10 +53,10 @@ function ViewRequestDetailsModal({
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <h3 className="font-semibold text-lg text-gray-900">
-                  {requestDetails.name}
+                  {selectedRequest.name || 'Unknown Student'}
                 </h3>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${getStatusBadgeColor(requestDetails.status)}`}>
-                  {requestDetails.status}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${getStatusBadgeColor(selectedRequest.status)}`}>
+                  {selectedRequest.status}
                 </span>
               </div>
             </div>
@@ -68,22 +66,28 @@ function ViewRequestDetailsModal({
               <div className="grid grid-cols-1 gap-y-2 text-sm">
                 <div>
                   <span className="font-medium text-gray-700">Document Type: </span>
-                  <span className="text-gray-900">{requestDetails.document}</span>
+                  <span className="text-gray-900">{selectedRequest.documentName || selectedRequest.document?.documentName || 'Unknown Document'}</span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Date Requested: </span>
-                  <span className="text-gray-900">{requestDetails.displayDate}</span>
+                  <span className="text-gray-900">{selectedRequest.displayDate}</span>
                 </div>
-                {requestDetails.purpose && (
+                {selectedRequest.purpose && (
                   <div>
                     <span className="font-medium text-gray-700">Purpose: </span>
-                    <span className="text-gray-900">{requestDetails.purpose}</span>
+                    <span className="text-gray-900">{selectedRequest.purpose}</span>
                   </div>
                 )}
-                {requestDetails.remarks && (
+                {selectedRequest.mode && (
+                  <div>
+                    <span className="font-medium text-gray-700">Mode: </span>
+                    <span className="text-gray-900 capitalize">{selectedRequest.mode}</span>
+                  </div>
+                )}
+                {selectedRequest.remarks && selectedRequest.remarks !== '-' && (
                   <div>
                     <span className="font-medium text-gray-700">Remarks: </span>
-                    <span className="text-gray-900">{requestDetails.remarks}</span>
+                    <span className="text-gray-900">{selectedRequest.remarks}</span>
                   </div>
                 )}
               </div>
@@ -92,50 +96,51 @@ function ViewRequestDetailsModal({
             <div className="pt-3 border-t border-gray-200">
               <h4 className="text-sm font-medium text-gray-900 mb-2">Contact & Delivery Information</h4>
               <div className="grid grid-cols-1 gap-y-2 text-sm">
-                {requestDetails.email && (
+                {selectedRequest.email && (
                   <div>
                     <span className="font-medium text-gray-700">Email: </span>
-                    <span className="text-gray-900">{requestDetails.email}</span>
+                    <span className="text-gray-900">{selectedRequest.email}</span>
                   </div>
                 )}
-                {requestDetails.phone && (
+                {selectedRequest.phone && (
                   <div>
                     <span className="font-medium text-gray-700">Phone: </span>
-                    <span className="text-gray-900">{requestDetails.phone}</span>
+                    <span className="text-gray-900">{selectedRequest.phone}</span>
                   </div>
                 )}
-                {requestDetails.address && (
-                  <div>
-                    <span className="font-medium text-gray-700">Delivery Address: </span>
-                    <span className="text-gray-900">{requestDetails.address}</span>
-                  </div>
+                {selectedRequest.mode === 'delivery' && selectedRequest.address && (
+                  <>
+                    <div>
+                      <span className="font-medium text-gray-700">Delivery Address: </span>
+                      <span className="text-gray-900">{selectedRequest.address}</span>
+                    </div>
+                    {selectedRequest.city && (
+                      <div>
+                        <span className="font-medium text-gray-700">City: </span>
+                        <span className="text-gray-900">{selectedRequest.city}</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
 
-            {requestDetails.additionalNotes && (
+            {selectedRequest.additionalNotes && (
               <div className="pt-3 border-t border-gray-200">
                 <h4 className="text-sm font-medium text-gray-900 mb-2">Additional Notes</h4>
-                <p className="text-sm text-gray-700">{requestDetails.additionalNotes}</p>
+                <p className="text-sm text-gray-700">{selectedRequest.additionalNotes}</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-end">
           <button
             type="button"
             className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-6 py-2 rounded font-semibold transition-colors duration-150"
-            onClick={() => {
-              onClose();
-              setTimeout(() => {
-                if (requestDetails && typeof onUpdate === 'function') {
-                  onUpdate(requestDetails);
-                }
-              }, 100);
-            }}
+            onClick={closeViewDetailsModal}
           >
-            Update Status
+            Close
           </button>
         </div>
       </div>

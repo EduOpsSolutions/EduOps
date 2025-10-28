@@ -166,13 +166,15 @@ const usePaymentStore = create((set, get) => ({
     try {
       const paymentData = store.preparePaymentData();
       const response = await axiosInstance.post('/payments/send-email', paymentData);
-      const { paymentId, amount, checkoutUrl } = response.data.data;
+      const { paymentId } = response.data.data;
+
+      const checkoutUrl = `${window.location.origin}/payment?paymentId=${paymentId}`;
 
       await store.showDialog({
         title: 'Payment Link Created!',
         html: `
           <p><strong>Payment ID:</strong> ${paymentId}</p>
-          <p><strong>Amount:</strong> ₱${amount}</p>
+          <p><strong>Amount:</strong> ₱${paymentData.amount}</p>
           <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.75rem;">
             Payment link sent to your email or click Pay Now to proceed.
           </p>

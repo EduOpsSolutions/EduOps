@@ -5,7 +5,8 @@ import {
   trackEnrollment,
   updateEnrollmentPaymentProof,
   updateEnrollmentStatus,
-  updateEnrollment
+  updateEnrollment,
+  checkEmailExists,
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
 import { verifyToken } from "../../utils/verifyToken.js";
@@ -28,6 +29,8 @@ router.put(
   updateEnrollmentStatus
 );
 
+// Public endpoint to check if email is already used in an enrollment request
+router.get('/check-email', checkEmailExists);
 
 // Admin routes
 router.get(

@@ -21,12 +21,11 @@ function Documents() {
     
     const searchStore = useManageDocumentsSearchStore();
     const { fetchDocuments, loading, error } = useManageDocumentsStore();
-    const { viewDetailsModal, closeViewDetailsModal } = useDocumentRequestStore();
     const user = useAuthStore((state) => state.user);
 
     useEffect(() => {
         // Fetch documents available to teachers
-        fetchDocuments(false); // Don't include hidden documents
+        fetchDocuments(false);
     }, [fetchDocuments]);
 
     const handleDownload = async (document) => {
@@ -148,15 +147,19 @@ function Documents() {
                                                             {row.documentName}
                                                         </td>
                                                         <td className="py-4 px-4 text-center">
-                                                            {row.downloadable && row.uploadFile ? (
-                                                                <DownloadButton onClick={() => handleDownload(row)} />
-                                                            ) : row.requestBasis ? (
-                                                                <RequestButton
-                                                                    onClick={() => handleRequestDocument(row)}
-                                                                />
-                                                            ) : (
-                                                                <span className="text-gray-500 text-sm">Not Available</span>
-                                                            )}
+                                                            <div className="flex justify-center gap-2">
+                                                                {row.downloadable && row.uploadFile && (
+                                                                    <DownloadButton onClick={() => handleDownload(row)} />
+                                                                )}
+                                                                {row.requestBasis && (
+                                                                    <RequestButton
+                                                                        onClick={() => handleRequestDocument(row)}
+                                                                    />
+                                                                )}
+                                                                {!row.downloadable && !row.requestBasis && (
+                                                                    <span className="text-gray-500 text-sm">Not Available</span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
                                                             {row.description || 'No description'}
@@ -207,10 +210,7 @@ function Documents() {
                     setDocRequestsModal={setDocRequestsModal}
                 />
 
-                <ViewRequestDetailsModal
-                    viewDetailsModal={viewDetailsModal}
-                    closeViewDetailsModal={closeViewDetailsModal}
-                />
+                <ViewRequestDetailsModal />
             </div>
         </div>
     );

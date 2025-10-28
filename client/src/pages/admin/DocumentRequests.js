@@ -222,9 +222,9 @@ function DocumentRequests() {
                         >
                           <div
                             className="truncate w-20 sm:w-28 md:w-36 lg:w-auto"
-                            title={request.document}
+                            title={request.documentName || request.document?.documentName || 'Unknown Document'}
                           >
-                            {request.document}
+                            {request.documentName || request.document?.documentName || 'Unknown Document'}
                           </div>
                         </td>
                         <td
