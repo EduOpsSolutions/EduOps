@@ -13,6 +13,7 @@ import TrackEnrollmentModal from '../../components/modals/enrollment/TrackEnroll
 import Swal from 'sweetalert2';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import useAuthStore from '../../stores/authStore';
+import Spinner from '../../components/common/Spinner';
 
 function Login() {
   const { login, isLoading, getUser } = useAuthStore();
@@ -204,13 +205,16 @@ function Login() {
               
               */}
 
-              {/* DELETE THIS AFTER IMPLEMENTING BACKEND LOGIC FOR LOGGING IN */}
               <PrimaryButton
                 className="w-fit py-5 px-10 flex items-center justify-center"
                 disabled={isLoading}
                 onClick={handleLogin}
               >
-                Login
+                {isLoading ? (
+                  <Spinner size="md" color="text-white" className="p-8 py-2" />
+                ) : (
+                  'Login'
+                )}
               </PrimaryButton>
 
               {/* ALSO DELETE THIS AFTER BACKEND LOGIC FOR LOGGING IN */}
