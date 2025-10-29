@@ -98,7 +98,7 @@ function TransactionDetailModal({
             <label className="font-semibold text-gray-700 w-32 mb-1 sm:mb-0">
               Student ID:
             </label>
-            <span className="text-gray-900">{transaction.userId}</span>
+            <span className="text-gray-900">{transaction.studentId  || transaction.userId}</span>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center">

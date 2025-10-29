@@ -5,24 +5,18 @@ import {
     validatePagination,
     validatePaymentId
 } from '../../middleware/paymentValidator.js';
+import { verifyToken, validateUserIsAdmin } from '../../middleware/authValidator.js';
 
 const {
     createManualTransaction,
     getAllTransactions,
-    refreshPaymentStatus,
-    bulkSyncPendingPayments,
-    cleanupOrphanedPayments,
     createPaymentIntent,
     attachPaymentMethod,
     sendPaymentLinkEmail,
     checkPaymentStatus,
     handleWebhook,
     getPaymentDetails,
-    getPaymentsByUserId,
-    getAvailablePaymentMethods,
-    forceSyncPaymentStatus,
-    manualSyncPayment,
-    cancelPayment
+    refreshPaymentStatus
 } = paymentController;
 
 const router = express.Router();
@@ -30,14 +24,11 @@ const router = express.Router();
 // Public endpoints
 router.post('/send-email', sendPaymentLinkEmail);
 router.get('/check-status/:paymentIntentId', checkPaymentStatus);
-router.post('/sync/:paymentIntentId', manualSyncPayment);
 router.post('/webhook', handleWebhook);
 
 // Admin endpoints
-router.post('/manual', validateCreateManualTransaction, createManualTransaction);
-router.get('/admin/allTransactions', validatePagination, getAllTransactions);
-router.post('/admin/cleanup', cleanupOrphanedPayments);
-router.post('/admin/bulk-sync', bulkSyncPendingPayments);
+router.post('/manual', verifyToken, validateUserIsAdmin, validateCreateManualTransaction, createManualTransaction);
+router.get('/admin/allTransactions', verifyToken, validateUserIsAdmin, validatePagination, getAllTransactions);
 
 // PIPM Flow endpoints
 router.post('/create-intent', createPaymentIntent);
@@ -46,9 +37,5 @@ router.post('/attach-method', attachPaymentMethod);
 // Payment management
 router.get('/:paymentId', validatePaymentId, getPaymentDetails);
 router.get('/:paymentId/status', validatePaymentId, refreshPaymentStatus);
-router.get('/:paymentId/force-sync', validatePaymentId, forceSyncPaymentStatus);
-router.delete('/:paymentId/cancel', validatePaymentId, cancelPayment);
-router.get('/user/:userId', getPaymentsByUserId);
-router.get('/methods/available', getAvailablePaymentMethods);
 
 export default router;

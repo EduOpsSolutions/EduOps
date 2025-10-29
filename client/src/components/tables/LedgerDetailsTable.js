@@ -1,6 +1,16 @@
 import React from 'react';
 import ThinRedButton from '../buttons/ThinRedButton';
 
+// Print-specific CSS (hide everything except the ledger details card when printing)
+const printStyles = `
+  @media print {
+    body * { visibility: hidden !important; }
+    .print-ledger-container, .print-ledger-container * { visibility: visible !important; }
+    .print-ledger-container { position: absolute !important; left: 0; top: 0; width: 100vw !important; background: #fff !important; box-shadow: none !important; border: 1px solid #000 !important; z-index: 9999; }
+    .no-print { display: none !important; }
+  }
+`;
+
 //Table after clicking a result from ledger
 const LedgerDetails = ({ 
   student, 
@@ -11,39 +21,42 @@ const LedgerDetails = ({
   if (!student) return null;
   
   return (
-    <div className="flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-3 sm:p-5 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)]">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pb-4 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
-        <p className="text-lg sm:text-xl uppercase text-center sm:text-left">{student.name}</p>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <ThinRedButton>Print Ledger</ThinRedButton>
-          <button
-            className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-1.5 px-2 flex items-center justify-center"
-            onClick={onAddTransaction}
-            aria-label="Add transaction"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-5 h-5"
+    <>
+      {/* Print styles injected only once */}
+      <style>{printStyles}</style>
+  <div className="print-ledger-container flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-3 sm:p-5 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)] print-ledger-table">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pb-4 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
+          <p className="text-lg sm:text-xl uppercase text-center sm:text-left">{student.name}</p>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 no-print">
+            <ThinRedButton onClick={() => window.print()}>Print Ledger</ThinRedButton>
+            <button
+              className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-1.5 px-2 flex items-center justify-center"
+              onClick={onAddTransaction}
+              aria-label="Add transaction"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Table Section */}
-      <div className="pt-2">
-        <div className="overflow-x-auto -mx-2 sm:mx-0">
-          <div className="inline-block min-w-full align-middle">
-            <table className="min-w-full">
+        {/* Table Section */}
+        <div className="pt-2">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="min-w-full">
               <thead>
                 <tr className="border-b-2 border-dark-red-2">
                   <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
@@ -74,50 +87,66 @@ const LedgerDetails = ({
               </thead>
               <tbody>
                 {ledgerEntries.length > 0 ? (
-                  ledgerEntries.map(entry => (
-                    <tr key={entry.id} className="border-b border-[rgb(137,14,7,.49)]">
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.date}>
-                          {entry.date}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.time}>
-                          {entry.time}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-24 sm:max-w-28 md:max-w-none" title={entry.orNumber}>
-                          {entry.orNumber}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.debitAmount}>
-                          {entry.debitAmount}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.creditAmount}>
-                          {entry.creditAmount}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.balance}>
-                          {entry.balance}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.type}>
-                          {entry.type}
-                        </div>
-                      </td>
-                      <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                        <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={entry.remarks}>
-                          {entry.remarks}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  ledgerEntries.map(entry => {
+                    // Format date and time from paidAt or createdAt
+                    let date = "";
+                    let time = "";
+                    if (entry.paidAt || entry.createdAt) {
+                      const dt = new Date(entry.paidAt || entry.createdAt);
+                      date = dt.toLocaleDateString();
+                      time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    }
+                    // User-friendly feeType
+                    let feeType = entry.feeType || "";
+                    if (feeType) {
+                      feeType = feeType.replace(/_/g, ' ')
+                        .replace(/\b\w/g, c => c.toUpperCase());
+                    }
+                    return (
+                      <tr key={entry.id} className="border-b border-[rgb(137,14,7,.49)]">
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={date}>
+                            {date}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={time}>
+                            {time}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-24 sm:max-w-28 md:max-w-none" title={entry.referenceNumber}>
+                            {entry.referenceNumber}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.amount}>
+                            {entry.amount}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.creditAmount || "N/A"}>
+                            {entry.creditAmount || "N/A"}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.balance || "N/A"}>
+                            {entry.balance || "N/A"}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={feeType}>
+                            {feeType}
+                          </div>
+                        </td>
+                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                          <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={entry.remarks}>
+                            {entry.remarks}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr className="border-b border-[rgb(137,14,7,.49)]">
                     <td 
@@ -134,12 +163,13 @@ const LedgerDetails = ({
         </div>
       </div>
 
-      <div className="mt-4">
-        <ThinRedButton onClick={onBackClick}>
-          Back to Results
-        </ThinRedButton>
+        <div className="mt-4 no-print">
+          <ThinRedButton onClick={onBackClick}>
+            Back to Results
+          </ThinRedButton>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
