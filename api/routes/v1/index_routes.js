@@ -17,6 +17,7 @@ import { router as reports } from './reports_routes.js';
 import { router as assessment } from "./assessment_routes.js";
 import { router as feeRoutes } from './fees_routes.js';
 import { router as courseRequisites } from './course_requisites_routes.js';
+import { router as ledger } from './ledger_routes.js';
 
 const router = express.Router();
 router.get('/', function (req, res) {
@@ -43,5 +44,6 @@ router.use('/grades', grades);
 router.use('/assessment', assessment);
 router.use('/fees', feeRoutes);
 router.use('/course-requisites', courseRequisites);
+router.use('/ledger', ledger);
 
 export default router;

@@ -3,7 +3,6 @@ import createSearchStore from './searchStore';
 import { getCookieItem } from '../utils/jwt';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
-//const ASSESSMENT_LIST_API = `${API_BASE_URL}/assessment`;
 
 const fetchAssessmentList = async () => {
   const token = getCookieItem('token');

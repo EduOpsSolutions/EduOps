@@ -1,9 +1,14 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import UpdateLedgerModal from "../../components/modals/transactions/UpdateLedger";
 import { useLedgerSearchStore, useLedgerStore } from "../../stores/ledgerStore";
 import SearchForm from "../../components/common/SearchFormHorizontal";
 import SearchResults from "../../components/common/SearchResults";
+import axios from "axios";
+import axiosInstance from "../../utils/axios";
 import LedgerDetails from "../../components/tables/LedgerDetailsTable";
+import { getCookieItem } from "../../utils/jwt";
+
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 function Ledger() {
 
@@ -27,10 +32,65 @@ function Ledger() {
     handleModalSubmit
   } = useLedgerStore();
 
+  // Store all transactions in a ref to avoid unnecessary rerenders
+  const allTransactionsRef = useRef([]);
+
+  // Fetch students for search (from ledger endpoint)
   useEffect(() => {
-    initializeSearch();
-    performSearch();
+    async function fetchStudents() {
+      try {
+        const token = getCookieItem("token");
+        const res = await axios.get(
+          `${API_BASE_URL}/ledger/students/ongoing`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        useLedgerSearchStore.getState().setData(res.data || []);
+        useLedgerSearchStore.getState().performSearch();
+      } catch (err) {
+        console.error('Failed to fetch students for ledger:', err);
+      }
+    }
+    fetchStudents();
+    // eslint-disable-next-line
   }, [initializeSearch, performSearch]);
+
+  // Fetch all transactions on mount
+  useEffect(() => {
+    async function fetchTransactions() {
+      try {
+        const res = await axiosInstance.get("/payments/admin/allTransactions");
+        allTransactionsRef.current = res.data.data?.payments || [];
+      } catch (err) {
+        console.error('Failed to fetch transactions for ledger:', err);
+      }
+    }
+    fetchTransactions();
+  }, []);
+
+  // When a student is selected, filter transactions by studentId and set as ledgerEntries
+  useEffect(() => {
+    if (selectedStudent) {
+      // Debug logs
+      console.log('[Ledger] selectedStudent:', selectedStudent);
+      if (allTransactionsRef.current.length > 0) {
+        console.log('[Ledger] first transaction:', allTransactionsRef.current[0]);
+      } else {
+        console.log('[Ledger] No transactions loaded');
+      }
+
+      // Match by userId (user unique id)
+      const studentId = selectedStudent.studentId
+      const studentTransactions = allTransactionsRef.current.filter((tx) => {
+        return String(tx.userId) === String(studentId);
+      });
+      console.log('[Ledger] Matched transactions:', studentTransactions);
+      useLedgerStore.getState().setLedgerEntries(studentTransactions);
+    }
+  }, [selectedStudent]);
 
   // Search form config
   const searchFormConfig = {
