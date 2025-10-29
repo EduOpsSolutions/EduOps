@@ -1,7 +1,9 @@
-import admin from 'firebase-admin';
-import { randomUUID } from 'crypto';
-import { filePaths } from '../constants/file_paths.js';
-import { PrismaClient } from '@prisma/client';
+import admin from "firebase-admin";
+import { randomUUID } from "crypto";
+import { filePaths } from "../constants/file_paths.js";
+import { PrismaClient } from "@prisma/client";
+import { logUserActivity, logError } from "./logger.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -15,9 +17,9 @@ if (!admin.apps.length) {
       credential = admin.credential.cert(serviceAccount);
     } else if (process.env.FIREBASE_CREDENTIALS_PATH) {
       // File path for service account JSON
-      const fs = await import('fs');
+      const fs = await import("fs");
       const path = process.env.FIREBASE_CREDENTIALS_PATH;
-      const raw = fs.readFileSync(path, 'utf-8');
+      const raw = fs.readFileSync(path, "utf-8");
       const serviceAccount = JSON.parse(raw);
       credential = admin.credential.cert(serviceAccount);
     } else if (
@@ -27,14 +29,26 @@ if (!admin.apps.length) {
       // Default ADC flow (requires env var to be set in runtime environment)
       credential = admin.credential.applicationDefault();
     } else {
+      logError(
+        "File Storage - No Firebase credentials found",
+        new Error("No Firebase credentials found"),
+        null,
+        MODULE_TYPES.SYSTEM
+      );
       throw new Error(
-        'No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT (JSON) or FIREBASE_CREDENTIALS_PATH.'
+        "No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT (JSON) or FIREBASE_CREDENTIALS_PATH."
       );
     }
   } catch (e) {
     console.error(
-      'Failed to initialize Firebase Admin credentials:',
+      "Failed to initialize Firebase Admin credentials:",
       e.message
+    );
+    logError(
+      "File Storage - Failed to initialize Firebase Admin credentials",
+      e,
+      null,
+      MODULE_TYPES.SYSTEM
     );
     throw e;
   }
@@ -54,39 +68,39 @@ export const uploadFile = async (file, directory) => {
     const fileBuffer = file.buffer;
 
     // Generate filename since memory storage doesn't create one
-    const path = await import('path');
+    const path = await import("path");
     const ext = path.extname(file.originalname);
     const name = path.basename(file.originalname, ext);
     const filename = `${file.fieldname}_${name}_${new Date()
       .toISOString()
-      .replace(/:/g, '-')}${ext}`;
+      .replace(/:/g, "-")}${ext}`;
 
-    let file_dir = 'uncategorized';
+    let file_dir = "uncategorized";
     switch (directory) {
       case filePaths.userProfiles:
-        file_dir = 'user-profile';
+        file_dir = "user-profile";
         break;
       case filePaths.posts:
-        file_dir = 'posts';
+        file_dir = "posts";
         break;
       case filePaths.documents:
-        file_dir = 'documents';
+        file_dir = "documents";
         break;
       case filePaths.enrollment:
-        file_dir = 'enrollment';
+        file_dir = "enrollment";
         break;
       case filePaths.proofIds:
-        file_dir = 'proof-ids';
+        file_dir = "proof-ids";
         break;
       case filePaths.paymentProofs:
-        file_dir = 'payment-proofs';
+        file_dir = "payment-proofs";
         break;
       case filePaths.grades:
-        file_dir = 'grades';
+        file_dir = "grades";
         break;
       case filePaths.uncategorized:
       default:
-        file_dir = 'uncategorized';
+        file_dir = "uncategorized";
     }
     const objectPath = `${file_dir}/${filename}`;
     const fileRef = bucket.file(objectPath);
@@ -115,6 +129,12 @@ export const uploadFile = async (file, directory) => {
         directory: file_dir,
       },
     });
+    logUserActivity(
+      "File Storage - File uploaded successfully",
+      null,
+      MODULE_TYPES.SYSTEM,
+      `File ${file.originalname} uploaded successfully URL: ${downloadURL}`
+    );
 
     return {
       success: true,
@@ -124,23 +144,53 @@ export const uploadFile = async (file, directory) => {
       originalName: file.originalname,
     };
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error("Error uploading file:", error);
+    logError(
+      "File Storage - Error uploading file",
+      error,
+      null,
+      MODULE_TYPES.SYSTEM
+    );
     throw new Error(`Upload failed: ${error.message}`);
   }
 };
 
 export const uploadMultipleFiles = async (files, directory) => {
   try {
+    logUserActivity(
+      "File Storage - Uploading multiple files",
+      null,
+      MODULE_TYPES.SYSTEM,
+      `Uploading ${files.length} files to ${directory}`
+    );
     const uploadedFiles = [];
     const failedFiles = [];
     for (const file of files) {
       const result = await uploadFile(file, directory).catch((error) => {
-        console.error('Error uploading file:', error);
+        console.error("Error uploading file:", error);
+        logError(
+          "File Storage - Error uploading file",
+          error,
+          null,
+          MODULE_TYPES.SYSTEM
+        );
       });
       if (result.success === true) {
         uploadedFiles.push(result);
+        logUserActivity(
+          "File Storage - File uploaded successfully",
+          null,
+          MODULE_TYPES.SYSTEM,
+          `File ${file.originalname} uploaded successfully`
+        );
       } else {
         failedFiles.push(file.originalname);
+        logError(
+          "File Storage - File upload failed",
+          error,
+          null,
+          MODULE_TYPES.SYSTEM
+        );
       }
     }
 
@@ -149,7 +199,13 @@ export const uploadMultipleFiles = async (files, directory) => {
       failedFiles,
     };
   } catch (error) {
-    console.error('Error uploading multiple files:', error);
+    console.error("Error uploading multiple files:", error);
+    logError(
+      "File Storage - Error uploading multiple files",
+      error,
+      null,
+      MODULE_TYPES.SYSTEM
+    );
     throw new Error(`Upload failed: ${error.message}`);
   }
 };

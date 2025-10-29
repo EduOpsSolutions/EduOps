@@ -10,6 +10,8 @@ import { sendEmail } from '../utils/mailer.js';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { createLog, logSecurityEvent } from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 const bcryptSalt = parseInt(process.env.BCRYPT_SALT) || 11;
 const prisma = new PrismaClient();
@@ -27,6 +29,12 @@ async function login(req, res) {
     try {
       const isValidPassword = bcrypt.compareSync(password, user.data?.password);
       if (!isValidPassword) {
+        createLog({
+          title: 'Authentication Error - Login - Incorrect email or password',
+          content: `Attempted login with email: ${email}`,
+          moduleType: MODULE_TYPES.AUTH,
+          type: 'security_log',
+        });
         return res.status(401).json({
           error: true,
           message: 'Incorrect email or password',
@@ -188,8 +196,19 @@ async function resetPassword(req, res) {
 
 async function register(req, res) {
   try {
-    const token = await signJWT(payload);
-    res.json({ token });
+    // TODO: Implement registration logic
+    // This function needs to:
+    // 1. Extract user data from req.body
+    // 2. Validate the data
+    // 3. Hash the password
+    // 4. Create the user in the database
+    // 5. Generate a token
+    // 6. Return the token
+
+    res.status(501).json({
+      error: true,
+      message: 'Registration not implemented yet',
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -283,11 +302,16 @@ const requestResetPassword = async (req, res) => {
 
     const token = await signJWT({ email });
     console.log('token', token);
-    await prisma.users.update({
+    const updatedUser = await prisma.users.update({
       where: { email },
       data: {
         resetToken: token.token,
         resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000),
+      },
+      select: {
+        id: true,
+        userId: true,
+        email: true,
       },
     });
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token.token}`;
@@ -299,13 +323,31 @@ const requestResetPassword = async (req, res) => {
       `;
     const isSent = await sendEmail(email, 'Reset Password', '', html);
     if (isSent) {
+      await logSecurityEvent(
+        'Reset Password Request',
+        updatedUser.userId,
+        MODULE_TYPES.AUTH,
+        `Reset password request sent to email: ${email}`
+      );
       res
         .status(200)
         .json({ error: false, message: 'Reset link sent successfully' });
     } else {
+      await logSecurityEvent(
+        'Reset Password Request Error',
+        updatedUser.userId,
+        MODULE_TYPES.AUTH,
+        `Error sending email to ${email}`
+      );
       res.status(500).json({ error: true, message: 'Error sending email' });
     }
   } catch (error) {
+    await logSecurityEvent(
+      'Reset Password Request Error',
+      null,
+      MODULE_TYPES.AUTH,
+      `Error resetting password: ${error.message}`
+    );
     res.status(500).json({
       error: true,
       message: 'Error resetting password',
