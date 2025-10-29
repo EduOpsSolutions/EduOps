@@ -1,70 +1,71 @@
-import React, { useEffect } from 'react';
+import React, { useEffect } from "react";
 import {
   Navigate,
   Route,
   BrowserRouter as Router,
   Routes,
-} from 'react-router-dom';
-import './App.css';
+} from "react-router-dom";
+import "./App.css";
 
 /*Utility Pages*/
-import Assets from './pages/Assets';
+import Assets from "./pages/Assets";
 
 /* General Pages */
-import PublicLayout from './components/layout/PublicLayout';
-import PrivacyPolicy from './pages/legal/PrivacyPolicy';
-import Terms from './pages/legal/Terms';
-import Login from './pages/public/Login';
-import NotFound from './pages/public/NotFound';
-import PaymentForm from './pages/public/PaymentForm';
-import PaymentPage from './pages/payment/PaymentPage';
-import PaymentComplete from './pages/payment/PaymentComplete';
-import Profile from './pages/public/Profile';
-import RedirectPage from './pages/public/RedirectPage';
-import SignUp from './pages/public/SignUp';
-import ResetPassword from './pages/public/ResetPassword';
-import Swal from 'sweetalert2';
-import axiosInstance from './utils/axios';
+import PublicLayout from "./components/layout/PublicLayout";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import Terms from "./pages/legal/Terms";
+import Login from "./pages/public/Login";
+import NotFound from "./pages/public/NotFound";
+import PaymentForm from "./pages/public/PaymentForm";
+import PaymentPage from "./pages/payment/PaymentPage";
+import PaymentComplete from "./pages/payment/PaymentComplete";
+import Profile from "./pages/public/Profile";
+import RedirectPage from "./pages/public/RedirectPage";
+import SignUp from "./pages/public/SignUp";
+import ResetPassword from "./pages/public/ResetPassword";
+import Swal from "sweetalert2";
+import axiosInstance from "./utils/axios";
 
 /* Student Pages */
-import StudentLayout from './components/layout/StudentLayout';
-import StudentDocuments from './pages/student/Documents';
-import Enrollment from './pages/student/Enrollment';
-import Grades from './pages/student/Grades';
-import Home from './pages/student/Home';
-import StudentSchedule from './pages/student/StudentSchedule';
-import StudyLoad from './pages/student/StudyLoad';
-import Ledger from './pages/student/Ledger';
-import Assessment from './pages/student/Assessment';
+import StudentLayout from "./components/layout/StudentLayout";
+import StudentDocuments from "./pages/student/Documents";
+import Enrollment from "./pages/student/Enrollment";
+import Grades from "./pages/student/Grades";
+import Home from "./pages/student/Home";
+import StudentSchedule from "./pages/student/StudentSchedule";
+import StudyLoad from "./pages/student/StudyLoad";
+import Ledger from "./pages/student/Ledger";
+import Assessment from "./pages/student/Assessment";
 
 /* Teacher Pages */
-import TeacherLayout from './components/layout/TeacherLayout';
-import TeacherHome from './pages/teacher/Home';
-import TeachingLoad from './pages/teacher/TeachingLoad';
-import TeacherDocuments from './pages/teacher/Documents';
+import TeacherLayout from "./components/layout/TeacherLayout";
+import TeacherHome from "./pages/teacher/Home";
+import TeachingLoad from "./pages/teacher/TeachingLoad";
+import TeacherDocuments from "./pages/teacher/Documents";
 
 /* Admin Pages */
-import AdminLayout from './components/layout/AdminLayout';
-import CourseManagement from './pages/admin/CourseManagement';
-import AdminHome from './pages/admin/Home';
-import EnrollmentRequests from './pages/admin/EnrollmentRequests';
-import EnrollmentPeriod from './pages/admin/EnrollmentPeriod';
-import Transaction from './pages/admin/Transaction';
-import AccountManagement from './pages/admin/AccountManagement';
-import CreateUser from './pages/admin/CreateUser';
-import useAuthStore from './stores/authStore';
-import AdminLedger from './pages/admin/Ledger';
-import AdminAssessment from './pages/admin/Assessment';
-import ManageFees from './pages/admin/ManageFees';
-import DocumentValidation from './pages/admin/DocumentValidation';
-import Archives from './pages/admin/Archives';
-import AdminGrades from './pages/admin/Grades';
-import DocumentRequests from './pages/admin/DocumentRequests';
-import ManageDocuments from './pages/admin/ManageDocuments';
-import Chatbot from './pages/admin/Chatbot';
-import AdminSchedule from './pages/admin/Schedule';
-import Reports from './pages/admin/Reports';
-import ReportSummary from './pages/admin/ReportSummary';
+import AdminLayout from "./components/layout/AdminLayout";
+import CourseManagement from "./pages/admin/CourseManagement";
+import AdminHome from "./pages/admin/Home";
+import EnrollmentRequests from "./pages/admin/EnrollmentRequests";
+import EnrollmentPeriod from "./pages/admin/EnrollmentPeriod";
+import Transaction from "./pages/admin/Transaction";
+import AccountManagement from "./pages/admin/AccountManagement";
+import CreateUser from "./pages/admin/CreateUser";
+import useAuthStore from "./stores/authStore";
+import AdminLedger from "./pages/admin/Ledger";
+import AdminAssessment from "./pages/admin/Assessment";
+import ManageFees from "./pages/admin/ManageFees";
+import DocumentValidation from "./pages/admin/DocumentValidation";
+import Archives from "./pages/admin/Archives";
+import AdminGrades from "./pages/admin/Grades";
+import DocumentRequests from "./pages/admin/DocumentRequests";
+import ManageDocuments from "./pages/admin/ManageDocuments";
+import Chatbot from "./pages/admin/Chatbot";
+import AdminSchedule from "./pages/admin/Schedule";
+import Logs from "./pages/admin/Logs";
+import Reports from "./pages/admin/Reports";
+import ReportSummary from "./pages/admin/ReportSummary";
 
 function App() {
   const { isAuthenticated, validateToken } = useAuthStore();
@@ -169,6 +170,7 @@ function App() {
                 <Route path="schedule" element={<AdminSchedule />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="report-summary" element={<ReportSummary />} />
+                <Route path="logs" element={<Logs />} />
               </Route>
             </>
           ) : (

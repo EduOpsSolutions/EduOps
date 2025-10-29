@@ -7,6 +7,8 @@ import { verifyJWT } from '../utils/jwt.js';
 import { uploadFile } from '../utils/fileStorage.js';
 import { getUserByEmail } from '../model/user_model.js';
 import { getUsersByRole as getUsersByRolesModel } from '../model/user_model.js';
+import { createLog, logSecurityEvent, LogTypes } from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -22,7 +24,6 @@ const getAllUsers = async (req, res) => {
     status,
   } = req.query;
   try {
-    console.log(await verifyJWT(req.headers.authorization.split(' ')[1]));
     let whereClause = {};
     if (role) whereClause.role = role;
     if (status) whereClause.status = status;
@@ -41,8 +42,6 @@ const getAllUsers = async (req, res) => {
         { email: { contains: search } },
       ];
     }
-
-    console.log('Where Clause', whereClause);
 
     const users = await prisma.users.findMany({
       select: {
@@ -186,6 +185,15 @@ const createUser = async (req, res) => {
         status: 'active',
       },
     });
+
+    await createLog({
+      title: `User created successfully: ${user.userId}`,
+      userId: user.userId,
+      reqBody: JSON.stringify(req.body),
+      moduleType: MODULE_TYPES.AUTH,
+      content: `User created successfully: [${user.userId}] - ${user.firstName} ${user.lastName}`,
+      type: LogTypes.USER_ACTIVITY,
+    });
     res.status(201).json({
       error: false,
       message: 'User created successfully',
@@ -198,11 +206,11 @@ const createUser = async (req, res) => {
 
 // Update student
 const updateUser = async (req, res) => {
-  console.log('was here');
   try {
     const { id } = req.params;
-    console.log('id key', id);
-    console.log(req.params);
+    const userRequest = await verifyJWT(
+      req.headers.authorization.split(' ')[1]
+    );
 
     // Create an object with only the fields that are present in req.body
     const updateData = {};
@@ -220,10 +228,19 @@ const updateUser = async (req, res) => {
     if (req.body.profilePicLink)
       updateData.profilePicLink = req.body.profilePicLink;
 
-    await prisma.users.update({
+    const result = await prisma.users.update({
       where: { id },
       data: updateData,
     });
+
+    const requesting_user_details = userRequest.payload.data;
+
+    logSecurityEvent(
+      'User updated successfully',
+      requesting_user_details.userId,
+      MODULE_TYPES.AUTH,
+      `Updated user info: [${result.userId}] - ${result.firstName} ${result.lastName} by [${requesting_user_details.userId}] - ${requesting_user_details.firstName} ${requesting_user_details.lastName}`
+    );
 
     res.status(200).json({
       error: false,
@@ -253,12 +270,17 @@ const deleteUser = async (req, res) => {
 const deactivateUser = async (req, res) => {
   try {
     const { id } = req.query;
-    console.log('deactivate user', id);
-    await prisma.users.update({
+    const deleted = await prisma.users.update({
       where: { id },
       data: { status: 'disabled' },
     });
 
+    await logSecurityEvent({
+      title: `User deactivated`,
+      userId: deleted.userId,
+      moduleType: MODULE_TYPES.AUTH,
+      content: `ID:${deleted.userId} disabled at ${deleted.updatedAt} server time.`,
+    });
     res.json({ error: false, message: 'User deactivated successfully' });
   } catch (error) {
     res.status(500).json({ error: true, message: 'Error deactivating user' });
@@ -273,6 +295,12 @@ const activateUser = async (req, res) => {
       data: { status: 'active', deletedAt: null },
     });
 
+    await logSecurityEvent({
+      title: `User activated`,
+      userId: activated.userId,
+      moduleType: MODULE_TYPES.AUTH,
+      content: `ID:${activated.userId} enabled at ${activated.updatedAt} server time.`,
+    });
     res.json({ error: false, message: 'User activated successfully' });
   } catch (error) {
     res.status(500).json({
@@ -288,9 +316,7 @@ const changePassword = async (req, res) => {
   const { password } = req.body;
   const token = req.headers.authorization.split(' ')[1];
   const decoded = await verifyJWT(token);
-  console.log('decoded', decoded);
   const user = await getUserByEmail(decoded.email);
-  console.log('user', user);
   if (user.error) {
     return res.status(404).json({ error: true, message: 'User not found' });
   }
@@ -299,6 +325,12 @@ const changePassword = async (req, res) => {
       where: { id: user.data.id },
       data: { password: bcrypt.hashSync(password, SALT) },
     });
+    await logSecurityEvent(
+      'Password changed successfully',
+      user.data.id,
+      MODULE_TYPES.AUTH,
+      'password_changed'
+    );
     res.json({ error: false, message: 'Password changed successfully' });
   } catch (error) {
     res.status(500).json({
@@ -397,6 +429,15 @@ const createStudentAccount = async (req, res) => {
         data: { studentId: user.userId },
       });
     }
+
+    await createLog({
+      title: `Student account created`,
+      userId: user.userId,
+      moduleType: MODULE_TYPES.AUTH,
+      content: `Student account for [${user.userId}] - ${user.firstName} ${user.lastName} created.`,
+      reqBody: JSON.stringify(req.body),
+      type: LogTypes.SECURITY_LOG,
+    });
 
     res.status(201).json({
       error: false,
@@ -667,7 +708,6 @@ const checkStudentScheduleConflicts = async (req, res) => {
 const updateProfilePicture = async (req, res) => {
   try {
     const profilePic = req.file;
-    console.log('uploaded file: ', req.file);
 
     if (!profilePic) {
       return res.status(400).json({
@@ -679,7 +719,6 @@ const updateProfilePicture = async (req, res) => {
     // Extract user ID from JWT token
     const token = req.headers.authorization.split(' ')[1];
     const decoded = await verifyJWT(token);
-    console.log('decoded JWT:', decoded);
 
     if (!decoded || !decoded.payload) {
       return res.status(401).json({
@@ -733,7 +772,6 @@ const removeProfilePicture = async (req, res) => {
     // Extract user ID from JWT token
     const token = req.headers.authorization.split(' ')[1];
     const decoded = await verifyJWT(token);
-    console.log('decoded JWT:', decoded);
 
     if (!decoded || !decoded.payload) {
       return res.status(401).json({
@@ -841,7 +879,6 @@ const getUsersByRole = async (req, res) => {
       });
     }
 
-    console.log('USERS KO', users);
     res.json({ error: false, success: true, data: users.data });
   } catch (error) {
     console.error('Error fetching users by role:', error);

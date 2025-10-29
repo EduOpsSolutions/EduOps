@@ -45,6 +45,7 @@ model users {
   documentRequests    document_request[]    @relation("UserDocumentRequests")
   documentValidations document_validation[] @relation("UserDocumentValidations")
   studentGrades       student_grade[]       @relation("UserStudentGrades")
+  logs          logs[]
 }
 
 model enrollment_request {
@@ -214,16 +215,28 @@ model module {
 }
 
 model logs {
-  id                 String   @id @default(cuid())
-  moduleId           Int
-  title              String
-  content            String?
-  initiatedByTeacher Boolean  @default(false)
-  initiatedByStudent Boolean  @default(false)
-  initiatedByAdmin   Boolean  @default(false)
-  initiatedBySystem  Boolean  @default(false)
-  sourceId           Int?
-  createdAt          DateTime @default(now())
+  id        Int   @id @default(autoincrement())
+  title    String
+  content  String? @db.Text
+  reqBody String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  userId String?
+  moduleType ModuleType @default(UNCATEGORIZED)
+  type LogType @default(user_activity)
+
+
+  user      users? @relation(fields: [userId], references: [userId])
+}
+
+enum LogType {
+  user_activity //for user actions like login, logout, etc.
+  system_activity //for cron jobs and system maintenance
+  api_response //for api responses
+  error_log //for error logs like 500, 404, etc.
+  security_log //for security logs like login attempts, failed login attempts, etc.
+  other //for other logs like system logs, etc.
 }
 
 enum Visibility {
@@ -382,6 +395,19 @@ enum AdjustmentType {
   refund
   manual_charge
   fee_waiver
+}
+
+enum ModuleType {
+  UNCATEGORIZED
+  AUTH
+  ENROLLMENTS
+  SCHEDULES
+  GRADING
+  DOCUMENTS
+  PAYMENTS
+  REPORTS
+  CONTENTS
+  SYSTEM
 }
 
 model document_template {
