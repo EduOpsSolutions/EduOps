@@ -12,6 +12,7 @@ const Maya = ({
   isLocked,
   onPaymentSuccess,
   onPaymentError,
+  paymentId,
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -59,10 +60,12 @@ const Maya = ({
           firstName: firstName,
           lastName: lastName,
           email: userEmail,
+          paymentId: typeof paymentId !== 'undefined' ? paymentId : undefined
         }),
       });
 
       const intentData = await intentResponse.json();
+      console.log('[Maya] create-intent response ok:', intentResponse.ok, 'success:', intentData?.success);
 
       if (!intentResponse.ok) {
         throw new Error(
@@ -81,6 +84,7 @@ const Maya = ({
       }
       const paymentIntent = intentData?.data?.data;
       const clientKey = paymentIntent?.attributes?.client_key;
+      console.log('[Maya] intent id:', paymentIntent?.id, 'clientKey:', !!clientKey);
       const paymentIntentId =
         paymentIntent?.id ||
         (clientKey ? clientKey.split('_client')[0] : undefined);
@@ -118,6 +122,8 @@ const Maya = ({
 
         const methodData = await methodResponse.json();
 
+        console.log('[Maya] payment_method created:', !!methodData?.data, methodData?.data?.id);
+
         if (!methodData.data) {
           const errMsg =
             methodData?.errors?.map?.((e) => e?.detail).join(', ') ||
@@ -147,15 +153,14 @@ const Maya = ({
 
       const attachData = await attachResponse.json();
 
-      if (!attachData.success) {
-        throw new Error('Failed to attach payment method');
-      }
+      console.log('[Maya] attach-method response ok:', attachResponse.ok, 'success:', attachData?.success);
 
       const attachedIntent = attachData?.data?.data || attachData?.data;
       const status = attachedIntent.attributes.status;
 
       if (status === 'awaiting_next_action') {
         const nextAction = attachedIntent.attributes.next_action;
+        console.log('[Maya] awaiting_next_action redirect url:', nextAction?.redirect?.url);
         if (nextAction && nextAction.redirect && nextAction.redirect.url) {
           setPaymentStatus('Redirecting to Maya...');
           window.location.href = nextAction.redirect.url;
@@ -163,12 +168,15 @@ const Maya = ({
           throw new Error('No redirect URL received');
         }
       } else if (status === 'succeeded') {
+        console.log('[Maya] intent succeeded, triggering onPaymentSuccess');
         setPaymentStatus('Payment Success');
         onPaymentSuccess && onPaymentSuccess(attachedIntent);
       } else {
+        console.warn('[Maya] unexpected status:', status);
         throw new Error(`Unexpected payment status: ${status}`);
       }
     } catch (error) {
+      console.error('[Maya] flow error:', error);
       throw error;
     }
   };

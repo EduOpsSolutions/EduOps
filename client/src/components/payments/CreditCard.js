@@ -12,6 +12,7 @@ const CreditCard = ({
   isLocked,
   onPaymentSuccess,
   onPaymentError,
+  paymentId,
 }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -108,10 +109,12 @@ const CreditCard = ({
           firstName: firstName,
           lastName: lastName,
           email: userEmail,
+          paymentId: typeof paymentId !== 'undefined' ? paymentId : undefined
         }),
       });
 
       const data = await response.json();
+      console.log('[Card] create-intent response ok:', response.ok, 'success:', data?.success);
 
       if (!response.ok) {
         throw new Error(
@@ -175,6 +178,7 @@ const CreditCard = ({
       );
 
       const data = await response.json();
+      console.log('[Card] payment_method created:', !!data?.data, data?.data?.id);
       if (data.data) {
         return data.data;
       } else {
@@ -217,6 +221,7 @@ const CreditCard = ({
       });
 
       const data = await response.json();
+      console.log('[Card] attach-method response ok:', response.ok, 'success:', data?.success);
       if (data.success && data.data && data.data.data) {
         const paymentIntent = data.data.data;
 
@@ -230,6 +235,7 @@ const CreditCard = ({
 
         if (paymentIntentStatus === 'awaiting_next_action') {
           setPaymentStatus('3D Secure Authentication Required');
+          console.log('[Card] awaiting_next_action redirect url:', paymentIntent.attributes.next_action?.redirect?.url);
           window.open(
             paymentIntent.attributes.next_action.redirect.url,
             '_blank'
@@ -237,6 +243,7 @@ const CreditCard = ({
           listenToPayment(paymentIntent.attributes.client_key);
         } else {
           setPaymentStatus(paymentIntentStatus);
+          console.warn('[Card] unexpected status:', paymentIntentStatus);
           if (paymentIntentStatus === 'succeeded') {
             onPaymentSuccess && onPaymentSuccess(paymentIntent);
           }
@@ -246,6 +253,7 @@ const CreditCard = ({
       }
     } catch (error) {
       setPaymentStatus('Error processing payment');
+      console.error('[Card] flow error:', error);
       onPaymentError && onPaymentError(error);
     }
   };
