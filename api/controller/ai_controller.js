@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { PrismaClient } from "@prisma/client";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { PrismaClient } from '@prisma/client';
 import {
   logError,
   logUserActivity,
   logSystemActivity,
-} from "../utils/logger.js";
-import { MODULE_TYPES } from "../constants/module_types.js";
+} from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 const prisma = new PrismaClient();
 
@@ -54,7 +54,7 @@ async function getSchedulingContext() {
     const courses = await prisma.course.findMany({
       where: {
         deletedAt: null,
-        visibility: "visible",
+        visibility: 'visible',
       },
       select: {
         id: true,
@@ -93,8 +93,24 @@ async function getSchedulingContext() {
       },
       take: 30,
     });
+
+    const teachers = await prisma.users.findMany({
+      where: {
+        role: 'teacher',
+        deletedAt: null,
+      },
+      select: { id: true, userId: true, firstName: true, lastName: true },
+    });
+    context.teachers = teachers;
+
     await logSystemActivity(
-      "AI: Scheduling Context Fetched",
+      'AI: Scheduling Context Fetched - Teachers',
+      MODULE_TYPES.AUTH,
+      JSON.stringify(teachers)
+    );
+
+    await logSystemActivity(
+      'AI: Scheduling Context Fetched - Schedules',
       MODULE_TYPES.SCHEDULES,
       JSON.stringify(schedules)
     );
@@ -102,7 +118,7 @@ async function getSchedulingContext() {
 
     return context;
   } catch (error) {
-    console.error("Error fetching scheduling context:", error);
+    console.error('Error fetching scheduling context:', error);
     return {};
   }
 }
@@ -117,7 +133,7 @@ const geminiConfig = {
 };
 
 const geminiModel = googleAI.getGenerativeModel({
-  model: "gemini-2.0-flash-exp",
+  model: 'gemini-2.0-flash-exp',
   generationConfig: geminiConfig,
 });
 
@@ -202,7 +218,7 @@ async function getSafeReportContext() {
 
     // Get enrollment statistics (excluding sensitive user data)
     const enrollmentStats = await prisma.student_enrollment.groupBy({
-      by: ["periodId", "status"],
+      by: ['periodId', 'status'],
       where: { deletedAt: null },
       _count: { id: true },
     });
@@ -210,20 +226,20 @@ async function getSafeReportContext() {
 
     // Get user counts by role and status (no personal data)
     const userStats = await prisma.users.groupBy({
-      by: ["role", "status"],
+      by: ['role', 'status'],
       where: { deletedAt: null },
       _count: { id: true },
     });
     context.userStats = userStats;
 
     await logSystemActivity(
-      "AI: Safe Report Context Fetched",
+      'AI: Safe Report Context Fetched',
       MODULE_TYPES.REPORTS,
       JSON.stringify(context)
     );
     return context;
   } catch (error) {
-    console.error("Error fetching safe report context:", error);
+    console.error('Error fetching safe report context:', error);
     return {};
   }
 }
@@ -231,30 +247,30 @@ async function getSafeReportContext() {
 // AI Report Generation endpoint
 export const generateAIReport = async (req, res) => {
   try {
-    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
     if (!apiKey) {
       await logError(
-        "AI: Generate Report Error - Missing API Key",
-        new Error("GEMINI_API_KEY is missing"),
+        'AI: Generate Report Error - Missing API Key',
+        new Error('GEMINI_API_KEY is missing'),
         req.user?.data?.userId || null,
         MODULE_TYPES.REPORTS
       );
       return res
         .status(500)
-        .json({ error: true, message: "GEMINI_API_KEY is missing" });
+        .json({ error: true, message: 'GEMINI_API_KEY is missing' });
     }
 
     const { prompt, history } = req.body || {};
-    if (!prompt || typeof prompt !== "string") {
+    if (!prompt || typeof prompt !== 'string') {
       await logError(
-        "AI: Generate Report Error - Invalid Prompt",
-        new Error("prompt is required"),
+        'AI: Generate Report Error - Invalid Prompt',
+        new Error('prompt is required'),
         req.user?.data?.userId || null,
         MODULE_TYPES.REPORTS
       );
       return res
         .status(400)
-        .json({ error: true, message: "prompt is required" });
+        .json({ error: true, message: 'prompt is required' });
     }
 
     // Fetch safe database context
@@ -321,14 +337,14 @@ If the user asks for data you don't have access to, politely explain the limitat
     const contents = [];
 
     contents.push({
-      role: "user",
+      role: 'user',
       parts: [{ text: systemInstruction }],
     });
     contents.push({
-      role: "model",
+      role: 'model',
       parts: [
         {
-          text: "Understood. I will analyze the educational data and generate insights while respecting data privacy and security constraints.",
+          text: 'Understood. I will analyze the educational data and generate insights while respecting data privacy and security constraints.',
         },
       ],
     });
@@ -336,10 +352,10 @@ If the user asks for data you don't have access to, politely explain the limitat
     // Add chat history if provided
     if (Array.isArray(history) && history.length > 0) {
       history.forEach((msg) => {
-        if (msg.role === "user" || msg.role === "model") {
+        if (msg.role === 'user' || msg.role === 'model') {
           contents.push({
             role: msg.role,
-            parts: [{ text: msg.content || msg.text || "" }],
+            parts: [{ text: msg.content || msg.text || '' }],
           });
         }
       });
@@ -347,13 +363,13 @@ If the user asks for data you don't have access to, politely explain the limitat
 
     // Add current prompt
     contents.push({
-      role: "user",
+      role: 'user',
       parts: [{ text: prompt }],
     });
 
     const model = geminiModel;
     const result = await model.generateContent({ contents });
-    const responseText = result?.response?.text?.() || "";
+    const responseText = result?.response?.text?.() || '';
 
     // Check if AI wants to generate a report table
     const reportTableMatch = responseText.match(
@@ -364,14 +380,14 @@ If the user asks for data you don't have access to, politely explain the limitat
       try {
         const reportData = JSON.parse(reportTableMatch[1]);
         const cleanText = responseText
-          .replace(/GENERATE_REPORT_TABLE\s*\{[\s\S]*?\}/, "")
+          .replace(/GENERATE_REPORT_TABLE\s*\{[\s\S]*?\}/, '')
           .trim();
 
         return res.json({
           text: cleanText,
-          action: "generate_report_table",
+          action: 'generate_report_table',
           reportData: {
-            reportName: reportData.reportName || "Custom Report",
+            reportName: reportData.reportName || 'Custom Report',
             summary: reportData.summary || {},
             columns: reportData.columns || [],
             data: reportData.data || [],
@@ -384,7 +400,7 @@ If the user asks for data you don't have access to, politely explain the limitat
           },
         });
       } catch (parseError) {
-        console.error("Failed to parse report table command:", parseError);
+        console.error('Failed to parse report table command:', parseError);
         // Fall through to normal response if parsing fails
       }
     }
@@ -398,10 +414,10 @@ If the user asks for data you don't have access to, politely explain the limitat
       },
     });
   } catch (err) {
-    console.error("generateAIReport error:", err);
+    console.error('generateAIReport error:', err);
     return res.status(500).json({
       error: true,
-      message: "Failed to generate AI report",
+      message: 'Failed to generate AI report',
       details: err.message,
     });
   }
@@ -409,18 +425,18 @@ If the user asks for data you don't have access to, politely explain the limitat
 
 export const askGemini = async (req, res) => {
   try {
-    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
     if (!apiKey) {
       return res
         .status(500)
-        .json({ error: true, message: "GEMINI_API_KEY is missing" });
+        .json({ error: true, message: 'GEMINI_API_KEY is missing' });
     }
 
     const { prompt, context, history } = req.body || {};
-    if (!prompt || typeof prompt !== "string") {
+    if (!prompt || typeof prompt !== 'string') {
       return res
         .status(400)
-        .json({ error: true, message: "prompt is required" });
+        .json({ error: true, message: 'prompt is required' });
     }
 
     // Fetch database context
@@ -484,18 +500,18 @@ ${JSON.stringify(aiContext, null, 2)}`;
 
     const contextualNotes = context
       ? `\n\nAdditional Context: ${JSON.stringify(context).slice(0, 4000)}`
-      : "";
+      : '';
 
     // Build conversation history
     const contents = [];
 
     // Add system instruction as first user message
     contents.push({
-      role: "user",
+      role: 'user',
       parts: [{ text: systemInstruction + contextualNotes }],
     });
     contents.push({
-      role: "model",
+      role: 'model',
       parts: [
         { text: "Understood. I'm ready to help with scheduling questions." },
       ],
@@ -504,10 +520,10 @@ ${JSON.stringify(aiContext, null, 2)}`;
     // Add chat history if provided
     if (Array.isArray(history) && history.length > 0) {
       history.forEach((msg) => {
-        if (msg.role === "user" || msg.role === "model") {
+        if (msg.role === 'user' || msg.role === 'model') {
           contents.push({
             role: msg.role,
-            parts: [{ text: msg.content || msg.text || "" }],
+            parts: [{ text: msg.content || msg.text || '' }],
           });
         }
       });
@@ -515,13 +531,13 @@ ${JSON.stringify(aiContext, null, 2)}`;
 
     // Add current prompt
     contents.push({
-      role: "user",
+      role: 'user',
       parts: [{ text: prompt }],
     });
 
     const model = geminiModel;
     const result = await model.generateContent({ contents });
-    const text = result?.response?.text?.() || "";
+    const text = result?.response?.text?.() || '';
 
     // Check if AI wants to create a schedule
     const scheduleCommandMatch = text.match(
@@ -532,12 +548,12 @@ ${JSON.stringify(aiContext, null, 2)}`;
       try {
         const scheduleData = JSON.parse(scheduleCommandMatch[1]);
         const responseText = text
-          .replace(/SCHEDULE_CREATE_COMMAND\s*\{[\s\S]*?\}/, "")
+          .replace(/SCHEDULE_CREATE_COMMAND\s*\{[\s\S]*?\}/, '')
           .trim();
 
         // Resolve course ID
-        let courseId = "";
-        let courseName = scheduleData.courseName || "";
+        let courseId = '';
+        let courseName = scheduleData.courseName || '';
         if (courseName) {
           // Try exact match first
           let course = dbContext.courses?.find(
@@ -560,16 +576,16 @@ ${JSON.stringify(aiContext, null, 2)}`;
         }
 
         // Resolve teacher ID
-        let teacherId = "";
-        let teacherName = scheduleData.teacherFullName || "";
+        let teacherId = '';
+        let teacherName = scheduleData.teacherFullName || '';
         if (teacherName) {
-          const nameParts = teacherName.split(" ");
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
+          const nameParts = teacherName.split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
 
           const teacher = await prisma.users.findFirst({
             where: {
-              role: "teacher",
+              role: 'teacher',
               deletedAt: null,
               OR: [
                 {
@@ -591,10 +607,10 @@ ${JSON.stringify(aiContext, null, 2)}`;
         }
 
         // Resolve academic period ID
-        let academicPeriodId = "";
-        let academicPeriodName = "";
-        let periodStart = "";
-        let periodEnd = "";
+        let academicPeriodId = '';
+        let academicPeriodName = '';
+        let periodStart = '';
+        let periodEnd = '';
 
         if (scheduleData.periodBatchName) {
           const period = dbContext.academicPeriods?.find(
@@ -617,17 +633,17 @@ ${JSON.stringify(aiContext, null, 2)}`;
               // Format dates to YYYY-MM-DD
               periodStart = new Date(period.startAt)
                 .toISOString()
-                .split("T")[0];
-              periodEnd = new Date(period.endAt).toISOString().split("T")[0];
+                .split('T')[0];
+              periodEnd = new Date(period.endAt).toISOString().split('T')[0];
             }
           }
         }
 
         const userId = req.user?.data?.userId || null;
-        console.log("Creating log with userId:", userId);
+        console.log('Creating log with userId:', userId);
 
         const logResult = await logUserActivity(
-          "AI: Ask Gemini (Schedule)",
+          'AI: Ask Gemini (Schedule)',
           userId,
           MODULE_TYPES.SCHEDULES,
           JSON.stringify({
@@ -639,14 +655,14 @@ ${JSON.stringify(aiContext, null, 2)}`;
         );
 
         if (!logResult.success) {
-          console.error("Failed to create log:", logResult.error);
+          console.error('Failed to create log:', logResult.error);
         } else {
-          console.log("Log created successfully:", logResult.log?.id);
+          console.log('Log created successfully:', logResult.log?.id);
         }
 
         return res.json({
           text: responseText,
-          action: "create_schedule",
+          action: 'create_schedule',
           scheduleData: {
             courseId,
             courseName,
@@ -654,28 +670,28 @@ ${JSON.stringify(aiContext, null, 2)}`;
             academicPeriodName,
             teacherId,
             teacherName,
-            days: scheduleData.days || "",
-            time_start: scheduleData.time_start || "",
-            time_end: scheduleData.time_end || "",
-            location: scheduleData.location || "",
-            notes: scheduleData.notes || "",
+            days: scheduleData.days || '',
+            time_start: scheduleData.time_start || '',
+            time_end: scheduleData.time_end || '',
+            location: scheduleData.location || '',
+            notes: scheduleData.notes || '',
             periodStart,
             periodEnd,
-            color: "#FFCF00",
+            color: '#FFCF00',
             capacity: scheduleData.capacity || 30,
           },
         });
       } catch (parseError) {
-        console.error("Failed to parse schedule command:", parseError);
+        console.error('Failed to parse schedule command:', parseError);
       }
     }
 
     return res.json({ text });
   } catch (err) {
-    console.error("askGemini error:", err);
+    console.error('askGemini error:', err);
     return res.status(500).json({
       error: true,
-      message: "Failed to contact Gemini",
+      message: 'Failed to contact Gemini',
       details: err.message,
     });
   }
