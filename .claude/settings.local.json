@@ -1,6 +1,10 @@
 {
   "permissions": {
-    "allow": ["Bash(npx prisma migrate:*)", "Bash(npx prisma:*)"],
+    "allow": [
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx prisma:*)",
+      "Read(//Users/angelousereno/Documents/**)"
+    ],
     "deny": [],
     "ask": []
   }
