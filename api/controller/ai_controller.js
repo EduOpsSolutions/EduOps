@@ -114,7 +114,6 @@ async function getSchedulingContext() {
       MODULE_TYPES.SCHEDULES,
       JSON.stringify(schedules)
     );
-    context.schedules = schedules;
 
     return context;
   } catch (error) {
@@ -659,7 +658,6 @@ ${JSON.stringify(aiContext, null, 2)}`;
         } else {
           console.log('Log created successfully:', logResult.log?.id);
         }
-
         return res.json({
           text: responseText,
           action: 'create_schedule',
