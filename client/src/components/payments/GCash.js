@@ -34,7 +34,7 @@ const GCash = ({ amount, description, userId, firstName, lastName, userEmail, is
   const handleGCashPIPMFlow = async () => {
     try {
       // Create Payment Intent
-      const intentResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`, {
+      const intentResponse = await fetch(`${process.env.REACT_APP_API_URL}/payments/create-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,8 +105,8 @@ const GCash = ({ amount, description, userId, firstName, lastName, userEmail, is
         throw new Error(`Payment method creation failed: ${error.message}`);
       }
       
-      // Attach Payment Method to Payment Intent 
-      const attachResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
+      // Attach Payment Method to Payment Intent
+      const attachResponse = await fetch(`${process.env.REACT_APP_API_URL}/payments/attach-method`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
