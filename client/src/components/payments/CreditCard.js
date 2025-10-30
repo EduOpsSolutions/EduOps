@@ -1,25 +1,35 @@
-import React, { useState } from "react";
-import styles from "../../styles/Payment.module.css";
+import React, { useState } from 'react';
+import styles from '../../styles/Payment.module.css';
 
-const CreditCard = ({ amount, description, userId, firstName, lastName, userEmail, isLocked, onPaymentSuccess, onPaymentError }) => {
+const CreditCard = ({
+  amount,
+  description,
+  userId,
+  firstName,
+  lastName,
+  userEmail,
+  isLocked,
+  onPaymentSuccess,
+  onPaymentError,
+}) => {
   const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    cardHolder: "",
-    number: "",
-    month: "",
-    year: "",
-    code: ""
+    name: '',
+    phone: '',
+    email: '',
+    cardHolder: '',
+    number: '',
+    month: '',
+    year: '',
+    code: '',
   });
 
-  const [paymentStatus, setPaymentStatus] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "number") {
+    if (name === 'number') {
       const formattedValue = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
       const matches = formattedValue.match(/\d{4,16}/g);
       const match = (matches && matches[0]) || '';
@@ -28,174 +38,211 @@ const CreditCard = ({ amount, description, userId, firstName, lastName, userEmai
         parts.push(match.substring(i, i + 4));
       }
       if (parts.length) {
-        setFormData(prev => ({ ...prev, [name]: parts.join(' ') }));
+        setFormData((prev) => ({ ...prev, [name]: parts.join(' ') }));
       } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
       }
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const listenToPayment = async (fullClient) => {
     const paymentIntentId = fullClient.split('_client')[0];
-    
+
     for (let i = 5; i > 0; i--) {
       setPaymentStatus(`Checking payment status... ${i}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (i === 1) {
         const paymentIntentData = await fetch(
-          'https://api.paymongo.com/v1/payment_intents/' + paymentIntentId + '?client_key=' + fullClient,
+          'https://api.paymongo.com/v1/payment_intents/' +
+            paymentIntentId +
+            '?client_key=' +
+            fullClient,
           {
             headers: {
-              Authorization: `Basic ${btoa(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':')}`
-            }
+              Authorization: `Basic ${btoa(
+                process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':'
+              )}`,
+            },
           }
-        ).then((response) => {
-          return response.json();
-        }).then((response) => {
-          console.log('Payment Intent Status:', response.data);
-          return response.data;
-        });
+        )
+          .then((response) => {
+            return response.json();
+          })
+          .then((response) => {
+            console.log('Payment Intent Status:', response.data);
+            return response.data;
+          });
 
         if (paymentIntentData.attributes.last_payment_error) {
-          setPaymentStatus(JSON.stringify(paymentIntentData.attributes.last_payment_error));
-          onPaymentError && onPaymentError(paymentIntentData.attributes.last_payment_error);
-        } else if (paymentIntentData.attributes.status === "succeeded") {
-          setPaymentStatus("Payment Success");
+          setPaymentStatus(
+            JSON.stringify(paymentIntentData.attributes.last_payment_error)
+          );
+          onPaymentError &&
+            onPaymentError(paymentIntentData.attributes.last_payment_error);
+        } else if (paymentIntentData.attributes.status === 'succeeded') {
+          setPaymentStatus('Payment Success');
           onPaymentSuccess && onPaymentSuccess(paymentIntentData);
         } else {
-          i = 5; 
+          i = 5;
         }
       }
     }
   };
 
   const createPaymentIntent = async () => {
-    setPaymentStatus("Creating Payment Intent");
-    
+    setPaymentStatus('Creating Payment Intent');
+
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: amount,
-          description: description,
-          statement_descriptor: "EduOps",
-          userId: userId,
-          firstName: firstName,
-          lastName: lastName,
-          email: userEmail
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: amount,
+            description: description,
+            statement_descriptor: 'EduOps',
+            userId: userId,
+            firstName: firstName,
+            lastName: lastName,
+            email: userEmail,
+          }),
+        }
+      );
 
       const data = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(data.message || data.error || `HTTP ${response.status}: Failed to create payment intent`);
+        throw new Error(
+          data.message ||
+            data.error ||
+            `HTTP ${response.status}: Failed to create payment intent`
+        );
       }
-      
+
       if (data.success && data.data && data.data.data) {
-        return data.data.data; 
+        return data.data.data;
       } else {
-        throw new Error(data.message || data.error || 'Failed to create payment intent');
+        throw new Error(
+          data.message || data.error || 'Failed to create payment intent'
+        );
       }
     } catch (error) {
       console.error('Error creating payment intent:', error);
-      setPaymentStatus("Error creating payment intent");
+      setPaymentStatus('Error creating payment intent');
       throw error;
     }
   };
 
   // Create Payment Method
   const createPaymentMethod = async () => {
-    setPaymentStatus("Creating Payment Method");
-    
+    setPaymentStatus('Creating Payment Method');
+
     try {
-      const expYear = parseInt(formData.year) > 2000 ? parseInt(formData.year) % 100 : parseInt(formData.year);
-      
-      const response = await fetch('https://api.paymongo.com/v1/payment_methods', {
-        method: "POST",
-        headers: {
-          'Authorization': `Basic ${btoa(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':')}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          data: {
-            attributes: {
-              type: 'card',
-              details: {
-                card_number: formData.number.replace(/\s/g, ''),
-                exp_month: parseInt(formData.month),
-                exp_year: expYear,
-                cvc: formData.code,
+      const expYear =
+        parseInt(formData.year) > 2000
+          ? parseInt(formData.year) % 100
+          : parseInt(formData.year);
+
+      const response = await fetch(
+        'https://api.paymongo.com/v1/payment_methods',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${btoa(
+              process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':'
+            )}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            data: {
+              attributes: {
+                type: 'card',
+                details: {
+                  card_number: formData.number.replace(/\s/g, ''),
+                  exp_month: parseInt(formData.month),
+                  exp_year: expYear,
+                  cvc: formData.code,
+                },
+                billing: {
+                  name: formData.name,
+                  email: formData.email,
+                  phone: formData.phone,
+                },
               },
-              billing: {
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-              }
-            }
-          }
-        }),
-      });
+            },
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.data) {
-        return data.data; 
+        return data.data;
       } else {
         let errorMessage = 'Failed to create payment method';
         if (data.data && data.data.error && data.data.error.errors) {
-          errorMessage = data.data.error.errors.map(err => err.detail || err.message).join(', ');
+          errorMessage = data.data.error.errors
+            .map((err) => err.detail || err.message)
+            .join(', ');
         } else if (data.message) {
           errorMessage = data.message;
         }
         throw new Error(errorMessage);
       }
     } catch (error) {
-      setPaymentStatus("Error creating payment method");
+      setPaymentStatus('Error creating payment method');
       throw error;
     }
   };
 
   // Attach Payment Method to the Intent
   const attachIntentMethod = async (intent, method) => {
-    setPaymentStatus("Processing Payment");
-    
+    setPaymentStatus('Processing Payment');
+
     try {
       const clientKey = intent?.attributes?.client_key;
       if (!clientKey) throw new Error('Client key not found in intent object');
-      
+
       const methodId = method?.id || method?.data?.id;
-      
-      const response = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          payment_intent_id: intent?.id,
-          payment_method_id: methodId,
-          client_key: clientKey
-        }),
-      });
+
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            payment_intent_id: intent?.id,
+            payment_method_id: methodId,
+            client_key: clientKey,
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success && data.data && data.data.data) {
         const paymentIntent = data.data.data;
-        
+
         if (!paymentIntent || !paymentIntent.attributes) {
-          throw new Error('Invalid payment intent structure returned from attach method');
+          throw new Error(
+            'Invalid payment intent structure returned from attach method'
+          );
         }
-        
+
         const paymentIntentStatus = paymentIntent.attributes.status;
-        
+
         if (paymentIntentStatus === 'awaiting_next_action') {
-          setPaymentStatus("3D Secure Authentication Required");
-          window.open(paymentIntent.attributes.next_action.redirect.url, "_blank");
+          setPaymentStatus('3D Secure Authentication Required');
+          window.open(
+            paymentIntent.attributes.next_action.redirect.url,
+            '_blank'
+          );
           listenToPayment(paymentIntent.attributes.client_key);
         } else {
           setPaymentStatus(paymentIntentStatus);
@@ -207,7 +254,7 @@ const CreditCard = ({ amount, description, userId, firstName, lastName, userEmai
         throw new Error(data.message || 'Failed to attach payment method');
       }
     } catch (error) {
-      setPaymentStatus("Error processing payment");
+      setPaymentStatus('Error processing payment');
       onPaymentError && onPaymentError(error);
     }
   };
@@ -216,13 +263,13 @@ const CreditCard = ({ amount, description, userId, firstName, lastName, userEmai
     event.preventDefault();
     if (isLocked) return;
     setIsProcessing(true);
-    
+
     try {
       const paymentIntent = await createPaymentIntent();
       const paymentMethod = await createPaymentMethod();
       await attachIntentMethod(paymentIntent, paymentMethod);
     } catch (error) {
-      setPaymentStatus("Payment failed. Please try again.");
+      setPaymentStatus('Payment failed. Please try again.');
       onPaymentError && onPaymentError(error);
     } finally {
       setIsProcessing(false);
@@ -357,8 +404,16 @@ const CreditCard = ({ amount, description, userId, firstName, lastName, userEmai
             required
           />
         </div>
-        <button type="submit" className={styles.payButton} disabled={isProcessing || isLocked}>
-          {isLocked ? "Payment Locked" : isProcessing ? "Processing..." : "Pay with Card"}
+        <button
+          type="submit"
+          className={styles.payButton}
+          disabled={isProcessing || isLocked}
+        >
+          {isLocked
+            ? 'Payment Locked'
+            : isProcessing
+            ? 'Processing...'
+            : 'Pay with Card'}
         </button>
         <p>{paymentStatus}</p>
       </form>
