@@ -12,6 +12,7 @@ const CreditCard = ({
   isLocked,
   onPaymentSuccess,
   onPaymentError,
+  paymentId,
 }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -108,6 +109,7 @@ const CreditCard = ({
           firstName: firstName,
           lastName: lastName,
           email: userEmail,
+          paymentId: typeof paymentId !== 'undefined' ? paymentId : undefined
         }),
       });
 

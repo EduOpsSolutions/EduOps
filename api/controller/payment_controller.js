@@ -289,7 +289,7 @@ const sendPaymentLinkEmail = async (req, res) => {
 /* Create payment intent (PIPM flow) */
 const createPaymentIntent = async (req, res) => {
   try {
-    const { firstName, lastName, purpose, remarks, description, userId, amount, feeType } = req.body;
+    const { firstName, lastName, purpose, remarks, description, userId, amount, feeType, paymentId } = req.body;
     
     if (!amount || amount <= 0) {
       return sendError(res, "Amount is required and must be greater than 0", 400);
@@ -314,48 +314,70 @@ const createPaymentIntent = async (req, res) => {
       const paymentIntentId = result.data?.data?.id;
       
       if (paymentIntentId && userId && amount) {
-        const customTransactionId = await generatePaymentId();
-        
-        let finalUserId = userId;
-        if (typeof userId === 'string' && userId.length <= 20) {
+        if (paymentId) {
           try {
-            const user = await prisma.users.findUnique({
-              where: { userId: userId },
-              select: { id: true }
-            });
-
-            if (user) {
-              finalUserId = user.id;
+            const existing = await prisma.payments.findUnique({ where: { id: paymentId } });
+            if (!existing) {
+              return sendError(res, "Payment record not found for provided paymentId", 404);
             }
-          } catch (userError) {
-            console.error('Error finding user:', userError);
+            if (existing.status !== 'pending') {
+              return sendError(res, "Payment link is locked or already processed", 409);
+            }
+            await prisma.payments.update({
+              where: { id: paymentId },
+              data: {
+                paymentIntentId: paymentIntentId,
+                remarks: existing.remarks || paymongoDescription,
+                feeType: existing.feeType || (feeType || purpose || 'tuition_fee'),
+              },
+            });
+            console.log(`[Create Intent] Reused pending payment ${paymentId} -> intent ${paymentIntentId}`);
+          } catch (dbError) {
+            console.error('Failed to update existing payment record with intent:', dbError);
+          }
+        } else {
+          const customTransactionId = await generatePaymentId();
+          
+          let finalUserId = userId;
+          if (typeof userId === 'string' && userId.length <= 20) {
+            try {
+              const user = await prisma.users.findUnique({
+                where: { userId: userId },
+                select: { id: true }
+              });
+
+              if (user) {
+                finalUserId = user.id;
+              }
+            } catch (userError) {
+              console.error('Error finding user:', userError);
+            }
+          }
+          try {
+            await prisma.payments.create({
+              data: {
+                transactionId: customTransactionId,
+                userId: finalUserId, 
+                amount: parseFloat(amount),
+                status: 'pending',
+                paymentMethod: 'Online Payment', 
+                paymentIntentId: paymentIntentId,
+                feeType: feeType || purpose || 'tuition_fee',
+                remarks: paymongoDescription,
+              },
+            });
+            console.log('[Create Intent] Inserted a new pending payment');
+          } catch (dbError) {
+            console.error('Failed to create payment record:', dbError);
           }
         }
-        
-        try {
-          await prisma.payments.create({
-            data: {
-              transactionId: customTransactionId,
-              userId: finalUserId, 
-              amount: parseFloat(amount),
-              status: 'pending',
-              paymentMethod: 'Online Payment', 
-              paymentIntentId: paymentIntentId,
-              feeType: feeType || purpose || 'tuition_fee',
-              remarks: paymongoDescription,
-            },
-          });
-        } catch (dbError) {
-          console.error('Failed to create payment record:', dbError);
-        }
       }
-      
       return sendSuccess(res, result.data, "Payment intent created successfully");
     } else {
       return sendError(res, result.message, 500, result.error);
     }
   } catch (error) {
-    console.error("Create payment intent error:", error);
+    console.error("Create payment intent error", error);
     return sendError(res, error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR, 500, error.message);
   }
 };

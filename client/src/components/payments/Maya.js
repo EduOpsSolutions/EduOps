@@ -12,6 +12,7 @@ const Maya = ({
   isLocked,
   onPaymentSuccess,
   onPaymentError,
+  paymentId,
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -59,6 +60,7 @@ const Maya = ({
           firstName: firstName,
           lastName: lastName,
           email: userEmail,
+          paymentId: typeof paymentId !== 'undefined' ? paymentId : undefined
         }),
       });
 

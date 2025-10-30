@@ -254,6 +254,7 @@ const PaymentPage = () => {
         isLocked={isLocked}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
+        paymentId={currentPaymentId}
       />
     );
   };
