@@ -80,7 +80,7 @@ const PaymentPage = () => {
         studentId: user.studentId || user.userId || null,
         firstName: user.firstName || user.first_name || '',
         lastName: user.lastName || user.last_name || '',
-        email: user.email || ''
+        email: payment.paymentEmail || user.email || ''
       } : null;
 
       setPaymentData({ amount, description, studentInfo });
@@ -254,6 +254,7 @@ const PaymentPage = () => {
         isLocked={isLocked}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
+        paymentId={currentPaymentId}
       />
     );
   };
