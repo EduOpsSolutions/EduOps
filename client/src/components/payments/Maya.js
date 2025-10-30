@@ -1,12 +1,22 @@
-import React, { useState } from "react";
-import styles from "../../styles/Payment.module.css";
+import React, { useState } from 'react';
+import styles from '../../styles/Payment.module.css';
 
-const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isLocked, onPaymentSuccess, onPaymentError }) => {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [paymentStatus, setPaymentStatus] = useState("");
-  const [phoneError, setPhoneError] = useState("");
+const Maya = ({
+  amount,
+  description,
+  userId,
+  firstName,
+  lastName,
+  userEmail,
+  isLocked,
+  onPaymentSuccess,
+  onPaymentError,
+}) => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const onSubmit = async (event) => {
@@ -15,16 +25,16 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
     setIsProcessing(true);
     if (!phone || phone.length < 11) {
       setIsProcessing(false);
-      setPhoneError("Phone number must be at least 11 digits.");
+      setPhoneError('Phone number must be at least 11 digits.');
       return;
     }
-    
+
     try {
       console.log('Starting Maya payment with traditional PIPM workflow...');
       await handleTraditionalPIPMFlow();
     } catch (error) {
       console.error('Maya payment error:', error);
-      setPaymentStatus("Payment failed. Please try again.");
+      setPaymentStatus('Payment failed. Please try again.');
       onPaymentError && onPaymentError(error);
     } finally {
       setIsProcessing(false);
@@ -33,36 +43,49 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
 
   const handleTraditionalPIPMFlow = async () => {
     try {
-      // Create Payment Intent 
-      const intentResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amount,
-          currency: 'PHP',
-          description: description,
-          payment_method_allowed: ['paymaya'],
-          userId: userId,
-          firstName: firstName,
-          lastName: lastName,
-          email: userEmail
-        }),
-      });
+      // Create Payment Intent
+      const intentResponse = await fetch(
+        `${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: amount,
+            currency: 'PHP',
+            description: description,
+            payment_method_allowed: ['paymaya'],
+            userId: userId,
+            firstName: firstName,
+            lastName: lastName,
+            email: userEmail,
+          }),
+        }
+      );
 
       const intentData = await intentResponse.json();
-      
+
       if (!intentResponse.ok) {
-        throw new Error(intentData.message || intentData.error || `HTTP ${intentResponse.status}: Failed to create payment intent`);
+        throw new Error(
+          intentData.message ||
+            intentData.error ||
+            `HTTP ${intentResponse.status}: Failed to create payment intent`
+        );
       }
-      
+
       if (!intentData.success) {
-        throw new Error(intentData.message || intentData.error || 'Failed to create payment intent');
+        throw new Error(
+          intentData.message ||
+            intentData.error ||
+            'Failed to create payment intent'
+        );
       }
       const paymentIntent = intentData?.data?.data;
       const clientKey = paymentIntent?.attributes?.client_key;
-      const paymentIntentId = paymentIntent?.id || (clientKey ? clientKey.split('_client')[0] : undefined);
+      const paymentIntentId =
+        paymentIntent?.id ||
+        (clientKey ? clientKey.split('_client')[0] : undefined);
 
       if (!paymentIntentId) {
         console.error('Full response:', intentData);
@@ -72,30 +95,37 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
       // Create Payment Method
       let paymentMethod;
       try {
-        const methodResponse = await fetch('https://api.paymongo.com/v1/payment_methods', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${btoa(process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            data: {
-              attributes: {
-                type: 'paymaya', 
-                billing: {
-                  name: name,
-                  email: userEmail,
-                  phone: phone,
-                }
-              }
-            }
-          }),
-        });
+        const methodResponse = await fetch(
+          'https://api.paymongo.com/v1/payment_methods',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${btoa(
+                process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':'
+              )}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              data: {
+                attributes: {
+                  type: 'paymaya',
+                  billing: {
+                    name: name,
+                    email: userEmail,
+                    phone: phone,
+                  },
+                },
+              },
+            }),
+          }
+        );
 
         const methodData = await methodResponse.json();
 
         if (!methodData.data) {
-          const errMsg = methodData?.errors?.map?.(e => e?.detail).join(', ') || 'Failed to create Maya payment method';
+          const errMsg =
+            methodData?.errors?.map?.((e) => e?.detail).join(', ') ||
+            'Failed to create Maya payment method';
           throw new Error(errMsg);
         }
 
@@ -104,23 +134,26 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
         throw new Error(`Payment method creation failed: ${error.message}`);
       }
 
-      // Attach Payment Method to Payment Intent 
-      const attachResponse = await fetch(`${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          payment_intent_id: paymentIntentId,
-          payment_method_id: paymentMethod.id,
-          client_key: clientKey,
-          //return_url: `${process.env.REACT_APP_CLIENT_URL || window.location.origin}/payment-complete` //production
-          return_url: `${window.location.origin}/payment-complete` // Redirect to completion page
-        }),
-      });
+      // Attach Payment Method to Payment Intent
+      const attachResponse = await fetch(
+        `${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            payment_intent_id: paymentIntentId,
+            payment_method_id: paymentMethod.id,
+            client_key: clientKey,
+            //return_url: `${process.env.REACT_APP_CLIENT_URL || window.location.origin}/payment-complete` //production
+            return_url: `${window.location.origin}/payment-complete`, // Redirect to completion page
+          }),
+        }
+      );
 
       const attachData = await attachResponse.json();
-      
+
       if (!attachData.success) {
         throw new Error('Failed to attach payment method');
       }
@@ -131,13 +164,13 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
       if (status === 'awaiting_next_action') {
         const nextAction = attachedIntent.attributes.next_action;
         if (nextAction && nextAction.redirect && nextAction.redirect.url) {
-          setPaymentStatus("Redirecting to Maya...");
+          setPaymentStatus('Redirecting to Maya...');
           window.location.href = nextAction.redirect.url;
         } else {
-          throw new Error("No redirect URL received");
+          throw new Error('No redirect URL received');
         }
       } else if (status === 'succeeded') {
-        setPaymentStatus("Payment Success");
+        setPaymentStatus('Payment Success');
         onPaymentSuccess && onPaymentSuccess(attachedIntent);
       } else {
         throw new Error(`Unexpected payment status: ${status}`);
@@ -173,9 +206,9 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
             maxLength="15"
             value={phone}
             onChange={(e) => {
-              const digits = e.target.value.replace(/\D/g, "").slice(0, 15);
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 15);
               setPhone(digits);
-              if (digits.length >= 11) setPhoneError("");
+              if (digits.length >= 11) setPhoneError('');
             }}
             required
           />
@@ -195,8 +228,16 @@ const Maya = ({ amount, description, userId, firstName, lastName, userEmail, isL
             required
           />
         </div>
-        <button type="submit" className={styles.payButton} disabled={isProcessing || isLocked}>
-          {isLocked ? "Payment Locked" : isProcessing ? "Processing..." : "Pay with Maya"}
+        <button
+          type="submit"
+          className={styles.payButton}
+          disabled={isProcessing || isLocked}
+        >
+          {isLocked
+            ? 'Payment Locked'
+            : isProcessing
+            ? 'Processing...'
+            : 'Pay with Maya'}
         </button>
         <p>{paymentStatus}</p>
       </form>
