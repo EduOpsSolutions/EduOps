@@ -97,10 +97,6 @@ export const verifyWebhookSignature = (req) => {
   const testSignature = sigParts.te;
   const liveSignature = sigParts.li;
 
-  // Use test signature for test mode, live signature for live mode
-  const expectedSignature =
-    process.env.NODE_ENV === "production" ? liveSignature : testSignature;
-
   // Create signature string
   const rawBody = JSON.stringify(req.body);
   const signatureString = `${timestamp}.${rawBody}`;
@@ -111,10 +107,25 @@ export const verifyWebhookSignature = (req) => {
     .update(signatureString)
     .digest("hex");
 
-  // Verify signature
-  if (computedSignature !== expectedSignature) {
+  // Try both test and live signatures to handle environments without NODE_ENV
+  const isTestValid = testSignature && computedSignature === testSignature;
+  const isLiveValid = liveSignature && computedSignature === liveSignature;
+
+  if (!isTestValid && !isLiveValid) {
+    console.error('[WebhookVerify] Signature mismatch', {
+      computed: computedSignature,
+      testProvided: testSignature,
+      liveProvided: liveSignature,
+      hasTestSig: !!testSignature,
+      hasLiveSig: !!liveSignature
+    });
     throw new Error("Invalid webhook signature");
   }
+
+  console.log('[WebhookVerify] Signature verified successfully', {
+    usedTestMode: isTestValid,
+    usedLiveMode: isLiveValid
+  });
 
   return true;
 };

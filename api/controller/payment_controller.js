@@ -236,6 +236,7 @@ const cleanupOrphanedPaymentsController = async (req, res) => {
 // Webhook Handling
 const handleWebhook = async (req, res) => {
   try {
+    console.log('[Webhook] Received webhook request');
 
     // Verify webhook signature
     verifyWebhookSignature(req);
@@ -243,8 +244,10 @@ const handleWebhook = async (req, res) => {
     // Process webhook event
     const event = req.body;
     const eventType = event.data.attributes.type;
-    
+    console.log('[Webhook] Processing event type:', eventType);
+
     const result = await processWebhookEvent(event);
+    console.log('[Webhook] Event processed successfully:', result);
 
 
     // Always respond with 200 to acknowledge the webhook
@@ -253,15 +256,21 @@ const handleWebhook = async (req, res) => {
       body: { message: "SUCCESS", result },
     });
   } catch (error) {
+    console.error('[Webhook] Error processing webhook:', error.message);
+    console.error('[Webhook] Error stack:', error.stack);
+
     // Handle specific webhook errors
     if (error.message.includes("Webhook secret not configured")) {
+      console.error('[Webhook] Webhook secret not configured in environment');
       return res.status(500).json({ error: "Webhook secret not configured" });
     }
-    
+
     if (error.message.includes("Missing") || error.message.includes("Invalid")) {
+      console.error('[Webhook] Signature verification failed:', error.message);
       return res.status(400).json({ error: error.message });
     }
 
+    console.error('[Webhook] Acknowledging webhook with error state');
     return res.status(200).json({
       statusCode: 200,
       body: { message: "ERROR_ACKNOWLEDGED" },
