@@ -236,25 +236,31 @@ const cleanupOrphanedPaymentsController = async (req, res) => {
 // Webhook Handling
 const handleWebhook = async (req, res) => {
   try {
-    console.log('[Webhook] Received webhook request');
+    // Read raw body if provided by raw parser; otherwise use JSON body
+    let rawBodyString = null;
+    if (req.body && Buffer.isBuffer(req.body)) {
+      rawBodyString = req.body.toString('utf8');
+    } else if (typeof req.body === 'string') {
+      rawBodyString = req.body;
+    }
 
-    // Verify webhook signature
+    // Verify webhook signature (uses raw body if available)
     verifyWebhookSignature(req);
 
-    // Process webhook event
-    const event = req.body;
-    const eventType = event.data.attributes.type;
-    console.log('[Webhook] Processing event type:', eventType);
-
-    const result = await processWebhookEvent(event);
-    console.log('[Webhook] Event processed successfully:', result);
-
-
-    // Always respond with 200 to acknowledge the webhook
-    return res.status(200).json({
+    // Immediately ACK success
+    res.status(200).json({
       statusCode: 200,
-      body: { message: "SUCCESS", result },
+      body: { message: "SUCCESS" },
     });
+
+    // Process asynchronously after ACK
+    try {
+      const event = rawBodyString ? JSON.parse(rawBodyString) : req.body;
+      await processWebhookEvent(event);
+    } catch (processingError) {
+      console.error('Webhook processing error:', processingError);
+    }
+    return; // response already sent
   } catch (error) {
     console.error('[Webhook] Error processing webhook:', error.message);
     console.error('[Webhook] Error stack:', error.stack);

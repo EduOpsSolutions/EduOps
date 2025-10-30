@@ -97,8 +97,25 @@ export const verifyWebhookSignature = (req) => {
   const testSignature = sigParts.te;
   const liveSignature = sigParts.li;
 
-  // Create signature string
-  const rawBody = JSON.stringify(req.body);
+  // Use test signature for test mode, live signature for live mode
+  const expectedSignature =
+    process.env.NODE_ENV === "production" ? liveSignature : testSignature;
+
+  // Create signature string using raw body when available
+  let rawBody = null;
+  try {
+    if (req.body && Buffer.isBuffer(req.body)) {
+      rawBody = req.body.toString('utf8');
+    } else if (typeof req.body === 'string') {
+      rawBody = req.body;
+    } else if (req.rawBody) {
+      rawBody = typeof req.rawBody === 'string' ? req.rawBody : Buffer.from(req.rawBody).toString('utf8');
+    } else {
+      rawBody = JSON.stringify(req.body);
+    }
+  } catch (_) {
+    rawBody = JSON.stringify(req.body);
+  }
   const signatureString = `${timestamp}.${rawBody}`;
 
   // Generate HMAC

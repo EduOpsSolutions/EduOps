@@ -6,6 +6,10 @@ import indexRouter from './routes/v1/index_routes.js';
 
 const app = express();
 
+// Ensure PayMongo webhook can access raw body for signature verification
+// This must be registered BEFORE the JSON parser
+app.post('/api/v1/payments/webhook', bodyParser.raw({ type: 'application/json' }));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(
