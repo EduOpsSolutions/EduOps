@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styles from '../../styles/Payment.module.css';
-
+const apiUrl = process.env.REACT_APP_API_URL;
+const paymongoPublicKey = process.env.REACT_APP_PAYMONGO_PUBLIC_KEY;
 const CreditCard = ({
   amount,
   description,
@@ -62,9 +63,7 @@ const CreditCard = ({
             fullClient,
           {
             headers: {
-              Authorization: `Basic ${btoa(
-                process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':'
-              )}`,
+              Authorization: `Basic ${btoa(paymongoPublicKey + ':')}`,
             },
           }
         )
@@ -96,24 +95,21 @@ const CreditCard = ({
     setPaymentStatus('Creating Payment Intent');
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: amount,
-            description: description,
-            statement_descriptor: 'EduOps',
-            userId: userId,
-            firstName: firstName,
-            lastName: lastName,
-            email: userEmail,
-          }),
-        }
-      );
+      const response = await fetch(`${apiUrl}/payments/create-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount,
+          description: description,
+          statement_descriptor: 'EduOps',
+          userId: userId,
+          firstName: firstName,
+          lastName: lastName,
+          email: userEmail,
+        }),
+      });
 
       const data = await response.json();
 
@@ -154,9 +150,7 @@ const CreditCard = ({
         {
           method: 'POST',
           headers: {
-            Authorization: `Basic ${btoa(
-              process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':'
-            )}`,
+            Authorization: `Basic ${btoa(paymongoPublicKey + ':')}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -210,20 +204,17 @@ const CreditCard = ({
 
       const methodId = method?.id || method?.data?.id;
 
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            payment_intent_id: intent?.id,
-            payment_method_id: methodId,
-            client_key: clientKey,
-          }),
-        }
-      );
+      const response = await fetch(`${apiUrl}/payments/attach-method`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payment_intent_id: intent?.id,
+          payment_method_id: methodId,
+          client_key: clientKey,
+        }),
+      });
 
       const data = await response.json();
       if (data.success && data.data && data.data.data) {

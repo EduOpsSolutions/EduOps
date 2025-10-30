@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styles from '../../styles/Payment.module.css';
-
+const apiUrl = process.env.REACT_APP_API_URL;
+const paymongoPublicKey = process.env.REACT_APP_PAYMONGO_PUBLIC_KEY;
 const Maya = ({
   amount,
   description,
@@ -44,25 +45,22 @@ const Maya = ({
   const handleTraditionalPIPMFlow = async () => {
     try {
       // Create Payment Intent
-      const intentResponse = await fetch(
-        `${process.env.REACT_APP_API_BASE}/api/v1/payments/create-intent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: amount,
-            currency: 'PHP',
-            description: description,
-            payment_method_allowed: ['paymaya'],
-            userId: userId,
-            firstName: firstName,
-            lastName: lastName,
-            email: userEmail,
-          }),
-        }
-      );
+      const intentResponse = await fetch(`${apiUrl}/payments/create-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount,
+          currency: 'PHP',
+          description: description,
+          payment_method_allowed: ['paymaya'],
+          userId: userId,
+          firstName: firstName,
+          lastName: lastName,
+          email: userEmail,
+        }),
+      });
 
       const intentData = await intentResponse.json();
 
@@ -100,9 +98,7 @@ const Maya = ({
           {
             method: 'POST',
             headers: {
-              Authorization: `Basic ${btoa(
-                process.env.REACT_APP_PAYMONGO_PUBLIC_KEY + ':'
-              )}`,
+              Authorization: `Basic ${btoa(paymongoPublicKey + ':')}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -135,22 +131,19 @@ const Maya = ({
       }
 
       // Attach Payment Method to Payment Intent
-      const attachResponse = await fetch(
-        `${process.env.REACT_APP_API_BASE}/api/v1/payments/attach-method`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            payment_intent_id: paymentIntentId,
-            payment_method_id: paymentMethod.id,
-            client_key: clientKey,
-            //return_url: `${process.env.REACT_APP_CLIENT_URL || window.location.origin}/payment-complete` //production
-            return_url: `${window.location.origin}/payment-complete`, // Redirect to completion page
-          }),
-        }
-      );
+      const attachResponse = await fetch(`${apiUrl}/payments/attach-method`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payment_intent_id: paymentIntentId,
+          payment_method_id: paymentMethod.id,
+          client_key: clientKey,
+          //return_url: `${process.env.REACT_APP_CLIENT_URL || window.location.origin}/payment-complete` //production
+          return_url: `${window.location.origin}/payment-complete`, // Redirect to completion page
+        }),
+      });
 
       const attachData = await attachResponse.json();
 
