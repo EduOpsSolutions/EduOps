@@ -66,6 +66,7 @@ const GCash = ({
       });
 
       const intentData = await intentResponse.json();
+      console.log('[GCash] create-intent response ok:', intentResponse.ok, 'success:', intentData?.success);
 
       if (!intentResponse.ok) {
         throw new Error(
@@ -85,6 +86,7 @@ const GCash = ({
 
       const paymentIntent = intentData?.data?.data;
       const clientKey = paymentIntent?.attributes?.client_key;
+      console.log('[GCash] intent id:', paymentIntent?.id, 'clientKey:', !!clientKey);
 
       const paymentIntentId =
         paymentIntent?.id ||
@@ -122,6 +124,7 @@ const GCash = ({
         );
 
         const methodData = await methodResponse.json();
+        console.log('[GCash] payment_method created:', !!methodData?.data, methodData?.data?.id);
         if (!methodData.data) {
           const errMsg =
             methodData?.errors?.map?.((e) => e?.detail).join(', ') ||
@@ -150,15 +153,13 @@ const GCash = ({
       });
 
       const attachData = await attachResponse.json();
-      if (!attachData.success) {
-        throw new Error('Failed to attach payment method');
-      }
-
+      console.log('[GCash] attach-method response ok:', attachResponse.ok, 'success:', attachData?.success);
       const attachedIntent = attachData?.data?.data || attachData?.data;
       const status = attachedIntent.attributes.status;
 
       if (status === 'awaiting_next_action') {
         const nextAction = attachedIntent.attributes.next_action;
+        console.log('[GCash] awaiting_next_action redirect url:', nextAction?.redirect?.url);
         if (nextAction && nextAction.redirect && nextAction.redirect.url) {
           setPaymentStatus('Redirecting to GCash...');
           window.location.href = nextAction.redirect.url;
@@ -166,12 +167,15 @@ const GCash = ({
           throw new Error('No redirect URL received');
         }
       } else if (status === 'succeeded') {
+        console.log('[GCash] intent succeeded, triggering onPaymentSuccess');
         setPaymentStatus('Payment Success');
         onPaymentSuccess && onPaymentSuccess(attachedIntent);
       } else {
+        console.warn('[GCash] unexpected status:', status);
         throw new Error(`Unexpected payment status: ${status}`);
       }
     } catch (error) {
+      console.error('[GCash] flow error:', error);
       throw error;
     }
   };

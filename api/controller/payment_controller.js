@@ -290,6 +290,7 @@ const sendPaymentLinkEmail = async (req, res) => {
 const createPaymentIntent = async (req, res) => {
   try {
     const { firstName, lastName, purpose, remarks, description, userId, amount, feeType, paymentId } = req.body;
+    console.log('[CreateIntent] incoming body:', { userId, amount, feeType, paymentId, purpose, hasDesc: !!description, hasRemarks: !!remarks });
     
     if (!amount || amount <= 0) {
       return sendError(res, "Amount is required and must be greater than 0", 400);
@@ -305,6 +306,7 @@ const createPaymentIntent = async (req, res) => {
     }
     if (!paymongoDescription) paymongoDescription = 'Payment';
 
+    console.log('[CreateIntent] calling PayMongo createPaymentIntent with description:', paymongoDescription);
     const result = await createPayMongoPaymentIntent({
       ...req.body,
       description: paymongoDescription
@@ -312,15 +314,18 @@ const createPaymentIntent = async (req, res) => {
     
     if (result.success) {
       const paymentIntentId = result.data?.data?.id;
+      console.log('[CreateIntent] paymongo response success, intentId:', paymentIntentId);
       
       if (paymentIntentId && userId && amount) {
         if (paymentId) {
           try {
             const existing = await prisma.payments.findUnique({ where: { id: paymentId } });
+            console.log('[CreateIntent] reuse check existing payment:', { paymentId, exists: !!existing, status: existing?.status });
             if (!existing) {
               return sendError(res, "Payment record not found for provided paymentId", 404);
             }
             if (existing.status !== 'pending') {
+              console.warn('[CreateIntent] payment not pending, lock enforced', { paymentId, status: existing.status });
               return sendError(res, "Payment link is locked or already processed", 409);
             }
             await prisma.payments.update({
@@ -331,12 +336,13 @@ const createPaymentIntent = async (req, res) => {
                 feeType: existing.feeType || (feeType || purpose || 'tuition_fee'),
               },
             });
-            console.log(`[Create Intent] Reused pending payment ${paymentId} -> intent ${paymentIntentId}`);
+            console.log('[CreateIntent] reused existing pending payment', { paymentId, paymentIntentId });
           } catch (dbError) {
             console.error('Failed to update existing payment record with intent:', dbError);
           }
         } else {
           const customTransactionId = await generatePaymentId();
+          console.log('[CreateIntent] creating new pending payment row', { customTransactionId });
           
           let finalUserId = userId;
           if (typeof userId === 'string' && userId.length <= 20) {
@@ -366,14 +372,16 @@ const createPaymentIntent = async (req, res) => {
                 remarks: paymongoDescription,
               },
             });
-            console.log('[Create Intent] Inserted a new pending payment');
+            console.log('[CreateIntent] new pending payment inserted OK');
           } catch (dbError) {
             console.error('Failed to create payment record:', dbError);
           }
         }
       }
+      
       return sendSuccess(res, result.data, "Payment intent created successfully");
     } else {
+      console.warn('[CreateIntent] paymongo response failed:', result.message || result.error);
       return sendError(res, result.message, 500, result.error);
     }
   } catch (error) {
@@ -385,11 +393,14 @@ const createPaymentIntent = async (req, res) => {
 /* Attach payment method to payment intent */
 const attachPaymentMethod = async (req, res) => {
   try {
+    console.log('[AttachMethod] incoming body:', { hasPi: !!req.body?.payment_intent_id, hasPm: !!req.body?.payment_method_id, hasClient: !!req.body?.client_key });
     const result = await attachPayMongoPaymentMethod(req.body);
-    
     if (result.success) {
+      const status = result.data?.data?.data?.attributes?.status || result.data?.data?.attributes?.status;
+      console.log('[AttachMethod] paymongo attach success. intent status:', status);
       return sendSuccess(res, result.data, "Payment method attached successfully");
     } else {
+      console.warn('[AttachMethod] paymongo attach failed:', result.message || result.error);
       return sendError(res, result.message, 500, result.error);
     }
   } catch (error) {
@@ -402,15 +413,16 @@ const attachPaymentMethod = async (req, res) => {
 const checkPaymentStatus = async (req, res) => {
   try {
     const { paymentIntentId } = req.params;
+    console.log('[CheckStatus] start for intent:', paymentIntentId);
     
     const paymongoResult = await getPayMongoPaymentIntent(paymentIntentId);
+    console.log('[CheckStatus] paymongo intent fetch ok:', !!paymongoResult?.success);
 
     let intentDerivedPaymentId = null;
     let intentDerivedReference = null;
     try {
       if (paymongoResult?.success) {
         const intentData = paymongoResult.data?.data?.attributes;
-        
         intentDerivedPaymentId = intentData?.latest_payment || null;
         if (!intentDerivedPaymentId && Array.isArray(intentData?.payments) && intentData.payments.length > 0) {
           const firstPayment = intentData.payments[0];
@@ -423,6 +435,7 @@ const checkPaymentStatus = async (req, res) => {
           intentDerivedReference = p?.data?.attributes?.reference_number || null;
         }
       }
+      console.log('[CheckStatus] derived paymongo payment/ref:', { intentDerivedPaymentId, intentDerivedReference });
     } catch (e) {
       console.warn('Unable to derive payment id from intent:', e);
     }
@@ -431,12 +444,14 @@ const checkPaymentStatus = async (req, res) => {
       where: { paymentIntentId: paymentIntentId },
       include: PAYMENT_INCLUDES.WITH_USER
     });
+    console.log('[CheckStatus] db payment by intent:', { found: !!payment, status: payment?.status });
     
     if (!payment) {
       payment = await prisma.payments.findFirst({
         where: { referenceNumber: paymentIntentId },
         include: PAYMENT_INCLUDES.WITH_USER
       });
+      console.log('[CheckStatus] db payment by referenceNumber:', { found: !!payment, status: payment?.status });
     }
     if (!payment) {
       const recentPayments = await prisma.payments.findMany({
