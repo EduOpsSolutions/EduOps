@@ -895,6 +895,49 @@ const updateEnrollment = async (req, res) => {
   }
 };
 
+// Get student enrollments grouped by course and batch
+const getStudentEnrollments = async (req, res) => {
+  const { studentId } = req.params;
+  try {
+    // Get all user_schedules for this student (active only), including schedule, course, and period
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: {
+        userId: studentId,
+        deletedAt: null,
+      },
+      include: {
+        schedule: {
+          include: {
+            course: true,
+            period: true,
+          },
+        },
+      },
+    });
+
+    // Group by course and batch (period)
+    const enrollmentMap = {};
+    userSchedules.forEach(us => {
+      if (!us.schedule || !us.schedule.course || !us.schedule.period) return;
+      const key = `${us.schedule.course.id}|${us.schedule.period.id}`;
+      if (!enrollmentMap[key]) {
+        enrollmentMap[key] = {
+          courseId: us.schedule.course.id,
+          course: us.schedule.course.name,
+          batchId: us.schedule.period.id,
+          batch: us.schedule.period.batchName,
+          year: us.schedule.period.startAt ? new Date(us.schedule.period.startAt).getFullYear() : null,
+        };
+      }
+    });
+
+    res.json(Object.values(enrollmentMap));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch student enrollments.' });
+  }
+};
+
 export {
   createEnrollmentRequest,
   getEnrollmentRequests,
@@ -903,4 +946,5 @@ export {
   updateEnrollmentStatus,
   updateEnrollment,
   checkEmailExists,
+  getStudentEnrollments,
 };
