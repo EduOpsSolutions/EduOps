@@ -144,6 +144,7 @@ model document_validation {
   updatedAt         DateTime
   document_template document_template? @relation(fields: [documentId], references: [id])
   users             users?             @relation(fields: [userId], references: [id])
+  notifications     notification[]
 
   @@index([documentId], map: "document_validation_documentId_fkey")
   @@index([userId], map: "document_validation_userId_fkey")
@@ -243,22 +244,22 @@ model module {
   updatedAt DateTime
 }
 
-model notification {
-  id        String    @id
-  userId    String
-  type      String
-  title     String
-  message   String
-  data      String?   @db.LongText
-  isRead    Boolean   @default(false)
-  delivered Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime
-  deletedAt DateTime?
-  users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// model notification {
+//   id        String    @id
+//   userId    String
+//   type      String
+//   title     String
+//   message   String
+//   data      String?   @db.LongText
+//   isRead    Boolean   @default(false)
+//   delivered Boolean   @default(false)
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime
+//   deletedAt DateTime?
+//   users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId], map: "notification_userId_fkey")
-}
+//   @@index([userId], map: "notification_userId_fkey")
+// }
 
 model payments {
   id                  String              @id
@@ -562,4 +563,22 @@ enum document_request_status {
   delivered
   failed
   fulfilled
+}
+
+model notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean   @default(false)
+  delivered Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user                  users                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document_validation   document_validation? @relation(fields: [document_validationId], references: [id])
+  document_validationId String?
 }
