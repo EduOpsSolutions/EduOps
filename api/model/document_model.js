@@ -194,6 +194,16 @@ class DocumentModel {
     });
   }
 
+  static async updateDocumentRequestProofOfPayment(id, proofOfPayment) {
+    return await prisma.document_request.update({
+      where: { id },
+      data: { 
+        proofOfPayment,
+        updatedAt: new Date() 
+      }
+    });
+  }
+
   static async deleteDocumentRequest(id) {
     return await prisma.document_request.update({
       where: { id },

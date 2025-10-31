@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,122 +8,114 @@ datasource db {
 }
 
 model users {
-  id               String    @id @default(cuid())
-  userId           String    @unique
-  firstName        String
-  middleName       String?
-  lastName         String
-  birthmonth       Int
-  birthdate        Int
-  birthyear        Int
-  phoneNumber      String?
-  profilePicLink   String?   @db.LongText
-  status           String?
-  email            String    @unique
-  password         String
-  role             String?   @default("student")
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deletedAt        DateTime?
-  firstLogin       Boolean   @default(true)
-  resetToken       String?
-  resetTokenExpiry DateTime?
-  changePassword   Boolean   @default(true)
-
-  posts               posts[]
-  teacherSchedules    schedule[]            @relation("TeacherSchedules")
-  studentSchedules    user_schedule[]       @relation("StudentSchedules")
-  enrollments         student_enrollment[]  @relation("StudentEnrollments")
-  payments            payments[]
+  id                  String                @id @default(cuid())
+  userId              String                @unique
+  firstName           String
+  middleName          String?
+  lastName            String
+  birthmonth          Int
+  birthdate           Int
+  birthyear           Int
+  profilePicLink      String?               @db.LongText
+  status              String?
+  email               String                @unique
+  password            String
+  role                String?               @default("student")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  deletedAt           DateTime?
+  firstLogin          Boolean               @default(true)
+  resetToken          String?
+  resetTokenExpiry    DateTime?
+  phoneNumber         String?
+  changePassword      Boolean               @default(true)
   adjustments         adjustments[]
   documentRequests    document_request[]    @relation("UserDocumentRequests")
   documentValidations document_validation[] @relation("UserDocumentValidations")
-  studentGrades       student_grade[]       @relation("UserStudentGrades")
-  logs          logs[]
-  studentFees   student_fee[]
+  payments            payments[]
+  posts               posts[]
+  teacherSchedules    schedule[]            @relation("TeacherSchedules")
+  enrollments         student_enrollment[]  @relation("StudentEnrollments")
+  studentSchedules    user_schedule[]       @relation("StudentSchedules")
+  notifications notification[]
 }
 
 model enrollment_request {
-  id               String   @id @default(cuid())
-  enrollmentId     String   @unique
-  enrollmentStatus String   @default("pending")
-  studentId        String?  @map("student_id")
-  firstName        String
-  middleName       String?
-  lastName         String
+  id               String     @id @default(cuid())
+  enrollmentId     String     @unique
+  enrollmentStatus String     @default("pending")
+  studentId        String?    @map("student_id")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  address          String
+  altContactNumber String?
+  altEmail         String?
   birthDate        DateTime
   civilStatus      String
-  address          String
-  referredBy       String
   contactNumber    String
-  altContactNumber String?
-  preferredEmail   String
-  altEmail         String?
-  motherName       String?
-  motherContact    String?
-  fatherName       String?
-  fatherContact    String?
-  guardianName     String?
-  guardianContact  String?
   coursesToEnroll  String
-  validIdPath      String?  @db.LongText
-  idPhotoPath      String?  @db.LongText
-  paymentProofPath String?  @db.LongText
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  periodId         String?
-
-  period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  // Relations
-  payments payments[]
+  fatherContact    String?
+  fatherName       String?
+  firstName        String
+  guardianContact  String?
+  guardianName     String?
+  idPhotoPath      String?    @db.LongText
+  lastName         String
+  middleName       String?
+  motherContact    String?
+  motherName       String?
+  preferredEmail   String
+  referredBy       String
+  validIdPath      String?    @db.LongText
+  paymentProofPath String?    @db.LongText
+  payments         payments[]
 }
 
 model course {
-  id          String     @id @default(cuid())
-  name        String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  deletedAt   DateTime?
-  maxNumber   Int        @default(30)
-  visibility  Visibility
-  description String?
-  logo        String?
-  price       Decimal    @db.Decimal(10, 2)
-  schedule    Json?
-
-  courseRequisite course_requisite[] @relation("CourseMain")
-  requisiteFor    course_requisite[] @relation("CourseRequisite")
+  id              String                    @id @default(cuid())
+  name            String
+  price           Decimal                   @db.Decimal(10, 2)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  deletedAt       DateTime?
+  description     String?
+  logo            String?
+  maxNumber       Int                       @default(30)
+  schedule        String?                   @db.LongText
+  visibility      Visibility
   academicPeriods academic_period_courses[]
-  schedules       schedule[]
-  payments        payments[]
+  courseRequisite course_requisite[]        @relation("CourseMain")
   fees            fees[]
-  studentGrades   student_grade[]           @relation("CourseStudentGrades")
-  studentFees     student_fee[]
+  payments        payments[]
+  schedules       schedule[]
 }
 
 model schedule {
-  id          Int       @id @default(autoincrement())
-  days        String
-  time        String?
-  time_start  String?
-  time_end    String?
-  location    String?
-  notes       String?   @db.Text
-  color       String?   @default("#FFCF00")
-  periodStart DateTime?
-  periodEnd   DateTime?
-  courseId    String?
-  periodId    String?
-  teacherId   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  capacity    Int? @default(30)
-
+  id            Int              @id @default(autoincrement())
+  days          String
+  time          String?
+  courseId      String?
+  periodId      String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+  teacherId     String?
+  color         String?          @default("#FFCF00")
+  location      String?
+  notes         String?          @db.Text
+  periodEnd     DateTime?
+  periodStart   DateTime?
+  time_end      String?
+  time_start    String?
+  capacity      Int?             @default(30)
   course        course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  teacher       users?           @relation("TeacherSchedules", fields: [teacherId], references: [id], onDelete: SetNull)
+  teacher       users?           @relation("TeacherSchedules", fields: [teacherId], references: [id])
   userSchedules user_schedule[]
+
+  @@index([courseId], map: "schedule_courseId_fkey")
+  @@index([periodId], map: "schedule_periodId_fkey")
+  @@index([teacherId], map: "schedule_teacherId_fkey")
 }
 
 model user_schedule {
@@ -139,9 +125,11 @@ model user_schedule {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
+  schedule   schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  user       users?    @relation("StudentSchedules", fields: [userId], references: [id], onDelete: Cascade)
 
-  user     users?    @relation("StudentSchedules", fields: [userId], references: [id], onDelete: Cascade)
-  schedule schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  @@index([scheduleId], map: "user_schedule_scheduleId_fkey")
+  @@index([userId], map: "user_schedule_userId_fkey")
 }
 
 model student_enrollment {
@@ -152,62 +140,55 @@ model student_enrollment {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   deletedAt DateTime?
-
-  student users           @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
-  period  academic_period @relation("PeriodEnrollments", fields: [periodId], references: [id], onDelete: Cascade)
+  period    academic_period  @relation("PeriodEnrollments", fields: [periodId], references: [id], onDelete: Cascade)
+  student   users            @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, periodId])
-}
-
-enum EnrollmentStatus {
-  enrolled
-  completed
-  dropped
-  withdrawn
+  @@index([periodId], map: "student_enrollment_periodId_fkey")
 }
 
 model course_requisite {
-  id                String   @id @default(cuid())
-  ruleName          String
-  type              RequisiteType
-  courseId          String
-  requisiteCourseId String
-  course            course   @relation("CourseMain", fields: [courseId], references: [id])
-  requisiteCourse   course   @relation("CourseRequisite", fields: [requisiteCourseId], references: [id])
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  deletedAt         DateTime?
+  id        String        @id @default(cuid())
+  ruleName  String
+  type      RequisiteType
+  courseId  String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+  course    course        @relation("CourseMain", fields: [courseId], references: [id])
+
+  @@index([courseId], map: "course_requisite_courseId_fkey")
 }
 
 model academic_period {
-  id        String               @id @default(cuid())
-  batchName String
-  startAt   DateTime
-  endAt     DateTime
-  enrollmentOpenAt DateTime
-  enrollmentCloseAt DateTime
-  isEnrollmentClosed Boolean @default(false)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  deletedAt DateTime?
-
-  courses     academic_period_courses[]
-  schedules   schedule[]
-  enrollments student_enrollment[]      @relation("PeriodEnrollments")
-  payments    payments[]
-  enrollment_request enrollment_request[]
-  studentFees   student_fee[]
+  id                 String                    @id @default(cuid())
+  batchName          String
+  startAt            DateTime
+  endAt              DateTime
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  deletedAt          DateTime?
+  enrollmentCloseAt  DateTime
+  enrollmentOpenAt   DateTime
+  isEnrollmentClosed Boolean                   @default(false)
+  courses            academic_period_courses[]
+  payments           payments[]
+  schedules          schedule[]
+  enrollments        student_enrollment[]      @relation("PeriodEnrollments")
 }
 
 model academic_period_courses {
   id               String          @id @default(cuid())
   courseId         String
   academicperiodId String
-  course           course          @relation(fields: [courseId], references: [id])
-  academicPeriods  academic_period @relation(fields: [academicperiodId], references: [id])
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   deletedAt        DateTime?
+  academicPeriods  academic_period @relation(fields: [academicperiodId], references: [id])
+  course           course          @relation(fields: [courseId], references: [id])
+
+  @@index([academicperiodId], map: "academic_period_courses_academicperiodId_fkey")
+  @@index([courseId], map: "academic_period_courses_courseId_fkey")
 }
 
 model module {
@@ -218,67 +199,48 @@ model module {
 }
 
 model logs {
-  id        Int   @id @default(autoincrement())
-  title    String
-  content  String? @db.Text
-  reqBody String? @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-  userId String?
-  moduleType ModuleType @default(UNCATEGORIZED)
-  type LogType @default(user_activity)
-
-
-  user      users? @relation(fields: [userId], references: [userId])
-}
-
-enum LogType {
-  user_activity //for user actions like login, logout, etc.
-  system_activity //for cron jobs and system maintenance
-  api_response //for api responses
-  error_log //for error logs like 500, 404, etc.
-  security_log //for security logs like login attempts, failed login attempts, etc.
-  other //for other logs like system logs, etc.
-}
-
-enum Visibility {
-  hidden
-  visible
-}
-
-enum RequisiteType {
-  prerequisite
-  corequisite
+  id                 String   @id
+  title              String
+  content            String?
+  createdAt          DateTime @default(now())
+  initiatedByAdmin   Boolean  @default(false)
+  initiatedByStudent Boolean  @default(false)
+  initiatedBySystem  Boolean  @default(false)
+  initiatedByTeacher Boolean  @default(false)
+  moduleId           Int
+  sourceId           Int?
 }
 
 model posts {
-  id         String     @id @default(cuid())
+  id         String       @id @default(cuid())
   title      String
-  content    String     @db.Text
-  tag        PostTag    @default(global)
-  status     PostStatus @default(visible)
+  content    String       @db.Text
+  tag        PostTag      @default(global)
+  status     PostStatus   @default(visible)
   userId     String
-  user       users      @relation(fields: [userId], references: [id])
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
   deletedAt  DateTime?
-  isArchived Boolean    @default(false)
+  isArchived Boolean      @default(false)
+  files      post_files[]
+  user       users        @relation(fields: [userId], references: [id])
 
-  files post_files[]
+  @@index([userId], map: "posts_userId_fkey")
 }
 
 model post_files {
   id        String     @id @default(cuid())
-  url       String     @db.LongText
+  url       String
   fileName  String?
   fileType  String?
   fileSize  Int?
   postId    String     @map("post_id")
-  post      posts      @relation(fields: [postId], references: [id], onDelete: Cascade)
   status    FileStatus @default(visible)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  post      posts      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "post_files_post_id_fkey")
 }
 
 model files {
@@ -291,6 +253,153 @@ model files {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
+}
+
+model payments {
+  id                  String              @id @default(cuid())
+  userId              String
+  feeId               String?
+  enrollmentRequestId String?
+  courseId            String?
+  academicPeriodId    String?
+  amount              Decimal             @db.Decimal(10, 2)
+  currency            String              @default("PHP")
+  status              PaymentStatus       @default(pending)
+  paymentMethod       String?
+  referenceNumber     String?
+  paymongoResponse    String?             @db.LongText
+  remarks             String?             @db.Text
+  paidAt              DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  checkoutUrl         String?             @db.LongText
+  paymongoId          String?
+  adjustments         adjustments[]
+  academicPeriod      academic_period?    @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
+  course              course?             @relation(fields: [courseId], references: [id], map: "payment_course_fkey")
+  enrollmentRequest   enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
+  fee                 fees?               @relation(fields: [feeId], references: [id])
+  user                users               @relation(fields: [userId], references: [id])
+
+  @@index([academicPeriodId], map: "payment_academic_period_fkey")
+  @@index([courseId], map: "payment_course_fkey")
+  @@index([enrollmentRequestId], map: "payment_enrollment_fkey")
+  @@index([feeId], map: "payments_feeId_fkey")
+  @@index([userId], map: "payments_userId_fkey")
+}
+
+model fees {
+  id          String        @id @default(cuid())
+  courseId    String
+  batchId     String
+  price       Decimal       @db.Decimal(10, 2)
+  name        String
+  type        FeeType
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  adjustments adjustments[]
+  course      course        @relation(fields: [courseId], references: [id])
+  payments    payments[]
+
+  @@index([courseId], map: "fees_courseId_fkey")
+}
+
+model adjustments {
+  id              String         @id @default(cuid())
+  userId          String
+  paymentId       String?
+  feeId           String
+  amount          Decimal        @db.Decimal(10, 2)
+  type            AdjustmentType
+  isRefunded      Boolean        @default(false)
+  reason          String?        @db.Text
+  referenceNumber String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  fee             fees           @relation(fields: [feeId], references: [id])
+  payment         payments?      @relation(fields: [paymentId], references: [id])
+  user            users          @relation(fields: [userId], references: [id])
+
+  @@index([feeId], map: "adjustments_feeId_fkey")
+  @@index([paymentId], map: "adjustments_paymentId_fkey")
+  @@index([userId], map: "adjustments_userId_fkey")
+}
+
+model document_template {
+  id           String                @id @default(cuid())
+  documentName String
+  description  String?               @db.Text
+  privacy      DocumentPrivacy       @default(public)
+  requestBasis Boolean               @default(false)
+  downloadable Boolean               @default(true)
+  price        DocumentPriceType     @default(free)
+  amount       Decimal?              @db.Decimal(10, 2)
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  deletedAt    DateTime?
+  uploadFile   String?               @db.LongText
+  requests     document_request[]
+  validations  document_validation[]
+}
+
+model document_request {
+  id              String                @id @default(cuid())
+  documentId      String
+  userId          String?
+  email           String
+  firstName       String?
+  lastName        String?
+  phone           String?
+  mode            DeliveryMode?         @default(pickup)
+  address         String?
+  city            String?
+  purpose         String?               @db.Text
+  additionalNotes String?               @db.Text
+  status          DocumentRequestStatus @default(in_process)
+  remarks         String?               @db.Text
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  proofOfPayment  String?               @db.LongText
+  document        document_template     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user            users?                @relation("UserDocumentRequests", fields: [userId], references: [id])
+
+  @@index([documentId], map: "document_request_documentId_fkey")
+  @@index([userId], map: "document_request_userId_fkey")
+}
+
+model document_validation {
+  id            String             @id @default(cuid())
+  documentId    String?
+  userId        String?
+  documentName  String?
+  fileSignature String             @unique
+  isValid       Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  document      document_template? @relation(fields: [documentId], references: [id])
+  user          users?             @relation("UserDocumentValidations", fields: [userId], references: [id])
+
+  @@index([documentId], map: "document_validation_documentId_fkey")
+  @@index([userId], map: "document_validation_userId_fkey")
+}
+
+enum EnrollmentStatus {
+  enrolled
+  completed
+  dropped
+  withdrawn
+}
+
+enum Visibility {
+  hidden
+  visible
+}
+
+enum RequisiteType {
+  prerequisite
+  corequisite
 }
 
 enum PostTag {
@@ -308,73 +417,6 @@ enum PostStatus {
 enum FileStatus {
   visible
   deleted
-}
-
-model payments {
-  id                  String        @id @default(cuid())
-  userId              String
-  transactionId       String        @unique // Format (PAY-YYYYMMDD-XXXXX)
-  paymentIntentId     String?       // PayMongo payment intent ID (pi_xxxxx) for matching
-  referenceNumber     String?       // PayMongo reference ID (pay_xxxxx) 
-  feeId               String?
-  enrollmentRequestId String?
-  courseId            String?
-  academicPeriodId    String?
-  amount              Decimal       @db.Decimal(10, 2)
-  currency            String        @default("PHP")
-  status              PaymentStatus @default(pending)
-  paymentMethod       String?
-  paymongoResponse    Json?         // PayMongo webhook response data
-  remarks             String?       @db.Text
-  paidAt              DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  feeType             String?
-  paymentEmail        String?       // Email from payment form (for receipt)
-  // Relations
-  user              users               @relation(fields: [userId], references: [id])
-  fee               fees?               @relation(fields: [feeId], references: [id])
-  enrollmentRequest enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
-  course            course?             @relation(fields: [courseId], references: [id], map: "payment_course_fkey")
-  academicPeriod    academic_period?    @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
-  adjustments       adjustments[]
-}
-
-model fees {
-  id        String   @id @default(cuid())
-  courseId  String
-  batchId   String
-  price     Decimal  @db.Decimal(10, 2)
-  name      String
-  type      FeeType
-  isActive  Boolean  @default(true)
-  dueDate   DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  course      course        @relation(fields: [courseId], references: [id])
-  payments    payments[]
-  adjustments adjustments[]
-}
-
-model adjustments {
-  id              String         @id @default(cuid())
-  userId          String
-  paymentId       String?
-  feeId           String
-  amount          Decimal        @db.Decimal(10, 2)
-  type            AdjustmentType
-  isRefunded      Boolean        @default(false)
-  reason          String?        @db.Text
-  referenceNumber String? // Reference for adjustment
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  // Relations
-  user    users     @relation(fields: [userId], references: [id])
-  payment payments? @relation(fields: [paymentId], references: [id])
-  fee     fees      @relation(fields: [feeId], references: [id])
 }
 
 enum PaymentStatus {
@@ -398,76 +440,6 @@ enum AdjustmentType {
   refund
   manual_charge
   fee_waiver
-}
-
-enum ModuleType {
-  UNCATEGORIZED
-  AUTH
-  ENROLLMENTS
-  SCHEDULES
-  GRADING
-  DOCUMENTS
-  PAYMENTS
-  REPORTS
-  CONTENTS
-  SYSTEM
-}
-
-model document_template {
-  id           String            @id @default(cuid())
-  documentName String
-  description  String?           @db.Text
-  privacy      DocumentPrivacy   @default(public)
-  requestBasis Boolean           @default(false)
-  downloadable Boolean           @default(true)
-  price        DocumentPriceType @default(free)
-  amount       Decimal?          @db.Decimal(10, 2)
-  uploadFile   String?           @db.LongText
-  isActive     Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  deletedAt    DateTime?
-
-  // Relations
-  requests    document_request[]
-  validations document_validation[]
-}
-
-model document_request {
-  id              String                @id @default(cuid())
-  documentId      String
-  userId          String?
-  email           String
-  firstName       String?
-  lastName        String?
-  phone           String?
-  mode            DeliveryMode?         @default(pickup)
-  address         String?
-  city            String?
-  purpose         String?               @db.Text
-  additionalNotes String?               @db.Text
-  status          DocumentRequestStatus @default(in_process)
-  remarks         String?               @db.Text
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-
-  // Relations
-  document document_template @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  user     users?            @relation("UserDocumentRequests", fields: [userId], references: [id], onDelete: SetNull)
-}
-
-model document_validation {
-  id            String   @id @default(cuid())
-  documentId    String?
-  userId        String?
-  documentName  String?
-  fileSignature String   @unique
-  isValid       Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  document document_template? @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  user     users?             @relation("UserDocumentValidations", fields: [userId], references: [id], onDelete: SetNull)
 }
 
 enum DocumentPrivacy {
@@ -494,59 +466,19 @@ enum DocumentRequestStatus {
   fulfilled
 }
 
-model student_grade {
-  id           String     @id @default(cuid())
-  studentId    String
-  courseId     String
-  periodId     String?
-  grade        GradeValue
-  approvedBy   String?    // userId of teacher/admin who approved
-  approvedAt   DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
 
-  student users  @relation("UserStudentGrades", fields: [studentId], references: [id])
-  course  course @relation("CourseStudentGrades", fields: [courseId], references: [id])
-  files   grade_file[]
-}
+model notification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  message    String
+  data       Json?
+  isRead     Boolean  @default(false)
+  delivered  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
 
-model grade_file {
-  id             String     @id @default(cuid())
-  studentGradeId String
-  url            String     @db.LongText
-  fileName       String?
-  fileType       String?
-  uploadedBy     String?    // userId of uploader
-  uploadedAt     DateTime   @default(now())
-
-  studentGrade student_grade @relation(fields: [studentGradeId], references: [id], onDelete: Cascade)
-}
-
-enum GradeValue {
-  Pass
-  Fail
-  NoGrade
-}
-
-model student_fee {
-  id        String   @id @default(cuid())
-  studentId String
-  courseId  String
-  batchId   String
-  name      String
-  amount    Decimal
-  type      StudentFeeType
-  dueDate   DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-
-  student users   @relation(fields: [studentId], references: [id])
-  course  course  @relation(fields: [courseId], references: [id])
-  batch   academic_period @relation(fields: [batchId], references: [id])
-}
-
-enum StudentFeeType{
-  fee
-  discount
+  user users @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
