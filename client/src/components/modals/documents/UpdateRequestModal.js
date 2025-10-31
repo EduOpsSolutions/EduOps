@@ -52,29 +52,15 @@ function UpdateDocumentRequestModal({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       setError("");
-      onSubmit();
-      
-      Swal.fire({
-        title: 'Success!',
-        text: 'Document request status has been updated successfully.',
-        icon: 'success',
-        confirmButtonColor: '#992525',
-      });
+      await onSubmit();
     } catch (error) {
       const errorMessage = error.message || "Failed to update document request. Please try again.";
       setError(errorMessage);
-      
-      Swal.fire({
-        title: 'Error',
-        text: errorMessage,
-        icon: 'error',
-        confirmButtonColor: '#992525',
-      });
     }
   };
 
