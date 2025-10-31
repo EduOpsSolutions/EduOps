@@ -109,11 +109,7 @@ function RequestDocumentModal(props) {
             setErrors({});
             
             props.setRequestDocumentModal(false);
-            if (props.setRequestSentModal) {
-                props.setRequestSentModal(true);
-            }
         } catch (error) {
-            // Error is already handled in the store
             console.error('Request submission failed:', error);
         }
     };
@@ -130,7 +126,6 @@ function RequestDocumentModal(props) {
             <div className="pt-4 flex flex-col justify-center bg-white-yellow-tone transition duration-150 ease-out rounded-2xl">
                 {/* Document Header */}
                 <Modal.Header className="ml-4 mr-2 mb-4">
-                    {/* Replace with backend logic to display name of Document*/}
                     <h1 className='text-3xl font-bold'>Request {props.documentName}</h1>
                 </Modal.Header>
                 <Modal.Body>

@@ -125,6 +125,15 @@ const useDocumentRequestStore = create((set, get) => ({
         throw new Error('Please fill in all required fields correctly');
       }
 
+      Swal.fire({
+        title: 'Submitting Request...',
+        text: 'Please wait while we process your document request.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       const response = await documentApi.requests.create(requestData);
       
       if (response.error) {
