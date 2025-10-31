@@ -20,6 +20,7 @@ import { router as logs } from './logs_routes.js';
 import { router as courseRequisites } from './course_requisites_routes.js';
 import { router as ledger } from './ledger_routes.js';
 import { router as studentFees } from './student_fee_routes.js';
+import { router as notification } from './notification_routes.js';
 
 const router = express.Router();
 router.get('/', function (req, res) {
@@ -49,5 +50,6 @@ router.use('/fees', feeRoutes);
 router.use('/course-requisites', courseRequisites);
 router.use('/ledger', ledger);
 router.use('/student-fees', studentFees);
+router.use('/notifications', notification);
 
 export default router;
