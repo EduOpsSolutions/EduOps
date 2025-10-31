@@ -94,6 +94,27 @@ export const documentRequestsApi = {
       remarks
     });
     return response.data;
+  },
+
+  // Upload proof of payment (students and teachers for their own requests)
+  uploadProofOfPayment: async (id, file) => {
+    const formData = new FormData();
+    formData.append('proofOfPayment', file);
+    
+    const response = await axiosInstance.patch(`/documents/requests/${id}/proof-of-payment`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Remove proof of payment (upload empty/null)
+  removeProofOfPayment: async (id) => {
+    const response = await axiosInstance.patch(`/documents/requests/${id}/proof-of-payment`, {
+      proofOfPayment: null
+    });
+    return response.data;
   }
 };
 

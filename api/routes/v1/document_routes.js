@@ -14,6 +14,7 @@ import {
   getAllDocumentRequests,
   getDocumentRequestById,
   updateDocumentRequestStatus,
+  uploadProofOfPayment,
   searchDocumentRequests,
   
   // Document Validations
@@ -108,6 +109,13 @@ router.patch('/requests/:id/status',
   validateUserIsAdmin, 
   validateUpdateDocumentRequestStatus,  // Changed from validateUpdateRequestStatus
   updateDocumentRequestStatus
+);
+
+// PATCH /api/v1/documents/requests/:id/proof-of-payment - Students/Teachers can upload for their own requests
+router.patch('/requests/:id/proof-of-payment',
+  validateUserRole(['student', 'teacher']),
+  uploadSingle('proofOfPayment'),
+  uploadProofOfPayment
 );
 
 // Document Validation Routes (Admin access for management, public for verification)
