@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import DiscardChangesModal from "../common/DiscardChangesModal";
 import ModalTextField from "../../form/ModalTextField";
+import ModalSelectField from "../../form/ModalSelectField";
+import { getCookieItem } from '../../../utils/jwt';
 
-const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course }) => {
+const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course, studentId, courseId, batchId }) => {
   const [formData, setFormData] = useState({
     description: "",
     amount: "",
     dueDate: "",
+    type: "",
   });
 
   const [showDiscardModal, setShowDiscardModal] = useState(false);
@@ -19,6 +22,7 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course }) => {
         description: "",
         amount: "",
         dueDate: "",
+        type: "",
       });
     }
   }, [isOpen]);
@@ -40,20 +44,18 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setLoading(true);
     try {
-      setLoading(true); 
-      
-      const feeData = {
-        description: formData.description,
-        amount: parseFloat(formData.amount).toFixed(2),
-        dueDate: formatDate(formData.dueDate),
+      // Prepare payload for store
+      const payload = {
+        name: formData.description,
+        amount: parseFloat(formData.amount),
+        dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
+        type: formData.type,
       };
-
       if (onSubmit && typeof onSubmit === "function") {
-        await onSubmit(feeData); 
+        await onSubmit(payload);
       }
-      
       onClose();
     } catch (error) {
       console.error("Failed to add fee:", error);
@@ -148,6 +150,20 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course }) => {
                 ₱
               </span>
             </ModalTextField>
+
+            {/* Type Fees dropdown*/}
+            <ModalSelectField
+              label="Type"
+              name="type"
+              value={formData.type}
+              onChange={handleInputChange}
+              required
+              options={[
+                { value: '', label: 'Select Type' },
+                { value: 'fee', label: 'Fee' },
+                { value: 'discount', label: 'Discount' }
+              ]}
+            />
 
             {/* Due Date */}
             <ModalTextField
