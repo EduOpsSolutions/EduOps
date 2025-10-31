@@ -7,6 +7,7 @@ import {
   updateEnrollmentStatus,
   updateEnrollment,
   checkEmailExists,
+  getStudentEnrollments
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
 import { verifyToken } from "../../utils/verifyToken.js";
@@ -48,6 +49,14 @@ router.put(
   validateIsActiveUser,
   validateUserIsAdmin,
   updateEnrollment
+);
+
+router.get(
+  "/:studentId/enrollments",
+  verifyToken,
+  validateIsActiveUser,
+  validateUserIsAdmin,
+  getStudentEnrollments
 );
 
 export { router };

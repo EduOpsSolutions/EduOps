@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import UpdateLedgerModal from "../../components/modals/transactions/UpdateLedger";
 import { useLedgerSearchStore, useLedgerStore } from "../../stores/ledgerStore";
 import SearchForm from "../../components/common/SearchFormHorizontal";
@@ -32,9 +32,6 @@ function Ledger() {
     handleModalSubmit
   } = useLedgerStore();
 
-  // Store all transactions in a ref to avoid unnecessary rerenders
-  const allTransactionsRef = useRef([]);
-
   // Fetch students for search (from ledger endpoint)
   useEffect(() => {
     async function fetchStudents() {
@@ -57,40 +54,6 @@ function Ledger() {
     fetchStudents();
     // eslint-disable-next-line
   }, [initializeSearch, performSearch]);
-
-  // Fetch all transactions on mount
-  useEffect(() => {
-    async function fetchTransactions() {
-      try {
-        const res = await axiosInstance.get("/payments/admin/allTransactions");
-        allTransactionsRef.current = res.data.data?.payments || [];
-      } catch (err) {
-        console.error('Failed to fetch transactions for ledger:', err);
-      }
-    }
-    fetchTransactions();
-  }, []);
-
-  // When a student is selected, filter transactions by studentId and set as ledgerEntries
-  useEffect(() => {
-    if (selectedStudent) {
-      // Debug logs
-      console.log('[Ledger] selectedStudent:', selectedStudent);
-      if (allTransactionsRef.current.length > 0) {
-        console.log('[Ledger] first transaction:', allTransactionsRef.current[0]);
-      } else {
-        console.log('[Ledger] No transactions loaded');
-      }
-
-      // Match by userId (user unique id)
-      const studentId = selectedStudent.studentId
-      const studentTransactions = allTransactionsRef.current.filter((tx) => {
-        return String(tx.userId) === String(studentId);
-      });
-      console.log('[Ledger] Matched transactions:', studentTransactions);
-      useLedgerStore.getState().setLedgerEntries(studentTransactions);
-    }
-  }, [selectedStudent]);
 
   // Search form config
   const searchFormConfig = {
@@ -153,8 +116,33 @@ function Ledger() {
 
   const handleStudentClickWrapper = (student) => {
     handleStudentClick(student);
+    const studentId = student.studentId || student.id;
+    fetchLedger(studentId);
   };
 
+  const fetchLedger = async (studentId) => {
+    try {
+      const token = getCookieItem("token");
+      const res = await fetch(`${API_BASE_URL}/ledger/student/${studentId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      useLedgerStore.getState().setLedgerEntries(data);
+    } catch (error) {
+      console.error("Error fetching ledger:", error);
+    }
+  };
+
+  // Wrap modal submit to refresh ledger after submit
+  const handleModalSubmitAndRefresh = async (transactionData) => {
+    await handleModalSubmit(transactionData);
+    if (selectedStudent) {
+      const studentId = selectedStudent.studentId
+      await fetchLedger(studentId);
+    }
+  };
 
   // Pagination config
   const paginationConfig = {
@@ -201,7 +189,7 @@ function Ledger() {
       <UpdateLedgerModal
         isOpen={isModalOpen}
         onClose={closeAddTransactionModal}
-        onSubmit={handleModalSubmit}
+        onSubmit={handleModalSubmitAndRefresh}
         student={selectedStudent}
       />
     </div>
