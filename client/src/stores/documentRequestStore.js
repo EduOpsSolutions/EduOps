@@ -144,7 +144,7 @@ const useDocumentRequestStore = create((set, get) => ({
 
       Swal.fire({
         title: 'Success!',
-        text: 'Document request submitted successfully',
+        text: 'You may now proceed to the payment form',
         icon: 'success',
         confirmButtonColor: '#992525',
       });

@@ -1,14 +1,32 @@
 import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import documentApi from "../../../utils/documentApi";
 import Swal from "sweetalert2";
 
 function ViewRequestDetailsModal() {
+  const navigate = useNavigate();
   const { viewDetailsModal, closeViewDetailsModal, selectedRequest, fetchDocumentRequests, refreshSelectedRequest } = useDocumentRequestStore();
   const user = useAuthStore((state) => state.user);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Cleanup expired payment data on mount
+  React.useEffect(() => {
+    const data = sessionStorage.getItem('documentPaymentData');
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        // Expire after 30 minutes (1800000 ms)
+        if (!parsed.timestamp || Date.now() - parsed.timestamp > 1800000) {
+          sessionStorage.removeItem('documentPaymentData');
+        }
+      } catch {
+        sessionStorage.removeItem('documentPaymentData');
+      }
+    }
+  }, []);
 
   if (!viewDetailsModal || !selectedRequest) return null;
 
@@ -145,63 +163,43 @@ function ViewRequestDetailsModal() {
     }
   };
 
-  const handlePayOnline = async () => {
-    try {
-      setUploading(true);
+  const handlePayOnline = () => {
+    // Store payment details in sessionStorage for the payment form, with timestamp
+    const paymentData = {
+      requestId: selectedRequest.id,
+      documentName: selectedRequest.document?.documentName || selectedRequest.documentName,
+      amount: selectedRequest.document?.amount || selectedRequest.paymentAmount,
+      feeType: 'document_fee',
+      userId: user?.userId,
+      studentId: user?.role === 'student' ? user?.userId : null,
+      email: selectedRequest.email,
+      phone: selectedRequest.phone,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      middleName: user?.middleName,
+      timestamp: Date.now()
+    };
 
-      // If payment URL already exists, just open it
-      if (selectedRequest.paymentUrl) {
-        window.open(selectedRequest.paymentUrl, '_blank', 'noopener,noreferrer');
-        setUploading(false);
-        return;
-      }
+    sessionStorage.setItem('documentPaymentData', JSON.stringify(paymentData));
 
-      // Create payment link
-      Swal.fire({
-        title: 'Creating Payment Link...',
-        text: 'Please wait while we prepare your payment.',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
+    // Optionally, set a timeout to remove the data after 30 minutes
+    setTimeout(() => {
+      const data = sessionStorage.getItem('documentPaymentData');
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.timestamp === paymentData.timestamp) {
+            sessionStorage.removeItem('documentPaymentData');
+          }
+        } catch {
+          sessionStorage.removeItem('documentPaymentData');
         }
-      });
-
-      const response = await documentApi.requests.createPayment(selectedRequest.id);
-
-      if (response.error) {
-        throw new Error(response.message);
       }
+    }, 1800000); // 30 minutes
 
-      // Refresh the request data
-      await Promise.all([
-        fetchDocumentRequests(),
-        refreshSelectedRequest()
-      ]);
-
-      Swal.close();
-
-      // Open payment URL in new tab
-      if (response.data.paymentUrl) {
-        window.open(response.data.paymentUrl, '_blank', 'noopener,noreferrer');
-        
-        Swal.fire({
-          title: 'Payment Link Created!',
-          text: 'A new tab has been opened for payment. Please complete your payment there.',
-          icon: 'success',
-          confirmButtonColor: '#992525',
-        });
-      }
-    } catch (error) {
-      console.error('Payment creation error:', error);
-      Swal.fire({
-        title: 'Error!',
-        text: error.message || 'Failed to create payment link',
-        icon: 'error',
-        confirmButtonColor: '#992525',
-      });
-    } finally {
-      setUploading(false);
-    }
+    // Close modal and redirect to payment form
+    closeViewDetailsModal();
+    navigate('/paymentForm');
   };
 
   const getStatusBadgeColor = (status) => {
