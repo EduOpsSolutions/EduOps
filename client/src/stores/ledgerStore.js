@@ -2,21 +2,9 @@ import { create } from 'zustand';
 
 import createSearchStore from './searchStore';
 import axios from 'axios';
+import { getCookieItem } from '../utils/jwt';
 
-// Initial ledger entries
-const initialLedgerEntries = [
-  {
-    id: 1,
-    date: "4/3/24",
-    time: "6:29:23AM",
-    orNumber: "100000058",
-    debitAmount: "28,650.00",
-    creditAmount: "0.00",
-    balance: "28,650.00",
-    type: "Assessment",
-    remarks: "Assessment Computation"
-  }
-];
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const useLedgerSearchStore = createSearchStore({
   initialData: [],
@@ -29,36 +17,16 @@ const useLedgerSearchStore = createSearchStore({
   searchableFields: ["name"],
   exactMatchFields: ["course", "batch", "year"],
   initialItemsPerPage: 10,
-  
-  fetchFunction: async (params) => {
-    // Fetch real student data from /api/v1/assessment
-    const res = await axios.get('/api/v1/assessment');
-    let students = res.data || [];
-    console.log('[LedgerStore] fetchFunction got students:', students);
-    // Filter client-side for now (can be optimized server-side if needed)
-    if (params.studentName) {
-      students = students.filter(s => s.name.toLowerCase().includes(params.studentName.toLowerCase()));
-    }
-    if (params.course) {
-      students = students.filter(s => s.course === params.course);
-    }
-    if (params.batch) {
-      students = students.filter(s => s.batch === params.batch);
-    }
-    if (params.year) {
-      students = students.filter(s => String(s.year) === String(params.year));
-    }
-    return students;
-  }
+
 });
 
 const useLedgerStore = create((set, get) => ({
   selectedStudent: null,
   showLedger: false,
   isModalOpen: false,
-  ledgerEntries: [...initialLedgerEntries],
+  ledgerEntries: [],
 
-  setSelectedStudent: (student) => set({ selectedStudent: student }),
+  setSelectedStudent: (student) => set({ selectedStudent: student, showLedger: true }),
   
   clearSelectedStudent: () => set({ 
     selectedStudent: null, 
@@ -83,44 +51,45 @@ const useLedgerStore = create((set, get) => ({
   
   closeAddTransactionModal: () => set({ isModalOpen: false }),
 
-  handleModalSubmit: (transactionData) => {
-    const { ledgerEntries } = get();
-    
-    // Calculation
-    const lastEntry = ledgerEntries[ledgerEntries.length - 1];
-    const lastBalance = parseFloat(lastEntry?.balance.replace(/,/g, '') || '0');
-    const debitAmount = parseFloat(transactionData.debitAmount?.replace(/,/g, '') || '0');
-    const creditAmount = parseFloat(transactionData.creditAmount?.replace(/,/g, '') || '0');
-    const newBalance = lastBalance + debitAmount - creditAmount;
-
-    const newEntry = {
-      id: Date.now(),
-      date: new Date().toLocaleDateString('en-US', { 
-        month: 'numeric', 
-        day: 'numeric', 
-        year: '2-digit' 
-      }),
-      time: new Date().toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        second: '2-digit',
-        hour12: true 
-      }),
-      orNumber: transactionData.orNumber || `${Date.now()}`,
-      debitAmount: transactionData.debitAmount || "0.00",
-      creditAmount: transactionData.creditAmount || "0.00",
-      balance: newBalance.toLocaleString('en-US', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-      }),
-      type: transactionData.typeOfFee || "Manual Entry",
-      remarks: transactionData.remarks || ""
-    };
-
-    set((state) => ({
-      ledgerEntries: [...state.ledgerEntries, newEntry],
-      isModalOpen: false
-    }));
+  handleModalSubmit: async (formData) => {
+    try {
+      const token = getCookieItem('token');
+      let payload;
+      if (!formData.isDebitDisabled && formData.debitAmount) {
+        // DEBIT AMOUNT - Student Fee
+        payload = {
+          studentId: formData.userId,
+          type: formData.typeOfFee,
+          amount: formData.debitAmount,
+          name: formData.typeOfFee,
+        ...(formData.courseId && { courseId: formData.courseId }),
+        ...(formData.academicPeriodId && { batchId: formData.academicPeriodId })
+        }
+        await axios.post(`${API_BASE_URL}/student-fees`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else if (!formData.isCreditDisabled && formData.creditAmount) {
+        // CREDIT AMOUNT - Payments
+        payload = {
+          studentId: formData.studentId,
+          purpose: formData.typeOfFee,
+          referenceNumber: formData.orNumber,
+          remarks: formData.remarks,
+          amountPaid: formData.creditAmount,
+          ...(formData.courseId && { courseId: formData.courseId }),
+          ...(formData.academicPeriodId && { academicPeriodId: formData.academicPeriodId })
+        };
+        await axios.post(`${API_BASE_URL}/payments/manual`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        throw new Error('Please enter a valid Debit or Credit amount.');
+      }
+      set({ isModalOpen: false });
+    } catch (error) {
+      // handle error as needed
+      throw error;
+    }
   },
 
   // Data management
@@ -153,7 +122,7 @@ const useLedgerStore = create((set, get) => ({
       selectedStudent: null,
       showLedger: false,
       isModalOpen: false,
-      ledgerEntries: [...initialLedgerEntries]
+      ledgerEntries: []
     });
   }
 }));

@@ -46,6 +46,7 @@ model users {
   documentValidations document_validation[] @relation("UserDocumentValidations")
   studentGrades       student_grade[]       @relation("UserStudentGrades")
   logs          logs[]
+  studentFees   student_fee[]
 }
 
 model enrollment_request {
@@ -103,6 +104,7 @@ model course {
   payments        payments[]
   fees            fees[]
   studentGrades   student_grade[]           @relation("CourseStudentGrades")
+  studentFees     student_fee[]
 }
 
 model schedule {
@@ -194,6 +196,7 @@ model academic_period {
   enrollments student_enrollment[]      @relation("PeriodEnrollments")
   payments    payments[]
   enrollment_request enrollment_request[]
+  studentFees   student_fee[]
 }
 
 model academic_period_courses {
@@ -523,4 +526,27 @@ enum GradeValue {
   Pass
   Fail
   NoGrade
+}
+
+model student_fee {
+  id        String   @id @default(cuid())
+  studentId String
+  courseId  String
+  batchId   String
+  name      String
+  amount    Decimal
+  type      StudentFeeType
+  dueDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  student users   @relation(fields: [studentId], references: [id])
+  course  course  @relation(fields: [courseId], references: [id])
+  batch   academic_period @relation(fields: [batchId], references: [id])
+}
+
+enum StudentFeeType{
+  fee
+  discount
 }

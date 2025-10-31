@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axiosInstance from "../../../utils/axios";
 import DiscardChangesModal from "../common/DiscardChangesModal";
 import ModalTextField from "../../form/ModalTextField";
 import ModalSelectField from "../../form/ModalSelectField";
@@ -11,7 +12,57 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
     creditAmount: "",
     balance: "",
     remarks: "",
+    courseId: "",
+    academicPeriodId: "",
   });
+
+  const [enrollments, setEnrollments] = useState([]);
+  useEffect(() => {
+    if (isOpen && student) {
+      const tryFetch = async (sid, label) => {
+        if (!sid) return false;
+        try {
+          const res = await axiosInstance.get(`/enrollment/${sid}/enrollments`);
+          const data = res.data || [];
+          setEnrollments(data);
+          if (data.length === 1) {
+            const e = data[0];
+            setFormData(prev => ({
+              ...prev,
+              courseId: e.courseId || e.course_id || e.id || "",
+              academicPeriodId: e.batchId || e.batch_id || e.periodId || e.period_id || "",
+            }));
+          } else {
+            setFormData(prev => ({ ...prev, courseId: "", academicPeriodId: "" }));
+          }
+          return true;
+        } catch (err) {
+          console.error(`[UpdateLedgerModal] Error fetching enrollments for ${label}:`, err);
+          return false;
+        }
+      };
+      (async () => {
+        let found = false;
+        if (student.id) found = await tryFetch(student.id, 'student.id');
+        if (!found && student.studentId) found = await tryFetch(student.studentId, 'student.studentId');
+        if (!found) {
+          setEnrollments([]);
+          setFormData(prev => ({ ...prev, courseId: "", academicPeriodId: "" }));
+        }
+      })();
+    } else if (!isOpen) {
+      setEnrollments([]);
+      setFormData(prev => ({ ...prev, courseId: "", academicPeriodId: "" }));
+    }
+  }, [isOpen, student]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // console.log('[UpdateLedgerModal] enrollments state:', enrollments);
+      // console.log('[UpdateLedgerModal] formData:', formData);
+      //console.log('[UpdateLedgerModal] Modal opened. Student:', student);
+    }
+  }, [isOpen, enrollments, formData, student]);
 
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [error, setError] = useState("");
@@ -27,28 +78,45 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
         creditAmount: "",
         balance: "",
         remarks: "",
+        courseId: "",
+        academicPeriodId: "",
       });
       setError("");
     }
   }, [isOpen]);
-
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
+    if (name === "courseBatch") {
+      const [courseId, academicPeriodId] = value.split("|");
+      setFormData((prev) => ({
+        ...prev,
+        courseId: courseId || "",
+        academicPeriodId: academicPeriodId || "",
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
     if (error) setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true); 
-      await onSubmit(formData);
-      onClose(); 
+      await onSubmit({
+        ...formData,
+        studentId: student.userId,
+        userId: student.studentId,
+        isDebitDisabled,
+        isCreditDisabled
+      });
+      onClose();
     } catch (error) {
       setError(error.message || "Failed to update ledger. Please try again.");
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
@@ -76,13 +144,19 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
   if (!isOpen) return null;
 
   const feeTypeOptions = [
-    { value: "", label: "Select type" },
-    { value: "Assessment", label: "Assessment" },
-    { value: "Payment", label: "Payment" },
-    { value: "Books", label: "Books" },
-    { value: "Adjustment", label: "Adjustment" },
-    { value: "Other", label: "Other" },
+    { value: "", label: "Select fee type" },
+    { value: "down_payment", label: "Down Payment" },
+    { value: "tuition_fee", label: "Tuition Fee" },
+    { value: "document_fee", label: "Document Fee" },
+    { value: "book_fee", label: "Book Fee" },
+    { value: "fee", label: "Additional Fee" },
+    { value: "discount", label: "Discount" },
   ];
+
+  const disableDebitForTypes = ["down_payment", "tuition_fee", "document_fee", "book_fee"];
+  const isDebitDisabled = disableDebitForTypes.includes(formData.typeOfFee);
+  const disableCreditForTypes = ["fee", "discount"];
+  const isCreditDisabled = disableCreditForTypes.includes(formData.typeOfFee);
 
   return (
     <>
@@ -133,6 +207,23 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Course-Batch Dropdown */}
+            <ModalSelectField
+              label="Course & Batch"
+              name="courseBatch"
+              value={formData.courseId && formData.academicPeriodId ? `${formData.courseId}|${formData.academicPeriodId}` : ""}
+              onChange={handleChange}
+              options={[
+                { value: '', label: enrollments.length === 0 ? 'No enrollments found' : 'Select course & batch' },
+                ...enrollments.map(e => ({
+                  value: `${e.courseId || e.course_id || e.id}|${e.batchId || e.batch_id || e.periodId || e.period_id}`,
+                  label: `${e.course || e.courseName || e.name} - ${e.batch || e.batchName}${e.year ? ` (${e.year})` : ''}`
+                }))
+              ]}
+              required
+            />
+
             {/* Type of Fee */}
             <ModalSelectField
               label="Type of Fee"
@@ -150,6 +241,7 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
               value={formData.orNumber}
               onChange={handleChange}
               placeholder="Enter O.R. Number"
+              disabled={isCreditDisabled}
             />
 
             {/* Debit and Credit Row */}
@@ -163,6 +255,7 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
                 value={formData.debitAmount}
                 onChange={handleChange}
                 placeholder="0.00"
+                disabled={isDebitDisabled}
               >
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
                   ₱
@@ -178,6 +271,7 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
                 value={formData.creditAmount}
                 onChange={handleChange}
                 placeholder="0.00"
+                disabled={isCreditDisabled}
               >
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
                   ₱

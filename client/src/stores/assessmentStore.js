@@ -121,7 +121,11 @@ const fetchStudentAssessment = async (studentId, courseId, batchId) => {
     course: data.course?.name || '',
     batch: data.batch?.batchName || '',
     year: data.batch?.year || '',
+    courseId: data.course?.id,
+    batchId: data.batch?.id,
     fees,
+    studentFees: data.studentFees || [],
+    netAssessment: data.netAssessment || 0,
     totalPayments: Number(data.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
     remainingBalance: Number(data.remainingBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
   };
@@ -146,8 +150,11 @@ const useAssessmentStore = create((set, get) => ({
     }
   },
 
-  handleBackToResults: () => {
+  handleBackToResults: async () => {
     set({ selectedStudent: null });
+    const fetched = await fetchAssessmentList();
+    useAssessmentSearchStore.getState().setData(fetched);
+    useAssessmentSearchStore.getState().performSearch();
   },
 
   openTransactionHistoryModal: () => set({ transactionHistoryModal: true }),
@@ -155,35 +162,60 @@ const useAssessmentStore = create((set, get) => ({
   openAddFeesModal: () => set({ addFeesModal: true }),
   closeAddFeesModal: () => set({ addFeesModal: false }),
 
-  handleAddFee: (feeData) => {
+  handleAddFee: async (feeData) => {
     const { selectedStudent } = get();
     if (!selectedStudent) return;
 
-    const updatedFees = [...selectedStudent.fees, feeData];
-    const updatedStudent = { ...selectedStudent, fees: updatedFees };
-    
-    set({
-      selectedStudent: updatedStudent,
-      addFeesModal: false
-    });
+    try {
+      const token = getCookieItem('token');
+      const res = await fetch(`${API_BASE_URL}/student-fees`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          ...feeData,
+          studentId: selectedStudent.id,
+          courseId: selectedStudent.courseId,
+          batchId: selectedStudent.batchId
+        })
+      });
+      if (!res.ok) throw new Error('Failed to add fee/discount');
+      // After successful add, re-fetch assessment list and selected student details
+      await useAssessmentSearchStore.getState().initializeSearch();
+      // Refresh selected student details
+      const detail = await fetchStudentAssessment(selectedStudent.id, selectedStudent.courseId, selectedStudent.batchId);
+      set({
+        selectedStudent: detail,
+        addFeesModal: false
+      });
+    } catch (err) {
+      set({ addFeesModal: false });
+    }
   },
 
-  calculateNetAssessment: (fees) => {
-    if (!fees || fees.length === 0) return "0.00";
-    
-    return fees.reduce((total, fee) => {
-      const amount = parseFloat(fee.amount.replace(/,/g, '')) || 0;
-      return total + amount;
-    }, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  handleDeleteFee: async (feeId) => {
+    const { selectedStudent } = get();
+    if (!selectedStudent) return;
+    try {
+      const token = getCookieItem('token');
+      const res = await fetch(`${API_BASE_URL}/student-fees/${feeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) throw new Error('Failed to delete fee/discount');
+      // After successful delete, refresh selected student details
+      const detail = await fetchStudentAssessment(selectedStudent.id, selectedStudent.courseId, selectedStudent.batchId);
+      set({ selectedStudent: detail });
+    } catch (err) {
+      console.error(err);
+    }
   },
 
-  resetStore: () => {
-    set({
-      selectedStudent: null,
-      transactionHistoryModal: false,
-      addFeesModal: false
-    });
-  }
 }));
 
 export { useAssessmentSearchStore, useAssessmentStore };

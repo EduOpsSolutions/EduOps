@@ -143,6 +143,8 @@ export const createManualPayment = async (transactionData) => {
     amountPaid,
     referenceNumber,
     remarks,
+    academicPeriodId,
+    courseId
   } = transactionData;
 
   const user = await prisma.users.findUnique({
@@ -168,6 +170,8 @@ export const createManualPayment = async (transactionData) => {
     feeType: purpose,
     remarks: remarks || null,
     paidAt: new Date(),
+    academicPeriodId: academicPeriodId || null,
+    courseId: courseId || null,
   };
   
   console.log('Creating payment with data:', paymentData);

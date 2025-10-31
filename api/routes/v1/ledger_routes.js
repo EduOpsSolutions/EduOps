@@ -6,7 +6,7 @@ import {
   validateIsActiveUser,
   verifyToken
 } from "../../middleware/authValidator.js";
-import { getStudentsWithOngoingPeriod } from '../../controller/ledger_controller.js';
+import { getStudentsWithOngoingPeriod, getStudentLedger } from '../../controller/ledger_controller.js';
 
 const router = express.Router();
 
@@ -15,6 +15,13 @@ router.get('/students/ongoing',
     validateIsActiveUser,
     validateUserIsAdmin,
     getStudentsWithOngoingPeriod
+);
+
+router.get('/student/:studentId',
+    verifyToken,
+    validateIsActiveUser,
+    //validateUserIsAdmin,
+    getStudentLedger
 );
 
 export { router };

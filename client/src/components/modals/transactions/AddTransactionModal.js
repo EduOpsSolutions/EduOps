@@ -19,12 +19,16 @@ function AddTransactionModal({
     amountPaid: "",
     referenceNumber: "",
     remarks: "",
+    courseId: "",
+    academicPeriodId: "",
   });
 
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState("");
+  const [enrollments, setEnrollments] = useState([]);
+  const [selectedEnrollment, setSelectedEnrollment] = useState("");
 
   useEffect(() => {
     if (!addTransactionModal) {
@@ -38,6 +42,8 @@ function AddTransactionModal({
         amountPaid: "",
         referenceNumber: "",
         remarks: "",
+        courseId: "",
+        academicPeriodId: "",
       });
       setError("");
       setNameError("");
@@ -54,11 +60,19 @@ function AddTransactionModal({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
+    if (name === "courseBatch") {
+      const [courseId, academicPeriodId] = value.split("|");
+      setFormData((prev) => ({
+        ...prev,
+        courseId: courseId || "",
+        academicPeriodId: academicPeriodId || "",
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
     if (error) setError("");
     if (name === 'studentId') {
       setNameError("");
@@ -86,6 +100,7 @@ function AddTransactionModal({
     try {
       const response = await axiosInstance.get(`/users/get-student-by-id/${studentId}`);
       const data = response.data;
+      const realStudentId = response.data.data.id;
 
       if (data.error || !data.success) {
         setNameError(data.message || 'Student ID not found. Please verify the Student ID.');
@@ -94,6 +109,8 @@ function AddTransactionModal({
           firstName: '',
           lastName: ''
         }));
+        setEnrollments([]);
+        setSelectedEnrollment("");
         return false;
       }
 
@@ -104,6 +121,13 @@ function AddTransactionModal({
           lastName: data.data.lastName || '',
         }));
         setNameError('');
+
+        try {
+          const enrollRes = await axiosInstance.get(`/enrollment/${realStudentId}/enrollments`);
+          setEnrollments(enrollRes.data || []);
+        } catch (enrollErr) {
+          setEnrollments([]);
+        }
       }
 
       return true;
@@ -277,6 +301,24 @@ function AddTransactionModal({
                   />
                 </div>
               </>
+            )}
+
+            {/* Course-Batch Dropdown */}
+            {enrollments.length > 0 && (
+              <ModalSelectField
+                label="Course & Batch"
+                name="courseBatch"
+                value={formData.courseId && formData.academicPeriodId ? `${formData.courseId}|${formData.academicPeriodId}` : ""}
+                onChange={handleChange}
+                options={[
+                  { value: '', label: 'Select course & batch' },
+                  ...enrollments.map(e => ({
+                    value: `${e.courseId}|${e.batchId}`,
+                    label: `${e.course} - ${e.batch}${e.year ? ` (${e.year})` : ''}`
+                  }))
+                ]}
+                required
+              />
             )}
 
             {/* Fee Type */}
