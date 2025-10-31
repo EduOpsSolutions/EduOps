@@ -15,6 +15,7 @@ import {
   getDocumentRequestById,
   updateDocumentRequestStatus,
   uploadProofOfPayment,
+  createDocumentPayment,
   searchDocumentRequests,
   
   // Document Validations
@@ -116,6 +117,12 @@ router.patch('/requests/:id/proof-of-payment',
   validateUserRole(['student', 'teacher']),
   uploadSingle('proofOfPayment'),
   uploadProofOfPayment
+);
+
+// POST /api/v1/documents/requests/:id/payment - Students/Teachers can create payment links for their own requests
+router.post('/requests/:id/payment',
+  validateUserRole(['student', 'teacher']),
+  createDocumentPayment
 );
 
 // Document Validation Routes (Admin access for management, public for verification)

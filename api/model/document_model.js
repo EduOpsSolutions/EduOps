@@ -204,6 +204,20 @@ class DocumentModel {
     });
   }
 
+  static async updateDocumentRequestPayment(id, paymentData) {
+    return await prisma.document_request.update({
+      where: { id },
+      data: {
+        ...paymentData,
+        updatedAt: new Date()
+      },
+      include: {
+        document: true,
+        user: true
+      }
+    });
+  }
+
   static async deleteDocumentRequest(id) {
     return await prisma.document_request.update({
       where: { id },

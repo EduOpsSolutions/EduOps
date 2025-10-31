@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import Spinner from "../../common/Spinner";
+import Swal from 'sweetalert2';
+import documentApi from '../../../utils/documentApi';
 
 function RequestDocumentModal(props) {
     const [selectedMode, setSelectedMode] = useState('pickup');
@@ -90,7 +92,7 @@ function RequestDocumentModal(props) {
                 })
             };
 
-            await createDocumentRequest(requestData);
+            const newRequest = await createDocumentRequest(requestData);
             
             // Reset form and close modal
             setFormData({
@@ -109,6 +111,44 @@ function RequestDocumentModal(props) {
             setErrors({});
             
             props.setRequestDocumentModal(false);
+
+            // If payment method is online and document has a price, create payment link
+            if (formData.paymentMethod === 'online' && props.selectedDocument?.amount && props.selectedDocument?.price === 'paid' && newRequest?.id) {
+                try {
+                    Swal.fire({
+                        title: 'Creating Payment Link...',
+                        text: 'Please wait while we generate your payment link.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    const paymentResponse = await documentApi.requests.createPayment(newRequest.id);
+                    
+                    Swal.close();
+                    
+                    if (paymentResponse?.data?.paymentUrl) {
+                        // Open payment URL in new tab
+                        window.open(paymentResponse.data.paymentUrl, '_blank');
+                        
+                        Swal.fire({
+                            title: 'Payment Link Created!',
+                            text: 'You will be redirected to the payment page. If the page doesn\'t open, please check your request details.',
+                            icon: 'success',
+                            confirmButtonColor: '#992525',
+                        });
+                    }
+                } catch (paymentError) {
+                    console.error('Failed to create payment link:', paymentError);
+                    Swal.fire({
+                        title: 'Payment Link Error',
+                        text: 'Your request was submitted successfully, but we couldn\'t create the payment link. Please go to "See Requests" and click "Pay Online" to complete your payment.',
+                        icon: 'warning',
+                        confirmButtonColor: '#992525',
+                    });
+                }
+            }
         } catch (error) {
             console.error('Request submission failed:', error);
         }

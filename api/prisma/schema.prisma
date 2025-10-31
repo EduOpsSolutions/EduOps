@@ -352,6 +352,7 @@ model document_request {
   lastName        String?
   phone           String?
   mode            DeliveryMode?         @default(pickup)
+  paymentMethod   String?
   address         String?
   city            String?
   purpose         String?               @db.Text
@@ -361,6 +362,10 @@ model document_request {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   proofOfPayment  String?               @db.LongText
+  paymentStatus   String?               @default("pending")
+  paymentAmount   Decimal?              @db.Decimal(10, 2)
+  paymentUrl      String?               @db.LongText
+  paymentId       String?
   document        document_template     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   user            users?                @relation("UserDocumentRequests", fields: [userId], references: [id])
 
