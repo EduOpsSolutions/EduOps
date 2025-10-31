@@ -57,108 +57,106 @@ const LedgerDetails = ({
           <div className="overflow-x-auto -mx-2 sm:mx-0">
             <div className="inline-block min-w-full align-middle">
               <table className="min-w-full">
-              <thead>
-                <tr className="border-b-2 border-dark-red-2">
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Date
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Time
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    O.R. Number
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Debit Amount
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Credit Amount
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Balance
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Type
-                  </th>
-                  <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
-                    Remarks
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledgerEntries.length > 0 ? (
-                  ledgerEntries.map(entry => {
-                    // Format date and time from paidAt or createdAt
-                    let date = "";
-                    let time = "";
-                    if (entry.paidAt || entry.createdAt) {
-                      const dt = new Date(entry.paidAt || entry.createdAt);
-                      date = dt.toLocaleDateString();
-                      time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    }
-                    // User-friendly feeType
-                    let feeType = entry.feeType || "";
-                    if (feeType) {
-                      feeType = feeType.replace(/_/g, ' ')
-                        .replace(/\b\w/g, c => c.toUpperCase());
-                    }
-                    return (
-                      <tr key={entry.id} className="border-b border-[rgb(137,14,7,.49)]">
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={date}>
-                            {date}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={time}>
-                            {time}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-24 sm:max-w-28 md:max-w-none" title={entry.referenceNumber}>
-                            {entry.referenceNumber}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.amount}>
-                            {entry.amount}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.creditAmount || "N/A"}>
-                            {entry.creditAmount || "N/A"}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={entry.balance || "N/A"}>
-                            {entry.balance || "N/A"}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={feeType}>
-                            {feeType}
-                          </div>
-                        </td>
-                        <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                          <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={entry.remarks}>
-                            {entry.remarks}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr className="border-b border-[rgb(137,14,7,.49)]">
-                    <td 
-                      colSpan="8" 
-                      className="py-6 md:py-8 text-center text-gray-500 text-sm md:text-base"
-                    >
-                      No transactions found
-                    </td>
+                <thead>
+                  <tr className="border-b-2 border-dark-red-2">
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Date
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Time
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      O.R. Number
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Debit Amount
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Credit Amount
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Balance
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Type
+                    </th>
+                    <th className="text-center py-2 md:py-3 px-2 sm:px-3 md:px-4 font-normal text-xs sm:text-sm md:text-base">
+                      Remarks
+                    </th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ledgerEntries.length > 0 ? (
+                    ledgerEntries.map((entry, idx) => {
+                      // Support both mapped and legacy fields
+                      const dt = new Date(entry.paidAt || entry.createdAt || entry.date);
+                      const date = dt && !isNaN(dt) ? dt.toLocaleDateString() : "";
+                      const time = dt && !isNaN(dt) ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "";
+                      const referenceNumber = entry.referenceNumber || entry.orNumber || "";
+                      const debitAmount = (entry.debitAmount !== undefined && entry.debitAmount !== null && entry.debitAmount !== 0 && entry.debitAmount !== "0" && entry.debitAmount !== "0.00") ? entry.debitAmount : (entry.debit !== undefined && entry.debit !== null && entry.debit !== 0 && entry.debit !== "0" && entry.debit !== "0.00" ? entry.debit : "");
+                      const creditAmount = (entry.amount !== undefined && entry.amount !== null && entry.amount !== 0 && entry.amount !== "0" && entry.amount !== "0.00") ? entry.amount : (entry.credit !== undefined && entry.credit !== null && entry.credit !== 0 && entry.credit !== "0" && entry.credit !== "0.00" ? entry.credit : "");
+                      const balance = entry.balance;
+                      let feeType = entry.feeType || entry.type || "";
+                      if (feeType) {
+                        feeType = feeType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                      }
+                      return (
+                        <tr key={entry.id || referenceNumber || idx} className="border-b border-[rgb(137,14,7,.49)]">
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={date}>
+                              {date}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={time}>
+                              {time}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-24 sm:max-w-28 md:max-w-none" title={referenceNumber}>
+                              {referenceNumber}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={debitAmount != null ? debitAmount : " "}>
+                              {debitAmount != null ? debitAmount : " "}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={creditAmount != null ? creditAmount : " "}>
+                              {creditAmount != null ? creditAmount : " "}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={balance != null ? balance : "N/A"}>
+                              {balance != null ? balance : "N/A"}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={feeType}>
+                              {feeType}
+                            </div>
+                          </td>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
+                            <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={entry.remarks}>
+                              {entry.remarks}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr className="border-b border-[rgb(137,14,7,.49)]">
+                      <td 
+                        colSpan="8" 
+                        className="py-6 md:py-8 text-center text-gray-500 text-sm md:text-base"
+                      >
+                        No transactions found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
           </div>
         </div>
       </div>
