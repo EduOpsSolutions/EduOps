@@ -205,6 +205,22 @@ const useDocumentRequestStore = create((set, get) => ({
     });
   },
 
+  refreshSelectedRequest: async () => {
+    const { selectedRequest } = get();
+    if (!selectedRequest) return;
+
+    try {
+      // Fetch the updated request data
+      const response = await documentApi.requests.getById(selectedRequest.id);
+      if (!response.error) {
+        const formattedRequest = documentApi.helpers.formatDocumentRequest(response.data);
+        set({ selectedRequest: formattedRequest });
+      }
+    } catch (error) {
+      console.error('Failed to refresh selected request:', error);
+    }
+  },
+
   setUpdateStatus: (status) => {
     set({ updateStatus: status });
   },
