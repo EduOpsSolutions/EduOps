@@ -648,3 +648,75 @@ export const getPaymentFromPayMongo = async (paymentId) => {
     };
   }
 };
+
+/**
+ * Create PayMongo Payment Link for document requests
+ * @param {Object} linkData - Payment link data
+ * @returns {Promise<Object>} PayMongo response
+ */
+export const createPaymentLink = async (linkData) => {
+  try {
+    const {
+      amount,
+      description,
+      remarks,
+      reference_number,
+    } = linkData;
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      throw new Error('Amount is required and must be greater than 0');
+    }
+
+    const requestBody = {
+      data: {
+        attributes: {
+          amount: Math.round(amount * 100), // Convert to centavos
+          description: description || 'Document Request Payment',
+          remarks: remarks || '',
+        },
+      },
+    };
+
+    // Add reference number if provided
+    if (reference_number) {
+      requestBody.data.attributes.reference_number = reference_number;
+    }
+
+    const response = await axios.post(
+      `${PAYMONGO_CONFIG.BASE_URL}/links`,
+      requestBody,
+      {
+        headers: createPayMongoAuthHeaders(),
+      }
+    );
+
+    console.log('PayMongo Payment Link created:', response.data);
+    return {
+      success: true,
+      data: response.data,
+    };
+  } catch (error) {
+    console.error(
+      'Error creating PayMongo Payment Link:',
+      error.response?.data || error.message
+    );
+
+    let errorMessage = 'Failed to create payment link';
+    if (error.response?.data?.errors) {
+      errorMessage = error.response.data.errors
+        .map((err) => err.detail || err.title)
+        .join(', ');
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    return {
+      success: false,
+      message: errorMessage,
+      error: error.response?.data || error.message,
+    };
+  }
+};

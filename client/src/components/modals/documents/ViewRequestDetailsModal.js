@@ -145,6 +145,65 @@ function ViewRequestDetailsModal() {
     }
   };
 
+  const handlePayOnline = async () => {
+    try {
+      setUploading(true);
+
+      // If payment URL already exists, just open it
+      if (selectedRequest.paymentUrl) {
+        window.open(selectedRequest.paymentUrl, '_blank', 'noopener,noreferrer');
+        setUploading(false);
+        return;
+      }
+
+      // Create payment link
+      Swal.fire({
+        title: 'Creating Payment Link...',
+        text: 'Please wait while we prepare your payment.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const response = await documentApi.requests.createPayment(selectedRequest.id);
+
+      if (response.error) {
+        throw new Error(response.message);
+      }
+
+      // Refresh the request data
+      await Promise.all([
+        fetchDocumentRequests(),
+        refreshSelectedRequest()
+      ]);
+
+      Swal.close();
+
+      // Open payment URL in new tab
+      if (response.data.paymentUrl) {
+        window.open(response.data.paymentUrl, '_blank', 'noopener,noreferrer');
+        
+        Swal.fire({
+          title: 'Payment Link Created!',
+          text: 'A new tab has been opened for payment. Please complete your payment there.',
+          icon: 'success',
+          confirmButtonColor: '#992525',
+        });
+      }
+    } catch (error) {
+      console.error('Payment creation error:', error);
+      Swal.fire({
+        title: 'Error!',
+        text: error.message || 'Failed to create payment link',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case 'Fulfilled':
@@ -268,6 +327,40 @@ function ViewRequestDetailsModal() {
               <div className="pt-3 border-t border-gray-200">
                 <h4 className="text-sm font-medium text-gray-900 mb-2">Additional Notes</h4>
                 <p className="text-sm text-gray-700">{selectedRequest.additionalNotes}</p>
+              </div>
+            )}
+
+            {/* Payment Section - Show if document has amount and payment method is online */}
+            {selectedRequest.document?.amount && selectedRequest.document?.price === 'paid' && selectedRequest.paymentMethod === 'online' && (
+              <div className="pt-3 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Payment</h4>
+                <div className="space-y-2">
+                  <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                    <span className="text-sm text-blue-700">
+                      Amount: ₱{parseFloat(selectedRequest.document.amount).toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  {canUploadProof && selectedRequest.paymentStatus !== 'paid' && (
+                    <button
+                      type="button"
+                      onClick={handlePayOnline}
+                      disabled={uploading}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {selectedRequest.paymentUrl ? 'Continue Payment' : 'Pay Online'}
+                    </button>
+                  )}
+
+                  {selectedRequest.paymentStatus === 'paid' && (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-green-700">Payment completed</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

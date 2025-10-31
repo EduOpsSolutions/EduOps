@@ -115,6 +115,12 @@ export const documentRequestsApi = {
       proofOfPayment: null
     });
     return response.data;
+  },
+
+  // Create payment link for document request
+  createPayment: async (id) => {
+    const response = await axiosInstance.post(`/documents/requests/${id}/payment`);
+    return response.data;
   }
 };
 
