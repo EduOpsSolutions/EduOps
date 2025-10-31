@@ -122,7 +122,10 @@ function DocRequestsModal(props) {
                                                 <tr 
                                                     key={request.id}
                                                     className="hover:bg-dark-red-2 hover:text-white cursor-pointer transition ease-in-out duration-300"
-                                                    onClick={() => viewRequestDetails(request)}
+                                                    onClick={() => {
+                                                        viewRequestDetails(request);
+                                                        props.setDocRequestsModal(false);
+                                                    }}
                                                 >
                                                     <td className="px-2 py-3">
                                                         {formatDate(request.createdAt)}
