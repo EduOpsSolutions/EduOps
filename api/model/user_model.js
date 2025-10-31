@@ -121,4 +121,30 @@ export async function getUsersByRole(role) {
   }
 }
 
+export async function getAllUserEmails() {
+  try {
+    const users = await prisma.users.findMany({
+      where: { deletedAt: null },
+      select: { email: true },
+    });
+    return users.map(user => user.email);
+  } catch (error) {
+    console.error('Error fetching user emails:', error);
+    return [];
+  }
+}
+
+export async function getUserEmailsByRole(role) {
+  try {
+    const users = await prisma.users.findMany({
+      where: { role, deletedAt: null },
+      select: { email: true },
+    });
+    return users.map(user => user.email);
+  } catch (error) {
+    console.error('Error fetching user emails by role:', error);
+    return [];
+  }
+}
+
 export { getUserByEmail, getUserByToken };

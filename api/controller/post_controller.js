@@ -3,6 +3,8 @@ import { uploadFile } from '../utils/fileStorage.js';
 import { filePaths } from '../constants/file_paths.js';
 import { logUserActivity, logError } from '../utils/logger.js';
 import { MODULE_TYPES } from '../constants/module_types.js';
+import { sendPostEmail } from '../utils/mailer.js';
+import { getAllUserEmails,getUserEmailsByRole } from '../model/user_model.js';
 
 const prisma = new PrismaClient();
 
@@ -81,7 +83,7 @@ export const getPosts = async (req, res) => {
 // Create a new post with optional file uploads
 export const createPost = async (req, res) => {
   try {
-    const { title, content, tag = 'global' } = req.body;
+    const { title, content, tag = 'global', sendOption } = req.body;
     const userId = req.user.data.id;
 
     // Validate required fields
@@ -157,6 +159,20 @@ export const createPost = async (req, res) => {
         },
       },
     });
+
+    let recipients = [];
+
+    if (tag === 'global'){
+      recipients = await getAllUserEmails();
+    } else if (tag === 'teacher') {
+      recipients = await getUserEmailsByRole('teacher');
+    } else if (tag === 'student') {
+      recipients = await getUserEmailsByRole('student');
+    }
+
+    if (sendOption === 'email' || sendOption === 'both') {
+      await sendPostEmail(post, recipients);
+    }
 
     await logUserActivity(
       'Posts - Created New Post',
