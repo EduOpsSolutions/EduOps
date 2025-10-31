@@ -75,6 +75,7 @@ export const formatPostData = (formData, files = []) => {
   postFormData.append('title', formData.title);
   postFormData.append('content', formData.content);
   postFormData.append('tag', formData.tag);
+  postFormData.append('sendOption', formData.sendOption);
   
   // Add files if provided
   files.forEach((file, index) => {
