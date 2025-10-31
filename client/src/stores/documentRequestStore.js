@@ -11,7 +11,7 @@ const useDocumentRequestSearchStore = createSearchStore({
     status: "",
     sortBy: "descending"
   },
-  searchableFields: ["name", "document"],
+  searchableFields: ["name", "documentName"],
   exactMatchFields: ["status"],
   initialItemsPerPage: 5,
   filterFunction: (data, params) => {
@@ -25,7 +25,7 @@ const useDocumentRequestSearchStore = createSearchStore({
 
     if (params.document?.trim()) {
       filteredResults = filteredResults.filter(request =>
-        request.document.toLowerCase().includes(params.document.toLowerCase())
+        request.documentName?.toLowerCase().includes(params.document.toLowerCase())
       );
     }
 
