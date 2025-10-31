@@ -116,7 +116,9 @@ const useTransactionStore = create((set, get) => ({
         paymentMethod: data.paymentMethod,
         amountPaid: data.amountPaid,
         referenceNumber: data.referenceNumber,
-        remarks: data.remarks
+        remarks: data.remarks,
+        academicPeriodId: data.academicPeriodId,
+        courseId: data.courseId,
       });
       
       if (response.data.success) {
