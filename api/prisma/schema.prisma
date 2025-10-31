@@ -37,6 +37,7 @@ model users {
   teacherSchedules    schedule[]            @relation("TeacherSchedules")
   enrollments         student_enrollment[]  @relation("StudentEnrollments")
   studentSchedules    user_schedule[]       @relation("StudentSchedules")
+  notifications notification[]
 }
 
 model enrollment_request {
@@ -463,4 +464,21 @@ enum DocumentRequestStatus {
   delivered
   failed
   fulfilled
+}
+
+
+model notification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  message    String
+  data       Json?
+  isRead     Boolean  @default(false)
+  delivered  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  user users @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
