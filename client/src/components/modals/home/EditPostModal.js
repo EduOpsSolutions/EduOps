@@ -285,12 +285,31 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
     };
 
     const hasChanges = () => {
-        return (
-            formData.title !== postData.title ||
-            formData.content !== postData.content ||
-            formData.selectedImages.length > 0 ||
-            formData.selectedFiles.length > 0
-        );
+        // Defensive: fallback to empty string/defaults for undefined
+        const origTitle = postData.title || '';
+        const origContent = postData.content || '';
+        const origTag = postData.tag || 'global';
+        const origSendOption = postData.sendOption || 'email';
+        const origFiles = Array.isArray(postData.files) ? postData.files : [];
+
+        if (formData.title !== origTitle) return true;
+        if (formData.content !== origContent) return true;
+        if (formData.tag !== origTag) return true;
+        if (formData.sendOption !== origSendOption) return true;
+
+        // New images/files added
+        if (formData.selectedImages.length > 0) return true;
+        if (formData.selectedFiles.length > 0) return true;
+
+        // Existing attachments removed
+        const originalFileIds = origFiles.map(f => f.id).sort();
+        const currentFileIds = [...existingImages, ...existingDocuments].map(f => f.id).sort();
+        if (originalFileIds.length !== currentFileIds.length) return true;
+        for (let i = 0; i < originalFileIds.length; i++) {
+            if (originalFileIds[i] !== currentFileIds[i]) return true;
+        }
+
+        return false;
     };
 
     const handleClose = () => {
