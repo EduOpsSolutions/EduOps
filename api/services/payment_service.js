@@ -1,11 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 import {
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-} from "../constants/payment_constants.js";
-import { sendPaymentLinkEmail, sendPaymentReceiptEmail } from "./paymentEmailService.js";
+} from '../constants/payment_constants.js';
+import {
+  sendPaymentLinkEmail,
+  sendPaymentReceiptEmail,
+} from './paymentEmailService.js';
+import { logSecurityEvent } from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 const prisma = new PrismaClient();
 
@@ -16,19 +21,19 @@ const prisma = new PrismaClient();
  * @returns {Promise<string>} Unique payment ID
  */
 export const generatePaymentId = async () => {
-
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const date = new Date();
-  const dateStr = date.getFullYear() + 
-                  String(date.getMonth() + 1).padStart(2, '0') + 
-                  String(date.getDate()).padStart(2, '0');
+  const dateStr =
+    date.getFullYear() +
+    String(date.getMonth() + 1).padStart(2, '0') +
+    String(date.getDate()).padStart(2, '0');
 
   let paymentId;
 
   do {
     const suffix = Array.from({ length: 5 }, () =>
       chars.charAt(Math.floor(Math.random() * chars.length))
-    ).join("");
+    ).join('');
     paymentId = `PAY-${dateStr}-${suffix}`;
     const existing = await prisma.payments.findUnique({
       where: { transactionId: paymentId },
@@ -55,17 +60,17 @@ const calculatePagination = (page, limit, total) => {
  */
 const mapPayMongoStatusToPrisma = (paymongoStatus) => {
   const statusMap = {
-    'paid': 'paid',
-    'pending': 'pending', 
-    'unpaid': 'failed', 
-    'failed': 'failed',
-    'expired': 'failed', 
-    'cancelled': 'cancelled',
-    'canceled': 'cancelled',
-    'refunded': 'refunded'
+    paid: 'paid',
+    pending: 'pending',
+    unpaid: 'failed',
+    failed: 'failed',
+    expired: 'failed',
+    cancelled: 'cancelled',
+    canceled: 'cancelled',
+    refunded: 'refunded',
   };
-  
-  return statusMap[paymongoStatus] || 'pending'; 
+
+  return statusMap[paymongoStatus] || 'pending';
 };
 
 /**
@@ -76,9 +81,11 @@ const mapPayMongoStatusToPrisma = (paymongoStatus) => {
  */
 const transformPaymentForFrontend = (payment, _options) => {
   if (!payment.user && payment.userId) {
-    console.log(`Payment ${payment.id} has userId ${payment.userId} but no user relation loaded`);
+    console.log(
+      `Payment ${payment.id} has userId ${payment.userId} but no user relation loaded`
+    );
   }
-  
+
   return {
     id: payment.id,
     transactionId: payment.transactionId || payment.id,
@@ -91,8 +98,8 @@ const transformPaymentForFrontend = (payment, _options) => {
     paidAt: payment.paidAt || null,
     createdAt: payment.createdAt,
     updatedAt: payment.updatedAt,
-    userId: payment.user ? payment.user.id : null, 
-    studentId: payment.user ? payment.user.userId : null, 
+    userId: payment.user ? payment.user.id : null,
+    studentId: payment.user ? payment.user.userId : null,
     firstName: payment.user ? payment.user.firstName : null,
     lastName: payment.user ? payment.user.lastName : null,
     email: payment.user ? payment.user.email : null,
@@ -126,7 +133,7 @@ const buildPaymentWhereClause = (filters = {}) => {
   return where;
 };
 
-// Core Payment Operations 
+// Core Payment Operations
 /**
  * Create manual payment (Physical Payment)
  * @param {Object} transactionData - Transaction data
@@ -144,13 +151,13 @@ export const createManualPayment = async (transactionData) => {
     referenceNumber,
     remarks,
     academicPeriodId,
-    courseId
+    courseId,
   } = transactionData;
 
   const user = await prisma.users.findUnique({
     where: {
-      userId: studentId
-    }
+      userId: studentId,
+    },
   });
 
   if (!user) {
@@ -162,10 +169,10 @@ export const createManualPayment = async (transactionData) => {
   // Create payment record for manual transaction
   const paymentData = {
     transactionId: customTransactionId,
-    userId: user.id, 
+    userId: user.id,
     amount: parseFloat(amountPaid),
     status: PAYMENT_STATUS.PAID,
-    paymentMethod: paymentMethod || "Physical Payment",
+    paymentMethod: paymentMethod || 'Physical Payment',
     referenceNumber: referenceNumber,
     feeType: purpose,
     remarks: remarks || null,
@@ -173,7 +180,7 @@ export const createManualPayment = async (transactionData) => {
     academicPeriodId: academicPeriodId || null,
     courseId: courseId || null,
   };
-  
+
   console.log('Creating payment with data:', paymentData);
   const payment = await prisma.payments.create({
     data: paymentData,
@@ -259,7 +266,7 @@ export const getPaymentsByUser = async (userId, options = {}) => {
   const [payments, total] = await Promise.all([
     prisma.payments.findMany({
       where: whereClause,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: parseInt(limit),
       include: PAYMENT_INCLUDES.WITH_USER,
@@ -286,7 +293,7 @@ export const getAllTransactions = async (options = {}) => {
   const [payments, total] = await Promise.all([
     prisma.payments.findMany({
       where: whereClause,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: parseInt(limit),
       include: PAYMENT_INCLUDES.WITH_USER,
@@ -314,8 +321,8 @@ export const getAvailablePaymentMethods = async () => {
     methods: [
       { id: 'gcash', name: 'GCash', type: 'gcash' },
       { id: 'maya', name: 'Maya', type: 'maya' },
-      { id: 'card', name: 'Credit/Debit Card', type: 'card' }
-    ]
+      { id: 'card', name: 'Credit/Debit Card', type: 'card' },
+    ],
   };
 };
 
@@ -338,16 +345,18 @@ export const forceSyncPaymentStatus = async (paymentId) => {
     return {
       paymentId: payment.id,
       status: payment.status,
-      message: "Not an online payment, no sync needed"
+      message: 'Not an online payment, no sync needed',
     };
   }
 
-  console.log(`Force syncing payment ${paymentId} with reference: ${payment.referenceNumber}`);
-  
+  console.log(
+    `Force syncing payment ${paymentId} with reference: ${payment.referenceNumber}`
+  );
+
   return {
     paymentId: payment.id,
     status: payment.status,
-    message: "Payment status retrieved"
+    message: 'Payment status retrieved',
   };
 };
 
@@ -360,10 +369,10 @@ export const bulkSyncPendingPayments = async () => {
   const pendingPayments = await prisma.payments.findMany({
     where: {
       status: PAYMENT_STATUS.PENDING,
-      referenceNumber: { not: null }, 
-      createdAt: { lt: twoMinutesAgo }, 
+      referenceNumber: { not: null },
+      createdAt: { lt: twoMinutesAgo },
     },
-    take: 50, 
+    take: 50,
   });
 
   let updatedCount = 0;
@@ -372,30 +381,32 @@ export const bulkSyncPendingPayments = async () => {
   for (const payment of pendingPayments) {
     try {
       const syncResult = await forceSyncPaymentStatus(payment.id);
-      
+
       if (syncResult.previousStatus !== syncResult.newStatus) {
         updatedCount++;
       }
-      
+
       results.push(syncResult);
-      
+
       // Add small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
       console.error(`Error bulk syncing payment ${payment.id}:`, error);
       results.push({
         paymentId: payment.id,
-        error: error.message
+        error: error.message,
       });
     }
   }
 
-  console.log(`Bulk sync completed. Updated ${updatedCount} out of ${pendingPayments.length} payments.`);
-  
+  console.log(
+    `Bulk sync completed. Updated ${updatedCount} out of ${pendingPayments.length} payments.`
+  );
+
   return {
     totalChecked: pendingPayments.length,
     totalUpdated: updatedCount,
-    results
+    results,
   };
 };
 
@@ -406,17 +417,17 @@ export const bulkSyncPendingPayments = async () => {
  */
 export const cleanupOrphanedPayments = async () => {
   console.log('Starting orphaned payments cleanup...');
-  
+
   // Find pending payments older than 24 hours
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  
+
   const pendingPayments = await prisma.payments.findMany({
     where: {
       status: PAYMENT_STATUS.PENDING,
       referenceNumber: { not: null },
       createdAt: { lt: oneDayAgo },
     },
-    take: 50, 
+    take: 50,
   });
 
   let updatedCount = 0;
@@ -424,44 +435,50 @@ export const cleanupOrphanedPayments = async () => {
 
   for (const payment of pendingPayments) {
     try {
-      console.log(`Checking orphaned payment ${payment.id} with reference: ${payment.referenceNumber}`);
-      
+      console.log(
+        `Checking orphaned payment ${payment.id} with reference: ${payment.referenceNumber}`
+      );
+
       // Mark old pending payments as failed
-      console.log(`Marking old pending payment ${payment.id} as failed (PIPM flow)`);
-      
+      console.log(
+        `Marking old pending payment ${payment.id} as failed (PIPM flow)`
+      );
+
       await prisma.payments.update({
         where: { id: payment.id },
         data: {
-          status: "failed",
+          status: 'failed',
         },
       });
-      
+
       updatedCount++;
       results.push({
         paymentId: payment.id,
         action: 'marked_as_failed',
-        reason: 'Payment expired'
+        reason: 'Payment expired',
       });
     } catch (error) {
       console.error(`Error checking orphaned payment ${payment.id}:`, error);
       results.push({
         paymentId: payment.id,
         action: 'error',
-        error: error.message
+        error: error.message,
       });
     }
   }
 
-  console.log(`Orphaned payments cleanup completed. Updated ${updatedCount} payments.`);
-  
+  console.log(
+    `Orphaned payments cleanup completed. Updated ${updatedCount} payments.`
+  );
+
   return {
     totalChecked: pendingPayments.length,
     totalUpdated: updatedCount,
-    results
+    results,
   };
 };
 
-// Response Helpers 
+// Response Helpers
 /**
  * Send success response
  * @param {Object} res - Express response object
@@ -473,7 +490,7 @@ export const cleanupOrphanedPayments = async () => {
 export const sendSuccess = (
   res,
   data,
-  message = "Operation successful",
+  message = 'Operation successful',
   statusCode = 200
 ) => {
   return res.status(statusCode).json({ success: true, message, data });
@@ -485,18 +502,10 @@ export const sendSuccess = (
  * @returns {Promise<Object>} Email send result
  */
 export const sendPaymentLinkViaEmail = async (paymentData) => {
-  const {
-    email,
-    firstName,
-    lastName,
-    amount,
-    description,
-    feeType,
-    userId
-  } = paymentData;
+  const { email, firstName, lastName, amount, description, feeType, userId } =
+    paymentData;
 
   try {
-
     const customTransactionId = await generatePaymentId();
 
     const payment = await prisma.payments.create({
@@ -505,7 +514,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         userId: userId || null,
         amount: parseFloat(amount),
         status: PAYMENT_STATUS.PENDING,
-        paymentMethod: "Online Payment", 
+        paymentMethod: 'Online Payment',
         feeType: feeType || 'tuition_fee',
         remarks: description || `Payment for ${firstName} ${lastName}`,
         paymentEmail: email, // Store the email from payment form
@@ -513,13 +522,14 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     });
 
     console.log(`Created pending payment record: ${payment.id}`);
-    
-  // Use dynamic baseUrl for production and development
-  const isProd = process.env.ENVIRONMENT === 'production';
-  const baseUrl = isProd
-    ? process.env.PRODUCTION_CLIENT_URL || 'https://preprod-eduops.danred-server.uk'
-    : process.env.CLIENT_URL || 'http://localhost:3000';
-  const checkoutUrl = `${baseUrl}/payment?paymentId=${payment.id}`;
+
+    // Use dynamic baseUrl for production and development
+    const isProd = process.env.ENVIRONMENT === 'production';
+    const baseUrl = isProd
+      ? process.env.PRODUCTION_CLIENT_URL ||
+        'https://preprod-eduops.danred-server.uk'
+      : process.env.CLIENT_URL || 'http://localhost:3000';
+    const checkoutUrl = `${baseUrl}/payment?paymentId=${payment.id}`;
 
     // User and payment details for email
     const user = { firstName, lastName };
@@ -537,23 +547,56 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     );
 
     if (emailSent) {
+      // Log successful payment link creation
+      logSecurityEvent(
+        'Payment link created and sent',
+        userId || 'GUEST',
+        MODULE_TYPES.PAYMENTS,
+        `Payment link created: Transaction ID [${customTransactionId}] for ${firstName} ${lastName} (${email}). Amount: ₱${parseFloat(
+          amount
+        ).toFixed(2)}, Fee Type: ${feeType || 'tuition_fee'}, Description: ${
+          description || 'N/A'
+        }`
+      );
+
       return {
         success: true,
-        message: "Payment link sent to your email successfully!",
-        paymentId: payment.id
+        message: 'Payment link sent to your email successfully!',
+        paymentId: payment.id,
       };
     } else {
+      // Log failed email send
+      logSecurityEvent(
+        'Payment link email failed',
+        userId || 'GUEST',
+        MODULE_TYPES.PAYMENTS,
+        `Failed to send payment link email for Transaction ID [${customTransactionId}] to ${email}. Amount: ₱${parseFloat(
+          amount
+        ).toFixed(2)}`
+      );
+
       await prisma.payments.delete({
-        where: { id: payment.id }
+        where: { id: payment.id },
       });
-      throw new Error("Failed to send email");
+      throw new Error('Failed to send email');
     }
   } catch (error) {
-    console.error("Error sending payment link via email:", error);
+    console.error('Error sending payment link via email:', error);
+
+    // Log payment link creation failure
+    logSecurityEvent(
+      'Payment link creation failed',
+      userId || 'GUEST',
+      MODULE_TYPES.PAYMENTS,
+      `Error creating payment link for ${firstName} ${lastName} (${email}). Amount: ₱${parseFloat(
+        amount
+      ).toFixed(2)}, Error: ${error.message}`
+    );
+
     return {
       success: false,
-      message: "Failed to send payment link via email",
-      error: error.message
+      message: 'Failed to send payment link via email',
+      error: error.message,
     };
   }
 };

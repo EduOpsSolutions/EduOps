@@ -8,7 +8,7 @@ const ResetPasswordModal = ({
   reset_password_modal,
   setResetPasswordModal,
   userId,
-  userName
+  userName,
 }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -23,23 +23,38 @@ const ResetPasswordModal = ({
 
     // Validation
     if (!newPassword || !confirmNewPassword) {
-      setError('Please fill in all password fields');
+      await Swal.fire({
+        title: 'Validation Error',
+        text: 'Please fill in all password fields',
+        icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      setError('New password and confirm password do not match');
+      await Swal.fire({
+        title: 'Validation Error',
+        text: 'New password and confirm password do not match',
+        icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters long');
+      await Swal.fire({
+        title: 'Validation Error',
+        text: 'New password must be at least 6 characters long',
+        icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
       return;
     }
 
     const result = await Swal.fire({
       title: 'Reset Password',
-      text: 'Are you sure you want to reset this user\'s password?',
+      text: "Are you sure you want to reset this user's password?",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Reset Password',
@@ -84,15 +99,25 @@ const ResetPasswordModal = ({
         setShowConfirmPassword(false);
         setResetPasswordModal(false);
       } else {
-        setError(response.data.message || 'Something went wrong!');
+        await Swal.fire({
+          title: 'Error',
+          text: response.data.message || 'Something went wrong!',
+          icon: 'error',
+          confirmButtonColor: '#890E07',
+        });
       }
     } catch (error) {
       console.error('Something went wrong!', error);
-      setError(
+      const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        'Something went wrong!'
-      );
+        'Something went wrong!';
+      await Swal.fire({
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +139,10 @@ const ResetPasswordModal = ({
         confirmButtonColor: '#992525',
         cancelButtonColor: '#6B7280',
       }).then((result) => {
-        if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
+        if (
+          result.isDismissed ||
+          result.dismiss === Swal.DismissReason.cancel
+        ) {
           setNewPassword('');
           setConfirmNewPassword('');
           setError('');
@@ -166,14 +194,20 @@ const ResetPasswordModal = ({
                 }}
                 placeholder="Enter new password"
                 required
-                className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
+                disabled={isLoading}
+                className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
               <button
                 type="button"
-                className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
+                disabled={isLoading}
+                className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setShowNewPassword(!showNewPassword)}
               >
-                {showNewPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                {showNewPassword ? (
+                  <BsEye size={18} />
+                ) : (
+                  <BsEyeSlash size={18} />
+                )}
               </button>
             </div>
           </div>
@@ -194,14 +228,20 @@ const ResetPasswordModal = ({
                 }}
                 placeholder="Confirm new password"
                 required
-                className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
+                disabled={isLoading}
+                className="w-full border border-dark-red-2 rounded px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
               <button
                 type="button"
-                className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none"
+                disabled={isLoading}
+                className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-700 hover:text-dark-red-2 transition-colors duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                {showConfirmPassword ? <BsEye size={18} /> : <BsEyeSlash size={18} />}
+                {showConfirmPassword ? (
+                  <BsEye size={18} />
+                ) : (
+                  <BsEyeSlash size={18} />
+                )}
               </button>
             </div>
           </div>
