@@ -98,6 +98,43 @@ function PaymentForm() {
       const paymentData = preparePaymentData();
       const feeLabel = getFeeTypeLabel(paymentData.feeType);
       const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
+
+      // For document fees, bypass email and go directly to payment
+      if (paymentData.feeType === 'document_fee') {
+        Swal.fire({
+          title: 'Redirecting to Payment...',
+          text: 'Please wait while we prepare your payment page.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Navigate directly to payment page
+        localStorage.setItem("totalPayment", paymentData.amount.toString());
+        
+        setTimeout(() => {
+          Swal.close();
+          navigate("/payment", {
+            state: {
+              amount: paymentData.amount,
+              description: description,
+              studentInfo: {
+                firstName: paymentData.firstName,
+                lastName: paymentData.lastName,
+                email: paymentData.email,
+                phone: paymentData.phoneNumber,
+                studentId: paymentData.studentId
+              }
+            }
+          });
+          resetForm();
+        }, 500);
+        
+        return;
+      }
+
+      // For other fee types, send email with payment link
       const emailData = {
         email: paymentData.email,
         firstName: paymentData.firstName,

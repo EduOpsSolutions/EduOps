@@ -372,6 +372,12 @@ export const createDocumentRequest = async (req, res) => {
 
     // Get user details to populate firstName and lastName
     const user = await DocumentModel.getUserById(userId);
+
+    // If payment method is online and document has a price, set paymentAmount
+    let paymentAmount = null;
+    if (paymentMethod === 'online' && document.price === 'paid' && document.amount) {
+      paymentAmount = document.amount;
+    }
     
     const requestData = {
       studentId: userId,
@@ -381,6 +387,8 @@ export const createDocumentRequest = async (req, res) => {
       lastName: user?.lastName,
       phone,
       mode: mode || 'pickup',
+      paymentMethod,
+      paymentAmount,
       address: mode === 'delivery' ? address : null,
       city: mode === 'delivery' ? city : null,
       purpose,
@@ -608,6 +616,167 @@ export const uploadProofOfPayment = async (req, res) => {
   }
 };
 
+export const uploadFulfilledDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.data.role;
+
+    // Only admins can upload fulfilled documents
+    if (userRole !== 'admin') {
+      return res.status(403).json({
+        error: true,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    // Get the document request
+    const request = await DocumentModel.getDocumentRequestById(id);
+    if (!request) {
+      return res.status(404).json({
+        error: true,
+        message: 'Document request not found'
+      });
+    }
+
+    // If no file is provided, remove the fulfilled document
+    if (!req.file) {
+      const updatedRequest = await DocumentModel.updateFulfilledDocument(id, null);
+      return res.json({
+        error: false,
+        data: updatedRequest,
+        message: 'Fulfilled document removed successfully'
+      });
+    }
+
+    // Upload new file to Firebase Storage
+    const uploadResult = await uploadFile(
+      req.file,
+      filePaths.documents,
+      `fulfilled_${request.documentId}_${request.userId}_${Date.now()}`
+    );
+
+    if (!uploadResult || !uploadResult.downloadURL) {
+      throw new Error('Failed to upload file to storage');
+    }
+
+    // Update document request with fulfilled document URL
+    const updatedRequest = await DocumentModel.updateFulfilledDocument(id, uploadResult.downloadURL);
+
+    res.json({
+      error: false,
+      data: updatedRequest,
+      message: 'Fulfilled document uploaded successfully'
+    });
+
+  } catch (error) {
+    console.error('Upload fulfilled document error:', error);
+    res.status(500).json({
+      error: true,
+      message: error.message || 'Failed to upload fulfilled document'
+    });
+  }
+};
+
+export const createDocumentPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.data.id;
+    const userRole = req.user.data.role;
+
+    // Only students and teachers can create payments
+    if (!['student', 'teacher'].includes(userRole)) {
+      return res.status(403).json({
+        error: true,
+        message: 'Access denied. Only students and teachers can create payments.'
+      });
+    }
+
+    // Get the document request
+    const request = await DocumentModel.getDocumentRequestById(id);
+    if (!request) {
+      return res.status(404).json({
+        error: true,
+        message: 'Document request not found'
+      });
+    }
+
+    // Verify ownership
+    if (request.userId !== userId) {
+      return res.status(403).json({
+        error: true,
+        message: 'Access denied. You can only create payments for your own requests.'
+      });
+    }
+
+    // Check if document has a price
+    const document = request.document;
+    if (!document || document.price === 'free' || !document.amount) {
+      return res.status(400).json({
+        error: true,
+        message: 'This document is free or has no amount set'
+      });
+    }
+
+    // Check if payment already exists and is paid
+    if (request.paymentStatus === 'paid') {
+      return res.status(400).json({
+        error: true,
+        message: 'Payment already completed for this request'
+      });
+    }
+
+    // Create PayMongo payment link
+    const { createPaymentLink } = await import('../services/paymongo_service.js');
+    
+    const paymentLinkData = {
+      amount: parseFloat(document.amount),
+      description: `Payment for ${document.documentName}`,
+      remarks: `Document Request ID: ${request.id}`,
+      reference_number: request.id,
+    };
+
+    const paymentLinkResult = await createPaymentLink(paymentLinkData);
+
+    if (!paymentLinkResult.success) {
+      return res.status(500).json({
+        error: true,
+        message: paymentLinkResult.message || 'Failed to create payment link'
+      });
+    }
+
+    // Update document request with payment details
+    const paymentUrl = paymentLinkResult.data.data.attributes.checkout_url;
+    const paymentId = paymentLinkResult.data.data.id;
+
+    const updatedRequest = await DocumentModel.updateDocumentRequestPayment(
+      id,
+      {
+        paymentMethod: 'online',
+        paymentStatus: 'pending',
+        paymentAmount: parseFloat(document.amount),
+        paymentUrl,
+        paymentId,
+      }
+    );
+
+    res.json({
+      error: false,
+      data: {
+        ...updatedRequest,
+        paymentUrl,
+      },
+      message: 'Payment link created successfully'
+    });
+
+  } catch (error) {
+    console.error('Create document payment error:', error);
+    res.status(500).json({
+      error: true,
+      message: error.message || 'Failed to create payment'
+    });
+  }
+};
+
 // Document Validation (Admin Only)
 
 export const createDocumentValidation = async (req, res) => {
@@ -635,8 +804,8 @@ export const createDocumentValidation = async (req, res) => {
     // Handle file upload
     let filePath = null;
     if (req.file) {
-      const fileResult = await uploadFile(req.file, filePaths.documents);  // Changed from saveFile to uploadFile
-      filePath = fileResult.downloadURL;  // Changed from url to downloadURL
+      const fileResult = await uploadFile(req.file, filePaths.documents);  
+      filePath = fileResult.downloadURL;  
     }
 
     const validationData = {

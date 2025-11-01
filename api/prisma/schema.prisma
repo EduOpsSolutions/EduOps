@@ -37,7 +37,7 @@ model users {
   teacherSchedules    schedule[]            @relation("TeacherSchedules")
   enrollments         student_enrollment[]  @relation("StudentEnrollments")
   studentSchedules    user_schedule[]       @relation("StudentSchedules")
-  notifications notification[]
+  notifications       notification[]
 }
 
 model enrollment_request {
@@ -345,25 +345,31 @@ model document_template {
 }
 
 model document_request {
-  id              String                @id @default(cuid())
-  documentId      String
-  userId          String?
-  email           String
-  firstName       String?
-  lastName        String?
-  phone           String?
-  mode            DeliveryMode?         @default(pickup)
-  address         String?
-  city            String?
-  purpose         String?               @db.Text
-  additionalNotes String?               @db.Text
-  status          DocumentRequestStatus @default(in_process)
-  remarks         String?               @db.Text
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  proofOfPayment  String?               @db.LongText
-  document        document_template     @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  user            users?                @relation("UserDocumentRequests", fields: [userId], references: [id])
+  id                   String                @id @default(cuid())
+  documentId           String
+  userId               String?
+  email                String
+  firstName            String?
+  lastName             String?
+  phone                String?
+  mode                 DeliveryMode?         @default(pickup)
+  paymentMethod        String?
+  address              String?
+  city                 String?
+  purpose              String?               @db.Text
+  additionalNotes      String?               @db.Text
+  status               DocumentRequestStatus @default(in_process)
+  remarks              String?               @db.Text
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  proofOfPayment       String?               @db.LongText
+  paymentStatus        String?               @default("pending")
+  paymentAmount        Decimal?              @db.Decimal(10, 2)
+  paymentUrl           String?               @db.LongText
+  paymentId            String?
+  fulfilledDocumentUrl String?               @db.LongText
+  document             document_template     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user                 users?                @relation("UserDocumentRequests", fields: [userId], references: [id])
 
   @@index([documentId], map: "document_request_documentId_fkey")
   @@index([userId], map: "document_request_userId_fkey")
