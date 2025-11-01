@@ -37,9 +37,8 @@ function RequestDocumentModal(props) {
 
     // Payment options
     const paymentOptions = [
-        { value: 'online', label: 'Online (Maya)' },
-        { value: 'cod', label: 'Cash on Delivery' },
-        { value: 'cashPickup', label: 'Cash (Pay upon Pickup)' },
+        { value: 'cash', label: 'Cash (Pickup Only)' },
+        { value: 'online', label: 'Pay Online' },
     ];
 
     // Mode options
@@ -54,6 +53,11 @@ function RequestDocumentModal(props) {
             ...prev,
             [name]: value
         }));
+        
+        // If payment method is changed to cash, lock mode to pickup
+        if (name === 'paymentMethod' && value === 'cash') {
+            setSelectedMode('pickup');
+        }
         
         // Clear error when user starts typing
         if (errors[name]) {
@@ -192,10 +196,11 @@ function RequestDocumentModal(props) {
                                     <select
                                         name="mode"
                                         id="mode"
-                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${formData.paymentMethod === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         required
                                         value={selectedMode}
                                         onChange={(e) => setSelectedMode(e.target.value)}
+                                        disabled={formData.paymentMethod === 'cash'}
                                     >
                                         {pickupOptions.map((option, index) => (
                                             <option key={index} value={option.value}>
@@ -203,6 +208,9 @@ function RequestDocumentModal(props) {
                                             </option>
                                         ))}
                                     </select>
+                                    {formData.paymentMethod === 'cash' && (
+                                        <p className="text-xs text-gray-500 mt-1">Cash payment is only available for pickup</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="col-span-2">

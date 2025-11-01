@@ -105,13 +105,9 @@ export const createDocumentTemplate = async (req, res) => {
 
   } catch (error) {
     console.error('Create document template error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Request body:', req.body);
-    console.error('Request file:', req.file);
     res.status(500).json({
       error: true,
-      message: error.message || 'Failed to create document template',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      message: error.message || 'Failed to create document template'
     });
   }
 };
@@ -523,27 +519,11 @@ export const updateDocumentRequestStatus = async (req, res) => {
 
 export const uploadProofOfPayment = async (req, res) => {
   try {
-    console.log('Upload proof of payment - Request received');
-    console.log('Request ID:', req.params.id);
-    console.log('User ID:', req.user?.data?.id);
-    console.log('User Role:', req.user?.data?.role);
-    console.log('File received:', req.file ? 'Yes' : 'No');
-    if (req.file) {
-      console.log('File details:', {
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size
-      });
-    }
-
     const { id } = req.params;
     const userId = req.user.data.id;
     const userRole = req.user.data.role;
 
-    // Check if request exists
-    console.log('Fetching document request...');
     const request = await DocumentModel.getDocumentRequestById(id);
-    console.log('Document request found:', request ? 'Yes' : 'No');
     if (!request) {
       return res.status(404).json({
         error: true,
@@ -551,21 +531,15 @@ export const uploadProofOfPayment = async (req, res) => {
       });
     }
 
-    // Students/teachers can only upload proof for their own requests
     if (userRole !== 'admin' && request.userId !== userId) {
-      console.log('Access denied - User ID mismatch');
       return res.status(403).json({
         error: true,
         message: 'Access denied. You can only upload proof of payment for your own requests.'
       });
     }
 
-    // Check if this is a removal request (no file uploaded)
     if (!req.file) {
-      console.log('No file received - removing proof of payment');
-      // Remove proof of payment
       const updatedRequest = await DocumentModel.updateDocumentRequestProofOfPayment(id, null);
-      
       return res.json({
         error: false,
         data: updatedRequest,
@@ -573,24 +547,18 @@ export const uploadProofOfPayment = async (req, res) => {
       });
     }
 
-    // Upload the file
-    console.log('Starting file upload to Firebase...');
     const { uploadFile } = await import('../utils/fileStorage.js');
     const { filePaths } = await import('../constants/file_paths.js');
     const uploadResult = await uploadFile(req.file, filePaths.documents);
-    console.log('Upload result:', uploadResult);
 
     if (!uploadResult || !uploadResult.downloadURL) {
-      console.error('Upload failed - no download URL');
       return res.status(500).json({
         error: true,
         message: 'Failed to upload file'
       });
     }
 
-    console.log('File uploaded successfully, updating database...');
     const updatedRequest = await DocumentModel.updateDocumentRequestProofOfPayment(id, uploadResult.downloadURL);
-    console.log('Database updated successfully');
 
     res.json({
       error: false,
@@ -600,10 +568,75 @@ export const uploadProofOfPayment = async (req, res) => {
 
   } catch (error) {
     console.error('Upload proof of payment error:', error);
-    console.error('Error stack:', error.stack);
     res.status(500).json({
       error: true,
       message: error.message || 'Failed to upload proof of payment'
+    });
+  }
+};
+
+export const uploadCompletedDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.data.role;
+
+    if (userRole !== 'admin') {
+      return res.status(403).json({
+        error: true,
+        message: 'Access denied. Only admins can upload completed documents.'
+      });
+    }
+
+    const request = await DocumentModel.getDocumentRequestById(id);
+    if (!request) {
+      return res.status(404).json({
+        error: true,
+        message: 'Document request not found'
+      });
+    }
+
+    let completedDocumentUrl = null;
+
+    if (req.file) {
+      const { uploadFile } = await import('../utils/fileStorage.js');
+      const { filePaths } = await import('../constants/file_paths.js');
+      const uploadResult = await uploadFile(req.file, filePaths.documents);
+
+      if (!uploadResult || !uploadResult.downloadURL) {
+        return res.status(500).json({
+          error: true,
+          message: 'Failed to upload file'
+        });
+      }
+
+      completedDocumentUrl = uploadResult.downloadURL;
+    } else if (req.body.fulfilledDocumentUrl === null) {
+      completedDocumentUrl = null;
+    } else {
+      return res.status(400).json({
+        error: true,
+        message: 'No file provided'
+      });
+    }
+
+    const updatedRequest = await DocumentModel.updateDocumentRequestCompletedDocument(
+      id,
+      completedDocumentUrl
+    );
+
+    res.json({
+      error: false,
+      data: updatedRequest,
+      message: completedDocumentUrl 
+        ? 'Completed document uploaded successfully' 
+        : 'Completed document removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Upload completed document error:', error);
+    res.status(500).json({
+      error: true,
+      message: error.message || 'Failed to upload completed document'
     });
   }
 };
@@ -635,8 +668,8 @@ export const createDocumentValidation = async (req, res) => {
     // Handle file upload
     let filePath = null;
     if (req.file) {
-      const fileResult = await uploadFile(req.file, filePaths.documents);  // Changed from saveFile to uploadFile
-      filePath = fileResult.downloadURL;  // Changed from url to downloadURL
+      const fileResult = await uploadFile(req.file, filePaths.documents);  
+      filePath = fileResult.downloadURL;  
     }
 
     const validationData = {

@@ -115,6 +115,27 @@ export const documentRequestsApi = {
       proofOfPayment: null
     });
     return response.data;
+  },
+
+  // Upload completed document (admin only)
+  uploadCompletedDocument: async (id, file) => {
+    const formData = new FormData();
+    formData.append('completedDocument', file);
+    
+    const response = await axiosInstance.patch(`/documents/requests/${id}/completed-document`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Remove completed document (admin only)
+  removeCompletedDocument: async (id) => {
+    const response = await axiosInstance.patch(`/documents/requests/${id}/completed-document`, {
+      fulfilledDocumentUrl: null
+    });
+    return response.data;
   }
 };
 
@@ -229,7 +250,7 @@ export const documentHelpers = {
       errors.email = 'Valid email is required';
     }
 
-    if (!requestData.phone || !/^[\d\s\-\+\(\)]+$/.test(requestData.phone)) {
+    if (!requestData.phone || !/^[\d\s\-+()]+$/.test(requestData.phone)) {
       errors.phone = 'Valid phone number is required';
     }
 
