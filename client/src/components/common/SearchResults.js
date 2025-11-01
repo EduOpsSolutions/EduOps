@@ -19,7 +19,8 @@ const SearchResults = ({
   pagination,
   actionButton = null,
   title = "SEARCH RESULTS",
-  columnRenderers = {}
+  columnRenderers = {},
+  emptyMessage = "No items found"
 }) => {
   if (!visible) return null;
   
@@ -74,7 +75,7 @@ const SearchResults = ({
                   colSpan={columns.length}
                   className="text-center py-6 sm:py-8 text-gray-500 border-t border-b border-dark-red-2 text-sm sm:text-base"
                 >
-                  No items found
+                  {emptyMessage}
                 </td>
               </tr>
             )}
