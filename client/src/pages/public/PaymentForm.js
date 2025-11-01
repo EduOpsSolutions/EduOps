@@ -61,7 +61,7 @@ function PaymentForm() {
         icon: "warning",
         title: "Missing Required Fields",
         text: "Please fill in all required fields before submitting.",
-        confirmButtonColor: "#b71c1c",
+        confirmButtonColor: "#992525",
       });
       return;
     }

@@ -246,7 +246,7 @@ const useManageDocumentsStore = create((set, get) => ({
         text: 'This document will be permanently deleted.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#dc2626',
+        confirmButtonColor: '#992525',
         cancelButtonColor: '#6b7280',
         confirmButtonText: 'Yes, delete it!',
         cancelButtonText: 'Cancel'

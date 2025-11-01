@@ -375,7 +375,7 @@ function SignUp() {
         title: 'Error!',
         text: error.message,
         icon: 'error',
-        confirmButtonColor: '#ef4444',
+  confirmButtonColor: '#992525',
         confirmButtonText: 'Try Again',
       });
     } finally {
