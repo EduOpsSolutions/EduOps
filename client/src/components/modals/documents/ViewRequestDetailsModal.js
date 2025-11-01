@@ -330,12 +330,12 @@ function ViewRequestDetailsModal() {
 
             {/* Proof of Payment Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-3 md:col-span-2">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-              <svg className="w-4 h-4 text-dark-red-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Proof of Payment
-            </h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-dark-red-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Proof of Payment
+              </h4>
               
               {selectedRequest.proofOfPayment ? (
                 <div className="space-y-2">
@@ -385,6 +385,8 @@ function ViewRequestDetailsModal() {
                           </svg>
                           <span className="text-sm text-yellow-700">No proof of payment uploaded</span>
                         </div>
+                      </div>
+                      <div>
                         <input
                           ref={fileInputRef}
                           type="file"
@@ -396,17 +398,14 @@ function ViewRequestDetailsModal() {
                         />
                         <label
                           htmlFor="proof-upload"
-                          className={`bg-dark-red-2 hover:bg-dark-red-5 text-white p-2 rounded cursor-pointer transition-colors duration-150 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          title="Upload proof of payment"
+                          className={`block w-full text-center bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded font-medium cursor-pointer transition-colors duration-150 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
+                          {uploading ? 'Uploading...' : 'Upload Proof of Payment'}
                         </label>
+                        <p className="text-xs text-gray-500 mt-1 text-center">
+                          Accepted: JPG, PNG, GIF, PDF (Max 5MB)
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 text-center">
-                        Accepted: JPG, PNG, GIF, PDF (Max 5MB)
-                      </p>
                     </>
                   ) : (
                     <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded">
@@ -416,8 +415,8 @@ function ViewRequestDetailsModal() {
                       <span className="text-sm text-gray-500">No proof of payment uploaded</span>
                     </div>
                   )}
-              </div>
-            )}
+                </div>
+              )}
             </div>
           </div>
 
