@@ -112,7 +112,7 @@ function Enrollment() {
     if (paymentProof && !isUploadingPaymentProof) {
       return <StatusIndicator type="success">File uploaded successfully: {paymentProof.name}</StatusIndicator>;
     }
-    if (hasPaymentProof && !paymentProof && !isUploadingPaymentProof) {
+    if (hasPaymentProof && !paymentProof && !isUploadingPaymentProof && enrollmentStatus?.toLowerCase() !== "rejected") {
       return <StatusIndicator type="success">Payment proof already uploaded and being processed</StatusIndicator>;
     }
     return null;
@@ -250,7 +250,11 @@ function Enrollment() {
                         : "bg-slate-50 text-slate-700 border border-slate-200"
                     }`}
                   >
-                    {enrollmentStatus?.replace(/_/g, ' ').toUpperCase()}
+                    {enrollmentStatus?.toLowerCase() === "rejected"
+                      ? currentStep === 3
+                        ? "PAYMENT REJECTED"
+                        : "FORM REJECTED"
+                      : enrollmentStatus?.replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>
                 {createdAt && (

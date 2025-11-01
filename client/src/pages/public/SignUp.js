@@ -256,7 +256,7 @@ function SignUp() {
         params: { email },
       });
       if (res.data && res.data.exists) {
-        setEmailError("This email is already used in an enrollment request.");
+        setEmailError("This email is already used.");
       } else {
         setEmailError("");
       }

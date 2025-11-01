@@ -489,7 +489,15 @@ function EnrollmentRequests() {
                                   title={request.enrollmentStatus || 'N/A'}
                                 >
                                   {request.enrollmentStatus
-                                    ? request.enrollmentStatus.replace(/_/g, ' ').charAt(0).toUpperCase() + request.enrollmentStatus.replace(/_/g, ' ').slice(1)
+                                    ? request.enrollmentStatus.toLowerCase() === "rejected"
+                                      ? request.currentStep === 3
+                                        ? "Payment Rejected"
+                                        : "Form Rejected"
+                                      : request.enrollmentStatus
+                                          .replace(/_/g, ' ')
+                                          .split(' ')
+                                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                          .join(' ')
                                     : 'N/A'}
                                 </span>
                               </div>
