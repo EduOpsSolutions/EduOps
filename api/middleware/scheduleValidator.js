@@ -234,7 +234,7 @@ export const validateCreateSchedule = (req, res, next) => {
     const errors = error.details.map((detail) => detail.message);
     return res.status(400).json({
       error: true,
-      message: 'Validation failed',
+      message: `Validation failed: ${errors.join(', ')}`,
       details: errors,
     });
   }

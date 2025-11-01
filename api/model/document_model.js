@@ -91,9 +91,6 @@ class DocumentModel {
 
   static async createDocumentRequest(data) {
     try {
-      console.log('DocumentModel: Creating request with data:', data);
-      
-      // Validate that the document template exists
       const documentExists = await prisma.document_template.findUnique({
         where: { id: data.documentId }
       });
@@ -102,7 +99,6 @@ class DocumentModel {
         throw new Error(`Document template with ID ${data.documentId} not found`);
       }
 
-      // Validate that the student exists
       const studentExists = await prisma.users.findUnique({
         where: { id: data.studentId }
       });
@@ -128,7 +124,6 @@ class DocumentModel {
         }
       });
       
-      console.log('DocumentModel: Created request successfully:', result.id);
       return result;
     } catch (error) {
       console.error('DocumentModel: Error creating document request:', error);
@@ -200,6 +195,34 @@ class DocumentModel {
       data: { 
         proofOfPayment,
         updatedAt: new Date() 
+      }
+    });
+  }
+
+  static async updateDocumentRequestPayment(id, paymentData) {
+    return await prisma.document_request.update({
+      where: { id },
+      data: {
+        ...paymentData,
+        updatedAt: new Date()
+      },
+      include: {
+        document: true,
+        user: true
+      }
+    });
+  }
+
+  static async updateDocumentRequestCompletedDocument(id, completedDocument) {
+    return await prisma.document_request.update({
+      where: { id },
+      data: { 
+        fulfilledDocumentUrl: completedDocument,
+        updatedAt: new Date() 
+      },
+      include: {
+        document: true,
+        user: true
       }
     });
   }
@@ -414,19 +437,9 @@ class DocumentModel {
     });
   }
 
-  // Audit logging
   static async logDocumentOperation(operation, documentId, userId, details = {}) {
     try {
-      // You can implement this with a separate audit_logs table
-      console.log(`Document Operation Log:`, {
-        operation,
-        documentId,
-        userId,
-        timestamp: new Date(),
-        details
-      });
-      
-      // Optional: Save to database audit table
+      // Optional: Implement with a separate audit_logs table
       // await prisma.audit_logs.create({
       //   data: {
       //     operation,

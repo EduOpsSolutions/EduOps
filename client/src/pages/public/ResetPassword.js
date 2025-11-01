@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import UserNavbar from '../../components/navbars/UserNav';
-import { BsEye, BsEyeSlash } from 'react-icons/bs';
 
 function ResetPassword() {
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -28,17 +25,39 @@ function ResetPassword() {
     e.preventDefault();
     console.log('Form submitted with data:', formData);
 
-    // Add your password reset logic here
+    // Validation
+    if (!formData.password || !formData.confirmPassword) {
+      await Swal.fire({
+        title: 'Validation Error',
+        text: 'Please fill in all password fields',
+        icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
-      Swal.fire({
-        title: 'Error',
+      await Swal.fire({
+        title: 'Validation Error',
         text: 'Passwords do not match!',
         icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      await Swal.fire({
+        title: 'Validation Error',
+        text: 'Password must be at least 6 characters long',
+        icon: 'error',
+        confirmButtonColor: '#890E07',
       });
       return;
     }
 
     try {
+      setIsLoading(true);
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/auth/reset-password`,
         {
@@ -48,103 +67,80 @@ function ResetPassword() {
       );
 
       if (response.status === 200) {
-        Swal.fire({
+        await Swal.fire({
           title: 'Success',
           text: 'Password reset successful!',
           icon: 'success',
-          confirmButtonColor: '#992525',
-          confirmButtonTextColor: '#ffffff',
-        }).then((res) => res.isConfirmed && redirectToLogin());
+          confirmButtonColor: '#890E07',
+        });
+        redirectToLogin();
       } else {
-        Swal.fire({
+        await Swal.fire({
           title: 'Error',
           text: 'Password reset failed!',
           icon: 'error',
-          confirmButtonColor: '#992525',
-          confirmButtonTextColor: '#ffffff',
+          confirmButtonColor: '#890E07',
         });
       }
     } catch (error) {
-      if (error.response.status === 401) {
-        Swal.fire({
-          title: 'Error',
-          text: error.response.data.message,
-          icon: 'error',
-          confirmButtonColor: '#992525',
-          confirmButtonTextColor: '#ffffff',
-        });
-      } else {
-        Swal.fire({
-          title: 'Error',
-          text: error.message,
-          icon: 'error',
-          confirmButtonColor: '#992525',
-          confirmButtonTextColor: '#ffffff',
-        });
-      }
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Password reset failed!';
+      await Swal.fire({
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#890E07',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white-yellow-tone">
-      <UserNavbar role="public" />
-      <div className="pt-8 h-screen flex flex-col items-center justify-start bg-white-yellow md:min-w-[50vh] min-w-[30%] bg-white-yellow-tone">
-        <p className="text-2xl font-bold">Reset Password</p>
+    <div className="pt-8 h-screen flex flex-col items-center justify-start bg-white-yellow md:min-w-[50vh] min-w-[30%] bg-white-yellow-tone">
+      <p className="text-2xl font-bold">Reset Password</p>
 
       <form
         className="flex flex-col items-center w-5/6 my-2 md:w-[50%] lg:w-[30%]"
         onSubmit={handleSubmit}
       >
         <p className="self-start mt-5">New Password:</p>
-        <div className="relative w-full">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            value={formData.password}
-            onChange={handleInputChange}
-            className="border border-black pl-2 pr-10 py-1 h-10 mt-1 focus:outline-none w-full"
-          />
-          <button
-            type="button"
-            className="absolute top-1/2 right-3 transform -translate-y-1/2"
-            onClick={(e) => {
-              e.preventDefault();
-              setShowPassword(!showPassword);
-            }}
-          >
-            {showPassword ? <BsEye /> : <BsEyeSlash />}
-          </button>
-        </div>
+        <input
+          type="password"
+          name="password"
+          value={formData.password}
+          onChange={handleInputChange}
+          disabled={isLoading}
+          className="border border-black pl-2 pr-4 py-1 h-10 mt-1 focus:outline-none w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+        />
 
         <p className="self-start mt-3">Confirm Password:</p>
-        <div className="relative w-full">
-          <input
-            type={showConfirmPassword ? 'text' : 'password'}
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleInputChange}
-            className="border border-black pl-2 pr-10 py-1 h-10 mt-1 focus:outline-none w-full"
-          />
-          <button
-            type="button"
-            className="absolute top-1/2 right-3 transform -translate-y-1/2"
-            onClick={(e) => {
-              e.preventDefault();
-              setShowConfirmPassword(!showConfirmPassword);
-            }}
-          >
-            {showConfirmPassword ? <BsEye /> : <BsEyeSlash />}
-          </button>
-        </div>
+        <input
+          type="password"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleInputChange}
+          disabled={isLoading}
+          className="border border-black pl-2 pr-4 py-1 h-10 mt-1 focus:outline-none w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+        />
 
         <button
           type="submit"
-          className="text-white mt-5 w-32 h-10 self-center font-bold bg-dark-red-2 text-white-yellow hover:bg-german-red ease-in duration-150"
+          disabled={isLoading}
+          className="text-white mt-5 w-auto px-6 h-10 self-center font-bold bg-dark-red-2 text-white-yellow hover:bg-german-red ease-in duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-dark-red-2 flex items-center justify-center gap-2"
         >
-          Confirm
+          {isLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <span>Resetting...</span>
+            </>
+          ) : (
+            'Confirm'
+          )}
         </button>
       </form>
-      </div>
     </div>
   );
 }
