@@ -9,6 +9,7 @@ import { getUserByEmail } from '../model/user_model.js';
 import { getUsersByRole as getUsersByRolesModel } from '../model/user_model.js';
 import { createLog, logSecurityEvent, LogTypes } from '../utils/logger.js';
 import { MODULE_TYPES } from '../constants/module_types.js';
+import { sendEmailChangeNotification } from '../services/userChangeEmailService.js';
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -51,6 +52,10 @@ const getAllUsers = async (req, res) => {
         middleName: true,
         lastName: true,
         email: true,
+        phoneNumber: true,
+        birthyear: true,
+        birthmonth: true,
+        birthdate: true,
         role: true,
         status: true,
         createdAt: true,
@@ -212,34 +217,147 @@ const updateUser = async (req, res) => {
       req.headers.authorization.split(' ')[1]
     );
 
+    // Get current user data before update to track changes
+    const userBeforeUpdate = await prisma.users.findUnique({
+      where: { id },
+      select: {
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        birthmonth: true,
+        birthdate: true,
+        birthyear: true,
+        email: true,
+        phoneNumber: true,
+        status: true,
+        role: true,
+        profilePicLink: true,
+      },
+    });
+
+    if (!userBeforeUpdate) {
+      return res.status(404).json({
+        error: true,
+        message: 'User not found',
+      });
+    }
+
     // Create an object with only the fields that are present in req.body
     const updateData = {};
     if (req.body.userId) updateData.userId = req.body.userId;
     if (req.body.firstName) updateData.firstName = req.body.firstName;
-    if (req.body.middleName) updateData.middleName = req.body.middleName;
+    if (req.body.middleName !== undefined)
+      updateData.middleName = req.body.middleName;
     if (req.body.lastName) updateData.lastName = req.body.lastName;
     if (req.body.birthmonth) updateData.birthmonth = req.body.birthmonth;
     if (req.body.birthdate) updateData.birthdate = req.body.birthdate;
     if (req.body.birthyear) updateData.birthyear = req.body.birthyear;
     if (req.body.email) updateData.email = req.body.email;
+    if (req.body.phoneNumber !== undefined)
+      updateData.phoneNumber = req.body.phoneNumber;
     if (req.body.password)
       updateData.password = bcrypt.hashSync(req.body.password, SALT);
     if (req.body.status) updateData.status = req.body.status;
-    if (req.body.profilePicLink)
+    if (req.body.role) updateData.role = req.body.role;
+    if (req.body.profilePicLink !== undefined)
       updateData.profilePicLink = req.body.profilePicLink;
+
+    const requesting_user_details = userRequest.payload.data;
+
+    // Send email notification if email is being changed
+    if (updateData.email && userBeforeUpdate.email !== updateData.email) {
+      try {
+        const adminName = `${requesting_user_details.firstName} ${requesting_user_details.lastName}`;
+        const userName = `${userBeforeUpdate.firstName} ${userBeforeUpdate.lastName}`;
+
+        await sendEmailChangeNotification(
+          userBeforeUpdate.email, // Send to OLD email
+          updateData.email, // New email
+          userName,
+          `Admin: ${adminName}`
+        );
+
+        console.log(
+          `Email change notification sent to ${userBeforeUpdate.email}`
+        );
+      } catch (emailError) {
+        console.error('Failed to send email change notification:', emailError);
+        // Don't block the update if email fails, but log it
+      }
+    }
 
     const result = await prisma.users.update({
       where: { id },
       data: updateData,
     });
 
-    const requesting_user_details = userRequest.payload.data;
+    // Build detailed change log
+    const changes = [];
+    const fieldMapping = {
+      userId: 'User ID',
+      firstName: 'First Name',
+      middleName: 'Middle Name',
+      lastName: 'Last Name',
+      email: 'Email',
+      phoneNumber: 'Phone Number',
+      status: 'Status',
+      role: 'Role',
+      profilePicLink: 'Profile Picture',
+    };
 
-    logSecurityEvent(
-      'User updated successfully',
+    // Handle birthdate changes as a single field
+    if (
+      updateData.hasOwnProperty('birthmonth') ||
+      updateData.hasOwnProperty('birthdate') ||
+      updateData.hasOwnProperty('birthyear')
+    ) {
+      const oldBirthdate = `${userBeforeUpdate.birthyear || ''}-${String(
+        userBeforeUpdate.birthmonth || ''
+      ).padStart(2, '0')}-${String(userBeforeUpdate.birthdate || '').padStart(
+        2,
+        '0'
+      )}`;
+      const newBirthdate = `${
+        updateData.birthyear || userBeforeUpdate.birthyear || ''
+      }-${String(
+        updateData.birthmonth || userBeforeUpdate.birthmonth || ''
+      ).padStart(2, '0')}-${String(
+        updateData.birthdate || userBeforeUpdate.birthdate || ''
+      ).padStart(2, '0')}`;
+
+      if (oldBirthdate !== newBirthdate) {
+        changes.push(`Birthdate: "${oldBirthdate}" → "${newBirthdate}"`);
+      }
+    }
+
+    for (const [key, displayName] of Object.entries(fieldMapping)) {
+      if (updateData.hasOwnProperty(key) && key !== 'password') {
+        const oldValue = userBeforeUpdate[key] || 'null';
+        const newValue = updateData[key] || 'null';
+
+        if (oldValue !== newValue) {
+          if (key === 'profilePicLink') {
+            changes.push(`${displayName}: ${oldValue ? 'Changed' : 'Added'}`);
+          } else {
+            changes.push(`${displayName}: "${oldValue}" → "${newValue}"`);
+          }
+        }
+      }
+    }
+
+    if (updateData.password) {
+      changes.push('Password: Updated');
+    }
+
+    const changeLog =
+      changes.length > 0 ? changes.join(', ') : 'No changes detected';
+
+    await logSecurityEvent(
+      'User account updated',
       requesting_user_details.userId,
       MODULE_TYPES.AUTH,
-      `Updated user info: [${result.userId}] - ${result.firstName} ${result.lastName} by [${requesting_user_details.userId}] - ${requesting_user_details.firstName} ${requesting_user_details.lastName}`
+      `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} updated user [${result.userId}] ${result.firstName} ${result.lastName}. Changes: ${changeLog}`
     );
 
     res.status(200).json({
@@ -255,11 +373,21 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.body;
+    const userRequest = await verifyJWT(
+      req.headers.authorization.split(' ')[1]
+    );
+    const requesting_user_details = userRequest.payload.data;
 
-    await prisma.users.update({
+    const deleted = await prisma.users.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+    await logSecurityEvent(
+      'User deleted',
+      requesting_user_details.userId,
+      MODULE_TYPES.AUTH,
+      `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} deleted user [${deleted.userId}] ${deleted.firstName} ${deleted.lastName} at ${deleted.deletedAt} server time.`
+    );
 
     res.json({ error: false, message: 'User deleted successfully' });
   } catch (error) {
@@ -270,17 +398,22 @@ const deleteUser = async (req, res) => {
 const deactivateUser = async (req, res) => {
   try {
     const { id } = req.query;
-    const deleted = await prisma.users.update({
+    const userRequest = await verifyJWT(
+      req.headers.authorization.split(' ')[1]
+    );
+    const requesting_user_details = userRequest.payload.data;
+
+    const deactivated = await prisma.users.update({
       where: { id },
       data: { status: 'disabled' },
     });
 
-    await logSecurityEvent({
-      title: `User deactivated`,
-      userId: deleted.userId,
-      moduleType: MODULE_TYPES.AUTH,
-      content: `ID:${deleted.userId} disabled at ${deleted.updatedAt} server time.`,
-    });
+    await logSecurityEvent(
+      'User deactivated',
+      requesting_user_details.userId,
+      MODULE_TYPES.AUTH,
+      `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} deactivated user [${deactivated.userId}] ${deactivated.firstName} ${deactivated.lastName} at ${deactivated.updatedAt} server time.`
+    );
     res.json({ error: false, message: 'User deactivated successfully' });
   } catch (error) {
     res.status(500).json({ error: true, message: 'Error deactivating user' });
@@ -290,17 +423,22 @@ const deactivateUser = async (req, res) => {
 const activateUser = async (req, res) => {
   try {
     const { id } = req.query;
-    await prisma.users.update({
+    const userRequest = await verifyJWT(
+      req.headers.authorization.split(' ')[1]
+    );
+    const requesting_user_details = userRequest.payload.data;
+
+    const activated = await prisma.users.update({
       where: { id },
       data: { status: 'active', deletedAt: null },
     });
 
-    await logSecurityEvent({
-      title: `User activated`,
-      userId: activated.userId,
-      moduleType: MODULE_TYPES.AUTH,
-      content: `ID:${activated.userId} enabled at ${activated.updatedAt} server time.`,
-    });
+    await logSecurityEvent(
+      'User activated',
+      requesting_user_details.userId,
+      MODULE_TYPES.AUTH,
+      `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} activated user [${activated.userId}] ${activated.firstName} ${activated.lastName} at ${activated.updatedAt} server time.`
+    );
     res.json({ error: false, message: 'User activated successfully' });
   } catch (error) {
     res.status(500).json({
