@@ -57,6 +57,7 @@ const useDocumentRequestStore = create((set, get) => ({
   viewDetailsModal: false,
   updateStatus: "in_process",
   updateRemarks: "",
+  linkedTransactionId: null,
   loading: false,
   error: null,
 
@@ -178,6 +179,7 @@ const useDocumentRequestStore = create((set, get) => ({
       selectedRequest: request,
       updateStatus: request.status,
       updateRemarks: request.remarks || "",
+      linkedTransactionId: request.paymentId || null,
       updateModal: true
     });
   },
@@ -198,7 +200,8 @@ const useDocumentRequestStore = create((set, get) => ({
       updateModal: false,
       selectedRequest: null,
       updateStatus: "in_process",
-      updateRemarks: ""
+      updateRemarks: "",
+      linkedTransactionId: null
     });
   },
 
@@ -233,9 +236,20 @@ const useDocumentRequestStore = create((set, get) => ({
     set({ updateRemarks: remarks });
   },
 
+  setLinkedTransactionId: (transactionId) => {
+    set({ linkedTransactionId: transactionId });
+  },
+
   // Update document request status (admin only)
   handleSubmitStatusUpdate: async () => {
-    const { selectedRequest, updateStatus, updateRemarks } = get();
+    const { selectedRequest, updateStatus, updateRemarks, linkedTransactionId } = get();
+
+    console.log('[handleSubmitStatusUpdate] Submitting with:', {
+      requestId: selectedRequest?.id,
+      updateStatus,
+      updateRemarks,
+      linkedTransactionId
+    });
 
     if (!selectedRequest) return;
 
@@ -253,17 +267,27 @@ const useDocumentRequestStore = create((set, get) => ({
       
       const dbStatus = statusMap[updateStatus] || updateStatus.toLowerCase().replace(/ /g, '_');
       
+      console.log('[handleSubmitStatusUpdate] Calling API with:', {
+        id: selectedRequest.id,
+        dbStatus,
+        updateRemarks,
+        linkedTransactionId
+      });
+      
       const response = await documentApi.requests.updateStatus(
         selectedRequest.id, 
         dbStatus, 
-        updateRemarks
+        updateRemarks,
+        linkedTransactionId
       );
+      
+      console.log('[handleSubmitStatusUpdate] API response:', response);
       
       if (response.error) {
         throw new Error(response.message || 'Failed to update request status');
       }
 
-      await get().fetchDocumentRequests(); // Refresh the list
+      await get().fetchDocumentRequests();
 
       Swal.fire({
         title: 'Success!',
@@ -297,6 +321,7 @@ const useDocumentRequestStore = create((set, get) => ({
       viewDetailsModal: false,
       updateStatus: "in_process",
       updateRemarks: "",
+      linkedTransactionId: null,
       loading: false,
       error: null
     });

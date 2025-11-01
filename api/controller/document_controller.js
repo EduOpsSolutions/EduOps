@@ -481,8 +481,10 @@ export const getDocumentRequestById = async (req, res) => {
 export const updateDocumentRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, paymentId } = req.body;
     const userRole = req.user.data.role;
+
+    console.log('[updateDocumentRequestStatus] Request data:', { id, status, remarks, paymentId });
 
     // Only admins can update request status
     if (userRole !== 'admin') {
@@ -500,7 +502,13 @@ export const updateDocumentRequestStatus = async (req, res) => {
       });
     }
 
-    const updatedRequest = await DocumentModel.updateDocumentRequestStatus(id, status, remarks);
+    const updatedRequest = await DocumentModel.updateDocumentRequestStatus(id, status, remarks, paymentId);
+    
+    console.log('[updateDocumentRequestStatus] Updated request:', { 
+      id: updatedRequest.id, 
+      status: updatedRequest.status,
+      paymentId: updatedRequest.paymentId 
+    });
 
     res.json({
       error: false,

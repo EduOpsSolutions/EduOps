@@ -134,6 +134,11 @@ const validateUpdateDocumentRequestStatus = [
         .isLength({ max: 500 })
         .withMessage('Remarks must be less than 500 characters'),
     
+    body('paymentId')
+        .optional()
+        .isString()
+        .withMessage('Payment ID must be a valid string'),
+    
     handleValidationErrors
 ];
 

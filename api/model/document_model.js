@@ -178,14 +178,21 @@ class DocumentModel {
     });
   }
 
-  static async updateDocumentRequestStatus(id, status, remarks) {
+  static async updateDocumentRequestStatus(id, status, remarks, paymentId = null) {
+    const updateData = { 
+      status,
+      remarks,
+      updatedAt: new Date() 
+    };
+    
+    // Only update paymentId if it's provided (not null or undefined)
+    if (paymentId !== null && paymentId !== undefined) {
+      updateData.paymentId = paymentId;
+    }
+    
     return await prisma.document_request.update({
       where: { id },
-      data: { 
-        status,
-        remarks,
-        updatedAt: new Date() 
-      }
+      data: updateData
     });
   }
 

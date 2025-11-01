@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ModalSelectField from "../../form/ModalSelectField";
+import TransactionSelector from "./TransactionSelector";
 import Swal from 'sweetalert2';
 
 function UpdateDocumentRequestModal({ 
@@ -10,7 +11,9 @@ function UpdateDocumentRequestModal({
   updateRemarks, 
   onStatusChange, 
   onRemarksChange, 
-  onSubmit 
+  onSubmit,
+  linkedTransactionId,
+  onTransactionChange
 }) {
   const [error, setError] = useState("");
   const [initialStatus, setInitialStatus] = useState("");
@@ -149,6 +152,11 @@ function UpdateDocumentRequestModal({
             onChange={onStatusChange}
             options={statusOptions}
             required
+          />
+
+          <TransactionSelector
+            selectedTransactionId={linkedTransactionId}
+            onSelectTransaction={(transaction) => onTransactionChange(transaction?.id || null)}
           />
 
           <div>

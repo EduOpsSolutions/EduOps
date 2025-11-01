@@ -88,11 +88,21 @@ export const documentRequestsApi = {
   },
 
   // Update document request status (admin only)
-  updateStatus: async (id, status, remarks) => {
+  updateStatus: async (id, status, remarks, paymentId = null) => {
+    console.log('[documentApi.updateStatus] Sending request:', {
+      id,
+      status,
+      remarks,
+      paymentId
+    });
+    
     const response = await axiosInstance.patch(`/documents/requests/${id}/status`, {
       status,
-      remarks
+      remarks,
+      paymentId
     });
+    
+    console.log('[documentApi.updateStatus] Response:', response.data);
     return response.data;
   },
 
