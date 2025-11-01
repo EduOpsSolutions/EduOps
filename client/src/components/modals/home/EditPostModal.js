@@ -436,10 +436,14 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={isSubmitting}
-                                            className="flex-1 sm:flex-none text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50"
+                                            disabled={isSubmitting || !hasChanges()}
+                                            className={`flex-1 sm:flex-none font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                hasChanges()
+                                                    ? 'text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none'
+                                                    : 'text-gray-500 bg-gray-300 cursor-not-allowed'
+                                            }`}
                                         >
-                                            {isSubmitting ? 'Saving...' : 'Save'}
+                                            {isSubmitting ? 'Saving...' : hasChanges() ? 'Save' : 'No Changes'}
                                         </button>
                                     </div>
                                 </div>
