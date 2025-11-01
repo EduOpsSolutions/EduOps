@@ -1,10 +1,13 @@
 import { Modal } from "flowbite-react";
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import Spinner from "../../common/Spinner";
+import Swal from 'sweetalert2';
 
 function RequestDocumentModal(props) {
+    const navigate = useNavigate();
     const [selectedMode, setSelectedMode] = useState('pickup');
     const { createDocumentRequest, loading } = useDocumentRequestStore();
     const user = useAuthStore((state) => state.user);
@@ -94,9 +97,16 @@ function RequestDocumentModal(props) {
                 })
             };
 
-            await createDocumentRequest(requestData);
+            // Check if document is free or paid
+            const isFreeDocument = props.selectedDocument?.price === 'free';
+            const isOnlinePayment = formData.paymentMethod === 'online' && !isFreeDocument;
             
-            // Reset form and close modal
+            const createdRequest = await createDocumentRequest(requestData, {
+                skipSuccessDialog: isOnlinePayment,  // Skip default success dialog if online payment
+                skipLoadingDialog: false
+            });
+            
+            // Reset form
             setFormData({
                 email: user?.email || '',
                 phone: user?.phoneNumber || '',
@@ -113,6 +123,63 @@ function RequestDocumentModal(props) {
             setErrors({});
             
             props.setRequestDocumentModal(false);
+
+            if (isOnlinePayment && props.selectedDocument) {
+                const result = await Swal.fire({
+                    title: 'Request Submitted!',
+                    html: `
+                        <div style="text-align: center;">
+                            <p style="margin-bottom: 15px; color: #333;">Your document request has been submitted successfully.</p>
+                            <p style="margin: 0; font-size: 0.95rem; color: #6B7280;">
+                                You will now be redirected to the payment form to complete your payment.
+                            </p>
+                        </div>
+                    `,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Proceed to Payment',
+                    cancelButtonText: 'Pay Later',
+                    confirmButtonColor: '#890E07',
+                    cancelButtonColor: '#6B7280',
+                    reverseButtons: true,
+                    allowOutsideClick: false
+                });
+
+                if (result.isConfirmed) {
+                    navigate('/paymentForm', {
+                        state: {
+                            documentRequest: {
+                                requestId: createdRequest?.id,
+                                documentName: props.selectedDocument.documentName,
+                                documentType: props.selectedDocument.documentName,
+                                amount: props.selectedDocument.amount || 0,
+                                email: formData.email,
+                                phone: formData.phone,
+                                studentId: user?.userId || '',
+                                firstName: user?.firstName || '',
+                                middleName: user?.middleName || '',
+                                lastName: user?.lastName || '',
+                                purpose: formData.purpose,
+                                mode: selectedMode
+                            }
+                        }
+                    });
+                }
+            } else if (isFreeDocument) {
+                await Swal.fire({
+                    title: 'Request Submitted!',
+                    html: `
+                        <div style="text-align: center;">
+                            <p style="margin-bottom: 10px; color: #333;">Your document request has been submitted successfully.</p>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#890E07',
+                    allowOutsideClick: false
+                });
+            }
+            
         } catch (error) {
             console.error('Request submission failed:', error);
         }

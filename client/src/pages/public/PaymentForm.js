@@ -1,5 +1,5 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 
 function PaymentForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     formData,
     loading,
@@ -22,8 +23,31 @@ function PaymentForm() {
     preparePaymentData,
     showDialog,
     resetForm,
-    sendPaymentLinkEmail
+    sendPaymentLinkEmail,
+    setFormData
   } = usePaymentStore();
+
+  
+  useEffect(() => {
+    const documentRequest = location.state?.documentRequest;
+    if (documentRequest) {
+      // Pre-fill the form with document request data
+      setFormData({
+        student_id: documentRequest.studentId || '',
+        first_name: documentRequest.firstName || '',
+        middle_name: documentRequest.middleName || '',
+        last_name: documentRequest.lastName || '',
+        email_address: documentRequest.email || '',
+        phone_number: documentRequest.phone || '',
+        fee: 'document_fee', 
+        amount: documentRequest.amount || 0
+      });
+      
+      if (documentRequest.studentId) {
+        validateAndFetchStudentByID(documentRequest.studentId);
+      }
+    }
+  }, [location.state, setFormData, validateAndFetchStudentByID]);
 
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
@@ -192,6 +216,8 @@ function PaymentForm() {
   };
 
 
+  const documentRequest = location.state?.documentRequest;
+
   return (
     <div className="bg_custom bg-white-yellow-tone">
       <UserNavbar role="public" />
@@ -220,6 +246,8 @@ function PaymentForm() {
                 value={formData.student_id || ""}
                 onChange={handleInputChange}
                 onBlur={handleStudentIdBlur}
+                readOnly={!!documentRequest}
+                className={documentRequest ? "bg-gray-100" : ""}
               />
             </div>
 
@@ -337,7 +365,8 @@ function PaymentForm() {
                 step="0.01"
                 value={formData.amount}
                 onChange={handleInputChange}
-                className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                readOnly={!!documentRequest}
+                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${documentRequest ? 'bg-gray-100' : ''}`}
               />
             </div>
 

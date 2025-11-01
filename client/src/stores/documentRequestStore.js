@@ -116,7 +116,7 @@ const useDocumentRequestStore = create((set, get) => ({
   },
 
   // Create new document request
-  createDocumentRequest: async (requestData) => {
+  createDocumentRequest: async (requestData, options = {}) => {
     try {
       set({ loading: true, error: null });
       
@@ -125,14 +125,16 @@ const useDocumentRequestStore = create((set, get) => ({
         throw new Error('Please fill in all required fields correctly');
       }
 
-      Swal.fire({
-        title: 'Submitting Request...',
-        text: 'Please wait while we process your document request.',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
+      if (!options.skipLoadingDialog) {
+        Swal.fire({
+          title: 'Submitting Request...',
+          text: 'Please wait while we process your document request.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+      }
 
       const response = await documentApi.requests.create(requestData);
       
@@ -142,12 +144,14 @@ const useDocumentRequestStore = create((set, get) => ({
 
       await get().fetchDocumentRequests(); // Refresh the list
 
-      Swal.fire({
-        title: 'Success!',
-        text: 'Document request submitted successfully',
-        icon: 'success',
-        confirmButtonColor: '#992525',
-      });
+      if (!options.skipSuccessDialog) {
+        Swal.fire({
+          title: 'Success!',
+          text: 'Document request submitted successfully',
+          icon: 'success',
+          confirmButtonColor: '#992525',
+        });
+      }
 
       set({ loading: false });
       return response.data;
