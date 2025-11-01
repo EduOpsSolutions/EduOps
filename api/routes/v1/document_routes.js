@@ -15,6 +15,7 @@ import {
   getDocumentRequestById,
   updateDocumentRequestStatus,
   uploadProofOfPayment,
+  uploadCompletedDocument,
   searchDocumentRequests,
   
   // Document Validations
@@ -116,6 +117,13 @@ router.patch('/requests/:id/proof-of-payment',
   validateUserRole(['student', 'teacher']),
   uploadSingle('proofOfPayment'),
   uploadProofOfPayment
+);
+
+// PATCH /api/v1/documents/requests/:id/completed-document - Admin only can upload completed document
+router.patch('/requests/:id/completed-document',
+  validateUserIsAdmin,
+  uploadSingle('completedDocument'),
+  uploadCompletedDocument
 );
 
 // Document Validation Routes (Admin access for management, public for verification)
