@@ -61,6 +61,7 @@ function ForgetPasswordModal(props) {
             title: 'Warning',
             text: response.data.message,
             icon: 'warning',
+            confirmButtonColor: '#992525',
           });
           return;
         }
@@ -77,6 +78,7 @@ function ForgetPasswordModal(props) {
           title: 'Error',
           text: response.data.message,
           icon: 'error',
+          confirmButtonColor: '#992525',
         });
       }
     } catch (error) {
@@ -84,6 +86,7 @@ function ForgetPasswordModal(props) {
         title: 'Error',
         text: error.message,
         icon: 'error',
+        confirmButtonColor: '#992525',
       });
     } finally {
       setEmail('');
