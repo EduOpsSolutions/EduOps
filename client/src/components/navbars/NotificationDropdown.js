@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import John_logo from "../../assets/images/John.jpg";
+import axios from "axios";
+import { useNotifications } from "../../stores/notoficationStore";
+import { getCookieItem } from "../../utils/jwt";
+
 
 const ICONS = {
   BELL: (
@@ -43,32 +46,36 @@ const NOTIFICATION_TYPES = {
   SYSTEM: { prefix: "Course reminder from", isSystem: true }
 };
 
-// Sample data
-const SAMPLE_NOTIFICATIONS = [
-  {
-    id: 1,
-    sender: "Jese Leos",
-    message: "Hey, what's up? All set for the presentation?",
-    time: "a few moments ago",
-    type: 'MESSAGE'
-  },
-  {
-    id: 2,
-    sender: "Admin", 
-    message: "Enrollment for A1 German Basic Course ends tomorrow",
-    time: "2 hours ago",
-    type: 'SYSTEM'
-  }
-];
-
 const getStyles = (isCompact) => RESPONSIVE_STYLES[isCompact ? 'compact' : 'normal'];
+const API_BASE_URL = process.env.REACT_APP_API_URL || "";
 
 const NotificationDropdown = ({ isCompact = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const styles = getStyles(isCompact);
+  const { notifications, loading, fetchNotifications } = useNotifications();
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
+  // Mark notification as read
+  const handleMarkAsRead = async (id) => {
+    try {
+      await axios.post(`${API_BASE_URL}/notifications/mark-read`, { id }, {
+        headers: {
+          Authorization: `Bearer ${getCookieItem('token')}`
+        }
+      });
+      if (fetchNotifications) {
+        await fetchNotifications();
+      }
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
+  };
+
+  const toggleDropdown = async () => {
+    const nextOpen = !isOpen;
+    setIsOpen(nextOpen);
+    if (!isOpen && fetchNotifications) {
+      await fetchNotifications();
+    }
   };
 
   return (
@@ -97,46 +104,68 @@ const NotificationDropdown = ({ isCompact = false }) => {
             Notifications
           </div>
 
-          {SAMPLE_NOTIFICATIONS.map((notification, index) => {
-            const notificationType = NOTIFICATION_TYPES[notification.type];
-            
-            return (
+          {loading ? (
+            <div className="p-4 text-center">Loading...</div>
+          ) : notifications.filter(n => n.isRead === false).length === 0 ? (
+            <div className="p-4 text-center text-gray-500">No notifications</div>
+          ) : (
+            notifications.filter(n => n.isRead === false).map((notification, index, arr) => (
               <div key={notification.id}>
-                <div className={`${styles.item} text-black hover:bg-gray-100 cursor-pointer transition-colors`}>
+                <div
+                  className={`${styles.item} text-black hover:bg-gray-100 cursor-pointer transition-colors`}
+                  style={{
+                    fontWeight: notification.isRead ? 'normal' : 'bold',
+                    background: !notification.isRead ? '#f9fafb' : undefined,
+                  }}
+                  onClick={() => handleMarkAsRead(notification.id)}
+                >
                   <div className={`flex items-start ${styles.item}`}>
                     <div className="shrink-0">
-                      <img
-                        className={`rounded-full ${styles.avatar} border-2 border-german-red`}
-                        src={John_logo}
-                        alt={`${notification.sender} avatar`}
-                      />
+                      {notification.profilePic || notification.user?.profilePicLink ? (
+                        <img
+                          className={`rounded-full ${styles.avatar} border-2 border-german-red`}
+                          src={
+                            notification.profilePic ||
+                            notification.user?.profilePicLink
+                          }
+                          alt="avatar"
+                          onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span
+                          className={`flex items-center justify-center bg-german-red text-white font-bold rounded-full border-2 border-german-yellow ${styles.avatar}`}
+                        >
+                          {notification.user && notification.user.firstName && notification.user.lastName
+                            ? `${notification.user.firstName[0]}${notification.user.lastName[0]}`.toUpperCase()
+                            : '?'}
+                        </span>
+                      )}
                     </div>
-                    
                     <div className={`w-full min-w-0 ${isCompact ? 'ml-2 sm:ml-3' : 'ml-3'}`}>
+                      <div className={`text-left text-gray-700  ${styles.smallText} mb-2`}>
+                        {notification.user.firstName} {notification.user.lastName}
+                      </div>
                       <div className={`text-left text-gray-700 ${styles.smallText} mb-1`}>
-                        {notificationType.prefix}{" "}
-                        <span className="font-semibold text-black">{notification.sender}</span>
+                        {notification.title}
                       </div>
-                      
-                      <div className={`text-left text-gray-600 ${styles.smallText} mb-1.5 ${isCompact ? 'line-clamp-3' : 'line-clamp-2'}`}>
-                        "{notification.message}"
+                      <div className={`text-left text-gray-600 ${styles.smallText} mb-1.5`}>
+                        {notification.message}
                       </div>
-                      
                       <div className="text-left text-xs text-dark-red-2 font-medium">
-                        {notification.time}
+                        {new Date(notification.createdAt).toLocaleString()}
                       </div>
                     </div>
                   </div>
                 </div>
-                {index < SAMPLE_NOTIFICATIONS.length - 1 && (
+                {index < arr.length - 1 && (
                   <hr className="border-gray-200 m-0" />
                 )}
               </div>
-            );
-          })}
+            ))
+          )}
 
           <hr className="border-gray-200 m-0" />
-          <div className={`${styles.viewAll} flex justify-center items-center text-dark-red-2 font-semibold hover:bg-gray-100 cursor-pointer transition-colors`}>
+          {/* <div className={`${styles.viewAll} flex justify-center items-center text-dark-red-2 font-semibold hover:bg-gray-100 cursor-pointer transition-colors`}>
             <svg
               className={`${styles.eyeIcon} me-2 text-dark-red-2`}
               aria-hidden="true"
@@ -147,10 +176,10 @@ const NotificationDropdown = ({ isCompact = false }) => {
               {ICONS.EYE}
             </svg>
             View all
-          </div>
+          </div> */}
         </div>
-      )}     
-      
+      )}
+
       {isOpen && (
         <div 
           className="fixed inset-0 z-40" 

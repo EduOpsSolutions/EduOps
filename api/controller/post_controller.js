@@ -162,6 +162,7 @@ export const createPost = async (req, res) => {
 
     let recipients = [];
 
+    //EMAIL 
     if (tag === 'global'){
       recipients = await getAllUserEmails();
     } else if (tag === 'teacher') {
@@ -172,6 +173,34 @@ export const createPost = async (req, res) => {
 
     if (sendOption === 'email' || sendOption === 'both') {
       await sendPostEmail(post, recipients);
+    }
+    // NOTIFICATIONS
+    if (sendOption === 'push' || sendOption === 'both') {
+      // Get user IDs for recipients (you may need to fetch these if you only have emails)
+      let recipientUserIds = [];
+      console.log('Recipient user IDs:', recipientUserIds);
+      if (tag === 'global') {
+        recipientUserIds = (await prisma.users.findMany({ where: { deletedAt: null }, select: { id: true } })).map(u => u.id);
+      } else if (tag === 'teacher' || tag === 'student') {
+        recipientUserIds = (await prisma.users.findMany({ where: { role: tag, deletedAt: null }, select: { id: true } })).map(u => u.id);
+      }
+
+      // Prepare notification data
+      const notifications = recipientUserIds.map(userId => ({
+        userId,
+        type: 'post',
+        title,
+        message: content,
+        data: { postId: post.id, tag },
+      }));
+      
+      console.log('Notification payload:', notifications);
+
+      // Bulk create notifications
+      if (notifications.length > 0) {
+        const result = await prisma.notification.createMany({ data: notifications });
+        console.log('Notification createMany result:', result);
+      }
     }
 
     await logUserActivity(
