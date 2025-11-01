@@ -68,6 +68,9 @@ function ForgetPasswordModal(props) {
           title: 'Success',
           text: response.data.message,
           icon: 'success',
+          confirmButtonColor: '#992525',
+        }).then(() => {
+          props.setForgetPasswordModal(false);
         });
       } else {
         Swal.fire({

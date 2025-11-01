@@ -46,8 +46,9 @@ const useProfileStore = create((set, get) => ({
       showCancelButton: true,
       confirmButtonText: 'Save',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#890E07',
+      confirmButtonColor: '#992525',
       cancelButtonColor: '#6b7280',
+      reverseButtons: true,
     });
 
     if (result.isConfirmed) {

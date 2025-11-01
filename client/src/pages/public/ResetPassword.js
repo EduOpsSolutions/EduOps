@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import UserNavbar from '../../components/navbars/UserNav';
+import { BsEye, BsEyeSlash } from 'react-icons/bs';
 
 function ResetPassword() {
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -48,7 +52,7 @@ function ResetPassword() {
           title: 'Success',
           text: 'Password reset successful!',
           icon: 'success',
-          confirmButtonColor: '#ff0000',
+          confirmButtonColor: '#992525',
           confirmButtonTextColor: '#ffffff',
         }).then((res) => res.isConfirmed && redirectToLogin());
       } else {
@@ -82,30 +86,56 @@ function ResetPassword() {
   };
 
   return (
-    <div className="pt-8 h-screen flex flex-col items-center justify-start bg-white-yellow md:min-w-[50vh] min-w-[30%] bg-white-yellow-tone">
-      <p className="text-2xl font-bold">Reset Password</p>
+    <div className="min-h-screen bg-white-yellow-tone">
+      <UserNavbar role="public" />
+      <div className="pt-8 h-screen flex flex-col items-center justify-start bg-white-yellow md:min-w-[50vh] min-w-[30%] bg-white-yellow-tone">
+        <p className="text-2xl font-bold">Reset Password</p>
 
       <form
         className="flex flex-col items-center w-5/6 my-2 md:w-[50%] lg:w-[30%]"
         onSubmit={handleSubmit}
       >
         <p className="self-start mt-5">New Password:</p>
-        <input
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleInputChange}
-          className="border border-black pl-2 pr-4 py-1 h-10 mt-1 focus:outline-none w-full"
-        />
+        <div className="relative w-full">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            name="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            className="border border-black pl-2 pr-10 py-1 h-10 mt-1 focus:outline-none w-full"
+          />
+          <button
+            type="button"
+            className="absolute top-1/2 right-3 transform -translate-y-1/2"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowPassword(!showPassword);
+            }}
+          >
+            {showPassword ? <BsEye /> : <BsEyeSlash />}
+          </button>
+        </div>
 
         <p className="self-start mt-3">Confirm Password:</p>
-        <input
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleInputChange}
-          className="border border-black pl-2 pr-4 py-1 h-10 mt-1 focus:outline-none w-full"
-        />
+        <div className="relative w-full">
+          <input
+            type={showConfirmPassword ? 'text' : 'password'}
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleInputChange}
+            className="border border-black pl-2 pr-10 py-1 h-10 mt-1 focus:outline-none w-full"
+          />
+          <button
+            type="button"
+            className="absolute top-1/2 right-3 transform -translate-y-1/2"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowConfirmPassword(!showConfirmPassword);
+            }}
+          >
+            {showConfirmPassword ? <BsEye /> : <BsEyeSlash />}
+          </button>
+        </div>
 
         <button
           type="submit"
@@ -114,6 +144,7 @@ function ResetPassword() {
           Confirm
         </button>
       </form>
+      </div>
     </div>
   );
 }
