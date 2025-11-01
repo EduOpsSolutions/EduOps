@@ -277,7 +277,7 @@ function EditCourseModal({
   const confirmDelete = async () => {
     if (!confirmDeleteId) return;
     try {
-      const token = localStorage.getItem("token") || "";
+      const token = getCookieItem("token") || "";
       const res = await fetch(
         `${process.env.REACT_APP_API_URL}/course-requisites/${confirmDeleteId}`,
         {
