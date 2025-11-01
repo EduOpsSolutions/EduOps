@@ -550,7 +550,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       // Log successful payment link creation
       await logSecurityEvent(
         'Payment link created and sent',
-        userId || null,
+        null,
         MODULE_TYPES.PAYMENTS,
         `Payment link created: Transaction ID [${customTransactionId}] for ${firstName} ${lastName} (${email}). Amount: ₱${parseFloat(
           amount
@@ -583,7 +583,6 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     await logSecurityEvent(
       'Payment link creation failed',
       userId || null,
-      MODULE_TYPES.PAYMENTS,
       MODULE_TYPES.PAYMENTS,
       `Error creating payment link for ${firstName} ${lastName} (${email}). Amount: ₱${parseFloat(
         amount
