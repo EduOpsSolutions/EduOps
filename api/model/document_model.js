@@ -91,8 +91,6 @@ class DocumentModel {
 
   static async createDocumentRequest(data) {
     try {
-      console.log('DocumentModel: Creating request with data:', data);
-      
       // Validate that the document template exists
       const documentExists = await prisma.document_template.findUnique({
         where: { id: data.documentId }
@@ -121,6 +119,8 @@ class DocumentModel {
           lastName: data.lastName,
           phone: data.phone,
           mode: data.mode || 'pickup',
+          paymentMethod: data.paymentMethod,
+          paymentAmount: data.paymentAmount,
           address: data.address,
           city: data.city,
           purpose: data.purpose,
@@ -128,7 +128,6 @@ class DocumentModel {
         }
       });
       
-      console.log('DocumentModel: Created request successfully:', result.id);
       return result;
     } catch (error) {
       console.error('DocumentModel: Error creating document request:', error);
@@ -214,6 +213,28 @@ class DocumentModel {
       include: {
         document: true,
         user: true
+      }
+    });
+  }
+
+  static async updateFulfilledDocument(id, fulfilledDocumentUrl) {
+    return await prisma.document_request.update({
+      where: { id },
+      data: { 
+        fulfilledDocumentUrl,
+        updatedAt: new Date() 
+      },
+      include: {
+        document: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            email: true,
+          }
+        }
       }
     });
   }
@@ -431,15 +452,6 @@ class DocumentModel {
   // Audit logging
   static async logDocumentOperation(operation, documentId, userId, details = {}) {
     try {
-      // You can implement this with a separate audit_logs table
-      console.log(`Document Operation Log:`, {
-        operation,
-        documentId,
-        userId,
-        timestamp: new Date(),
-        details
-      });
-      
       // Optional: Save to database audit table
       // await prisma.audit_logs.create({
       //   data: {

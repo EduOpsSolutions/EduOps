@@ -15,6 +15,7 @@ import {
   getDocumentRequestById,
   updateDocumentRequestStatus,
   uploadProofOfPayment,
+  uploadFulfilledDocument,
   createDocumentPayment,
   searchDocumentRequests,
   
@@ -117,6 +118,13 @@ router.patch('/requests/:id/proof-of-payment',
   validateUserRole(['student', 'teacher']),
   uploadSingle('proofOfPayment'),
   uploadProofOfPayment
+);
+
+// PATCH /api/v1/documents/requests/:id/fulfilled-document - Admin only - Upload personalized document
+router.patch('/requests/:id/fulfilled-document',
+  validateUserIsAdmin,
+  uploadSingle('fulfilledDocument'),
+  uploadFulfilledDocument
 );
 
 // POST /api/v1/documents/requests/:id/payment - Students/Teachers can create payment links for their own requests

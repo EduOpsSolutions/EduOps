@@ -116,7 +116,7 @@ const useDocumentRequestStore = create((set, get) => ({
   },
 
   // Create new document request
-  createDocumentRequest: async (requestData) => {
+  createDocumentRequest: async (requestData, documentInfo = null) => {
     try {
       set({ loading: true, error: null });
       
@@ -142,9 +142,14 @@ const useDocumentRequestStore = create((set, get) => ({
 
       await get().fetchDocumentRequests(); // Refresh the list
 
+      // Show different success message based on document type
+      const isFreeDocument = !documentInfo?.amount || documentInfo?.price === 'free';
+      
       Swal.fire({
         title: 'Success!',
-        text: 'You may now proceed to the payment form',
+        text: isFreeDocument 
+          ? 'Your document request has been submitted successfully.'
+          : 'Document request submitted successfully',
         icon: 'success',
         confirmButtonColor: '#992525',
       });

@@ -1,12 +1,12 @@
 import { Modal } from "flowbite-react";
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import Spinner from "../../common/Spinner";
+import Swal from 'sweetalert2';
+import documentApi from '../../../utils/documentApi';
 
 function RequestDocumentModal(props) {
-    const navigate = useNavigate();
     const [selectedMode, setSelectedMode] = useState('pickup');
     const { createDocumentRequest, loading } = useDocumentRequestStore();
     const user = useAuthStore((state) => state.user);
@@ -39,8 +39,9 @@ function RequestDocumentModal(props) {
 
     // Payment options
     const paymentOptions = [
-        { value: 'online', label: 'Pay Online' },
-        { value: 'cash', label: 'Cash (Pickup Only)' },
+        { value: 'online', label: 'Online (Maya)' },
+        { value: 'cod', label: 'Cash on Delivery' },
+        { value: 'cashPickup', label: 'Cash (Pay upon Pickup)' },
     ];
 
     // Mode options
@@ -55,11 +56,6 @@ function RequestDocumentModal(props) {
             ...prev,
             [name]: value
         }));
-        
-        // If payment method is cash, lock mode to pickup
-        if (name === 'paymentMethod' && value === 'cash') {
-            setSelectedMode('pickup');
-        }
         
         // Clear error when user starts typing
         if (errors[name]) {
@@ -96,7 +92,7 @@ function RequestDocumentModal(props) {
                 })
             };
 
-            const newRequest = await createDocumentRequest(requestData);
+            const newRequest = await createDocumentRequest(requestData, props.selectedDocument);
             
             // Reset form and close modal
             setFormData({
@@ -116,28 +112,42 @@ function RequestDocumentModal(props) {
             
             props.setRequestDocumentModal(false);
 
-            // If payment method is online and document has a price, redirect to payment form
+            // If payment method is online and document has a price, create payment link
             if (formData.paymentMethod === 'online' && props.selectedDocument?.amount && props.selectedDocument?.price === 'paid' && newRequest?.id) {
-                // Store payment details in sessionStorage for the payment form
-                const paymentData = {
-                    requestId: newRequest.id,
-                    documentName: props.selectedDocument.documentName,
-                    amount: props.selectedDocument.amount,
-                    feeType: 'document_fee',
-                    userId: user?.userId,
-                    studentId: user?.role === 'student' ? user?.userId : null,
-                    email: formData.email,
-                    phone: formData.phone,
-                    firstName: user?.firstName,
-                    lastName: user?.lastName,
-                    middleName: user?.middleName,
-                    timestamp: Date.now()
-                };
-                
-                sessionStorage.setItem('documentPaymentData', JSON.stringify(paymentData));
-                
-                // Redirect to payment form
-                navigate('/paymentForm');
+                try {
+                    Swal.fire({
+                        title: 'Creating Payment Link...',
+                        text: 'Please wait while we generate your payment link.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    const paymentResponse = await documentApi.requests.createPayment(newRequest.id);
+                    
+                    Swal.close();
+                    
+                    if (paymentResponse?.data?.paymentUrl) {
+                        // Open payment URL in new tab
+                        window.open(paymentResponse.data.paymentUrl, '_blank');
+                        
+                        Swal.fire({
+                            title: 'Payment Link Created!',
+                            text: 'You will be redirected to the payment page. If the page doesn\'t open, please check your request details.',
+                            icon: 'success',
+                            confirmButtonColor: '#992525',
+                        });
+                    }
+                } catch (paymentError) {
+                    console.error('Failed to create payment link:', paymentError);
+                    Swal.fire({
+                        title: 'Payment Link Error',
+                        text: 'Your request was submitted successfully, but we couldn\'t create the payment link. Please go to "See Requests" and click "Pay Online" to complete your payment.',
+                        icon: 'warning',
+                        confirmButtonColor: '#992525',
+                    });
+                }
             }
         } catch (error) {
             console.error('Request submission failed:', error);
@@ -222,11 +232,10 @@ function RequestDocumentModal(props) {
                                     <select
                                         name="mode"
                                         id="mode"
-                                        className={`mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${formData.paymentMethod === 'cash' ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
                                         required
                                         value={selectedMode}
                                         onChange={(e) => setSelectedMode(e.target.value)}
-                                        disabled={formData.paymentMethod === 'cash'}
                                     >
                                         {pickupOptions.map((option, index) => (
                                             <option key={index} value={option.value}>

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
@@ -41,39 +41,6 @@ function PaymentForm() {
     return feeTypeMap[feeType] || feeType.replace('_', ' ');
   };
 
-  // Check for document payment data on component mount
-  useEffect(() => {
-    const documentPaymentData = sessionStorage.getItem('documentPaymentData');
-    if (documentPaymentData) {
-      const paymentData = JSON.parse(documentPaymentData);
-      
-      // Pre-fill form with document payment data
-      updateFormField('student_id', paymentData.studentId || paymentData.userId);
-      updateFormField('email_address', paymentData.email);
-      updateFormField('phone_number', paymentData.phone);
-      updateFormField('fee', paymentData.feeType);
-      updateFormField('amount', paymentData.amount);
-      
-      // If we have user name data, pre-fill it (for teachers)
-      if (paymentData.firstName) {
-        updateFormField('first_name', paymentData.firstName);
-      }
-      if (paymentData.lastName) {
-        updateFormField('last_name', paymentData.lastName);
-      }
-      if (paymentData.middleName) {
-        updateFormField('middle_name', paymentData.middleName);
-      }
-      
-      // Only validate student ID if no name data provided
-      // This allows teachers to use the form without student ID validation
-      if (paymentData.studentId && !paymentData.firstName) {
-        validateAndFetchStudentByID(paymentData.studentId);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     updateFormField(name, value);
@@ -103,23 +70,20 @@ function PaymentForm() {
 
     const feeLabel = getFeeTypeLabel(formData.fee);
 
-    // Check if this is a document payment (from document request)
-    const documentPaymentData = sessionStorage.getItem('documentPaymentData');
-    const isDocumentPayment = !!documentPaymentData;
 
     const confirmResult = await Swal.fire({
       title: 'Confirm Payment',
       html: `
         <div style="text-align: center;">
           <p style="margin-bottom: 15px; font-size: 1.1rem; color: #333;">Are you sure you want to pay <strong>₱${formData.amount}</strong> for <strong>${feeLabel}</strong>?</p>
-          ${!isDocumentPayment ? `<p style="margin: 0; font-size: 0.9rem; color: #6B7280;">
+          <p style="margin: 0; font-size: 0.9rem; color: #6B7280;">
             Payment link will be sent to: <strong>${formData.email_address}</strong>
-          </p>` : ''}
+          </p>
         </div>
       `,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Yes, proceed to payment',
+      confirmButtonText: 'Yes, I\'m sure',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#890E07',
       cancelButtonColor: '#6B7280',
@@ -135,29 +99,42 @@ function PaymentForm() {
       const feeLabel = getFeeTypeLabel(paymentData.feeType);
       const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
 
-      if (isDocumentPayment || formData.fee === 'document_fee') {
-        localStorage.setItem("totalPayment", paymentData.amount.toString());
-        
-        if (documentPaymentData) {
-          sessionStorage.removeItem('documentPaymentData');
-        }
-        
-        navigate("/payment", {
-          state: {
-            amount: paymentData.amount,
-            description: description,
-            studentInfo: {
-              firstName: paymentData.firstName,
-              lastName: paymentData.lastName,
-              email: paymentData.email,
-              phone: paymentData.phoneNumber,
-              studentId: paymentData.studentId
-            }
+      // For document fees, bypass email and go directly to payment
+      if (paymentData.feeType === 'document_fee') {
+        Swal.fire({
+          title: 'Redirecting to Payment...',
+          text: 'Please wait while we prepare your payment page.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
           }
         });
-        return; 
+
+        // Navigate directly to payment page
+        localStorage.setItem("totalPayment", paymentData.amount.toString());
+        
+        setTimeout(() => {
+          Swal.close();
+          navigate("/payment", {
+            state: {
+              amount: paymentData.amount,
+              description: description,
+              studentInfo: {
+                firstName: paymentData.firstName,
+                lastName: paymentData.lastName,
+                email: paymentData.email,
+                phone: paymentData.phoneNumber,
+                studentId: paymentData.studentId
+              }
+            }
+          });
+          resetForm();
+        }, 500);
+        
+        return;
       }
 
+      // For other fee types, send email with payment link
       const emailData = {
         email: paymentData.email,
         firstName: paymentData.firstName,

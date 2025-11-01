@@ -7,156 +7,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model academic_period {
-  id                      String                    @id
-  batchName               String
-  startAt                 DateTime
-  endAt                   DateTime
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime
-  deletedAt               DateTime?
-  enrollmentCloseAt       DateTime
-  enrollmentOpenAt        DateTime
-  isEnrollmentClosed      Boolean                   @default(false)
-  academic_period_courses academic_period_courses[]
-  payments                payments[]
-  schedule                schedule[]
-  student_enrollment      student_enrollment[]
-}
-
-model academic_period_courses {
-  id               String          @id
-  courseId         String
-  academicperiodId String
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime
-  deletedAt        DateTime?
-  academic_period  academic_period @relation(fields: [academicperiodId], references: [id])
-  course           course          @relation(fields: [courseId], references: [id])
-
-  @@index([academicperiodId], map: "academic_period_courses_academicperiodId_fkey")
-  @@index([courseId], map: "academic_period_courses_courseId_fkey")
-}
-
-model adjustments {
-  id              String           @id
-  userId          String
-  paymentId       String?
-  feeId           String
-  amount          Decimal          @db.Decimal(10, 2)
-  type            adjustments_type
-  isRefunded      Boolean          @default(false)
-  reason          String?          @db.Text
-  referenceNumber String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime
-  fees            fees             @relation(fields: [feeId], references: [id])
-  payments        payments?        @relation(fields: [paymentId], references: [id])
-  users           users            @relation(fields: [userId], references: [id])
-
-  @@index([feeId], map: "adjustments_feeId_fkey")
-  @@index([paymentId], map: "adjustments_paymentId_fkey")
-  @@index([userId], map: "adjustments_userId_fkey")
-}
-
-model course {
-  id                      String                    @id
-  name                    String
-  price                   Decimal                   @db.Decimal(10, 2)
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime
-  deletedAt               DateTime?
-  description             String?
-  logo                    String?
-  maxNumber               Int                       @default(30)
-  visibility              course_visibility
-  academic_period_courses academic_period_courses[]
-  course_requisite        course_requisite[]
-  fees                    fees[]
-  payments                payments[]
-  schedule                schedule[]
-}
-
-model course_requisite {
-  id        String                @id
-  ruleName  String
-  type      course_requisite_type
-  courseId  String
-  createdAt DateTime              @default(now())
-  updatedAt DateTime
-  deletedAt DateTime?
-  course    course                @relation(fields: [courseId], references: [id])
-
-  @@index([courseId], map: "course_requisite_courseId_fkey")
-}
-
-model document_request {
-  id                String                  @id
-  documentId        String
-  userId            String?
-  email             String
-  firstName         String?
-  lastName          String?
-  phone             String?
-  mode              document_request_mode?  @default(pickup)
-  address           String?
-  city              String?
-  purpose           String?                 @db.Text
-  additionalNotes   String?                 @db.Text
-  status            document_request_status @default(in_process)
-  remarks           String?                 @db.Text
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime
-  proofOfPayment    String?                 @db.LongText
-  document_template document_template       @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  users             users?                  @relation(fields: [userId], references: [id])
-
-  @@index([documentId], map: "document_request_documentId_fkey")
-  @@index([userId], map: "document_request_userId_fkey")
-}
-
-model document_template {
-  id                  String                    @id
-  documentName        String
-  description         String?                   @db.Text
-  privacy             document_template_privacy @default(public)
-  requestBasis        Boolean                   @default(false)
-  downloadable        Boolean                   @default(true)
-  price               document_template_price   @default(free)
-  amount              Decimal?                  @db.Decimal(10, 2)
-  isActive            Boolean                   @default(true)
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime
+model users {
+  id                  String                @id @default(cuid())
+  userId              String                @unique
+  firstName           String
+  middleName          String?
+  lastName            String
+  birthmonth          Int
+  birthdate           Int
+  birthyear           Int
+  profilePicLink      String?               @db.LongText
+  status              String?
+  email               String                @unique
+  password            String
+  role                String?               @default("student")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
   deletedAt           DateTime?
-  uploadFile          String?                   @db.LongText
-  document_request    document_request[]
-  document_validation document_validation[]
-}
-
-model document_validation {
-  id                String             @id
-  documentId        String?
-  userId            String?
-  documentName      String?
-  fileSignature     String             @unique
-  isValid           Boolean            @default(true)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime
-  document_template document_template? @relation(fields: [documentId], references: [id])
-  users             users?             @relation(fields: [userId], references: [id])
-  notifications     notification[]
-
-  @@index([documentId], map: "document_validation_documentId_fkey")
-  @@index([userId], map: "document_validation_userId_fkey")
+  firstLogin          Boolean               @default(true)
+  resetToken          String?
+  resetTokenExpiry    DateTime?
+  phoneNumber         String?
+  changePassword      Boolean               @default(true)
+  adjustments         adjustments[]
+  documentRequests    document_request[]    @relation("UserDocumentRequests")
+  documentValidations document_validation[] @relation("UserDocumentValidations")
+  payments            payments[]
+  posts               posts[]
+  teacherSchedules    schedule[]            @relation("TeacherSchedules")
+  enrollments         student_enrollment[]  @relation("StudentEnrollments")
+  studentSchedules    user_schedule[]       @relation("StudentSchedules")
 }
 
 model enrollment_request {
-  id               String     @id
+  id               String     @id @default(cuid())
   enrollmentId     String     @unique
   enrollmentStatus String     @default("pending")
-  student_id       String?
+  studentId        String?    @map("student_id")
   createdAt        DateTime   @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime   @updatedAt
   address          String
   altContactNumber String?
   altEmail         String?
@@ -181,21 +70,176 @@ model enrollment_request {
   payments         payments[]
 }
 
-model fees {
-  id          String        @id
-  courseId    String
-  batchId     String
-  price       Decimal       @db.Decimal(10, 2)
-  name        String
-  type        fees_type
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime
-  adjustments adjustments[]
-  course      course        @relation(fields: [courseId], references: [id])
-  payments    payments[]
+model course {
+  id              String                    @id @default(cuid())
+  name            String
+  price           Decimal                   @db.Decimal(10, 2)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  deletedAt       DateTime?
+  description     String?
+  logo            String?
+  maxNumber       Int                       @default(30)
+  schedule        String?                   @db.LongText
+  visibility      Visibility
+  academicPeriods academic_period_courses[]
+  courseRequisite course_requisite[]        @relation("CourseMain")
+  fees            fees[]
+  payments        payments[]
+  schedules       schedule[]
+}
 
-  @@index([courseId], map: "fees_courseId_fkey")
+model schedule {
+  id            Int              @id @default(autoincrement())
+  days          String
+  time          String?
+  courseId      String?
+  periodId      String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+  teacherId     String?
+  color         String?          @default("#FFCF00")
+  location      String?
+  notes         String?          @db.Text
+  periodEnd     DateTime?
+  periodStart   DateTime?
+  time_end      String?
+  time_start    String?
+  capacity      Int?             @default(30)
+  course        course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  teacher       users?           @relation("TeacherSchedules", fields: [teacherId], references: [id])
+  userSchedules user_schedule[]
+
+  @@index([courseId], map: "schedule_courseId_fkey")
+  @@index([periodId], map: "schedule_periodId_fkey")
+  @@index([teacherId], map: "schedule_teacherId_fkey")
+}
+
+model user_schedule {
+  id         Int       @id @default(autoincrement())
+  userId     String?
+  scheduleId Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  schedule   schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  user       users?    @relation("StudentSchedules", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId], map: "user_schedule_scheduleId_fkey")
+  @@index([userId], map: "user_schedule_userId_fkey")
+}
+
+model student_enrollment {
+  id        String           @id @default(cuid())
+  studentId String
+  periodId  String
+  status    EnrollmentStatus @default(enrolled)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  deletedAt DateTime?
+  period    academic_period  @relation("PeriodEnrollments", fields: [periodId], references: [id], onDelete: Cascade)
+  student   users            @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, periodId])
+  @@index([periodId], map: "student_enrollment_periodId_fkey")
+}
+
+model course_requisite {
+  id        String        @id @default(cuid())
+  ruleName  String
+  type      RequisiteType
+  courseId  String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+  course    course        @relation("CourseMain", fields: [courseId], references: [id])
+
+  @@index([courseId], map: "course_requisite_courseId_fkey")
+}
+
+model academic_period {
+  id                 String                    @id @default(cuid())
+  batchName          String
+  startAt            DateTime
+  endAt              DateTime
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  deletedAt          DateTime?
+  enrollmentCloseAt  DateTime
+  enrollmentOpenAt   DateTime
+  isEnrollmentClosed Boolean                   @default(false)
+  courses            academic_period_courses[]
+  payments           payments[]
+  schedules          schedule[]
+  enrollments        student_enrollment[]      @relation("PeriodEnrollments")
+}
+
+model academic_period_courses {
+  id               String          @id @default(cuid())
+  courseId         String
+  academicperiodId String
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  deletedAt        DateTime?
+  academicPeriods  academic_period @relation(fields: [academicperiodId], references: [id])
+  course           course          @relation(fields: [courseId], references: [id])
+
+  @@index([academicperiodId], map: "academic_period_courses_academicperiodId_fkey")
+  @@index([courseId], map: "academic_period_courses_courseId_fkey")
+}
+
+model module {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model logs {
+  id                 String   @id
+  title              String
+  content            String?
+  createdAt          DateTime @default(now())
+  initiatedByAdmin   Boolean  @default(false)
+  initiatedByStudent Boolean  @default(false)
+  initiatedBySystem  Boolean  @default(false)
+  initiatedByTeacher Boolean  @default(false)
+  moduleId           Int
+  sourceId           Int?
+}
+
+model posts {
+  id         String       @id @default(cuid())
+  title      String
+  content    String       @db.Text
+  tag        PostTag      @default(global)
+  status     PostStatus   @default(visible)
+  userId     String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  deletedAt  DateTime?
+  isArchived Boolean      @default(false)
+  files      post_files[]
+  user       users        @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "posts_userId_fkey")
+}
+
+model post_files {
+  id        String     @id @default(cuid())
+  url       String
+  fileName  String?
+  fileType  String?
+  fileSize  Int?
+  postId    String     @map("post_id")
+  status    FileStatus @default(visible)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  post      posts      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "post_files_post_id_fkey")
 }
 
 model files {
@@ -206,63 +250,12 @@ model files {
   originalName String?
   directory    String?   @default("uncategorized")
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 }
 
-model grade_file {
-  id             String   @id
-  studentGradeId String
-  url            String   @db.LongText
-  fileName       String?
-  fileType       String?
-  uploadedBy     String?
-  uploadedAt     DateTime @default(now())
-
-  @@index([studentGradeId], map: "grade_file_studentGradeId_fkey")
-}
-
-model logs {
-  id         Int             @id @default(autoincrement())
-  title      String
-  content    String?         @db.Text
-  createdAt  DateTime        @default(now())
-  deletedAt  DateTime?
-  moduleType logs_moduleType @default(UNCATEGORIZED)
-  reqBody    String?         @db.Text
-  type       logs_type       @default(user_activity)
-  updatedAt  DateTime
-  userId     String?
-
-  @@index([userId], map: "logs_userId_fkey")
-}
-
-model module {
-  id        String   @id
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-}
-
-// model notification {
-//   id        String    @id
-//   userId    String
-//   type      String
-//   title     String
-//   message   String
-//   data      String?   @db.LongText
-//   isRead    Boolean   @default(false)
-//   delivered Boolean   @default(false)
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime
-//   deletedAt DateTime?
-//   users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-//   @@index([userId], map: "notification_userId_fkey")
-// }
-
 model payments {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   userId              String
   feeId               String?
   enrollmentRequestId String?
@@ -270,24 +263,22 @@ model payments {
   academicPeriodId    String?
   amount              Decimal             @db.Decimal(10, 2)
   currency            String              @default("PHP")
-  status              payments_status     @default(pending)
+  status              PaymentStatus       @default(pending)
   paymentMethod       String?
   referenceNumber     String?
   paymongoResponse    String?             @db.LongText
   remarks             String?             @db.Text
   paidAt              DateTime?
   createdAt           DateTime            @default(now())
-  updatedAt           DateTime
-  feeType             String?
-  paymentIntentId     String?
-  transactionId       String
-  paymentEmail        String?
+  updatedAt           DateTime            @updatedAt
+  checkoutUrl         String?             @db.LongText
+  paymongoId          String?
   adjustments         adjustments[]
-  academic_period     academic_period?    @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
+  academicPeriod      academic_period?    @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
   course              course?             @relation(fields: [courseId], references: [id], map: "payment_course_fkey")
-  enrollment_request  enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
-  fees                fees?               @relation(fields: [feeId], references: [id])
-  users               users               @relation(fields: [userId], references: [id])
+  enrollmentRequest   enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
+  fee                 fees?               @relation(fields: [feeId], references: [id])
+  user                users               @relation(fields: [userId], references: [id])
 
   @@index([academicPeriodId], map: "payment_academic_period_fkey")
   @@index([courseId], map: "payment_course_fkey")
@@ -296,254 +287,144 @@ model payments {
   @@index([userId], map: "payments_userId_fkey")
 }
 
-model post_files {
-  id        String            @id
-  url       String            @db.LongText
-  fileName  String?
-  fileType  String?
-  fileSize  Int?
-  post_id   String
-  status    post_files_status @default(visible)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime
-  posts     posts             @relation(fields: [post_id], references: [id], onDelete: Cascade)
+model fees {
+  id          String        @id @default(cuid())
+  courseId    String
+  batchId     String
+  price       Decimal       @db.Decimal(10, 2)
+  name        String
+  type        FeeType
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  adjustments adjustments[]
+  course      course        @relation(fields: [courseId], references: [id])
+  payments    payments[]
 
-  @@index([post_id], map: "post_files_post_id_fkey")
+  @@index([courseId], map: "fees_courseId_fkey")
 }
 
-model posts {
-  id         String       @id
-  title      String
-  content    String       @db.Text
-  tag        posts_tag    @default(global)
-  status     posts_status @default(visible)
-  userId     String
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime
-  deletedAt  DateTime?
-  isArchived Boolean      @default(false)
-  post_files post_files[]
-  users      users        @relation(fields: [userId], references: [id])
+model adjustments {
+  id              String         @id @default(cuid())
+  userId          String
+  paymentId       String?
+  feeId           String
+  amount          Decimal        @db.Decimal(10, 2)
+  type            AdjustmentType
+  isRefunded      Boolean        @default(false)
+  reason          String?        @db.Text
+  referenceNumber String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  fee             fees           @relation(fields: [feeId], references: [id])
+  payment         payments?      @relation(fields: [paymentId], references: [id])
+  user            users          @relation(fields: [userId], references: [id])
 
-  @@index([userId], map: "posts_userId_fkey")
+  @@index([feeId], map: "adjustments_feeId_fkey")
+  @@index([paymentId], map: "adjustments_paymentId_fkey")
+  @@index([userId], map: "adjustments_userId_fkey")
 }
 
-model schedule {
-  id              Int              @id @default(autoincrement())
-  days            String
-  time            String?
-  courseId        String?
-  periodId        String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime
-  deletedAt       DateTime?
-  teacherId       String?
-  color           String?          @default("#FFCF00")
-  location        String?
-  notes           String?          @db.Text
-  periodEnd       DateTime?
-  periodStart     DateTime?
-  time_end        String?
-  time_start      String?
-  capacity        Int?             @default(30)
-  course          course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  academic_period academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  users           users?           @relation(fields: [teacherId], references: [id])
-  user_schedule   user_schedule[]
-
-  @@index([courseId], map: "schedule_courseId_fkey")
-  @@index([periodId], map: "schedule_periodId_fkey")
-  @@index([teacherId], map: "schedule_teacherId_fkey")
+model document_template {
+  id           String                @id @default(cuid())
+  documentName String
+  description  String?               @db.Text
+  privacy      DocumentPrivacy       @default(public)
+  requestBasis Boolean               @default(false)
+  downloadable Boolean               @default(true)
+  price        DocumentPriceType     @default(free)
+  amount       Decimal?              @db.Decimal(10, 2)
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  deletedAt    DateTime?
+  uploadFile   String?               @db.LongText
+  requests     document_request[]
+  validations  document_validation[]
 }
 
-model student_enrollment {
-  id              String                    @id
-  studentId       String
-  periodId        String
-  status          student_enrollment_status @default(enrolled)
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime
-  deletedAt       DateTime?
-  academic_period academic_period           @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  users           users                     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+model document_request {
+  id                   String                @id @default(cuid())
+  documentId           String
+  userId               String?
+  email                String
+  firstName            String?
+  lastName             String?
+  phone                String?
+  mode                 DeliveryMode?         @default(pickup)
+  paymentMethod        String?
+  address              String?
+  city                 String?
+  purpose              String?               @db.Text
+  additionalNotes      String?               @db.Text
+  status               DocumentRequestStatus @default(in_process)
+  remarks              String?               @db.Text
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  proofOfPayment       String?               @db.LongText
+  paymentStatus        String?               @default("pending")
+  paymentAmount        Decimal?              @db.Decimal(10, 2)
+  paymentUrl           String?               @db.LongText
+  paymentId            String?
+  fulfilledDocumentUrl String?               @db.LongText
+  document             document_template     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user                 users?                @relation("UserDocumentRequests", fields: [userId], references: [id])
 
-  @@unique([studentId, periodId])
-  @@index([periodId], map: "student_enrollment_periodId_fkey")
+  @@index([documentId], map: "document_request_documentId_fkey")
+  @@index([userId], map: "document_request_userId_fkey")
 }
 
-model student_fee {
-  id        String           @id
-  studentId String
-  courseId  String
-  batchId   String
-  name      String
-  amount    Decimal
-  type      student_fee_type
-  dueDate   DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime
-  deletedAt DateTime?
+model document_validation {
+  id            String             @id @default(cuid())
+  documentId    String?
+  userId        String?
+  documentName  String?
+  fileSignature String             @unique
+  isValid       Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  document      document_template? @relation(fields: [documentId], references: [id])
+  user          users?             @relation("UserDocumentValidations", fields: [userId], references: [id])
 
-  @@index([batchId], map: "student_fee_batchId_fkey")
-  @@index([courseId], map: "student_fee_courseId_fkey")
-  @@index([studentId], map: "student_fee_studentId_fkey")
+  @@index([documentId], map: "document_validation_documentId_fkey")
+  @@index([userId], map: "document_validation_userId_fkey")
 }
 
-model student_grade {
-  id         String              @id
-  studentId  String
-  courseId   String
-  periodId   String?
-  grade      student_grade_grade
-  approvedBy String?
-  approvedAt DateTime?
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime
-
-  @@index([courseId], map: "student_grade_courseId_fkey")
-  @@index([studentId], map: "student_grade_studentId_fkey")
-}
-
-model user_schedule {
-  id         Int       @id @default(autoincrement())
-  userId     String?
-  scheduleId Int?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime
-  deletedAt  DateTime?
-  schedule   schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  users      users?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([scheduleId], map: "user_schedule_scheduleId_fkey")
-  @@index([userId], map: "user_schedule_userId_fkey")
-}
-
-model users {
-  id                  String                @id
-  userId              String                @unique
-  firstName           String
-  middleName          String?
-  lastName            String
-  birthmonth          Int
-  birthdate           Int
-  birthyear           Int
-  profilePicLink      String?               @db.LongText
-  status              String?
-  email               String                @unique
-  password            String
-  role                String?               @default("student")
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime
-  deletedAt           DateTime?
-  firstLogin          Boolean               @default(true)
-  resetToken          String?
-  resetTokenExpiry    DateTime?
-  phoneNumber         String?
-  changePassword      Boolean               @default(true)
-  adjustments         adjustments[]
-  document_request    document_request[]
-  document_validation document_validation[]
-  notification        notification[]
-  payments            payments[]
-  posts               posts[]
-  schedule            schedule[]
-  student_enrollment  student_enrollment[]
-  user_schedule       user_schedule[]
-}
-
-enum course_requisite_type {
-  prerequisite
-  corequisite
-}
-
-enum document_template_privacy {
-  public
-  student_only
-  teacher_only
-}
-
-enum posts_tag {
-  global
-  student
-  teacher
-}
-
-enum student_enrollment_status {
+enum EnrollmentStatus {
   enrolled
   completed
   dropped
   withdrawn
 }
 
-enum posts_status {
+enum Visibility {
+  hidden
+  visible
+}
+
+enum RequisiteType {
+  prerequisite
+  corequisite
+}
+
+enum PostTag {
+  global
+  student
+  teacher
+}
+
+enum PostStatus {
   visible
   hidden
   locked
 }
 
-enum student_grade_grade {
-  Pass
-  Fail
-  NoGrade
-}
-
-enum adjustments_type {
-  discount
-  refund
-  manual_charge
-  fee_waiver
-}
-
-enum fees_type {
-  down_payment
-  tuition_fee
-  document_fee
-  book_fee
-}
-
-enum logs_moduleType {
-  UNCATEGORIZED
-  AUTH
-  ENROLLMENTS
-  SCHEDULES
-  GRADING
-  DOCUMENTS
-  PAYMENTS
-  REPORTS
-  CONTENTS
-  SYSTEM
-}
-
-enum document_template_price {
-  free
-  paid
-}
-
-enum post_files_status {
+enum FileStatus {
   visible
   deleted
 }
 
-enum student_fee_type {
-  fee
-  discount
-}
-
-enum document_request_mode {
-  pickup
-  delivery
-}
-
-enum logs_type {
-  user_activity
-  system_activity
-  api_response
-  error_log
-  security_log
-  other
-}
-
-enum payments_status {
+enum PaymentStatus {
   pending
   paid
   failed
@@ -552,33 +433,40 @@ enum payments_status {
   refunded
 }
 
-enum course_visibility {
-  hidden
-  visible
+enum FeeType {
+  down_payment
+  tuition_fee
+  document_fee
+  book_fee
 }
 
-enum document_request_status {
+enum AdjustmentType {
+  discount
+  refund
+  manual_charge
+  fee_waiver
+}
+
+enum DocumentPrivacy {
+  public
+  student_only
+  teacher_only
+}
+
+enum DocumentPriceType {
+  free
+  paid
+}
+
+enum DeliveryMode {
+  pickup
+  delivery
+}
+
+enum DocumentRequestStatus {
   in_process
   in_transit
   delivered
   failed
   fulfilled
-}
-
-model notification {
-  id        String    @id @default(cuid())
-  userId    String
-  type      String
-  title     String
-  message   String
-  data      Json?
-  isRead    Boolean   @default(false)
-  delivered Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  user                  users                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  document_validation   document_validation? @relation(fields: [document_validationId], references: [id])
-  document_validationId String?
 }

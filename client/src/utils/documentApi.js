@@ -117,6 +117,27 @@ export const documentRequestsApi = {
     return response.data;
   },
 
+  // Upload fulfilled document (admin only)
+  uploadFulfilledDocument: async (id, file) => {
+    const formData = new FormData();
+    formData.append('fulfilledDocument', file);
+    
+    const response = await axiosInstance.patch(`/documents/requests/${id}/fulfilled-document`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Remove fulfilled document (admin only)
+  removeFulfilledDocument: async (id) => {
+    const response = await axiosInstance.patch(`/documents/requests/${id}/fulfilled-document`, {
+      fulfilledDocument: null
+    });
+    return response.data;
+  },
+
   // Create payment link for document request
   createPayment: async (id) => {
     const response = await axiosInstance.post(`/documents/requests/${id}/payment`);
