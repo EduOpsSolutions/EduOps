@@ -26,6 +26,7 @@ function EditCourseModal({
   // Requisites state
   const [allCourses, setAllCourses] = useState([]);
   const [requisites, setRequisites] = useState([]);
+  const [originalRequisites, setOriginalRequisites] = useState([]);
   const [newRequisite, setNewRequisite] = useState({
     type: "prerequisite",
     requisiteCourseId: "",
@@ -33,7 +34,7 @@ function EditCourseModal({
   });
   const [loadingRequisites, setLoadingRequisites] = useState(false);
   const [addError, setAddError] = useState("");
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [showAddRequisite, setShowAddRequisite] = useState(false);
 
   useEffect(() => {
     if (selectedCourse && edit_course_modal) {
@@ -93,6 +94,7 @@ function EditCourseModal({
         );
         const data = await res.json();
         setRequisites(data);
+        setOriginalRequisites(data);
       } catch (err) {
         setRequisites([]);
       } finally {
@@ -116,8 +118,9 @@ function EditCourseModal({
       setError("Course name is required");
       return false;
     }
-    if (!formData.price || parseFloat(formData.price) < 0) {
-      setError("Valid price is required");
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price < 1) {
+      setError("Price must be at least ₱1.00");
       return false;
     }
     return true;
@@ -129,48 +132,86 @@ function EditCourseModal({
     if (!validateForm()) return;
 
     const changed = hasChanges();
-    if (changed) {
-      const result = await Swal.fire({
-        title: "Save Changes?",
-        text: "Do you want to save your edits to this course?",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonColor: "#890E07",
-        cancelButtonColor: "#6b7280",
-        confirmButtonText: "Yes, save",
-        cancelButtonText: "Cancel",
-        reverseButtons: true,
-      });
-      if (!result.isConfirmed) return;
+    if (!changed) {
+      return;
     }
+
+    const result = await Swal.fire({
+      title: "Save Changes?",
+      text: "Do you want to save your edits to this course?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#890E07",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, save",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
 
     try {
       setLoading(true);
       setError("");
 
+      // Save course info
       const payload = {
         name: formData.name.trim(),
         visibility: formData.visibility,
         price: parseFloat(formData.price),
       };
+      await axiosInstance.put(`/courses/${selectedCourse.id}`, payload);
 
-      const response = await axiosInstance.put(
-        `/courses/${selectedCourse.id}`,
-        payload
-      );
-      console.log("Course updated:", response.data);
+      // Save requisites changes
+      const serialize = (arr) => arr.map(r => ({
+        requisiteCourseId: r.requisiteCourseId,
+        type: r.type,
+        ruleName: r.ruleName || ""
+      })).sort((a, b) => a.requisiteCourseId.localeCompare(b.requisiteCourseId));
+      const orig = serialize(originalRequisites);
+      const curr = serialize(requisites);
+      // Added: in curr not in orig
+      const added = curr.filter(c => !orig.some(o => o.requisiteCourseId === c.requisiteCourseId && o.type === c.type && o.ruleName === c.ruleName));
+      // Removed: in orig not in curr
+      const removed = orig.filter(o => !curr.some(c => c.requisiteCourseId === o.requisiteCourseId && c.type === o.type && c.ruleName === o.ruleName));
 
-      await fetchCourses();
-      if (changed) {
-        Swal.fire({
-          title: "Saved!",
-          text: "Your changes have been saved successfully.",
-          icon: "success",
-          confirmButtonColor: "#890E07",
-          timer: 2000,
-          showConfirmButton: false,
+      const token = getCookieItem("token") || "";
+      // Add new requisites
+      for (const req of added) {
+        await fetch(`${process.env.REACT_APP_API_URL}/course-requisites`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            courseId: selectedCourse.id,
+            requisiteCourseId: req.requisiteCourseId,
+            type: req.type,
+            ruleName: req.ruleName,
+          }),
         });
       }
+      // Remove deleted requisites
+      for (const req of removed) {
+        // Find the original requisite's id
+        const origReq = originalRequisites.find(r => r.requisiteCourseId === req.requisiteCourseId && r.type === req.type && (r.ruleName || "") === req.ruleName);
+        if (origReq && origReq.id) {
+          await fetch(`${process.env.REACT_APP_API_URL}/course-requisites/${origReq.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      }
+
+      await fetchCourses();
+      Swal.fire({
+        title: "Saved!",
+        text: "Your changes have been saved successfully.",
+        icon: "success",
+        confirmButtonColor: "#890E07",
+        timer: 2000,
+        showConfirmButton: false,
+      });
       setEditCourseModal(false);
     } catch (error) {
       console.error(
@@ -187,12 +228,21 @@ function EditCourseModal({
   };
 
   const hasChanges = () => {
-    return Object.entries(formData).some(([key, value]) => {
+    const formChanged = Object.entries(formData).some(([key, value]) => {
       return JSON.stringify(value) !== JSON.stringify(originalData[key]);
     });
+    // Compare requisites by requisiteCourseId/type/ruleName
+    const serialize = (arr) => arr.map(r => ({
+      requisiteCourseId: r.requisiteCourseId,
+      type: r.type,
+      ruleName: r.ruleName || ""
+    })).sort((a, b) => a.requisiteCourseId.localeCompare(b.requisiteCourseId));
+    const reqChanged = JSON.stringify(serialize(requisites)) !== JSON.stringify(serialize(originalRequisites));
+    return formChanged || reqChanged;
   };
 
   const handleClose = () => {
+    setShowAddRequisite(false);
     if (hasChanges()) {
       Swal.fire({
         title: "Discard Changes?",
@@ -215,7 +265,7 @@ function EditCourseModal({
   };
 
   // Add new requisite
-  const handleAddRequisite = async () => {
+  const handleAddRequisite = () => {
     setAddError("");
     if (!selectedCourse || !newRequisite.requisiteCourseId) {
       setAddError("Please select a course.");
@@ -229,70 +279,42 @@ function EditCourseModal({
       setAddError("This course is already a requisite.");
       return;
     }
-    try {
-      const token = getCookieItem("token") || "";
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/course-requisites`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          courseId: selectedCourse.id,
-          requisiteCourseId: newRequisite.requisiteCourseId,
-          type: newRequisite.type,
-          ruleName: newRequisite.ruleName,
-        }),
-      });
-      if (res.ok) {
-        setNewRequisite({
-          type: "prerequisite",
-          requisiteCourseId: "",
-          ruleName: "",
-        });
-        // Fetch the full course object for the requisite so the name appears immediately
-        const data = await res.json();
-        const courseObj = allCourses.find((c) => c.id === data.requisiteCourseId);
-        setRequisites((prev) => [
-          ...prev,
-          {
-            ...data,
-            requisiteCourse: courseObj || { id: data.requisiteCourseId, name: data.requisiteCourseId },
-          },
-        ]);
-      } else {
-        const errData = await res.json();
-        setAddError(errData.error || "Failed to add requisite.");
-      }
-    } catch (err) {
-      setAddError("Failed to add requisite.");
-    }
+    const courseObj = allCourses.find((c) => c.id === newRequisite.requisiteCourseId);
+    setRequisites((prev) => [
+      ...prev,
+      {
+        id: `local-${Date.now()}`,
+        courseId: selectedCourse.id,
+        requisiteCourseId: newRequisite.requisiteCourseId,
+        type: newRequisite.type,
+        ruleName: newRequisite.ruleName,
+        requisiteCourse: courseObj || { id: newRequisite.requisiteCourseId, name: newRequisite.requisiteCourseId },
+        _local: true,
+      },
+    ]);
+    setNewRequisite({
+      type: "prerequisite",
+      requisiteCourseId: "",
+      ruleName: "",
+    });
+    setShowAddRequisite(false);
   };
 
-  // Delete requisite
   const handleDeleteRequisite = async (id) => {
-    setConfirmDeleteId(id);
+    const result = await Swal.fire({
+      title: "Delete Requisite?",
+      text: "Are you sure you want to delete this requisite? This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#890E07",
+      cancelButtonColor: "#6b7280",
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
+    setRequisites((prev) => prev.filter((r) => r.id !== id));
   };
-
-  const confirmDelete = async () => {
-    if (!confirmDeleteId) return;
-    try {
-      const token = getCookieItem("token") || "";
-      const res = await fetch(
-        `${process.env.REACT_APP_API_URL}/course-requisites/${confirmDeleteId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (res.ok) {
-        setRequisites((prev) => prev.filter((r) => r.id !== confirmDeleteId));
-      }
-    } catch (err) {}
-    setConfirmDeleteId(null);
-  };
-
-  const cancelDelete = () => setConfirmDeleteId(null);
 
   if (!edit_course_modal) return null;
 
@@ -335,7 +357,8 @@ function EditCourseModal({
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" id="course-edit-form">
+            <h3 className="font-semibold text-lg mb-2">Course Information</h3>
             <ModalTextField
               label="Course Name"
               name="name"
@@ -365,7 +388,7 @@ function EditCourseModal({
                 value={formData.price}
                 onChange={handleInputChange}
                 placeholder="0.00"
-                min="0"
+                min="1"
                 required
                 className={isLocked ? "w-full" : "w-1/2"}
               >
@@ -374,162 +397,164 @@ function EditCourseModal({
                 </span>
               </ModalTextField>
             </div>
-
-            <div className="flex justify-center mt-6">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Updating...</span>
-                  </div>
-                ) : (
-                  "Submit"
-                )}
-              </button>
-            </div>
           </form>
 
           {/* Course Requisites */}
-          <div className="mt-6">
-            <h3 className="font-semibold text-lg mb-2">Course Requisites</h3>
+          <div className="mt-8 pt-6 border-t border-gray-300">
+            <h3 className="font-semibold text-lg mb-4">Course Requisites</h3>
             {loadingRequisites ? (
-              <div className="text-gray-500">Loading requisites...</div>
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <p className="ml-4 text-gray-600">Loading requisites...</p>
+              </div>
             ) : (
               <>
-                <table className="min-w-full mb-4 border border-gray-200 rounded">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="text-left px-3 py-2 font-medium text-sm">
-                        Type
-                      </th>
-                      <th className="text-left px-3 py-2 font-medium text-sm">
-                        Course
-                      </th>
-                      <th className="text-left px-3 py-2 font-medium text-sm">
-                        Rule Name
-                      </th>
-                      <th className="text-center px-3 py-2 font-medium text-sm">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requisites.map((req) => (
-                      <tr key={req.id} className="border-t border-gray-200">
-                        <td className="px-3 py-2 capitalize text-xs sm:text-sm">
-                          {req.type}
-                        </td>
-                        <td className="px-3 py-2 text-xs sm:text-sm">
-                          {req.requisiteCourse?.name || req.requisiteCourseId}
-                        </td>
-                        <td className="px-3 py-2 text-xs sm:text-sm">
-                          {req.ruleName}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <button
-                            onClick={() => handleDeleteRequisite(req.id)}
-                            className="text-red-600 hover:underline text-xs sm:text-sm"
-                          >
-                            Delete
-                          </button>
-                        </td>
+                {/* Requisites Table */}
+                <div className="overflow-x-auto mb-4">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="text-left px-3 py-2 font-medium text-sm">Type</th>
+                        <th className="text-left px-3 py-2 font-medium text-sm">Course</th>
+                        <th className="text-left px-3 py-2 font-medium text-sm hidden sm:table-cell">Rule Name</th>
+                        <th className="text-center px-3 py-2 font-medium text-sm">Actions</th>
                       </tr>
-                    ))}
-                    {requisites.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="text-gray-500 text-center py-3">
-                          No requisites set.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-                {/* Delete confirmation dialog */}
-                {confirmDeleteId && (
-                  <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs border border-gray-300">
-                      <p className="mb-4 text-center text-sm">
-                        Are you sure you want to delete this requisite?
-                      </p>
-                      <div className="flex justify-center gap-4">
-                        <button
-                          onClick={confirmDelete}
-                          className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 text-sm"
+                    </thead>
+                    <tbody className="bg-white">
+                      {requisites.map((req) => (
+                        <tr key={req.id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-3 py-2 capitalize text-xs sm:text-sm">
+                            {req.type}
+                          </td>
+                          <td className="px-3 py-2 text-xs sm:text-sm">
+                            {req.requisiteCourse?.name || req.requisiteCourseId}
+                          </td>
+                          <td className="px-3 py-2 text-xs sm:text-sm hidden sm:table-cell">
+                            {req.ruleName || '-'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRequisite(req.id)}
+                              className="text-red-600 hover:underline text-xs sm:text-sm"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {requisites.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-gray-500 text-center py-3 text-sm">
+                            No requisites set.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Add Requisite Section */}
+                {!showAddRequisite && (
+                  <div className="flex justify-end mt-4">
+                    <button
+                      type="button"
+                      className="bg-dark-red-2 text-white px-4 py-2 rounded hover:bg-dark-red-5 text-sm font-semibold transition-colors duration-150"
+                      onClick={() => setShowAddRequisite(true)}
+                    >
+                      Add Requisite
+                    </button>
+                  </div>
+                )}
+                {showAddRequisite && (
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Add New Requisite</p>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <select
+                          value={newRequisite.type}
+                          onChange={(e) =>
+                            setNewRequisite((n) => ({ ...n, type: e.target.value }))
+                          }
+                          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-transparent"
                         >
-                          Delete
+                          <option value="prerequisite">Prerequisite</option>
+                          <option value="corequisite">Corequisite</option>
+                        </select>
+                        <select
+                          value={newRequisite.requisiteCourseId}
+                          onChange={(e) =>
+                            setNewRequisite((n) => ({
+                              ...n,
+                              requisiteCourseId: e.target.value,
+                            }))
+                          }
+                          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-transparent"
+                        >
+                          <option value="">Select Course</option>
+                          {allCourses
+                            .filter(
+                              (c) =>
+                                c.id !== selectedCourse?.id &&
+                                !requisites.some((r) => r.requisiteCourseId === c.id)
+                            )
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Rule Name (optional)"
+                          value={newRequisite.ruleName}
+                          onChange={(e) =>
+                            setNewRequisite((n) => ({ ...n, ruleName: e.target.value }))
+                          }
+                          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={handleAddRequisite}
+                          className="bg-dark-red-2 text-white px-4 py-2 rounded hover:bg-dark-red-5 text-sm font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!newRequisite.requisiteCourseId}
+                        >
+                          Add
                         </button>
                         <button
-                          onClick={cancelDelete}
-                          className="bg-gray-200 text-gray-800 px-4 py-1 rounded hover:bg-gray-300 text-sm"
+                          type="button"
+                          onClick={() => { setShowAddRequisite(false); setAddError(""); }}
+                          className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 text-sm font-semibold transition-colors duration-150"
                         >
                           Cancel
                         </button>
                       </div>
+                      {addError && (
+                        <div className="text-red-600 text-xs">{addError}</div>
+                      )}
                     </div>
                   </div>
                 )}
-                <div className="flex flex-col sm:flex-row gap-2 items-center p-3 rounded shadow border border-gray-200">
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <select
-                      value={newRequisite.type}
-                      onChange={(e) =>
-                        setNewRequisite((n) => ({ ...n, type: e.target.value }))
-                      }
-                      className="border rounded px-2 py-1 text-sm"
-                    >
-                      <option value="prerequisite">Prerequisite</option>
-                      <option value="corequisite">Corequisite</option>
-                    </select>
-                    <select
-                      value={newRequisite.requisiteCourseId}
-                      onChange={(e) =>
-                        setNewRequisite((n) => ({
-                          ...n,
-                          requisiteCourseId: e.target.value,
-                        }))
-                      }
-                      className="border rounded px-2 py-1 text-sm"
-                    >
-                      <option value="">Select Course</option>
-                      {allCourses
-                        .filter(
-                          (c) =>
-                            c.id !== selectedCourse?.id &&
-                            !requisites.some((r) => r.requisiteCourseId === c.id)
-                        )
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Rule Name (optional)"
-                      value={newRequisite.ruleName}
-                      onChange={(e) =>
-                        setNewRequisite((n) => ({ ...n, ruleName: e.target.value }))
-                      }
-                      className="border rounded px-2 py-1 text-sm"
-                    />
-                  </div>
-                  <button
-                    onClick={handleAddRequisite}
-                    className="bg-dark-red-2 text-white px-4 py-1 rounded hover:bg-dark-red-5 text-sm font-semibold mt-2 sm:mt-0"
-                    disabled={!newRequisite.requisiteCourseId}
-                  >
-                    Add Requisite
-                  </button>
-                </div>
-                {addError && (
-                  <div className="text-red-600 text-xs mt-2">{addError}</div>
-                )}
               </>
             )}
+          </div>
+          
+          <div className="flex justify-center mt-8 pt-6 border-t border-gray-300">
+            <button
+              type="submit"
+              form="course-edit-form"
+              disabled={loading || !hasChanges()}
+              className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Updating...</span>
+                </div>
+              ) : (
+                "Submit"
+              )}
+            </button>
           </div>
         </div>
       </div>

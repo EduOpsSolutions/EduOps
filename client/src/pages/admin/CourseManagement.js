@@ -139,7 +139,14 @@ function CourseManagement() {
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={course.visibility === 'visible' ? 'Visible' : 'Hidden'}>
+                              <div
+                                className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border 
+                                  ${course.visibility === 'visible'
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : 'bg-red-100 text-red-800 border-red-200'}
+                                `}
+                                title={course.visibility === 'visible' ? 'Visible' : 'Hidden'}
+                              >
                                 {course.visibility === 'visible' ? 'Visible' : 'Hidden'}
                               </div>
                             </td>
