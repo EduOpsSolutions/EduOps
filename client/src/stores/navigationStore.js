@@ -16,6 +16,7 @@ const getNavigationConfig = (role) => {
       payment: {
         label: "Payment",
         items: [
+          { path: `/paymentForm`, label: "Payment Form" },
           { path: `/${role}/assessment`, label: "Assessment" },
           { path: `/${role}/ledger`, label: "Ledger" },
         ],
@@ -29,6 +30,12 @@ const getNavigationConfig = (role) => {
         items: [
           { path: `/${role}/schedule`, label: "Schedule" },
           { path: `/${role}/teachingLoad`, label: "Teaching Load" },
+        ],
+      },
+      payment: {
+        label: "Payment",
+        items: [
+          { path: `/paymentForm`, label: "Payment Form" },
         ],
       },
       documents: { path: `/${role}/documents`, label: "Documents" },

@@ -6,8 +6,10 @@ import GCash from "../../components/payments/GCash";
 import Maya from "../../components/payments/Maya";
 import Swal from "sweetalert2";
 import axiosInstance from "../../utils/axios";
+import useAuthStore from "../../stores/authStore";
 
 const PaymentPage = () => {
+  const { user, isAuthenticated } = useAuthStore();
   const [paymentOption, setPaymentOption] = useState(0);
   const [paymentData, setPaymentData] = useState({
     amount: 0,
@@ -262,7 +264,7 @@ const PaymentPage = () => {
   if (!paymentData.amount) {
     return (
       <div className="bg_custom bg-white-yellow-tone">
-        <UserNavbar role="public" />
+        <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
         <div className="flex justify-center items-center min-h-screen">
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4">Loading Payment...</h2>
@@ -275,7 +277,7 @@ const PaymentPage = () => {
 
   return (
     <div className="bg_custom bg-white-yellow-tone">
-      <UserNavbar role="public" />
+      <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
 
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-5xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden shadow-lg">

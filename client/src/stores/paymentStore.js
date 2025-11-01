@@ -38,21 +38,24 @@ const usePaymentStore = create((set, get) => ({
 
   validateAndFetchStudentByID: async (studentId) => {
     if (!studentId) {
-      set({ 
+      set({
         nameError: 'Student ID is required',
         formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' }
       });
       return false;
     }
 
+    set({ loading: true });
+
     try {
       const response = await axiosInstance.get(`/users/get-student-by-id/${studentId}`);
       const data = response.data;
 
       if (data.error || !data.success) {
-        set({ 
+        set({
           nameError: data.message || 'Student ID not found. Please verify the Student ID.',
-          formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' }
+          formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' },
+          loading: false
         });
         return false;
       }
@@ -66,16 +69,68 @@ const usePaymentStore = create((set, get) => ({
             last_name: data.data.lastName || '',
           },
           nameError: '',
-          studentData: data.data, 
+          studentData: data.data,
+          loading: false
         }));
       }
 
       return true;
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Unable to find student. Please verify the Student ID.';
-      set({ 
+      set({
         nameError: errorMessage,
+        formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' },
+        loading: false
+      });
+      return false;
+    }
+  },
+
+  validateAndFetchTeacherByID: async (teacherId) => {
+    if (!teacherId) {
+      set({
+        nameError: 'Teacher ID is required',
         formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' }
+      });
+      return false;
+    }
+
+    set({ loading: true });
+
+    try {
+      const response = await axiosInstance.get(`/users/get-teacher-by-id/${teacherId}`);
+      const data = response.data;
+
+      if (data.error || !data.success) {
+        set({
+          nameError: data.message || 'Teacher ID not found. Please verify the Teacher ID.',
+          formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' },
+          loading: false
+        });
+        return false;
+      }
+
+      if (data.data) {
+        set((state) => ({
+          formData: {
+            ...state.formData,
+            first_name: data.data.firstName || '',
+            middle_name: data.data.middleName || '',
+            last_name: data.data.lastName || '',
+          },
+          nameError: '',
+          studentData: data.data,
+          loading: false
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Unable to find teacher. Please verify the Teacher ID.';
+      set({
+        nameError: errorMessage,
+        formData: { ...get().formData, first_name: '', middle_name: '', last_name: '' },
+        loading: false
       });
       return false;
     }

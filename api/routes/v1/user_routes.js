@@ -15,6 +15,7 @@ import {
   searchStudentsForCoursePeriod,
   checkStudentScheduleConflicts,
   getStudentById,
+  getTeacherById,
   getUsersByRole,
 } from '../../controller/user_controller.js';
 import {
@@ -96,5 +97,6 @@ router.post(
 
 // Public routes (no auth required for payment form)
 router.get('/get-student-by-id/:studentId', getStudentById);
+router.get('/get-teacher-by-id/:teacherId', getTeacherById);
 
 export { router };
