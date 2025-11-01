@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import UserNavbar from '../../components/navbars/UserNav';
+import useAuthStore from '../../stores/authStore';
 
 const PaymentComplete = () => {
+  const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [paymentData, setPaymentData] = useState(null);
@@ -78,7 +80,7 @@ const PaymentComplete = () => {
   if (loading) {
     return (
       <div className="bg_custom bg-white-yellow-tone">
-        <UserNavbar role="public" />
+        <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-dark-red mx-auto mb-4"></div>
@@ -100,7 +102,7 @@ const PaymentComplete = () => {
   if (paymentData && !error) {
     return (
       <div className="bg_custom bg-white-yellow-tone">
-        <UserNavbar role="public" />
+        <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
         <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8 min-h-[calc(100vh-80px)]">
           <div className="w-full max-w-2xl bg-white border-2 border-dark-red rounded-lg p-6 sm:p-8 md:p-10 shadow-lg">
             {/* Success Icon */}
@@ -194,7 +196,13 @@ const PaymentComplete = () => {
             {/* Home Button */}
             <div className="mt-6">
               <button
-                onClick={() => navigate('/')}
+                onClick={() => {
+                  if (isAuthenticated && user?.role) {
+                    navigate(`/${user.role}`);
+                  } else {
+                    navigate('/login');
+                  }
+                }}
                 className="w-full px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
               >
                 <svg
@@ -222,7 +230,7 @@ const PaymentComplete = () => {
   // Error state
   return (
     <div className="bg_custom bg-white-yellow-tone">
-      <UserNavbar role="public" />
+      <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8 min-h-[calc(100vh-80px)]">
         <div className="w-full max-w-2xl bg-white border-2 border-dark-red rounded-lg p-6 sm:p-8 md:p-10 shadow-lg">
           {/* Error Icon */}
@@ -300,7 +308,13 @@ const PaymentComplete = () => {
               Try Again
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                if (isAuthenticated && user?.role) {
+                  navigate(`/${user.role}`);
+                } else {
+                  navigate('/login');
+                }
+              }}
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-dark-red border-2 border-dark-red font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
             >
               <svg
