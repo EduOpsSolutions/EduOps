@@ -17,7 +17,7 @@ const CreditCard = ({
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    email: '',
+    email: userEmail || '',
     cardHolder: '',
     number: '',
     month: '',
@@ -27,6 +27,7 @@ const CreditCard = ({
 
   const [paymentStatus, setPaymentStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -263,6 +264,22 @@ const CreditCard = ({
     if (isLocked) return;
     setIsProcessing(true);
 
+    // Validate email
+    if (!formData.email || formData.email.trim() === '') {
+      setIsProcessing(false);
+      setEmailError('Email is required.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setIsProcessing(false);
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+
+    setEmailError('');
+
     try {
       const paymentIntent = await createPaymentIntent();
       const paymentMethod = await createPaymentMethod();
@@ -308,12 +325,19 @@ const CreditCard = ({
           <input
             id="email"
             name="email"
+            type="email"
             placeholder="user@domain.com"
             className={styles.input}
             value={formData.email}
-            onChange={handleInputChange}
+            onChange={(e) => {
+              handleInputChange(e);
+              if (e.target.value.trim()) setEmailError('');
+            }}
             required
           />
+          {emailError && (
+            <small style={{ color: '#b71c1c' }}>{emailError}</small>
+          )}
         </div>
         <h2>Payment Details</h2>
         <div className={styles.formField}>
