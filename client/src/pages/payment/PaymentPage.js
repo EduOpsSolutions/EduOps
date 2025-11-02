@@ -75,14 +75,13 @@ const PaymentPage = () => {
       if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid amount');
 
       const description = payment.remarks || 'EduOps Payment';
-      const user = payment.users || payment.user || null;
-      const studentInfo = user ? {
-        userId: user.userId || user.id || null,
-        id: user.id || null,
-        studentId: user.studentId || user.userId || null,
-        firstName: user.firstName || user.first_name || '',
-        lastName: user.lastName || user.last_name || '',
-        email: payment.paymentEmail || user.email || ''
+      const studentInfo = payment.userId ? {
+        userId: payment.userId || null,
+        id: payment.userId || null,
+        studentId: payment.studentId || null,
+        firstName: payment.firstName || '',
+        lastName: payment.lastName || '',
+        email: payment.paymentEmail || payment.email || ''
       } : null;
 
       setPaymentData({ amount, description, studentInfo });

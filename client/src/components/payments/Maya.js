@@ -16,20 +16,41 @@ const Maya = ({
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(userEmail || '');
   const [paymentStatus, setPaymentStatus] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const onSubmit = async (event) => {
     event.preventDefault();
     if (isLocked) return;
     setIsProcessing(true);
+    
+    // Validate phone
     if (!phone || phone.length < 11) {
       setIsProcessing(false);
       setPhoneError('Phone number must be at least 11 digits.');
       return;
     }
+
+    // Validate email
+    if (!email || email.trim() === '') {
+      setIsProcessing(false);
+      setEmailError('Email is required.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setIsProcessing(false);
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+
+    // Clear errors
+    setPhoneError('');
+    setEmailError('');
 
     try {
       console.log('Starting Maya payment with traditional PIPM workflow...');
@@ -59,7 +80,7 @@ const Maya = ({
           userId: userId,
           firstName: firstName,
           lastName: lastName,
-          email: userEmail,
+          email: email,
           paymentId: typeof paymentId !== 'undefined' ? paymentId : undefined
         }),
       });
@@ -225,9 +246,15 @@ const Maya = ({
             placeholder="email@example.com"
             className={styles.input}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (e.target.value.trim()) setEmailError('');
+            }}
             required
           />
+          {emailError && (
+            <small style={{ color: '#b71c1c' }}>{emailError}</small>
+          )}
         </div>
         <button
           type="submit"
