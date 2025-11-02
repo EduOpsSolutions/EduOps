@@ -311,11 +311,11 @@ export const createSchedule = async (req, res) => {
     }
 
     // Validate capacity
-    const capacity = parseInt(req.body.capacity, 10);
-    if (capacity && (capacity < 1 || capacity > 100)) {
+    const capacity = req.body.capacity !== undefined ? parseInt(req.body.capacity, 10) : 30;
+    if (isNaN(capacity) || capacity < 0 || capacity > 100) {
       return res.status(400).json({
         error: true,
-        message: "Capacity must be between 1 and 100",
+        message: "Capacity must be between 0 and 100",
       });
     }
 
@@ -331,7 +331,7 @@ export const createSchedule = async (req, res) => {
       periodEnd: req.body.periodEnd,
       color: req.body.color,
       notes: req.body.notes,
-      capacity: capacity || 30,
+      capacity: capacity,
     };
 
     const schedule = await ScheduleModel.createSchedule(body);
@@ -412,13 +412,14 @@ export const updateSchedule = async (req, res) => {
         });
       }
     }
-    // Validate capacity if provided
+    // Parse and validate capacity if provided
+    const updateData = { ...req.body };
     if (req.body.capacity !== undefined) {
       const capacity = parseInt(req.body.capacity, 10);
-      if (capacity < 1 || capacity > 100) {
+      if (isNaN(capacity) || capacity < 0 || capacity > 100) {
         return res.status(400).json({
           error: true,
-          message: "Capacity must be between 1 and 100",
+          message: "Capacity must be between 0 and 100",
         });
       }
 
@@ -432,11 +433,14 @@ export const updateSchedule = async (req, res) => {
           message: `Cannot reduce capacity below current enrollment count of ${count}`,
         });
       }
+
+      // Update the capacity with parsed integer value
+      updateData.capacity = capacity;
     }
 
     const schedule = await ScheduleModel.updateSchedule(
       req.params.id,
-      req.body
+      updateData
     );
 
     // Transform the response
@@ -689,7 +693,7 @@ export const validateBulkStudents = async (req, res) => {
       }
 
       // User is not a student
-      if (user.role !== 'STUDENT') {
+      if (user.role.toLowerCase() !== 'student') {
         rejected.push({
           userId,
           name: `${user.firstName} ${user.lastName}`,
@@ -713,7 +717,7 @@ export const validateBulkStudents = async (req, res) => {
             WHERE us.userId = ${user.id}
               AND us.deletedAt IS NULL
               AND s.deletedAt IS NULL
-              AND s.periodId = ${parseInt(periodId)}
+              AND s.periodId = ${periodId}
               AND s.id != ${scheduleId}
           `;
 

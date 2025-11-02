@@ -43,6 +43,8 @@ function DateTile({
   year,
   events = defaultEvents,
   onDateClick,
+  timeFormat = '12h',
+  viewDensity = 'default',
 }) {
   // Handle blank tiles (day === null)
   if (day === null) {
@@ -68,11 +70,16 @@ function DateTile({
     }
   };
 
+  // View density classes
+  const densityClasses = viewDensity === 'compact'
+    ? 'min-h-[60px] md:min-h-[100px] max-h-[60px] md:max-h-[100px] p-1'
+    : 'min-h-[80px] md:min-h-[120px] max-h-[80px] md:max-h-[120px] p-1 md:p-2';
+
   // Handle populated tiles
   return (
     <div
       onClick={handleClick}
-      className={`w-full hover:cursor-pointer flex flex-col m-0.5 md:m-2 rounded-md p-1 md:p-2 border-solid border-2 border-neutral-400 hover:border-red-700 duration-100 min-h-[80px] md:min-h-[120px] max-h-[80px] md:max-h-[120px] overflow-hidden ${
+      className={`w-full hover:cursor-pointer flex flex-col m-0.5 md:m-2 rounded-md border-solid border-2 border-neutral-400 hover:border-red-700 duration-100 overflow-hidden ${densityClasses} ${
         isToday ? 'md:border-red-700 md:ring-2 md:ring-red-600' : ''
       }`}
     >
@@ -104,7 +111,7 @@ function DateTile({
       {/* Desktop view: Show full event details */}
       <div className="hidden md:block overflow-hidden space-y-1">
         {filteredEvents.slice(0, 3).map((event, index) => (
-          <TileEvent key={index} event={event} />
+          <TileEvent key={index} event={event} timeFormat={timeFormat} viewDensity={viewDensity} />
         ))}
         {filteredEvents.length > 3 && (
           <p className="text-[10px] text-gray-600 font-semibold">
@@ -135,6 +142,8 @@ DateTile.propTypes = {
     })
   ),
   onDateClick: PropTypes.func, // Callback when date is clicked
+  timeFormat: PropTypes.oneOf(['12h', '24h']),
+  viewDensity: PropTypes.oneOf(['compact', 'default']),
 };
 
 // Export component
