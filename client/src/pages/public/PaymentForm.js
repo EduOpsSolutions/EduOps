@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
@@ -10,7 +10,6 @@ import Swal from "sweetalert2";
 
 function PaymentForm() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, isAuthenticated } = useAuthStore();
   const [showIdCopied, setShowIdCopied] = useState(false);
   const {
@@ -27,8 +26,7 @@ function PaymentForm() {
     preparePaymentData,
     showDialog,
     resetForm,
-    sendPaymentLinkEmail,
-    setFormData
+    sendPaymentLinkEmail
   } = usePaymentStore();
 
   // Filtered fee options based on user role
@@ -39,28 +37,9 @@ function PaymentForm() {
     return feesOptions;
   };
 
-  // Handle document request pre-fill OR authenticated user auto-fill
+  // Auto-fill authenticated user details
   useEffect(() => {
-    const documentRequest = location.state?.documentRequest;
-    
-    if (documentRequest) {
-      // Pre-fill the form with document request data (takes priority)
-      setFormData({
-        student_id: documentRequest.studentId || '',
-        first_name: documentRequest.firstName || '',
-        middle_name: documentRequest.middleName || '',
-        last_name: documentRequest.lastName || '',
-        email_address: documentRequest.email || '',
-        phone_number: documentRequest.phone || '',
-        fee: 'document_fee', 
-        amount: documentRequest.amount || 0
-      });
-      
-      if (documentRequest.studentId) {
-        validateAndFetchStudentByID(documentRequest.studentId);
-      }
-    } else if (isAuthenticated && user?.userId) {
-      // Auto-fill authenticated user details
+    if (isAuthenticated && user?.userId) {
       updateFormField('student_id', user.userId);
 
       if (user.role === 'teacher') {
@@ -73,7 +52,7 @@ function PaymentForm() {
         updateFormField('email_address', user.email);
       }
     }
-  }, [location.state, isAuthenticated, user, setFormData, validateAndFetchStudentByID, validateAndFetchTeacherByID, updateFormField]);
+  }, [isAuthenticated, user, validateAndFetchStudentByID, validateAndFetchTeacherByID, updateFormField]);
 
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
@@ -252,8 +231,6 @@ function PaymentForm() {
     }
   };
 
-  const documentRequest = location.state?.documentRequest;
-
   return (
     <div className="bg_custom bg-white-yellow-tone">
       <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
@@ -328,8 +305,8 @@ function PaymentForm() {
                 value={formData.student_id || ""}
                 onChange={handleInputChange}
                 onBlur={handleStudentIdBlur}
-                readOnly={!!documentRequest || (isAuthenticated && (user?.role === 'teacher' || user?.role === 'student'))}
-                className={documentRequest || (isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')) ? "bg-gray-100" : ""}
+                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')}
+                className={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? "bg-gray-100" : ""}
               />
             </div>
 
@@ -464,8 +441,8 @@ function PaymentForm() {
                 step="0.01"
                 value={formData.amount}
                 onChange={handleInputChange}
-                readOnly={!!documentRequest}
-                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${documentRequest ? 'bg-gray-100' : ''}`}
+                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')}
+                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? 'bg-gray-100' : ''}`}
               />
             </div>
 

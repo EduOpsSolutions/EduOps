@@ -101,7 +101,7 @@ function RequestDocumentModal(props) {
             const isFreeDocument = props.selectedDocument?.price === 'free';
             const isOnlinePayment = formData.paymentMethod === 'online' && !isFreeDocument;
             
-            const createdRequest = await createDocumentRequest(requestData, {
+            await createDocumentRequest(requestData, {
                 skipSuccessDialog: isOnlinePayment,  // Skip default success dialog if online payment
                 skipLoadingDialog: false
             });
@@ -146,24 +146,7 @@ function RequestDocumentModal(props) {
                 });
 
                 if (result.isConfirmed) {
-                    navigate('/paymentForm', {
-                        state: {
-                            documentRequest: {
-                                requestId: createdRequest?.id,
-                                documentName: props.selectedDocument.documentName,
-                                documentType: props.selectedDocument.documentName,
-                                amount: props.selectedDocument.amount || 0,
-                                email: formData.email,
-                                phone: formData.phone,
-                                studentId: user?.userId || '',
-                                firstName: user?.firstName || '',
-                                middleName: user?.middleName || '',
-                                lastName: user?.lastName || '',
-                                purpose: formData.purpose,
-                                mode: selectedMode
-                            }
-                        }
-                    });
+                    navigate('/paymentForm');
                 }
             } else if (isFreeDocument) {
                 await Swal.fire({
