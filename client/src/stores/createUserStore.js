@@ -12,8 +12,6 @@ const useCreateUserStore = create((set, get) => ({
     role: 'student',
     phoneNumber: '',
     email: '',
-    password: '',
-    confirmPassword: '',
   },
   loading: false,
   error: null,
@@ -33,8 +31,6 @@ const useCreateUserStore = create((set, get) => ({
         role: 'student',
         phoneNumber: '',
         email: '',
-        password: '',
-        confirmPassword: '',
       },
       error: null,
     }),
@@ -48,17 +44,11 @@ const useCreateUserStore = create((set, get) => ({
     if (!formData.lastName) return 'Last Name is required';
     if (!formData.email) return 'Email is required';
     if (!formData.phoneNumber) return 'Phone Number is required';
-    if (!formData.password) return 'Password is required';
-    if (formData.password !== formData.confirmPassword)
-      return 'Passwords do not match';
     if (!formData.birthdate) return 'Birthdate is required';
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email))
       return 'Please enter a valid email address';
-
-    if (formData.password.length < 8)
-      return 'Password must be at least 8 characters long';
 
     return null;
   },
@@ -77,7 +67,7 @@ const useCreateUserStore = create((set, get) => ({
     set({ error: null, loading: true });
 
     try {
-      const { confirmPassword, birthdate, ...userData } = formData;
+      const { birthdate, ...userData } = formData;
 
       // Parse birthdate and extract month, date, year
       let birthmonth, birthdateNum, birthyear;

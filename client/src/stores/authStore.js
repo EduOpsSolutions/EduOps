@@ -83,7 +83,7 @@ const useAuthStore = create(
           console.log("Login response:", response);
 
           if (response?.status === 200) {
-            const { token: tokenData } = response.data;
+            const { token: tokenData, changePassword } = response.data;
             const token = tokenData.token || tokenData;
 
             // Store token in cookies and localStorage
@@ -107,7 +107,7 @@ const useAuthStore = create(
               fetchAndCacheProfileImage(decodedToken.data.profilePicLink);
             }
 
-            return { success: true };
+            return { success: true, changePassword };
           } else {
             throw new Error(response.data.message || "Login failed");
           }

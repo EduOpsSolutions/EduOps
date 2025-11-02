@@ -200,13 +200,12 @@ const manualSyncPayment = async (req, res) => {
       });
 
       // Send receipt email when payment status changes to paid
-      /*
-      if (updatedPayment.users && updatedPayment.users.email) {
-        console.log(`Sending payment receipt email to ${updatedPayment.users.email} after manual sync`);
-        
+      if (updatedPayment.user && updatedPayment.user.email) {
+        console.log(`Sending payment receipt email to ${updatedPayment.user.email} after manual sync`);
+
         try {
           const emailSent = await sendPaymentReceiptEmail(
-            updatedPayment.users.email,
+            updatedPayment.user.email,
             {
               transactionId: updatedPayment.transactionId,
               referenceNumber: updatedPayment.referenceNumber,
@@ -218,24 +217,24 @@ const manualSyncPayment = async (req, res) => {
               createdAt: updatedPayment.createdAt,
               currency: updatedPayment.currency || 'PHP'
             },
-                {
-                  firstName: updatedPayment.users.firstName,
-                  lastName: updatedPayment.users.lastName,
-                  email: updatedPayment.users.email,
-                  student_id: updatedPayment.users.userId
-                }
+            {
+              studentName: `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`,
+              firstName: updatedPayment.user.firstName,
+              lastName: updatedPayment.user.lastName,
+              email: updatedPayment.user.email,
+              student_id: updatedPayment.user.userId
+            }
           );
 
           if (emailSent) {
-            console.log(`Payment receipt email sent successfully to ${updatedPayment.users.email}`);
+            console.log(`Payment receipt email sent successfully to ${updatedPayment.user.email}`);
           } else {
-            console.error(`Failed to send payment receipt email to ${updatedPayment.users.email}`);
+            console.error(`Failed to send payment receipt email to ${updatedPayment.user.email}`);
           }
         } catch (emailError) {
           console.error('Error sending payment receipt email after manual sync:', emailError);
         }
       }
-      */
 
       return sendSuccess(
         res,
@@ -865,13 +864,12 @@ const checkPaymentStatus = async (req, res) => {
           payment.paidAt = new Date();
 
           // Send receipt email when payment status changes to paid
-          /*
-          if (payment.users && payment.users.email) {
-            console.log(`Sending payment receipt email to ${payment.users.email} after status sync`);
-            
+          if (payment.user && payment.user.email) {
+            console.log(`Sending payment receipt email to ${payment.user.email} after status sync`);
+
             try {
               const emailSent = await sendPaymentReceiptEmail(
-                payment.users.email,
+                payment.user.email,
                 {
                   transactionId: payment.transactionId,
                   referenceNumber: payment.referenceNumber,
@@ -884,23 +882,23 @@ const checkPaymentStatus = async (req, res) => {
                   currency: payment.currency || 'PHP'
                 },
                 {
-                  firstName: payment.users.firstName,
-                  lastName: payment.users.lastName,
-                  email: payment.users.email,
-                  student_id: payment.users.userId
+                  studentName: `${payment.user.firstName} ${payment.user.lastName}`,
+                  firstName: payment.user.firstName,
+                  lastName: payment.user.lastName,
+                  email: payment.user.email,
+                  student_id: payment.user.userId
                 }
               );
 
               if (emailSent) {
-                console.log(`Payment receipt email sent successfully to ${payment.users.email}`);
+                console.log(`Payment receipt email sent successfully to ${payment.user.email}`);
               } else {
-                console.error(`Failed to send payment receipt email to ${payment.users.email}`);
+                console.error(`Failed to send payment receipt email to ${payment.user.email}`);
               }
             } catch (emailError) {
               console.error('Error sending payment receipt email after status sync:', emailError);
             }
           }
-          */
         } catch (updateError) {
           console.error('Failed to update payment status:', updateError);
         }
@@ -926,11 +924,11 @@ const checkPaymentStatus = async (req, res) => {
       paymentMethod: finalPaymentMethod,
       description: payment.remarks || 'Payment',
       paidAt: payment.paidAt,
-      user: payment.users
+      user: payment.user
         ? {
-            firstName: payment.users.first_name,
-            lastName: payment.users.last_name,
-            email: payment.users.email,
+            firstName: payment.user.firstName,
+            lastName: payment.user.lastName,
+            email: payment.user.email,
           }
         : null,
     };

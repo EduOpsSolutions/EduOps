@@ -1,4 +1,4 @@
-import Joi from "joi";
+import Joi from 'joi';
 
 // Create User schema (password required)
 const userCreateSchema = Joi.object({
@@ -6,9 +6,8 @@ const userCreateSchema = Joi.object({
   firstName: Joi.string().min(2).trim().required(),
   lastName: Joi.string().min(2).trim().required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(8).max(100).required(),
-  role: Joi.string().valid("student", "teacher", "admin").default("student"),
-  middleName: Joi.string().trim().optional().allow(null, ""),
+  role: Joi.string().valid('student', 'teacher', 'admin').default('student'),
+  middleName: Joi.string().trim().optional().allow(null, ''),
   phoneNumber: Joi.string().optional(),
   birthmonth: Joi.number().integer().min(1).max(12).optional(),
   birthdate: Joi.number().integer().min(1).max(31).optional(),
@@ -24,13 +23,13 @@ const userUpdateSchema = Joi.object({
   firstName: Joi.string().min(2).trim().optional(),
   lastName: Joi.string().min(2).trim().optional(),
   email: Joi.string().email().optional(),
-  role: Joi.string().valid("student", "teacher", "admin").optional(),
+  role: Joi.string().valid('student', 'teacher', 'admin').optional(),
   status: Joi.string()
-    .valid("active", "disabled", "suspended", "deleted")
+    .valid('active', 'disabled', 'suspended', 'deleted')
     .optional(),
   deletedAt: Joi.date().optional().allow(null),
-  profilePicLink: Joi.string().uri().optional().allow(null, ""),
-  middleName: Joi.string().trim().optional().allow(null, ""),
+  profilePicLink: Joi.string().uri().optional().allow(null, ''),
+  middleName: Joi.string().trim().optional().allow(null, ''),
   password: Joi.any().forbidden(),
 });
 
@@ -44,7 +43,7 @@ const validateUpdateUser = (req, res, next) => {
   if (error) {
     return res.status(400).json({
       error: true,
-      message: "Validation error",
+      message: 'Validation error',
       errors: error.details.map((err) => ({
         field: err.path[0],
         message: err.message,
@@ -64,7 +63,7 @@ const validateCreateUser = (req, res, next) => {
   if (error) {
     return res.status(400).json({
       error: true,
-      message: "Validation error",
+      message: 'Validation error',
       errors: error.details.map((err) => ({
         field: err.path[0],
         message: err.message,

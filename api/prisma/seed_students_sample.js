@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { generateStandardizedUserId } from '../utils/userIdGenerator.js';
 
 const SALT = parseInt(process.env.BCRYPT_SALT) || 10;
 const prisma = new PrismaClient();
@@ -180,11 +181,10 @@ function getRandomBirthDate() {
   };
 }
 
-// Generate random student ID
-function generateStudentId(index) {
-  const year = new Date().getFullYear();
-  const paddedIndex = String(index + 1).padStart(3, '0');
-  return `STU${year}${paddedIndex}`;
+// Generate random student ID using standardized format
+// Now uses the centralized utility: S2025000001, S2025000002, etc.
+async function generateStudentId() {
+  return await generateStandardizedUserId('student');
 }
 
 // Generate random email
@@ -220,7 +220,7 @@ async function seedStudents() {
     const lastName = lastNames[i % lastNames.length];
     const middleName = middleNames[i % middleNames.length];
     const birthInfo = getRandomBirthDate();
-    const studentId = generateStudentId(i);
+    const studentId = await generateStudentId(); // Now generates standardized IDs
     const email = generateEmail(firstName, lastName, i);
     const password = 'Password123'; // Default password for all students
 
