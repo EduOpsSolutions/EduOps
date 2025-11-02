@@ -11,6 +11,22 @@ import { createLog, logSecurityEvent, LogTypes } from '../utils/logger.js';
 import { MODULE_TYPES } from '../constants/module_types.js';
 import { sendEmailChangeNotification } from '../services/userChangeEmailService.js';
 import { generateStandardizedUserId } from '../utils/userIdGenerator.js';
+import { sendAccountCreationEmail } from '../utils/mailer.js';
+
+// Generate default password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
+const generateDefaultPassword = (lastName, firstName, birthYear) => {
+  // Remove whitespaces from lastname and convert to lowercase
+  const cleanLastName = lastName.replace(/\s+/g, '').toLowerCase();
+
+  // Get first 2 letters of firstname (or just 1 if firstname has only 1 letter), convert to lowercase
+  const firstNamePart =
+    firstName.length >= 2
+      ? firstName.substring(0, 2).toLowerCase()
+      : firstName.substring(0, 1).toLowerCase();
+
+  // Combine: lastname + first2letters + yearofbirth
+  return `${cleanLastName}${firstNamePart}${birthYear}`;
+};
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -133,7 +149,6 @@ const createUser = async (req, res) => {
       birthdate,
       birthyear,
       email,
-      password,
       role = 'student',
     } = req.body;
 
@@ -178,6 +193,13 @@ const createUser = async (req, res) => {
         .json({ error: true, message: 'Email already taken' });
     }
 
+    // Auto-generate password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
+    const generatedPassword = generateDefaultPassword(
+      lastName,
+      firstName,
+      birthyear
+    );
+
     const user = await prisma.users.create({
       data: {
         userId,
@@ -188,11 +210,23 @@ const createUser = async (req, res) => {
         birthdate,
         birthyear,
         email,
-        password: bcrypt.hashSync(password, SALT),
+        password: bcrypt.hashSync(generatedPassword, SALT),
         role,
         status: 'active',
+        changePassword: true, // Force password change on first login
       },
     });
+
+    // Send account creation email with generated password
+    try {
+      await sendAccountCreationEmail(user, generatedPassword);
+    } catch (emailError) {
+      console.error(
+        '[createUser] Error sending account creation email:',
+        emailError
+      );
+      // Don't fail user creation if email fails
+    }
 
     await createLog({
       title: `User created successfully: ${user.userId}`,
@@ -626,10 +660,12 @@ const createStudentAccount = async (req, res) => {
         .json({ error: true, message: 'Email already taken' });
     }
 
-    // Auto-generate password: 4 letters of last name + 4 letters of first name + birth year
-    const lastNamePart = lastName.substring(0, 4).toUpperCase();
-    const firstNamePart = firstName.substring(0, 4).toUpperCase();
-    const autoPassword = `${lastNamePart}${firstNamePart}${birthYear}`;
+    // Auto-generate password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
+    const generatedPassword = generateDefaultPassword(
+      lastName,
+      firstName,
+      birthYear
+    );
 
     // Generate standardized userId if not provided
     const finalUserId = userId || (await generateStandardizedUserId('student'));
@@ -644,12 +680,23 @@ const createStudentAccount = async (req, res) => {
         birthdate: birthDay,
         birthyear: birthYear,
         email,
-        password: bcrypt.hashSync(autoPassword, SALT),
+        password: bcrypt.hashSync(generatedPassword, SALT),
         status: 'active',
         role: 'student',
         changePassword: true, // Force password change on first login
       },
     });
+
+    // Send account creation email with generated password
+    try {
+      await sendAccountCreationEmail(user, generatedPassword);
+    } catch (emailError) {
+      console.error(
+        '[createStudentAccount] Error sending account creation email:',
+        emailError
+      );
+      // Don't fail user creation if email fails
+    }
 
     // Link the created user to the specific enrollment request using enrollmentId
     if (req.body.enrollmentId) {
