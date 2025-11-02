@@ -97,30 +97,11 @@ const FileAttachment = ({ file, onImageClick }) => {
   // For non-image files, show a download link
   return (
     <div className="flex items-center p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
-      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6 text-blue-600"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-4.5B4.125 8.25 3 9.375 3 10.5v2.625a3.375 3.375 0 003.375 3.375h4.5a3.375 3.375 0 003.375-3.375v-2.625z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 12.75L11.25 15 15 9.75"
-          />
-        </svg>
-      </div>
       <div className="ml-3 flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 truncate">
-          {file.fileName || 'Download file'}
+          {file.fileName && file.fileName.length > 15
+            ? file.fileName.slice(0, 15) + '...'
+            : file.fileName || 'Download file'}
         </p>
         <p className="text-xs text-gray-500">
           {file.fileType}{' '}
