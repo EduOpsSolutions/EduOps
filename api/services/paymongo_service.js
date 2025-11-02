@@ -8,6 +8,8 @@ import {
   PAYMONGO_EVENTS,
 } from '../constants/payment_constants.js';
 import { sendPaymentReceiptEmail } from './paymentEmailService.js';
+import { logSecurityEvent } from '../utils/logger.js';
+import { MODULE_TYPES } from '../constants/module_types.js';
 
 const prisma = new PrismaClient();
 
@@ -387,6 +389,50 @@ export const processWebhookEvent = async (event) => {
           user: true,
         },
       });
+
+      // Log payment status change
+      if (updateData.status === 'paid') {
+        // Log successful payment
+        const userName = updatedPayment.user
+          ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`
+          : 'Guest';
+        const userEmail =
+          updatedPayment.paymentEmail || updatedPayment.user?.email || 'N/A';
+
+        await logSecurityEvent(
+          'Payment successful',
+          updatedPayment.user?.userId || 'GUEST',
+          MODULE_TYPES.PAYMENTS,
+          MODULE_TYPES.PAYMENTS,
+          `Payment completed: Transaction ID [${
+            updatedPayment.transactionId
+          }] for ${userName} (${userEmail}). Amount: ₱${parseFloat(
+            updatedPayment.amount
+          ).toFixed(2)}, Payment Method: ${
+            updatedPayment.paymentMethod || 'Online Payment'
+          }, Fee Type: ${updatedPayment.feeType || 'N/A'}, Reference: ${
+            updatedPayment.referenceNumber || 'N/A'
+          }`
+        );
+      } else if (updateData.status === 'failed') {
+        // Log failed payment
+        const userName = updatedPayment.user
+          ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`
+          : 'Guest';
+        const userEmail =
+          updatedPayment.paymentEmail || updatedPayment.user?.email || 'N/A';
+
+        logSecurityEvent(
+          'Payment failed',
+          updatedPayment.user?.userId || 'GUEST',
+          MODULE_TYPES.PAYMENTS,
+          `Payment failed: Transaction ID [${
+            updatedPayment.transactionId
+          }] for ${userName} (${userEmail}). Amount: ₱${parseFloat(
+            updatedPayment.amount
+          ).toFixed(2)}, Reference: ${updatedPayment.referenceNumber || 'N/A'}`
+        );
+      }
 
       // Send receipt email if payment was successful
       if (

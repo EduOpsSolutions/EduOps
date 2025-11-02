@@ -54,13 +54,56 @@ export const setOrUpdateGrade = async (req, res) => {
 // Upload a grade breakdown file
 export const uploadGradeFile = async (req, res) => {
   try {
-    const { studentGradeId } = req.params;
+    let { studentGradeId } = req.params;
+
+    // Handle case where studentGradeId is null or "null" (when student doesn't have a grade record yet)
+    if (
+      !studentGradeId ||
+      studentGradeId === 'null' ||
+      studentGradeId === 'undefined'
+    ) {
+      // Extract studentId, courseId, and periodId from request body (sent as form data)
+      const { studentId, courseId, periodId } = req.body;
+
+      if (!studentId || !courseId) {
+        return res.status(400).json({
+          error:
+            'Missing required fields. When studentGradeId is null, studentId and courseId must be provided.',
+        });
+      }
+
+      // Find or create a grade record for this student/course/period
+      let studentGrade = await prisma.student_grade.findFirst({
+        where: {
+          studentId,
+          courseId,
+          ...(periodId && { periodId }),
+        },
+      });
+
+      if (!studentGrade) {
+        // Create a new grade record with default 'NoGrade' status
+        studentGrade = await prisma.student_grade.create({
+          data: {
+            studentId,
+            courseId,
+            periodId: periodId || null,
+            grade: 'NoGrade',
+          },
+        });
+      }
+
+      studentGradeId = studentGrade.id;
+    }
+
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
 
     // Upload file to Firebase Storage
     const uploadResult = await uploadFile(req.file, filePaths.grades);
     if (!uploadResult.success) {
-      return res.status(500).json({ error: 'Failed to upload file to storage.' });
+      return res
+        .status(500)
+        .json({ error: 'Failed to upload file to storage.' });
     }
 
     const file = await prisma.grade_file.create({
@@ -122,38 +165,40 @@ export const getStudentsBySchedule = async (req, res) => {
     });
     const schedule = await prisma.schedule.findUnique({
       where: { id: Number(scheduleId) },
-      select: { courseId: true, teacherId: true },
+      select: { courseId: true, teacherId: true, periodId: true },
     });
 
     // For each student, fetch their grade for this course/period and check for file existence
-    const studentsWithGrades = await Promise.all(userSchedules.map(async (us) => {
-      let gradeRecord = null;
-      let hasDoc = false;
-      let studentGradeId = null;
-      if (schedule && us.userId && schedule.courseId) {
-        gradeRecord = await prisma.student_grade.findFirst({
-          where: {
-            studentId: us.userId,
-            courseId: schedule.courseId,
-          },
-          select: { id: true, grade: true },
-        });
-        if (gradeRecord && gradeRecord.id) {
-          studentGradeId = gradeRecord.id;
-          // Check if any files exist for this studentGradeId
-          const fileCount = await prisma.grade_file.count({
-            where: { studentGradeId: gradeRecord.id },
+    const studentsWithGrades = await Promise.all(
+      userSchedules.map(async (us) => {
+        let gradeRecord = null;
+        let hasDoc = false;
+        let studentGradeId = null;
+        if (schedule && us.userId && schedule.courseId) {
+          gradeRecord = await prisma.student_grade.findFirst({
+            where: {
+              studentId: us.userId,
+              courseId: schedule.courseId,
+            },
+            select: { id: true, grade: true },
           });
-          hasDoc = fileCount > 0;
+          if (gradeRecord && gradeRecord.id) {
+            studentGradeId = gradeRecord.id;
+            // Check if any files exist for this studentGradeId
+            const fileCount = await prisma.grade_file.count({
+              where: { studentGradeId: gradeRecord.id },
+            });
+            hasDoc = fileCount > 0;
+          }
         }
-      }
-      return {
-        ...us,
-        grade: gradeRecord ? gradeRecord.grade : null,
-        studentGradeId,
-        hasDoc,
-      };
-    }));
+        return {
+          ...us,
+          grade: gradeRecord ? gradeRecord.grade : null,
+          studentGradeId,
+          hasDoc,
+        };
+      })
+    );
 
     res.json({ schedule, students: studentsWithGrades });
   } catch (err) {
@@ -174,10 +219,12 @@ export const getGradesByStudent = async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     // For each grade, keep only the latest file (by uploadedAt)
-    grades = grades.map(g => {
+    grades = grades.map((g) => {
       let latestFile = null;
       if (g.files && g.files.length > 0) {
-        latestFile = [...g.files].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+        latestFile = [...g.files].sort(
+          (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
+        )[0];
       }
       return {
         ...g,
@@ -192,11 +239,11 @@ export const getGradesByStudent = async (req, res) => {
 };
 
 export default {
-    getGradesByCourse,
-    setOrUpdateGrade,
-    uploadGradeFile,
-    getGradeFiles,
-    approveGrade,
-    getStudentsBySchedule,
-    getGradesByStudent
+  getGradesByCourse,
+  setOrUpdateGrade,
+  uploadGradeFile,
+  getGradeFiles,
+  approveGrade,
+  getStudentsBySchedule,
+  getGradesByStudent,
 };
