@@ -254,6 +254,8 @@ class DocumentModel {
       data: {
         fileSignature: data.fileSignature,
         documentName: data.documentName,
+        documentId: data.documentId || null,
+        filePath: data.filePath || null,
         userId: data.userId,
       }
     });

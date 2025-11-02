@@ -10,7 +10,7 @@ export const useDocumentValidationSearchStore = createSearchStore({
     documentName: ''
   },
   initialItemsPerPage: 10,
-  showResultsOnLoad: false,
+  showResultsOnLoad: true,
   filterFunction: (data, searchParams) => {
     return data.filter(document => {
       return (
@@ -95,7 +95,20 @@ export const useDocumentValidationStore = create((set, get) => ({
 
       Swal.fire({
         title: 'Success!',
-        text: 'Document validation created successfully',
+        html: `
+          <div style="text-align: center;">
+            <p>Document uploaded successfully!</p>
+            <p style="margin-top: 12px; font-size: 14px; color: #6b7280;">
+              File signature has been automatically generated based on the file content.
+            </p>
+            ${response.data?.fileSignature ? `
+              <div style="margin-top: 16px; padding: 12px; background-color: #f3f4f6; border-radius: 8px;">
+                <p style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">File Signature:</p>
+                <p style="font-size: 16px; font-weight: 600; color: #111827; font-family: monospace;">${response.data.fileSignature}</p>
+              </div>
+            ` : ''}
+          </div>
+        `,
         icon: 'success',
         confirmButtonColor: '#992525',
       });
@@ -104,7 +117,21 @@ export const useDocumentValidationStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       console.error("Failed to create document validation:", error);
-      const errorMessage = error.message || 'Failed to create document validation';
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to create document validation';
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.details && Array.isArray(errorData.details)) {
+          // Show validation errors
+          errorMessage = errorData.details.map(d => d.msg).join(', ');
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       set({ error: errorMessage, loading: false });
       
       Swal.fire({

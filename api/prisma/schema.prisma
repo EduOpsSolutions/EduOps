@@ -468,6 +468,7 @@ model document_validation {
   userId        String?
   documentName  String?
   fileSignature String             @unique
+  filePath      String?
   isValid       Boolean            @default(true)
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
