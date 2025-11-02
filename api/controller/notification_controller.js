@@ -30,9 +30,48 @@ export const getNotifications = async (req, res) => {
 			prisma.notification.count({ where: { userId, deletedAt: null } })
 		]);
 
+		// Enrich notifications with post poster information
+		const enrichedNotifications = await Promise.all(
+			notifications.map(async (notification) => {
+				if (notification.type === 'post' && notification.data?.postId) {
+					try {
+						const post = await prisma.posts.findUnique({
+							where: { id: notification.data.postId },
+							select: {
+								userId: true,
+								user: {
+									select: {
+										firstName: true,
+										lastName: true,
+										profilePicLink: true,
+									}
+								}
+							}
+						});
+
+						if (post) {
+							return {
+								...notification,
+								data: {
+									...notification.data,
+									posterFirstName: post.user.firstName,
+									posterLastName: post.user.lastName,
+									posterProfilePic: post.user.profilePicLink,
+									posterId: post.userId
+								}
+							};
+						}
+					} catch (err) {
+						console.error('Error fetching post for notification:', err);
+					}
+				}
+				return notification;
+			})
+		);
+
 		res.json({
 			error: false,
-			data: notifications,
+			data: enrichedNotifications,
 			total,
 			page,
 			pageSize
