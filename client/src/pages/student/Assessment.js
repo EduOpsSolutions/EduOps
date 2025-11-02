@@ -408,6 +408,9 @@ function Assessment() {
                             <TransactionHistoryModal
                                 transaction_history_modal={transaction_history_modal}
                                 setTransactionHistoryModal={setTransactionHistoryModal}
+                                studentId={selectedEnrollment.id}
+                                courseId={selectedEnrollment.courseId}
+                                batchId={selectedEnrollment.batchId}
                             />
                         </div>
                     )}
