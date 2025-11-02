@@ -146,7 +146,15 @@ function RequestDocumentModal(props) {
                 });
 
                 if (result.isConfirmed) {
-                    navigate('/paymentForm');
+                    // Pass document fee information to payment form
+                    navigate('/paymentForm', {
+                        state: {
+                            documentFee: {
+                                feeType: 'document_fee',
+                                amount: props.selectedDocument.amount
+                            }
+                        }
+                    });
                 }
             } else if (isFreeDocument) {
                 await Swal.fire({

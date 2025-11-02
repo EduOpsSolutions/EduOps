@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
@@ -10,6 +10,7 @@ import Swal from "sweetalert2";
 
 function PaymentForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuthStore();
   const [showIdCopied, setShowIdCopied] = useState(false);
   const {
@@ -53,6 +54,19 @@ function PaymentForm() {
       }
     }
   }, [isAuthenticated, user, validateAndFetchStudentByID, validateAndFetchTeacherByID, updateFormField]);
+
+  // Auto-fill document fee from location state (when navigating from document request)
+  useEffect(() => {
+    if (location.state?.documentFee) {
+      const { feeType, amount } = location.state.documentFee;
+      if (feeType) {
+        updateFormField('fee', feeType);
+      }
+      if (amount) {
+        updateFormField('amount', amount.toString());
+      }
+    }
+  }, [location.state, updateFormField]);
 
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
