@@ -52,9 +52,12 @@ function ViewStudentsModal({
 
         // If we have a scheduleId, get students directly from the schedule
         if (scheduleId) {
-          const resp = await axiosInstance.get(`/schedules/${scheduleId}/students`, {
-            signal: controller.signal,
-          });
+          const resp = await axiosInstance.get(
+            `/schedules/${scheduleId}/students`,
+            {
+              signal: controller.signal,
+            }
+          );
           const students = Array.isArray(resp.data) ? resp.data : [];
           setEnrolledStudents(students);
           setEnrolledCount(students.length);
@@ -188,9 +191,12 @@ function ViewStudentsModal({
 
       // Refresh the list based on whether we have scheduleId
       if (scheduleId) {
-        const resp = await axiosInstance.get(`/schedules/${scheduleId}/students`, {
-          signal: controller.signal,
-        });
+        const resp = await axiosInstance.get(
+          `/schedules/${scheduleId}/students`,
+          {
+            signal: controller.signal,
+          }
+        );
         const students = Array.isArray(resp.data) ? resp.data : [];
         setEnrolledStudents(students);
         setEnrolledCount(students.length);
@@ -215,18 +221,24 @@ function ViewStudentsModal({
   };
 
   const parseCSV = (text, skipFirstRow = false) => {
-    const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+    const lines = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
     const studentIds = [];
 
     // Skip first row if it's a header
     const startIndex = skipFirstRow ? 1 : 0;
 
     for (let i = startIndex; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim()).filter(Boolean);
+      const values = lines[i]
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
       studentIds.push(...values);
     }
 
-    return studentIds.filter(id => id && id.length > 0);
+    return studentIds.filter((id) => id && id.length > 0);
   };
 
   const handleFileChange = async (e) => {
@@ -269,7 +281,13 @@ function ViewStudentsModal({
       // Validate with backend (backend expects 'userIds' parameter)
       const resp = await axiosInstance.post(
         `/schedules/${scheduleId}/students:validate-bulk`,
-        { userIds: studentIds }
+        {
+          userIds: studentIds,
+          days,
+          time_start,
+          time_end,
+          periodId
+        }
       );
 
       setCsvValidationData(resp.data);
@@ -285,16 +303,18 @@ function ViewStudentsModal({
     }
   };
 
-  const handleConfirmCSVImport = async () => {
-    if (!csvValidationData) return;
+  const handleConfirmCSVImport = async (modifiedData) => {
+    // Use modifiedData if provided (from user editing), otherwise use original validation data
+    const dataToUse = modifiedData || csvValidationData;
+    if (!dataToUse) return;
 
     try {
       setCsvLoading(true);
 
       // Extract approved and conflicts student IDs (dbId)
       const studentIdsToAdd = [
-        ...csvValidationData.approved.map(s => s.dbId),
-        ...csvValidationData.conflicts.map(s => s.dbId),
+        ...dataToUse.approved.map((s) => s.dbId),
+        ...dataToUse.conflicts.map((s) => s.dbId),
       ];
 
       if (studentIdsToAdd.length === 0) {
@@ -307,10 +327,9 @@ function ViewStudentsModal({
       }
 
       // Call bulk add endpoint
-      await axiosInstance.post(
-        `/schedules/${scheduleId}/students:bulk-add`,
-        { studentIds: studentIdsToAdd }
-      );
+      await axiosInstance.post(`/schedules/${scheduleId}/students:bulk-add`, {
+        userIds: studentIdsToAdd,
+      });
 
       // Close CSV preview modal
       setShowCSVPreview(false);
@@ -328,9 +347,12 @@ function ViewStudentsModal({
       // Refresh enrolled students list
       const controller = new AbortController();
       setEnrolledLoading(true);
-      const resp = await axiosInstance.get(`/schedules/${scheduleId}/students`, {
-        signal: controller.signal,
-      });
+      const resp = await axiosInstance.get(
+        `/schedules/${scheduleId}/students`,
+        {
+          signal: controller.signal,
+        }
+      );
       const students = Array.isArray(resp.data) ? resp.data : [];
       setEnrolledStudents(students);
       setEnrolledCount(students.length);
@@ -338,7 +360,8 @@ function ViewStudentsModal({
       Swal.fire({
         icon: 'error',
         title: 'Import Failed',
-        text: error.response?.data?.message || 'Failed to add students to schedule',
+        text:
+          error.response?.data?.message || 'Failed to add students to schedule',
       });
     } finally {
       setCsvLoading(false);
@@ -357,194 +380,202 @@ function ViewStudentsModal({
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div>
-            <h3 className="text-lg font-semibold">List of Students</h3>
-            {capacity && (
-              <p className="text-sm text-gray-600 mt-1">
-                Enrolled: {enrolledCount} / {capacity}
-                {enrolledCount >= capacity && (
-                  <span className="ml-2 text-red-600 font-medium">(Full)</span>
-                )}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <MdClose size={22} />
-          </button>
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-3 relative">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              className="px-3 py-2 bg-dark-red-2 text-white rounded disabled:opacity-50 flex items-center gap-2"
-              onClick={handleCSVUpload}
-              disabled={!scheduleId || csvLoading}
-            >
-              {csvLoading && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          <div className="flex items-center justify-between p-4 border-b">
+            <div>
+              <h3 className="text-lg font-semibold">List of Students</h3>
+              {capacity && (
+                <p className="text-sm text-gray-600 mt-1">
+                  Enrolled: {enrolledCount} / {capacity}
+                  {enrolledCount >= capacity && (
+                    <span className="ml-2 text-red-600 font-medium">
+                      (Full)
+                    </span>
+                  )}
+                </p>
               )}
-              <MdUpload size={16} />
-              Import CSV
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <MdClose size={22} />
             </button>
-            <input
-              type="text"
-              placeholder="Search by ID, Name, or Email"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              disabled={disabled}
-            />
-            {query && (
-              <div className="absolute left-[160px] right-20 bottom-full mb-1 z-10 bg-white border border-gray-200 rounded shadow max-h-64 overflow-y-auto">
-                {suggestionsLoading && (
-                  <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-dark-red"></div>
-                    Searching…
-                  </div>
+          </div>
+
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3 relative">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                className="px-3 py-2 bg-dark-red-2 text-white rounded disabled:opacity-50 flex items-center gap-2"
+                onClick={handleCSVUpload}
+                disabled={!scheduleId || csvLoading}
+              >
+                {csvLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
-                {!suggestionsLoading && suggestions.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-gray-500">
-                    No matches
-                  </div>
-                )}
-                {!suggestionsLoading &&
-                  suggestions.map((s) => (
-                    <button
-                      key={`sugg-${s.id}`}
-                      type="button"
-                      onClick={() => handleSelect(s)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0"
-                    >
-                      <div className="text-sm font-medium truncate">{s.name}</div>
-                      <div className="text-xs text-gray-500 truncate">
-                        {s.userId} • {s.email}
-                      </div>
-                    </button>
-                  ))}
+                <MdUpload size={16} />
+                Import CSV
+              </button>
+              <input
+                type="text"
+                placeholder="Search by ID, Name, or Email"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                disabled={disabled}
+              />
+              {query && (
+                <div className="absolute left-[160px] right-20 bottom-full mb-1 z-10 bg-white border border-gray-200 rounded shadow max-h-64 overflow-y-auto">
+                  {suggestionsLoading && (
+                    <div className="px-3 py-2 text-sm text-gray-500 flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-dark-red"></div>
+                      Searching…
+                    </div>
+                  )}
+                  {!suggestionsLoading && suggestions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      No matches
+                    </div>
+                  )}
+                  {!suggestionsLoading &&
+                    suggestions.map((s) => (
+                      <button
+                        key={`sugg-${s.id}`}
+                        type="button"
+                        onClick={() => handleSelect(s)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0"
+                      >
+                        <div className="text-sm font-medium truncate">
+                          {s.name}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {s.userId} • {s.email}
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              )}
+              {/* <button
+                type="button"
+                className="px-3 py-2 bg-dark-red-2 text-white rounded disabled:opacity-50"
+                disabled
+              >
+                +
+              </button> */}
+            </div>
+
+            <div className="grid grid-cols-12 text-sm font-semibold border-b pb-2 items-center">
+              <div className="col-span-1 px-2">
+                <input
+                  type="checkbox"
+                  className="cursor-pointer"
+                  checked={
+                    selectedIds.length > 0 &&
+                    selectedIds.length === allVisibleIds.length
+                  }
+                  onChange={toggleSelectAll}
+                />
               </div>
-            )}
+              <div className="col-span-2">Student ID</div>
+              <div className="col-span-5">Name</div>
+              <div className="col-span-3">Email</div>
+              {/* <div className="col-span-1 text-right">Enrolled</div> */}
+            </div>
+
+            <div className="divide-y overflow-y-auto max-h-[50vh]">
+              {enrolledLoading && (
+                <div className="py-12 flex flex-col items-center justify-center text-gray-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red mb-3"></div>
+                  <span className="text-sm">Loading students...</span>
+                </div>
+              )}
+              {!enrolledLoading && enrolledStudents.length === 0 && (
+                <div className="py-6 text-center text-gray-500">No results</div>
+              )}
+              {!enrolledLoading &&
+                enrolledStudents.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    // onClick={() => handleSelect(s)}
+                    className="w-full grid grid-cols-12 items-center py-3 hover:bg-gray-50 text-left cursor-default"
+                  >
+                    <div className="col-span-1 px-2">
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer"
+                        checked={selectedIds.includes(s.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelected(s.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <div
+                      className="col-span-2 truncate"
+                      title={s.userId || String(idx + 1)}
+                    >
+                      {s.userId || idx + 1}
+                    </div>
+                    <div className="col-span-5 truncate" title={s.name}>
+                      {s.name}
+                    </div>
+                    <div className="col-span-3 truncate" title={s.email}>
+                      {s.email}
+                    </div>
+                    {/* <div className="col-span-1 text-right">
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs ${
+                          s.enrolledInCourse
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {s.enrolledInCourse ? 'Yes' : 'No'}
+                      </span>
+                    </div> */}
+                    {checkingId === s.id && (
+                      <div className="col-span-12 text-xs text-gray-500 pl-2 flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-dark-red"></div>
+                        Checking conflicts…
+                      </div>
+                    )}
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          <div className="p-4 border-t flex flex-row gap-4">
             <button
               type="button"
-              className="px-3 py-2 bg-dark-red-2 text-white rounded disabled:opacity-50"
-              disabled
+              className="px-4 py-2 bg-dark-red-2 text-white rounded h-10"
+              onClick={onClose}
             >
-              +
+              Close
             </button>
-          </div>
 
-          <div className="grid grid-cols-12 text-sm font-semibold border-b pb-2 items-center">
-            <div className="col-span-1 px-2">
-              <input
-                type="checkbox"
-                className="cursor-pointer"
-                checked={
-                  selectedIds.length > 0 &&
-                  selectedIds.length === allVisibleIds.length
-                }
-                onChange={toggleSelectAll}
-              />
-            </div>
-            <div className="col-span-2">Student ID</div>
-            <div className="col-span-5">Name</div>
-            <div className="col-span-3">Email</div>
-            <div className="col-span-1 text-right">Enrolled</div>
-          </div>
-
-          <div className="divide-y overflow-y-auto max-h-[50vh]">
-            {enrolledLoading && (
-              <div className="py-12 flex flex-col items-center justify-center text-gray-500">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red mb-3"></div>
-                <span className="text-sm">Loading students...</span>
+            {selectedIds.length > 0 && (
+              <div className="flex flex-row items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleBatchDelete}
+                  className="px-4 py-2 bg-dark-red-2 text-white rounded h-10"
+                  disabled={!scheduleId}
+                >
+                  Remove Selected
+                </button>
+                <p className="text-xs">{selectedIds.length} selected</p>
               </div>
             )}
-            {!enrolledLoading && enrolledStudents.length === 0 && (
-              <div className="py-6 text-center text-gray-500">No results</div>
-            )}
-            {!enrolledLoading && enrolledStudents.map((s, idx) => (
-              <button
-                key={s.id}
-                type="button"
-                // onClick={() => handleSelect(s)}
-                className="w-full grid grid-cols-12 items-center py-3 hover:bg-gray-50 text-left cursor-default"
-              >
-                <div className="col-span-1 px-2">
-                  <input
-                    type="checkbox"
-                    className="cursor-pointer"
-                    checked={selectedIds.includes(s.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      toggleSelected(s.id);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="col-span-2 truncate" title={s.userId || String(idx + 1)}>
-                  {s.userId || idx + 1}
-                </div>
-                <div className="col-span-5 truncate" title={s.name}>
-                  {s.name}
-                </div>
-                <div className="col-span-3 truncate" title={s.email}>
-                  {s.email}
-                </div>
-                <div className="col-span-1 text-right">
-                  <span
-                    className={`inline-block px-2 py-1 rounded text-xs ${
-                      s.enrolledInCourse
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {s.enrolledInCourse ? 'Yes' : 'No'}
-                  </span>
-                </div>
-                {checkingId === s.id && (
-                  <div className="col-span-12 text-xs text-gray-500 pl-2 flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-dark-red"></div>
-                    Checking conflicts…
-                  </div>
-                )}
-              </button>
-            ))}
           </div>
-        </div>
-
-        <div className="p-4 border-t flex flex-row gap-4">
-          <button
-            type="button"
-            className="px-4 py-2 bg-dark-red-2 text-white rounded h-10"
-            onClick={onClose}
-          >
-            Close
-          </button>
-
-          {selectedIds.length > 0 && (
-            <div className="flex flex-row items-center gap-2">
-              <button
-                type="button"
-                onClick={handleBatchDelete}
-                className="px-4 py-2 bg-dark-red-2 text-white rounded h-10"
-                disabled={!scheduleId}
-              >
-                Remove Selected
-              </button>
-              <p className="text-xs">{selectedIds.length} selected</p>
-            </div>
-          )}
-        </div>
         </div>
       </div>
 

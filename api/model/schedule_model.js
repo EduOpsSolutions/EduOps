@@ -227,6 +227,7 @@ export const createSchedule = async (data) => {
     location: data.location,
     notes: data.notes,
     color: data.color,
+    capacity: data.capacity !== undefined ? data.capacity : 30,
     periodStart: data.periodStart ? new Date(data.periodStart) : null,
     periodEnd: data.periodEnd ? new Date(data.periodEnd) : null,
     course: data.courseId ? { connect: { id: data.courseId } } : undefined,
@@ -278,6 +279,10 @@ export const updateSchedule = async (id, data) => {
     notes: data.notes,
     color: data.color,
   };
+
+  if (data.capacity !== undefined) {
+    scheduleData.capacity = data.capacity;
+  }
 
   if (data.periodStart) {
     scheduleData.periodStart = new Date(data.periodStart);
