@@ -41,11 +41,6 @@ const RESPONSIVE_STYLES = {
   }
 };
 
-const NOTIFICATION_TYPES = {
-  MESSAGE: { prefix: "New message from", isSystem: false },
-  SYSTEM: { prefix: "Course reminder from", isSystem: true }
-};
-
 const getStyles = (isCompact) => RESPONSIVE_STYLES[isCompact ? 'compact' : 'normal'];
 const API_BASE_URL = process.env.REACT_APP_API_URL || "";
 
@@ -121,12 +116,12 @@ const NotificationDropdown = ({ isCompact = false }) => {
                 >
                   <div className={`flex items-start ${styles.item}`}>
                     <div className="shrink-0">
-                      {notification.profilePic || notification.user?.profilePicLink ? (
+                      {notification.data?.posterProfilePic || notification.profilePic ? (
                         <img
                           className={`rounded-full ${styles.avatar} border-2 border-german-red`}
                           src={
-                            notification.profilePic ||
-                            notification.user?.profilePicLink
+                            notification.data?.posterProfilePic ||
+                            notification.profilePic
                           }
                           alt="avatar"
                           onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }}
@@ -135,15 +130,15 @@ const NotificationDropdown = ({ isCompact = false }) => {
                         <span
                           className={`flex items-center justify-center bg-german-red text-white font-bold rounded-full border-2 border-german-yellow ${styles.avatar}`}
                         >
-                          {notification.user && notification.user.firstName && notification.user.lastName
-                            ? `${notification.user.firstName[0]}${notification.user.lastName[0]}`.toUpperCase()
+                          {notification.data?.posterFirstName && notification.data?.posterLastName
+                            ? `${notification.data.posterFirstName[0]}${notification.data.posterLastName[0]}`.toUpperCase()
                             : '?'}
                         </span>
                       )}
                     </div>
                     <div className={`w-full min-w-0 ${isCompact ? 'ml-2 sm:ml-3' : 'ml-3'}`}>
                       <div className={`text-left text-gray-700  ${styles.smallText} mb-2`}>
-                        {notification.user.firstName} {notification.user.lastName}
+                        {notification.data?.posterFirstName || notification.user?.firstName} {notification.data?.posterLastName || notification.user?.lastName}
                       </div>
                       <div className={`text-left text-gray-700 ${styles.smallText} mb-1`}>
                         {notification.title}
