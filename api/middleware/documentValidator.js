@@ -145,15 +145,14 @@ const validateUpdateDocumentRequestStatus = [
 // Document Validation Validations
 const validateCreateDocumentValidation = [
     body('documentName')
-        .notEmpty()
-        .withMessage('Document name is required')
+        .optional()
         .isLength({ max: 255 })
         .withMessage('Document name must be less than 255 characters'),
     
-    body('documentId')
+    body('userId')
         .optional()
         .isString()
-        .withMessage('Document ID must be a valid string'),
+        .withMessage('User ID must be a valid string'),
     
     handleValidationErrors
 ];
