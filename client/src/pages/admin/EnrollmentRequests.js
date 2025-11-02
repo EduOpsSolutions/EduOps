@@ -379,15 +379,7 @@ function EnrollmentRequests() {
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Courses
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            Amount Balance
-                          </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            Amount Paid
-                          </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            O.R.
-                          </th>
+                          
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Phone
                           </th>
@@ -441,30 +433,6 @@ function EnrollmentRequests() {
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
-                                className="truncate max-w-20 sm:max-w-28 md:max-w-none"
-                                title={request.amountBalance || 'N/A'}
-                              >
-                                {request.amountBalance || 'N/A'}
-                              </div>
-                            </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.amountPaid || 'N/A'}
-                              >
-                                {request.amountPaid || 'N/A'}
-                              </div>
-                            </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.or || 'N/A'}
-                              >
-                                {request.or || 'N/A'}
-                              </div>
-                            </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
                                 title={request.contactNumber || 'N/A'}
                               >
@@ -502,7 +470,36 @@ function EnrollmentRequests() {
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
                                 title={request.enrollmentStatus || 'N/A'}
                               >
-                                {request.enrollmentStatus || 'N/A'}
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs sm:text-sm md:text-base font-medium border max-w-[90vw] sm:max-w-[180px] truncate whitespace-normal text-center
+                                    ${request.enrollmentStatus?.toLowerCase() === "pending"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : request.enrollmentStatus?.toLowerCase() === "verified"
+                                      ? "bg-sky-50 text-sky-700 border-sky-200"
+                                      : request.enrollmentStatus?.toLowerCase() === "payment_pending"
+                                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                                      : request.enrollmentStatus?.toLowerCase() === "approved"
+                                      ? "bg-violet-50 text-violet-700 border-violet-200"
+                                      : request.enrollmentStatus?.toLowerCase() === "completed"
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                      : request.enrollmentStatus?.toLowerCase() === "rejected"
+                                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                                      : "bg-slate-50 text-slate-700 border-slate-200"
+                                  }`}
+                                  title={request.enrollmentStatus || 'N/A'}
+                                >
+                                  {request.enrollmentStatus
+                                    ? request.enrollmentStatus.toLowerCase() === "rejected"
+                                      ? request.currentStep === 3
+                                        ? "Payment Rejected"
+                                        : "Form Rejected"
+                                      : request.enrollmentStatus
+                                          .replace(/_/g, ' ')
+                                          .split(' ')
+                                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                          .join(' ')
+                                    : 'N/A'}
+                                </span>
                               </div>
                             </td>
                           </tr>
@@ -510,7 +507,7 @@ function EnrollmentRequests() {
                         {enrollmentRequests.length === 0 && !loading && (
                           <tr>
                             <td
-                              colSpan="11"
+                              colSpan="8"
                               className="text-center py-6 md:py-8 text-gray-500 border-t border-b border-red-900 text-sm md:text-base"
                             >
                               No enrollment requests found

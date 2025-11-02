@@ -259,7 +259,7 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
                 text: 'Do you want to save your edits to this post?',
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#890E07',
+                confirmButtonColor: '#992525',
                 cancelButtonColor: '#6b7280',
                 confirmButtonText: 'Yes, save',
                 cancelButtonText: 'Cancel',
@@ -277,7 +277,7 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
                 title: 'Saved!',
                 text: 'Your changes have been saved successfully.',
                 icon: 'success',
-                confirmButtonColor: '#890E07',
+                confirmButtonColor: '#992525',
                 timer: 2000,
                 showConfirmButton: false
             });
@@ -285,12 +285,31 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
     };
 
     const hasChanges = () => {
-        return (
-            formData.title !== postData.title ||
-            formData.content !== postData.content ||
-            formData.selectedImages.length > 0 ||
-            formData.selectedFiles.length > 0
-        );
+        // Defensive: fallback to empty string/defaults for undefined
+        const origTitle = postData.title || '';
+        const origContent = postData.content || '';
+        const origTag = postData.tag || 'global';
+        const origSendOption = postData.sendOption || 'email';
+        const origFiles = Array.isArray(postData.files) ? postData.files : [];
+
+        if (formData.title !== origTitle) return true;
+        if (formData.content !== origContent) return true;
+        if (formData.tag !== origTag) return true;
+        if (formData.sendOption !== origSendOption) return true;
+
+        // New images/files added
+        if (formData.selectedImages.length > 0) return true;
+        if (formData.selectedFiles.length > 0) return true;
+
+        // Existing attachments removed
+        const originalFileIds = origFiles.map(f => f.id).sort();
+        const currentFileIds = [...existingImages, ...existingDocuments].map(f => f.id).sort();
+        if (originalFileIds.length !== currentFileIds.length) return true;
+        for (let i = 0; i < originalFileIds.length; i++) {
+            if (originalFileIds[i] !== currentFileIds[i]) return true;
+        }
+
+        return false;
     };
 
     const handleClose = () => {
@@ -303,7 +322,7 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
                 confirmButtonText: 'Yes, discard',
                 cancelButtonText: 'No, keep editing',
                 confirmButtonColor: '#992525',
-                cancelButtonColor: '#6b7280',
+                cancelButtonColor: '#6B7280',
                 reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -436,10 +455,14 @@ function EditPostModal({ edit_post_modal, setEditPostModal, postData }) {
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={isSubmitting}
-                                            className="flex-1 sm:flex-none text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50"
+                                            disabled={isSubmitting || !hasChanges()}
+                                            className={`flex-1 sm:flex-none font-semibold rounded-md text-sm px-5 py-2 sm:px-6 sm:py-2.5 text-center shadow-sm shadow-black ease-in duration-150 min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                hasChanges()
+                                                    ? 'text-white bg-dark-red-2 hover:bg-dark-red-5 focus:outline-none'
+                                                    : 'text-gray-500 bg-gray-300 cursor-not-allowed'
+                                            }`}
                                         >
-                                            {isSubmitting ? 'Saving...' : 'Save'}
+                                            {isSubmitting ? 'Saving...' : hasChanges() ? 'Save' : 'No Changes'}
                                         </button>
                                     </div>
                                 </div>

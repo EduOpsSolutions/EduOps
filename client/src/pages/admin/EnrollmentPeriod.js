@@ -170,82 +170,95 @@ function EnrollmentPeriod() {
         </div>
       )}
 
-      {/* Search Form */}
-      <SearchForm
-        searchLogic={searchStore}
-        fields={searchFormConfig}
-        onSearch={handleSearch}
-      />
+      {/* Loading Spinner */}
+      {useEnrollmentPeriodStore.getState().loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+            <p className="text-lg">Loading Enrollment Periods...</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Search Form */}
+          <SearchForm
+            searchLogic={searchStore}
+            fields={searchFormConfig}
+            onSearch={handleSearch}
+          />
 
-      {/* Search Results */}
-      <SearchResults
-        visible={searchStore.showResults && !showCourses}
-        items={searchStore.currentItems}
-        columns={searchResultsColumns}
-        onItemClick={handlePeriodClick}
-        pagination={paginationConfig}
-        columnRenderers={{
-          batchStatus: (batchStatus) => (
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBatchStatusBadgeColor(
-                batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1)
-              )}`}
-            >
-              {batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1)}
-            </span>
-          ),
-          enrollmentStatus: (enrollmentStatus) => (
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEnrollmentStatusBadgeColor(
-                enrollmentStatus.charAt(0).toUpperCase() + enrollmentStatus.slice(1)
-              )}`}
-            >
-              {enrollmentStatus.charAt(0).toUpperCase() + enrollmentStatus.slice(1)}
-            </span>
-          ),
-        }}
-        actionButton={
-          <ThinRedButton
-            onClick={() =>
-              useEnrollmentPeriodStore.setState({
-                addAcademicPeriodModal: true,
-              })
+          {/* Search Results */}
+          <SearchResults
+            visible={searchStore.showResults && !showCourses}
+            items={searchStore.currentItems}
+            columns={searchResultsColumns}
+            onItemClick={handlePeriodClick}
+            pagination={paginationConfig}
+            columnRenderers={{
+              batchStatus: (batchStatus) => (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBatchStatusBadgeColor(
+                    batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1)
+                  )}`}
+                >
+                  {batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1)}
+                </span>
+              ),
+              enrollmentStatus: (enrollmentStatus) => (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEnrollmentStatusBadgeColor(
+                    enrollmentStatus.charAt(0).toUpperCase() + enrollmentStatus.slice(1)
+                  )}`}
+                >
+                  {enrollmentStatus.charAt(0).toUpperCase() + enrollmentStatus.slice(1)}
+                </span>
+              ),
+            }}
+            actionButton={
+              <ThinRedButton
+                onClick={() =>
+                  useEnrollmentPeriodStore.setState({
+                    addAcademicPeriodModal: true,
+                  })
+                }
+              >
+                Create Batch
+              </ThinRedButton>
             }
-          >
-            Create Batch
-          </ThinRedButton>
-        }
-      />
+            emptyMessage="No Enrollment Periods found"
+          />
 
-      {/* Period Details */}
-      {showCourses && selectedPeriod && (
-        <PeriodDetailsTable
-          periodCourses={periodCourses}
-          onDeleteCourse={deleteCourse}
-          selectedPeriod={selectedPeriod}
-          onAddCourse={() =>
-            useEnrollmentPeriodStore.setState({ addCourseModal: true })
-          }
-          onBack={handleBackToResults}
-        />
+          {/* Period Details */}
+          {showCourses && selectedPeriod && (
+            <PeriodDetailsTable
+              periodCourses={periodCourses}
+              onDeleteCourse={deleteCourse}
+              selectedPeriod={selectedPeriod}
+              onAddCourse={() =>
+                useEnrollmentPeriodStore.setState({ addCourseModal: true })
+              }
+              onBack={handleBackToResults}
+            />
+          )}
+
+          {/* Modals */}
+          <AddCourseModal
+            add_course_modal={addCourseModal}
+            setAddCourseModal={(show) =>
+              useEnrollmentPeriodStore.setState({ addCourseModal: show })
+            }
+            selectedPeriod={selectedPeriod}
+            fetchPeriodCourses={fetchPeriodCourses}
+          />
+          <AcademicPeriodModal
+            addAcademicPeriodModal={addAcademicPeriodModal}
+            setAddAcademicPeriodModal={(show) =>
+              useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: show })
+            }
+            fetchPeriods={fetchPeriods}
+          />
+        </>
       )}
-
-      {/* Modals */}
-      <AddCourseModal
-        add_course_modal={addCourseModal}
-        setAddCourseModal={(show) =>
-          useEnrollmentPeriodStore.setState({ addCourseModal: show })
-        }
-        selectedPeriod={selectedPeriod}
-        fetchPeriodCourses={fetchPeriodCourses}
-      />
-      <AcademicPeriodModal
-        addAcademicPeriodModal={addAcademicPeriodModal}
-        setAddAcademicPeriodModal={(show) =>
-          useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: show })
-        }
-        fetchPeriods={fetchPeriods}
-      />
     </div>
   );
 }

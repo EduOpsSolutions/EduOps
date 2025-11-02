@@ -46,8 +46,9 @@ const useProfileStore = create((set, get) => ({
       showCancelButton: true,
       confirmButtonText: 'Save',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#890E07',
+      confirmButtonColor: '#992525',
       cancelButtonColor: '#6b7280',
+      reverseButtons: true,
     });
 
     if (result.isConfirmed) {
@@ -104,7 +105,7 @@ const useProfileStore = create((set, get) => ({
           icon: 'success',
           title: 'Success!',
           text: 'Profile picture has been saved successfully!',
-          confirmButtonColor: '#890E07',
+          confirmButtonColor: '#992525',
         });
       } else {
         throw new Error('Invalid response from server');
@@ -117,7 +118,7 @@ const useProfileStore = create((set, get) => ({
         text:
           error.response?.data?.message ||
           'Something went wrong! Failed to save profile picture.',
-        confirmButtonColor: '#890E07',
+  confirmButtonColor: '#992525',
       });
     } finally {
       set({ uploadingImage: false });
@@ -158,7 +159,7 @@ const useProfileStore = create((set, get) => ({
         icon: 'success',
         title: 'Success!',
         text: 'Profile picture has been removed successfully!',
-        confirmButtonColor: '#890E07',
+  confirmButtonColor: '#992525',
       });
     } catch (error) {
       console.error('Error removing profile picture:', error);
@@ -168,7 +169,7 @@ const useProfileStore = create((set, get) => ({
         text:
           error.response?.data?.message ||
           'Something went wrong! Failed to remove profile picture.',
-        confirmButtonColor: '#890E07',
+  confirmButtonColor: '#992525',
       });
     } finally {
       set({ uploadingImage: false });

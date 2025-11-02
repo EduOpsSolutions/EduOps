@@ -96,30 +96,33 @@ export default function EnrollmentDetailsModal({
       const currentIndex = statusOrder.indexOf(currentStatus);
       const newIndex = statusOrder.indexOf(newStatus);
       
-      // Check if trying to advance to step 2 onwards without account
-      if (newIndex >= 1 && !(formData?.userId || formData?.studentId || emailExists) && newStatus !== "rejected") {
-        Swal.fire({
-          title: "Account Required",
-          text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
-          icon: "warning",
-          confirmButtonColor: "#992525"
-        });
-        return;
-      }
+      const hasAccountForThisEnrollment = !!(formData?.userId || formData?.studentId || originalData?.userId || originalData?.studentId || emailExists);
+      const isMovingBackwards = newIndex < currentIndex;
       
-      // Prevent skipping steps - must follow sequential order (1-5)
-      if (newIndex > currentIndex + 1 && newStatus !== "rejected") {
-        const currentStep = currentIndex + 1;
-        const nextStep = currentIndex + 2;
-        const targetStep = newIndex + 1;
+      if (!isMovingBackwards) {
+        if (newIndex >= 1 && !hasAccountForThisEnrollment && newStatus !== "rejected") {
+          Swal.fire({
+            title: "Account Required",
+            text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
+            icon: "warning",
+            confirmButtonColor: "#992525"
+          });
+          return;
+        }
         
-        Swal.fire({
-          title: "Cannot Skip Steps",
-          text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
-          icon: "warning",
-          confirmButtonColor: "#992525"
-        });
-        return;
+        if (newIndex > currentIndex + 1 && newStatus !== "rejected") {
+          const currentStep = currentIndex + 1;
+          const nextStep = currentIndex + 2;
+          const targetStep = newIndex + 1;
+          
+          Swal.fire({
+            title: "Cannot Skip Steps",
+            text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
+            icon: "warning",
+            confirmButtonColor: "#992525"
+          });
+          return;
+        }
       }
     }
     
@@ -172,8 +175,20 @@ export default function EnrollmentDetailsModal({
             }
           );
           
-          // Update form data to reflect account creation
-          setFormData(prev => ({ ...prev, userId: response.data.userId }));
+          const updatedUserId = response.data.userId || response.data.data?.userId;
+          const updatedStudentId = response.data.studentId || response.data.data?.studentId;
+          
+          setFormData(prev => ({ 
+            ...prev, 
+            userId: updatedUserId,
+            studentId: updatedStudentId
+          }));
+          
+          setOriginalData(prev => ({ 
+            ...prev, 
+            userId: updatedUserId,
+            studentId: updatedStudentId
+          }));
           
           // Update email exists state immediately
           setEmailExists(true);
@@ -384,30 +399,43 @@ export default function EnrollmentDetailsModal({
       const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
       const currentIndex = statusOrder.indexOf(currentStatus);
       const newIndex = statusOrder.indexOf(newStatus);
+      const hasAccountForThisEnrollment = !!(formData?.userId || formData?.studentId || originalData?.userId || originalData?.studentId || emailExists);
+      const isMovingBackwards = newIndex < currentIndex;
       
-      // Check if trying to skip steps
-      if (newIndex > currentIndex + 1) {
-        const currentStep = currentIndex + 1;
-        const nextStep = currentIndex + 2;
-        const targetStep = newIndex + 1;
+      if (!isMovingBackwards) {
+        if (newStatus === "verified" && !hasAccountForThisEnrollment) {
+          Swal.fire({
+            title: "Account Required",
+            text: "Cannot set status to 'Verified' without creating an account first. Please use the 'Create Account' button before verifying the enrollment.",
+            icon: "warning",
+            confirmButtonColor: "#992525"
+          });
+          return;
+        }
         
-        Swal.fire({
-          title: "Cannot Skip Steps",
-          text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
-          icon: "warning",
-          confirmButtonColor: "#992525"
-        });
-        return;
-      }
-      
-      if (newIndex >= 1 && !(formData?.userId || formData?.studentId || emailExists)) {
-        Swal.fire({
-          title: "Account Required",
-          text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
-          icon: "warning",
-          confirmButtonColor: "#992525"
-        });
-        return;
+        if (newIndex > currentIndex + 1) {
+          const currentStep = currentIndex + 1;
+          const nextStep = currentIndex + 2;
+          const targetStep = newIndex + 1;
+          
+          Swal.fire({
+            title: "Cannot Skip Steps",
+            text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
+            icon: "warning",
+            confirmButtonColor: "#992525"
+          });
+          return;
+        }
+        
+        if (newIndex >= 1 && !hasAccountForThisEnrollment) {
+          Swal.fire({
+            title: "Account Required",
+            text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
+            icon: "warning",
+            confirmButtonColor: "#992525"
+          });
+          return;
+        }
       }
     }
 
@@ -549,8 +577,12 @@ export default function EnrollmentDetailsModal({
                       formData?.enrollmentStatus
                     )}`}
                   >
-                    {formData?.enrollmentStatus?.charAt(0).toUpperCase() +
-                      formData?.enrollmentStatus?.slice(1)}
+                    {formData?.enrollmentStatus?.toLowerCase() === "rejected"
+                      ? formData?.paymentProofPath
+                        ? "Payment Rejected"
+                        : "Form Rejected"
+                      : formData?.enrollmentStatus?.charAt(0).toUpperCase() +
+                        formData?.enrollmentStatus?.slice(1)}
                   </span>
                 </div>
               </div>

@@ -86,7 +86,7 @@ axiosInstance.interceptors.response.use(
             title: "Session Expired",
             text: "Your session has expired. Please login again.",
             icon: "warning",
-            confirmButtonColor: "#DE0000",
+            confirmButtonColor: "#992525",
           }).then(() => {
             // Redirect to login page
             window.location.href = "/login";

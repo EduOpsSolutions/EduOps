@@ -47,7 +47,7 @@ function Login() {
         icon: 'error',
         title: 'Login Failed',
         text: error.message || 'A client-side error occurred.',
-        confirmButtonColor: '#DE0000',
+        confirmButtonColor: '#992525',
         customClass: {
           confirmButton: 'bg-german-red hover:bg-dark-red-2 text-white',
         },

@@ -467,8 +467,11 @@ const getEnrollmentRequests = async (req, res) => {
 
   const new_data = await Promise.all(
     enrollmentRequests.map(async (item) => {
+      const progressData = await trackEnrollmentProgress(item);
+      
       return {
         ...item,
+        currentStep: progressData.currentStep,
         isUserCreated: (await prisma.users.findFirst({
           where: {
             OR: [{ email: item.preferredEmail }, { email: item.altEmail }],
@@ -563,7 +566,6 @@ const trackEnrollment = async (req, res) => {
       "Your enrollment form has been submitted and is pending verification by an administrator.";
 
     const coursePrice = course ? parseFloat(course.price) : null;
-
     const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : "";
 
     switch (enrollmentRequest.enrollmentStatus.toUpperCase()) {
@@ -575,7 +577,7 @@ const trackEnrollment = async (req, res) => {
       case "VERIFIED":
         currentStep = 3;
         completedSteps = [1, 2];
-        remarkMsg = `Your form has been verified and please pay the Downpayment Fee: ₱3000 or ${priceText}`;
+        remarkMsg = `Your form has been verified. Please pay the Downpayment Fee: ₱3000 or full amount${priceText}`;
         break;
       case "PAYMENT_PENDING":
         currentStep = 4;
@@ -590,28 +592,25 @@ const trackEnrollment = async (req, res) => {
       case "COMPLETED":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4, 5];
-        remarkMsg = `Congratulations! Your enrollment is complete.`;
+        remarkMsg = `Congratulations! Your payment has been verified and your enrollment is now complete.`;
         break;
       case "REJECTED":
         const hasPaymentProof = enrollmentRequest.paymentProofPath && enrollmentRequest.paymentProofPath.trim() !== "";
         
         if (hasPaymentProof) {
-          // If payment proof exists, it was likely a payment rejection - go back to payment step
           currentStep = 3;
           completedSteps = [1, 2];
-          remarkMsg = "Your payment has been rejected. Please upload a new payment proof and try again.";
+          remarkMsg = "Your payment has been rejected. Please upload a new payment proof.";
         } else {
-          // If no payment proof, it was a form rejection - go back to form verification
-          currentStep = 2;
-          completedSteps = [1];
-          remarkMsg = "Your enrollment form has been rejected. Please contact our admissions office for more information.";
+          currentStep = 1;
+          completedSteps = [];
+          remarkMsg = "Your enrollment form has been rejected. Please contact the admissions office for guidance on how to proceed.";
         }
         break;
       default:
-        currentStep = 1;
-        completedSteps = [];
-        remarkMsg =
-          "Your enrollment form has been submitted and is pending verification by an administrator.";
+        currentStep = 2;
+        completedSteps = [1];
+        remarkMsg = "Your enrollment form has been submitted and is pending verification by an administrator.";
     }
 
     // Return enrollment tracking data
@@ -763,8 +762,8 @@ const trackEnrollmentProgress = async (enrollmentRequest) => {
       remarkMsg = "Your payment is being verified. This may take 1-2 business days.";
       break;
     case "APPROVED":
-      currentStep = 4;
-      completedSteps = [1, 2, 3, 5];
+      currentStep = 5;
+      completedSteps = [1, 2, 3, 4];
       remarkMsg = "Your payment has been verified. Enrollment is being processed.";
       break;
     case "COMPLETED":
@@ -781,15 +780,10 @@ const trackEnrollmentProgress = async (enrollmentRequest) => {
         currentStep = 3;
         completedSteps = [1, 2];
         remarkMsg = "Your payment has been rejected. Please upload a new payment proof and try again.";
-        // Return payment_pending status instead of rejected so the student can resubmit
-        enrollmentStatus = "payment_pending";
       } else {
-        // If no payment proof, it was a form rejection - go back to form verification
         currentStep = 2;
         completedSteps = [1];
         remarkMsg = "Your enrollment form has been rejected. Please contact our admissions office for more information.";
-        // Return verified status so the student can resubmit
-        enrollmentStatus = "verified";
       }
       break;
     default:
@@ -858,44 +852,48 @@ const updateEnrollment = async (req, res) => {
   if (paymentProofPath !== undefined)
     updateData.paymentProofPath = paymentProofPath;
   if (enrollmentStatus !== undefined) {
-    // If status is being set to rejected, convert it to the appropriate status for resubmission
-    if (enrollmentStatus.toUpperCase() === "REJECTED") {
-      // Get the current enrollment to check previous status
-      const currentEnrollment = await prisma.enrollment_request.findUnique({
-        where: { enrollmentId }
-      });
-      
-      if (currentEnrollment) {
-        const currentStatus = currentEnrollment.enrollmentStatus.toUpperCase();
-        // Determine the appropriate status to set
-        if (currentStatus === "PAYMENT_PENDING" || currentStatus === "APPROVED") {
-          // If currently in payment verification, go back to payment pending
-          updateData.enrollmentStatus = "payment_pending";
-        } else {
-          // For all other cases, go back to verified
-          updateData.enrollmentStatus = "verified";
-        }
-      }
-    } else {
-      updateData.enrollmentStatus = enrollmentStatus;
+    updateData.enrollmentStatus = enrollmentStatus;
+    
+    if (enrollmentStatus.toLowerCase() === "approved") {
+      updateData.enrollmentStatus = "completed";
     }
   }
 
   try {
+    const currentEnrollment = await prisma.enrollment_request.findUnique({
+      where: { enrollmentId }
+    });
+
+    if (!currentEnrollment) {
+      return res.status(404).json({
+        message: "Enrollment request not found",
+        error: true,
+      });
+    }
+
+    if (currentEnrollment.studentId) {
+      const currentStatus = currentEnrollment.enrollmentStatus?.toLowerCase();
+      const newStatus = enrollmentStatus?.toLowerCase();
+      
+      if (currentStatus === 'pending' && (!newStatus || newStatus === 'pending')) {
+        return res.status(400).json({
+          message: "Account has been created. Please change the status to 'Verified' before saving.",
+          error: true,
+        });
+      }
+    }
+
     const updated = await prisma.enrollment_request.update({
       where: { enrollmentId },
       data: updateData,
     });
 
-    // If enrollment status was changed, also update the enrollment progress
     if (enrollmentStatus !== undefined) {
-      // Call the trackEnrollment function to update progress
       const enrollmentRequest = await prisma.enrollment_request.findUnique({
         where: { enrollmentId }
       });
       
       if (enrollmentRequest) {
-        // Update the progress based on the new status
         const progressData = await trackEnrollmentProgress(enrollmentRequest);
       }
     }
