@@ -17,7 +17,6 @@ function DocumentRequests() {
     viewDetailsModal,
     updateStatus,
     updateRemarks,
-    linkedTransactionId,
     loading,
     error,
     fetchDocumentRequests,
@@ -27,7 +26,6 @@ function DocumentRequests() {
     closeViewDetailsModal,
     setUpdateStatus,
     setUpdateRemarks,
-    setLinkedTransactionId,
     handleSubmitStatusUpdate,
     resetStore
   } = useDocumentRequestStore();
@@ -306,10 +304,8 @@ function DocumentRequests() {
         selectedRequest={selectedRequest}
         updateStatus={updateStatus}
         updateRemarks={updateRemarks}
-        linkedTransactionId={linkedTransactionId}
         onStatusChange={handleStatusChange}
         onRemarksChange={handleRemarksChange}
-        onTransactionChange={setLinkedTransactionId}
         onSubmit={handleSubmitStatusUpdate}
       />
 

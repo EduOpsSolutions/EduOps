@@ -377,6 +377,7 @@ export const createDocumentRequest = async (req, res) => {
       lastName: user?.lastName,
       phone,
       mode: mode || 'pickup',
+      paymentMethod: paymentMethod || 'online',
       address: mode === 'delivery' ? address : null,
       city: mode === 'delivery' ? city : null,
       purpose,
@@ -867,6 +868,69 @@ export const searchDocumentValidations = async (req, res) => {
     res.status(500).json({
       error: true,
       message: 'Failed to search document validations'
+    });
+  }
+};
+
+// Attach transaction to document request (Admin only)
+export const attachTransactionToRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { transactionId } = req.body;
+    const userRole = req.user.data.role;
+
+    console.log('[attachTransactionToRequest] Request:', { id, transactionId, userRole });
+
+    // Only admins can attach transactions
+    if (userRole !== 'admin') {
+      return res.status(403).json({
+        error: true,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    if (!transactionId) {
+      return res.status(400).json({
+        error: true,
+        message: 'Transaction ID is required'
+      });
+    }
+
+    const request = await DocumentModel.getDocumentRequestById(id);
+    console.log('[attachTransactionToRequest] Request found:', !!request);
+    
+    if (!request) {
+      return res.status(404).json({
+        error: true,
+        message: 'Document request not found'
+      });
+    }
+
+    // Verify transaction exists and get transaction details
+    const transaction = await DocumentModel.getTransactionById(transactionId);
+    console.log('[attachTransactionToRequest] Transaction found:', !!transaction, transactionId);
+    
+    if (!transaction) {
+      return res.status(404).json({
+        error: true,
+        message: `Transaction not found with ID: ${transactionId}`
+      });
+    }
+
+    // Attach transaction to request and update payment status to "verified"
+    const updatedRequest = await DocumentModel.attachTransactionToRequest(id, transactionId);
+
+    res.json({
+      error: false,
+      data: updatedRequest,
+      message: 'Transaction attached successfully. Payment status updated to verified.'
+    });
+
+  } catch (error) {
+    console.error('Attach transaction error:', error);
+    res.status(500).json({
+      error: true,
+      message: error.message || 'Failed to attach transaction'
     });
   }
 };

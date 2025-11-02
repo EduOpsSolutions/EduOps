@@ -84,7 +84,7 @@ function TransactionSelector({ onSelectTransaction, selectedTransactionId }) {
     });
   };
 
-  const selectedTransaction = transactions.find(t => t.id === selectedTransactionId);
+  const selectedTransaction = transactions.find(t => t.transactionId === selectedTransactionId);
 
   return (
     <div className="mb-4">

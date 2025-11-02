@@ -146,6 +146,14 @@ export const documentRequestsApi = {
       fulfilledDocumentUrl: null
     });
     return response.data;
+  },
+
+  // Attach transaction to document request (admin only)
+  attachTransaction: async (id, transactionId) => {
+    const response = await axiosInstance.patch(`/documents/requests/${id}/attach-transaction`, {
+      transactionId
+    });
+    return response.data;
   }
 };
 
