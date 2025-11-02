@@ -1,13 +1,18 @@
 import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import documentApi from "../../../utils/documentApi";
+import TransactionSelector from "./TransactionSelector";
 import Swal from "sweetalert2";
 
 function ViewRequestDetailsModal() {
+  const navigate = useNavigate();
   const { viewDetailsModal, closeViewDetailsModal, selectedRequest, fetchDocumentRequests, refreshSelectedRequest } = useDocumentRequestStore();
   const user = useAuthStore((state) => state.user);
   const [uploading, setUploading] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [attachingTransaction, setAttachingTransaction] = useState(false);
   const fileInputRef = useRef(null);
   const completedDocInputRef = useRef(null);
 
@@ -15,6 +20,100 @@ function ViewRequestDetailsModal() {
 
   const isOwnRequest = user && selectedRequest.userId === user.id;
   const canUploadProof = isOwnRequest && (user.role === 'student' || user.role === 'teacher');
+  const isAdmin = user && user.role === 'admin';
+
+  const handleProceedToPayment = () => {
+    closeViewDetailsModal();
+    navigate('/paymentForm', {
+      state: {
+        documentFee: {
+          feeType: 'document_fee',
+          amount: selectedRequest.document?.amount || selectedRequest.amount
+        }
+      }
+    });
+  };
+
+  const handleAttachTransaction = async () => {
+    if (!selectedTransaction) {
+      await Swal.fire({
+        title: 'Error',
+        text: 'Please select a transaction first',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+      return;
+    }
+
+    console.log('[handleAttachTransaction] Attaching:', {
+      requestId: selectedRequest.id,
+      transactionId: selectedTransaction.transactionId,
+      selectedTransaction
+    });
+
+    const result = await Swal.fire({
+      title: 'Attach Transaction?',
+      html: `
+        <div style="text-align: left;">
+          <p style="margin-bottom: 10px;">Are you sure you want to attach this transaction?</p>
+          <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-top: 12px;">
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Transaction ID:</strong> ${selectedTransaction.transactionId}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Amount:</strong> ₱${parseFloat(selectedTransaction.amount).toFixed(2)}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>User:</strong> ${selectedTransaction.firstName} ${selectedTransaction.lastName}</p>
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, attach it',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setAttachingTransaction(true);
+
+        Swal.fire({
+          title: 'Attaching Transaction...',
+          text: 'Please wait...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        console.log('[handleAttachTransaction] Calling API with:', selectedRequest.id, selectedTransaction.transactionId);
+        await documentApi.requests.attachTransaction(selectedRequest.id, selectedTransaction.transactionId);
+
+        await Promise.all([
+          fetchDocumentRequests(),
+          refreshSelectedRequest()
+        ]);
+
+        Swal.fire({
+          title: 'Success!',
+          text: 'Transaction attached successfully. Payment status updated to verified.',
+          icon: 'success',
+          confirmButtonColor: '#992525',
+        });
+
+        setSelectedTransaction(null);
+      } catch (error) {
+        console.error('Attach transaction error:', error);
+        console.error('Error response:', error.response);
+        Swal.fire({
+          title: 'Error!',
+          text: error.response?.data?.message || error.message || 'Failed to attach transaction',
+          icon: 'error',
+          confirmButtonColor: '#992525',
+        });
+      } finally {
+        setAttachingTransaction(false);
+      }
+    }
+  };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -397,11 +496,77 @@ function ViewRequestDetailsModal() {
 
           {/* Right Column - Documents & Files */}
           <div className="space-y-3">
-            {/* Proof of Payment */}
+            {/* Payment Status */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Proof of Payment</h4>
-              
-              {selectedRequest.proofOfPayment ? (
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment Status</h4>
+              <div className="space-y-2">
+                {selectedRequest.paymentMethod === 'cash' ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm text-green-700 flex-1">Cash on {selectedRequest.mode === 'delivery' ? 'Delivery' : 'Pickup'} - Auto-verified</span>
+                  </div>
+                ) : selectedRequest.paymentStatus === 'verified' ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm text-green-700 flex-1">Verified</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                    <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm text-yellow-700 flex-1">Pending Verification</span>
+                  </div>
+                )}
+                
+                {selectedRequest.paymentId && (
+                  <div className="text-xs text-gray-600 mt-2">
+                    <span className="font-semibold">Transaction ID:</span> {selectedRequest.paymentId}
+                  </div>
+                )}
+                
+                {selectedRequest.paymentAmount && (
+                  <div className="text-xs text-gray-600">
+                    <span className="font-semibold">Amount:</span> ₱{parseFloat(selectedRequest.paymentAmount).toFixed(2)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Admin: Attach Transaction (only for online payments without verified status) */}
+            {isAdmin && selectedRequest.paymentMethod !== 'cash' && selectedRequest.paymentStatus !== 'verified' && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attach Transaction (Admin)</h4>
+                <TransactionSelector
+                  onSelectTransaction={setSelectedTransaction}
+                  selectedTransactionId={selectedTransaction?.transactionId}
+                />
+                {selectedTransaction && (
+                  <button
+                    type="button"
+                    onClick={handleAttachTransaction}
+                    disabled={attachingTransaction}
+                    className="w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center gap-2 mt-3"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    {attachingTransaction ? 'Attaching...' : 'Attach Transaction'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Proof of Payment - Hidden for cash payments */}
+            {selectedRequest.paymentMethod !== 'cash' && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Proof of Payment</h4>
+                
+                {selectedRequest.proofOfPayment ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
                     <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,12 +574,24 @@ function ViewRequestDetailsModal() {
                     </svg>
                     <span className="text-sm text-green-700 flex-1">Uploaded</span>
                   </div>
+                  {selectedRequest.status === 'In Process' && canUploadProof && (
+                    <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                      <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs text-amber-700">Payment verification is being processed by admin. Please refrain from paying again to avoid duplicate transactions.</span>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleViewProof}
-                      className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150"
+                      className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
                     >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
                       View
                     </button>
                     {canUploadProof && (
@@ -422,9 +599,12 @@ function ViewRequestDetailsModal() {
                         type="button"
                         onClick={handleRemoveProof}
                         disabled={uploading}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50"
+                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center"
+                        title="Remove proof of payment"
                       >
-                        Remove
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     )}
                   </div>
@@ -439,6 +619,18 @@ function ViewRequestDetailsModal() {
                         </svg>
                         <span className="text-sm text-yellow-700 flex-1">Not uploaded</span>
                       </div>
+                      {selectedRequest.status === 'In Process' && selectedRequest.paymentStatus !== 'verified' && selectedRequest.paymentMethod !== 'cash' && (
+                        <button
+                          type="button"
+                          onClick={handleProceedToPayment}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                          </svg>
+                          Proceed to Payment
+                        </button>
+                      )}
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -450,8 +642,11 @@ function ViewRequestDetailsModal() {
                       />
                       <label
                         htmlFor="proof-upload"
-                        className={`block w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium text-center cursor-pointer transition-colors duration-150 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
                         {uploading ? 'Uploading...' : 'Upload Proof'}
                       </label>
                       <p className="text-xs text-gray-500 text-center">JPG, PNG, PDF (Max 5MB)</p>
@@ -466,7 +661,8 @@ function ViewRequestDetailsModal() {
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Completed Document */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -484,8 +680,11 @@ function ViewRequestDetailsModal() {
                     <button
                       type="button"
                       onClick={() => window.open(selectedRequest.fulfilledDocumentUrl, '_blank')}
-                      className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150"
+                      className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
                     >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
                       Download
                     </button>
                     {user && user.role === 'admin' && (
@@ -493,9 +692,12 @@ function ViewRequestDetailsModal() {
                         type="button"
                         onClick={handleRemoveCompletedDocument}
                         disabled={uploading}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50"
+                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center"
+                        title="Remove completed document"
                       >
-                        Remove
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     )}
                   </div>
@@ -521,8 +723,11 @@ function ViewRequestDetailsModal() {
                       />
                       <label
                         htmlFor="completed-doc-upload"
-                        className={`block w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium text-center cursor-pointer transition-colors duration-150 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
                         {uploading ? 'Uploading...' : 'Upload Document'}
                       </label>
                       <p className="text-xs text-gray-500 text-center">PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>

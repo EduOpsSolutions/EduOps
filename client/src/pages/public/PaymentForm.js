@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
@@ -10,6 +10,7 @@ import Swal from "sweetalert2";
 
 function PaymentForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuthStore();
   const [showIdCopied, setShowIdCopied] = useState(false);
   const {
@@ -37,26 +38,35 @@ function PaymentForm() {
     return feesOptions;
   };
 
-  // Auto-fill user details on component mount
+  // Auto-fill authenticated user details
   useEffect(() => {
-    const autoFillUserDetails = async () => {
-      if (isAuthenticated && user?.userId) {
-        updateFormField('student_id', user.userId);
+    if (isAuthenticated && user?.userId) {
+      updateFormField('student_id', user.userId);
 
-        if (user.role === 'teacher') {
-          await validateAndFetchTeacherByID(user.userId);
-        } else if (user.role === 'student') {
-          await validateAndFetchStudentByID(user.userId);
-        }
-
-        if (user?.email) {
-          updateFormField('email_address', user.email);
-        }
+      if (user.role === 'teacher') {
+        validateAndFetchTeacherByID(user.userId);
+      } else if (user.role === 'student') {
+        validateAndFetchStudentByID(user.userId);
       }
-    };
 
-    autoFillUserDetails();
-  }, [isAuthenticated, user, validateAndFetchTeacherByID, validateAndFetchStudentByID, updateFormField]);
+      if (user?.email) {
+        updateFormField('email_address', user.email);
+      }
+    }
+  }, [isAuthenticated, user, validateAndFetchStudentByID, validateAndFetchTeacherByID, updateFormField]);
+
+  // Auto-fill document fee from location state (when navigating from document request)
+  useEffect(() => {
+    if (location.state?.documentFee) {
+      const { feeType, amount } = location.state.documentFee;
+      if (feeType) {
+        updateFormField('fee', feeType);
+      }
+      if (amount) {
+        updateFormField('amount', amount.toString());
+      }
+    }
+  }, [location.state, updateFormField]);
 
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
@@ -225,10 +235,6 @@ function PaymentForm() {
       });
     }
   };
-
-
-  // Remove this function as it's no longer needed
-  // Auto-fill happens on mount for both students and teachers
 
   // Handle copy ID
   const handleCopyId = () => {
@@ -449,7 +455,8 @@ function PaymentForm() {
                 step="0.01"
                 value={formData.amount}
                 onChange={handleInputChange}
-                className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')}
+                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? 'bg-gray-100' : ''}`}
               />
             </div>
 

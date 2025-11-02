@@ -10,7 +10,7 @@ function UpdateDocumentRequestModal({
   updateRemarks, 
   onStatusChange, 
   onRemarksChange, 
-  onSubmit 
+  onSubmit
 }) {
   const [error, setError] = useState("");
   const [initialStatus, setInitialStatus] = useState("");
