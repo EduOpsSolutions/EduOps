@@ -197,7 +197,7 @@ const usePaymentStore = create((set, get) => ({
         icon: "warning",
         title: "Missing Required Fields",
         text: "Please fill in all required fields before submitting.",
-        confirmButtonColor: "#b71c1c",
+        confirmButtonColor: "#992525",
       });
       return;
     }
@@ -216,10 +216,11 @@ const usePaymentStore = create((set, get) => ({
       `,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#890E07',
-      cancelButtonColor: '#6B7280',
+      confirmButtonColor: '#992525',
+      cancelButtonColor: '#6b7280',
       confirmButtonText: 'Yes, I\'m sure',
-      cancelButtonText: 'Cancel'
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
     });
 
     if (!result.isConfirmed) return;
@@ -243,7 +244,7 @@ const usePaymentStore = create((set, get) => ({
           </p>
         `,
         icon: 'success',
-        confirmButtonColor: '#890E07',
+  confirmButtonColor: '#992525',
         confirmButtonText: 'Pay Now'
       });
 
@@ -255,7 +256,7 @@ const usePaymentStore = create((set, get) => ({
         icon: "error",
         title: "Payment Failed",
         text: errorMessage,
-        confirmButtonColor: "#b71c1c",
+  confirmButtonColor: "#992525",
       });
     } finally {
       set({ loading: false });

@@ -1,6 +1,7 @@
 import { Flowbite, Modal } from "flowbite-react";
 import React from 'react';
-
+import { useEffect, useState } from 'react';
+import { fetchStudentAssessment } from '../../../stores/assessmentStore';
 
 // To customize measurements of header 
 const customModalTheme = {
@@ -26,6 +27,23 @@ const customModalTheme = {
 
 
 function TransactionHistoryModal(props) {
+    const { studentId, courseId, batchId } = props;
+    const [assessmentData, setAssessmentData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (props.transaction_history_modal && studentId && courseId && batchId) {
+        setLoading(true);
+        setError(null);
+        fetchStudentAssessment(studentId, courseId, batchId)
+            .then(data => {
+                setAssessmentData(data);
+            })
+            .catch(err => setError(err.message || 'Failed to fetch data'))
+            .finally(() => setLoading(false));
+        }
+    }, [props.transaction_history_modal, studentId, courseId, batchId]);
 
     return (
         <Flowbite theme={{ theme: customModalTheme }}>
@@ -58,26 +76,40 @@ function TransactionHistoryModal(props) {
                                             <th scope="col" className="p-2 font-normal"> Status </th>
                                         </tr>
                                     </thead>
-                                {/* Note: Replace table body data with backend logic. Use 1st tr and delete 2nd tr.*/}
                                     <tbody className="text-center">
-                                        <tr>
-                                            <td className="px-2 py-4"> 4/3/24 6:29:23AM </td>
-                                            <td className="px-2 py-4"> Course Fee</td>
-                                            <td className="px-2 py-4"> 33,000 </td>
-                                            <td className="px-2 py-4 uppercase"> cash </td>
-                                            <td className="px-2 py-4"> 1234567789 </td>
-                                            <td className="px-2 py-4 uppercase"> cash </td>
-                                            <td className="px-2 py-4 uppercase"> ok </td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-2 py-4"> 4/3/24 6:29:23AM </td>
-                                            <td className="px-2 py-4"> Books Fee</td>
-                                            <td className="px-2 py-4"> 33,000 </td>
-                                            <td className="px-2 py-4 uppercase"> cash </td>
-                                            <td className="px-2 py-4"> 565279825 </td>
-                                            <td className="px-2 py-4 uppercase"> cash </td>
-                                            <td className="px-2 py-4 uppercase"> ok </td>
-                                        </tr>
+                                        { loading ? (
+                                            <tr>
+                                                <td colSpan="7" className="px-2 py-4 text-gray-500">Loading...</td>
+                                            </tr>
+                                        ) : error ? (
+                                            <tr>
+                                                <td colSpan="7" className="px-2 py-4 text-red-600">Error: {error}</td>
+                                            </tr>
+                                        ) : assessmentData && assessmentData.payments && assessmentData.payments.length > 0 ? (
+                                            assessmentData.payments.map((payment, index) => {
+                                                // Format feeType (or paymentType) to be human-readable
+                                                let type = payment.feeType || payment.paymentType || '-';
+                                                if (type && type !== '-') {
+                                                    type = type.replace(/_/g, ' ')
+                                                               .replace(/\b\w/g, c => c.toUpperCase());
+                                                }
+                                                return (
+                                                    <tr key={index}>
+                                                        <td className="px-2 py-4">{payment.paidAt ? new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(payment.paidAt)) : '-'}</td>
+                                                        <td className="px-2 py-4"> {type} </td>
+                                                        <td className="px-2 py-4"> {payment.amount} </td>
+                                                        <td className="px-2 py-4 uppercase"> {payment.paymentMethod} </td>
+                                                        <td className="px-2 py-4"> {payment.referenceNumber} </td>
+                                                        <td className="px-2 py-4 uppercase"> {payment.remarks} </td>
+                                                        <td className="px-2 py-4 uppercase"> {payment.status} </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="7" className="px-2 py-4 text-gray-500">No transactions found</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

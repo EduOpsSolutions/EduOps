@@ -316,6 +316,9 @@ function Assessment() {
       <TransactionHistoryModal
         transaction_history_modal={transactionHistoryModal}
         setTransactionHistoryModal={closeTransactionHistoryModal}
+        studentId={selectedStudent?.id}
+        courseId={selectedStudent?.courseId}
+        batchId={selectedStudent?.batchId}
       />
 
       {/* Delete confirmation modal */}

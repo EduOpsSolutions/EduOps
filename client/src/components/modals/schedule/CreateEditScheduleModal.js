@@ -110,7 +110,7 @@ function CreateEditScheduleModal({
         teacherName: event.teacherName || "",
         notes: event.notes || "",
         color: event.color || "#FFCF00",
-        capacity: event.capacity || 30,
+        capacity: event.capacity !== undefined ? event.capacity : 30,
       });
     } else if (aiPrefillData) {
       // AI-created schedule (prefill but treat as new)
@@ -129,7 +129,7 @@ function CreateEditScheduleModal({
         teacherName: aiPrefillData.teacherName || "",
         notes: aiPrefillData.notes || "",
         color: aiPrefillData.color || "#FFCF00",
-        capacity: aiPrefillData.capacity || 30,
+        capacity: aiPrefillData.capacity !== undefined ? aiPrefillData.capacity : 30,
       });
     } else if (selectedDate) {
       // Creating new event with default time from selectedDate if available
@@ -653,6 +653,7 @@ function CreateEditScheduleModal({
                       placeholder="30"
                       min={0}
                       max={100}
+                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-dark-red-2"
                     />
                   </div>

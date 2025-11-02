@@ -5,6 +5,7 @@ import DateTile from '../../components/calendar/DateTile';
 import DaysWeek from './DaysWeek';
 import WeekView from './WeekView';
 import Spinner from '../common/Spinner';
+import CalendarSettingsModal from '../modals/calendar/CalendarSettingsModal';
 
 function Calendar(schedule) {
   const { events = [], onDateTimeClick } = schedule;
@@ -17,6 +18,11 @@ function Calendar(schedule) {
   const [show_dropdown, setshow_dropdown] = useState(false);
   const [show_year_dropdown, setshow_year_dropdown] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [calendarSettings, setCalendarSettings] = useState({
+    timeFormat: localStorage.getItem('calendarTimeFormat') || '12h',
+    viewDensity: localStorage.getItem('calendarViewDensity') || 'default',
+  });
   const current_year_ref = useRef(null);
   const year_range = Array.from(
     { length: 21 },
@@ -161,6 +167,8 @@ function Calendar(schedule) {
           year={current_year}
           events={events}
           onDateClick={onDateTimeClick}
+          timeFormat={calendarSettings.timeFormat}
+          viewDensity={calendarSettings.viewDensity}
         />
       );
     });
@@ -213,13 +221,21 @@ function Calendar(schedule) {
       ? monthName[weekStartMonth]
       : `${monthName[weekStartMonth]} - ${monthName[weekEndMonth]}`;
 
+  const handleSettingsChange = (newSettings) => {
+    setCalendarSettings(newSettings);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-2 md:px-4 lg:px-6">
       <div className="flex justify-center items-center w-full mt-2 flex-col">
         <div className="items-center w-full mt-4 min-h-14 px-4 md:px-8 flex flex-col md:flex-row justify-center overflow-visible gap-2 md:gap-0">
           {' '}
           {/*div upper container*/}
-          <button className="hidden md:block md:mr-4 rounded-full p-2 border-none hover:border-slate-500 hover:border hover:bg-slate-300 transition duration-100">
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="hidden md:block md:mr-4 rounded-full p-2 border-none hover:border-slate-500 hover:border hover:bg-slate-300 transition duration-100"
+            title="Calendar Settings"
+          >
             <FaGear className="text-base md:text-lg lg:text-xl" />
           </button>
           <div className="mx-2 md:mx-4 relative">
@@ -420,11 +436,20 @@ function Calendar(schedule) {
                 weekDates={weekDates}
                 events={events}
                 onTimeSlotClick={onDateTimeClick}
+                timeFormat={calendarSettings.timeFormat}
+                viewDensity={calendarSettings.viewDensity}
               />
             </div>
           )}
         </div>
       </div>
+
+      {/* Calendar Settings Modal */}
+      <CalendarSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onSettingsChange={handleSettingsChange}
+      />
     </div>
   );
 }

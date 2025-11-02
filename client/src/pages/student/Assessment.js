@@ -400,7 +400,7 @@ function Assessment() {
                                     </div>
                                 </div>
                             </div>
-                            <Link to="" className="flex flex-row justify-end mt-10">
+                            <Link to="/paymentform" className="flex flex-row justify-end mt-10">
                                 <span className="m-0">
                                     <ThinRedButton>Proceed to Payment</ThinRedButton>
                                 </span>
@@ -408,6 +408,9 @@ function Assessment() {
                             <TransactionHistoryModal
                                 transaction_history_modal={transaction_history_modal}
                                 setTransactionHistoryModal={setTransactionHistoryModal}
+                                studentId={selectedEnrollment.id}
+                                courseId={selectedEnrollment.courseId}
+                                batchId={selectedEnrollment.batchId}
                             />
                         </div>
                     )}
