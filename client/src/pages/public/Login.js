@@ -225,7 +225,7 @@ function Login() {
             </form>
 
             {/* New Student and Enrollment Tracker Area */}
-            <div className="container flex items-center justify-center mt-20 mr-8 lg:mr-0">
+            <div className="container flex items-center justify-center mt-4 mr-8 lg:mr-0">
               <div className="flex flex-col w-1/2 lg:w-1/3">
                 <p className="text-white-yellow-tone text-xs font-sans -mb-3 px-2">
                   New Student?
@@ -248,6 +248,16 @@ function Login() {
                   onClose={() => setTrackEnrollmentModal(false)}
                 />
               </div>
+            </div>
+
+            {/* Pay as Guest Option */}
+            <div className="flex items-center justify-center mt-4">
+              <button
+                onClick={() => navigate('/paymentForm')}
+                className="text-black text-lg font-sans py-2 px-4 bg-yellow-300  hover:bg-yellow-400 font-bold transition-colors duration-200"
+              >
+                Pay as Guest
+              </button>
             </div>
 
             {/* Terms and Privacy Policy Section*/}
