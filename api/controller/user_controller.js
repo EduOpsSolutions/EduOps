@@ -148,6 +148,20 @@ const createUser = async (req, res) => {
       role = 'student',
     } = req.body;
 
+    // Validate birthdate - must be before current date
+    if (birthyear && birthmonth && birthdate) {
+      const userBirthDate = new Date(birthyear, birthmonth - 1, birthdate);
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0); // Reset time to compare only dates
+
+      if (userBirthDate >= currentDate) {
+        return res.status(400).json({
+          error: true,
+          message: 'Birthdate must be before the current date',
+        });
+      }
+    }
+
     // Generate userId if not provided
     let userId = providedUserId;
     if (!userId) {
@@ -1005,6 +1019,59 @@ const getStudentById = async (req, res) => {
   }
 };
 
+const getTeacherById = async (req, res) => {
+  const { teacherId } = req.params;
+
+  if (!teacherId) {
+    return res.status(400).json({
+      error: true,
+      success: false,
+      message: 'Teacher ID is required',
+    });
+  }
+
+  try {
+    const teacher = await prisma.users.findFirst({
+      where: {
+        userId: teacherId,
+        role: 'TEACHER',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+      },
+    });
+
+    if (!teacher) {
+      return res.status(404).json({
+        error: true,
+        success: false,
+        message: 'Teacher not found with the provided ID',
+      });
+    }
+
+    res.json({
+      error: false,
+      success: true,
+      data: teacher,
+      message: 'Teacher found successfully',
+    });
+  } catch (error) {
+    console.error('Error fetching teacher by ID:', error);
+    res.status(500).json({
+      error: true,
+      success: false,
+      message: 'Server error while fetching teacher',
+      error_details: error.message,
+    });
+  }
+};
+
 const getUsersByRole = async (req, res) => {
   const { role } = req.params;
   try {
@@ -1044,5 +1111,6 @@ export {
   updateProfilePicture,
   removeProfilePicture,
   getStudentById,
+  getTeacherById,
   getUsersByRole,
 };

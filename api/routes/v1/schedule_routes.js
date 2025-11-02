@@ -11,6 +11,8 @@ import {
   deleteSchedule,
   addStudentToSchedule,
   removeStudentsFromSchedule,
+  validateBulkStudents,
+  bulkAddStudentsToSchedule,
 } from '../../controller/schedule_controller.js';
 import {
   validateCreateSchedule,
@@ -123,6 +125,30 @@ router.post(
   verifyToken,
   validateUserIsAdmin,
   removeStudentsFromSchedule
+);
+
+/**
+ * POST /api/v1/schedules/:id/students:validate-bulk
+ * Validate bulk student IDs from CSV
+ * Admins can validate students
+ */
+router.post(
+  '/:id/students:validate-bulk',
+  verifyToken,
+  validateUserIsAdmin,
+  validateBulkStudents
+);
+
+/**
+ * POST /api/v1/schedules/:id/students:bulk-add
+ * Bulk add students to schedule
+ * Admins can bulk add students
+ */
+router.post(
+  '/:id/students:bulk-add',
+  verifyToken,
+  validateUserIsAdmin,
+  bulkAddStudentsToSchedule
 );
 
 export { router };

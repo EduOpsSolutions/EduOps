@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import SmallButton from "../../components/buttons/SmallButton";
 import UserNavbar from "../../components/navbars/UserNav";
 import LabelledInputField from "../../components/textFields/LabelledInputField";
 import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
+import useAuthStore from "../../stores/authStore";
 import Swal from "sweetalert2";
 
 function PaymentForm() {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthStore();
+  const [showIdCopied, setShowIdCopied] = useState(false);
   const {
     formData,
     loading,
@@ -17,6 +20,7 @@ function PaymentForm() {
     feesOptions,
     updateFormField,
     validateAndFetchStudentByID,
+    validateAndFetchTeacherByID,
     validateRequiredFields,
     validatePhoneNumber,
     preparePaymentData,
@@ -24,6 +28,35 @@ function PaymentForm() {
     resetForm,
     sendPaymentLinkEmail
   } = usePaymentStore();
+
+  // Filtered fee options based on user role
+  const getFilteredFeeOptions = () => {
+    if (isAuthenticated && user?.role === 'teacher') {
+      return feesOptions.filter(option => option.value === 'document_fee');
+    }
+    return feesOptions;
+  };
+
+  // Auto-fill user details on component mount
+  useEffect(() => {
+    const autoFillUserDetails = async () => {
+      if (isAuthenticated && user?.userId) {
+        updateFormField('student_id', user.userId);
+
+        if (user.role === 'teacher') {
+          await validateAndFetchTeacherByID(user.userId);
+        } else if (user.role === 'student') {
+          await validateAndFetchStudentByID(user.userId);
+        }
+
+        if (user?.email) {
+          updateFormField('email_address', user.email);
+        }
+      }
+    };
+
+    autoFillUserDetails();
+  }, [isAuthenticated, user, validateAndFetchTeacherByID, validateAndFetchStudentByID, updateFormField]);
 
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
@@ -48,7 +81,9 @@ function PaymentForm() {
 
   const handleStudentIdBlur = async (e) => {
     const studentId = e.target.value;
-    if (studentId) {
+    // Only validate for guests (non-authenticated users)
+    // Authenticated users already have auto-filled data
+    if (studentId && !isAuthenticated) {
       await validateAndFetchStudentByID(studentId);
     }
   };
@@ -192,9 +227,21 @@ function PaymentForm() {
   };
 
 
+  // Remove this function as it's no longer needed
+  // Auto-fill happens on mount for both students and teachers
+
+  // Handle copy ID
+  const handleCopyId = () => {
+    if (user?.userId) {
+      navigator.clipboard.writeText(user.userId);
+      setShowIdCopied(true);
+      setTimeout(() => setShowIdCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="bg_custom bg-white-yellow-tone">
-      <UserNavbar role="public" />
+      <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
 
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-3xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
@@ -209,22 +256,70 @@ function PaymentForm() {
 
           <form onSubmit={onSubmit}>
             {/* Personal Information */}
+            {isAuthenticated && user?.userId && user?.role === 'student' && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">Your ID:</span>{" "}
+                      <span className="font-mono text-blue-700">{user.userId}</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyId}
+                        className="ml-2 text-blue-600 hover:text-blue-800 text-xs underline"
+                      >
+                        {showIdCopied ? "Copied!" : "Copy"}
+                      </button>
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    <span className="font-semibold">Note:</span> Your details have been automatically filled. You can only process payments for yourself. For guest payments, you can share your ID to allow others to pay without logging in.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isAuthenticated && user?.role === 'teacher' && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">Your ID:</span>{" "}
+                      <span className="font-mono text-blue-700">{user.userId}</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyId}
+                        className="ml-2 text-blue-600 hover:text-blue-800 text-xs underline"
+                      >
+                        {showIdCopied ? "Copied!" : "Copy"}
+                      </button>
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    <span className="font-semibold">Note:</span> Your details have been automatically filled. You can only process payments for yourself. For guest payments, you can share your ID to allow others to pay without logging in.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <LabelledInputField
                 name="student_id"
                 id="student_id"
-                label="Student ID*"
+                label={isAuthenticated && user?.role === 'teacher' ? "Teacher ID*" : "Student ID*"}
                 type="text"
                 required={true}
-                placeholder="Enter Student ID"
+                placeholder={isAuthenticated && user?.role === 'teacher' ? "Teacher ID" : "Enter Student ID"}
                 value={formData.student_id || ""}
                 onChange={handleInputChange}
                 onBlur={handleStudentIdBlur}
+                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')}
+                className={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? "bg-gray-100" : ""}
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div>
+              <div className="relative">
                 <LabelledInputField
                   name="first_name"
                   id="first_name"
@@ -239,20 +334,32 @@ function PaymentForm() {
                     nameError ? "border-red-500 focus:border-red-500 bg-gray-100" : "bg-gray-100"
                   }
                 />
+                {loading && !formData.first_name && (
+                  <div className="absolute right-3 top-9 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-dark-red"></div>
+                  </div>
+                )}
               </div>
-              <LabelledInputField
-                name="middle_name"
-                id="middle_name"
-                label="Middle Name"
-                type="text"
-                placeholder="Middle Name"
-                value={formData.middle_name}
-                onChange={handleInputChange}
-                readOnly={true}
-                className="bg-gray-100"
-              />
+              <div className="relative">
+                <LabelledInputField
+                  name="middle_name"
+                  id="middle_name"
+                  label="Middle Name"
+                  type="text"
+                  placeholder="Middle Name"
+                  value={formData.middle_name}
+                  onChange={handleInputChange}
+                  readOnly={true}
+                  className="bg-gray-100"
+                />
+                {loading && !formData.middle_name && (
+                  <div className="absolute right-3 top-9 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-dark-red"></div>
+                  </div>
+                )}
+              </div>
 
-              <div>
+              <div className="relative">
                 <LabelledInputField
                   name="last_name"
                   id="last_name"
@@ -267,6 +374,11 @@ function PaymentForm() {
                     nameError ? "border-red-500 focus:border-red-500 bg-gray-100" : "bg-gray-100"
                   }
                 />
+                {loading && !formData.last_name && (
+                  <div className="absolute right-3 top-9 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-dark-red"></div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -321,7 +433,7 @@ function PaymentForm() {
                 id="fee"
                 label="Type of Fee*"
                 required={true}
-                options={feesOptions}
+                options={getFilteredFeeOptions()}
                 value={formData.fee}
                 onChange={handleInputChange}
               />

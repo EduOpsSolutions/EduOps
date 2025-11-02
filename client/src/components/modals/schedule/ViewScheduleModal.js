@@ -80,8 +80,8 @@ function ViewScheduleModal({ isOpen, onClose, event }) {
   if (!isOpen || !event) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-y-auto">
         <div className="bg-white flex items-center justify-between p-4 border-b sticky top-0">
           <h3 className="text-lg font-semibold">Schedule Details</h3>
           <button
@@ -174,21 +174,31 @@ function ViewScheduleModal({ isOpen, onClose, event }) {
                 </div>
               ) : (
                 <table className="w-full text-sm max-h-[30vh] md:max-h-[40vh] overflow-y-auto">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="text-left px-3 py-2">Student ID</th>
-                      <th className="text-left px-3 py-2">Name</th>
-                      <th className="text-left px-3 py-2">Email</th>
-                      <th className="text-left px-3 py-2">Status</th>
+                      <th className="text-left px-3 py-2 w-[15%]">Student ID</th>
+                      <th className="text-left px-3 py-2 w-[30%]">Name</th>
+                      <th className="text-left px-3 py-2 w-[40%]">Email</th>
+                      <th className="text-left px-3 py-2 w-[15%]">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {students.map((s) => (
-                      <tr key={s.id} className="border-t">
-                        <td className="px-3 py-2">{s.userId}</td>
-                        <td className="px-3 py-2">{s.name}</td>
-                        <td className="px-3 py-2">{s.email}</td>
-                        <td className="px-3 py-2">{s.status || 'active'}</td>
+                      <tr key={s.id} className="border-t hover:bg-gray-50">
+                        <td className="px-3 py-2 truncate max-w-0" title={s.userId}>
+                          {s.userId}
+                        </td>
+                        <td className="px-3 py-2 truncate max-w-0" title={s.name}>
+                          {s.name}
+                        </td>
+                        <td className="px-3 py-2 truncate max-w-0" title={s.email}>
+                          {s.email}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-block px-2 py-1 rounded text-xs bg-green-100 text-green-700">
+                            {s.status || 'active'}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

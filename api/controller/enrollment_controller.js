@@ -59,6 +59,31 @@ const createEnrollmentRequest = async (req, res) => {
       idPhotoPath,
     } = req.body;
 
+    // Calculate age from birthDate
+    const userBirthDate = new Date(birthDate);
+    const currentDate = new Date();
+    let age = currentDate.getFullYear() - userBirthDate.getFullYear();
+    const monthDiff = currentDate.getMonth() - userBirthDate.getMonth();
+
+    // Adjust age if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && currentDate.getDate() < userBirthDate.getDate())) {
+      age--;
+    }
+
+    // If user is below 18, require at least one parent or guardian info
+    if (age < 18) {
+      const hasMotherInfo = motherName && motherContact;
+      const hasFatherInfo = fatherName && fatherContact;
+      const hasGuardianInfo = guardianName && guardianContact;
+
+      if (!hasMotherInfo && !hasFatherInfo && !hasGuardianInfo) {
+        return res.status(400).json({
+          error: true,
+          message: 'Applicants under 18 years old must provide at least one parent or guardian information (name and contact)',
+        });
+      }
+    }
+
     const enrollmentId = await generateEnrollmentId();
 
     // Resolve current open enrollment period
