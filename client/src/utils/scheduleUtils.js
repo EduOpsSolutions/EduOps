@@ -128,6 +128,31 @@ export const convertTo12Hour = (time24) => {
 };
 
 /**
+ * Format time based on user preference (12h or 24h)
+ * @param {string} time24 - Time in 24-hour format (e.g., "14:00")
+ * @param {string} format - Format preference ('12h' or '24h')
+ * @returns {string} - Formatted time string
+ */
+export const formatTime = (time24, format = '12h') => {
+  if (!time24) return '';
+
+  // Get format from localStorage if not provided
+  const timeFormat = format || localStorage.getItem('calendarTimeFormat') || '12h';
+
+  if (timeFormat === '24h') {
+    // Return 24-hour format (just ensure it's HH:MM)
+    const timeMatch = time24.match(/(\d+):(\d+)/);
+    if (!timeMatch) return time24;
+    const hour = timeMatch[1].padStart(2, '0');
+    const minute = timeMatch[2];
+    return `${hour}:${minute}`;
+  }
+
+  // Return 12-hour format
+  return convertTo12Hour(time24);
+};
+
+/**
  * Get events for a specific time slot and date
  * @param {Array} events - Array of event objects
  * @param {string} timeSlot - Time slot string (e.g., "10:00 AM")
