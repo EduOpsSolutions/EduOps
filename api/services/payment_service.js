@@ -169,6 +169,17 @@ export const createManualPayment = async (transactionData) => {
 
   const customTransactionId = await generatePaymentId();
 
+  // Check for duplicate reference number
+  if (referenceNumber) {
+    const existing = await prisma.payments.findFirst({
+      where: { referenceNumber },
+      select: { id: true }
+    });
+    if (existing) {
+      throw new Error('Reference number already exists. Please enter a unique value.');
+    }
+  }
+
   // Create payment record for manual transaction
   const paymentData = {
     transactionId: customTransactionId,

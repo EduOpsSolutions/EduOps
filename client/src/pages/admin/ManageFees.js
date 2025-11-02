@@ -1,9 +1,10 @@
 import React, { useEffect } from "react";
+import Swal from "sweetalert2";
 import ThinRedButton from "../../components/buttons/ThinRedButton";
 import AddFeeModal from "../../components/modals/transactions/GenAddFeesModal";
 import DiscardChangesModal from "../../components/modals/common/DiscardChangesModal";
 import SaveChangesModal from "../../components/modals/common/SaveChangesModal";
-import SaveNotifyModal from "../../components/modals/common/SaveNotif";
+// import SaveNotifyModal from "../../components/modals/common/SaveNotif";
 import { useFeesSearchStore, useFeesStore } from "../../stores/feesStore";
 import SearchForm from "../../components/common/SearchFormHorizontal";
 import SearchResults from "../../components/common/SearchResults";
@@ -16,8 +17,12 @@ function ManageFees() {
   // Search store
   const searchStore = useFeesSearchStore();
   // Destructure search actions for useEffect dependencies
-  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
-  
+  const {
+    initializeSearch,
+    handleSearch: performSearch,
+    resetSearch,
+  } = searchStore;
+
   // Fees store
   const {
     // State
@@ -27,7 +32,6 @@ function ManageFees() {
     showAddFeeModal,
     showDiscardModal,
     showSaveModal,
-    showSaveNotifyModal,
     showDeleteModal,
     feeToDelete,
     // Actions
@@ -39,7 +43,6 @@ function ManageFees() {
     handleConfirm,
     handleConfirmSave,
     handleCancelSave,
-    handleCloseSaveNotify,
     handleDiscard,
     handleConfirmDiscard,
     handleCancelDiscard,
@@ -50,8 +53,12 @@ function ManageFees() {
     confirmDeleteFee,
     handleDeleteFee,
     handleCancelEdit,
-    resetStore
+    resetStore,
   } = useFeesStore();
+
+  // Loading states for search and general fees
+  const [loadingSearch, setLoadingSearch] = React.useState(false);
+  const [loadingGeneralFees, setLoadingGeneralFees] = React.useState(false);
 
   useEffect(() => {
     async function fetchCourseBatches() {
@@ -134,11 +141,26 @@ function ManageFees() {
   };
 
   // Event handlers
-  const handleSearch = () => performSearch();
+  const handleSearch = async (...args) => {
+    setLoadingSearch(true);
+    try {
+      await performSearch(...args);
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
   const feesStore = useFeesStore();
   const [baseFee, setBaseFee] = React.useState(null);
   const [selectedCourseId, setSelectedCourseId] = React.useState(null);
   const [selectedBatchId, setSelectedBatchId] = React.useState(null);
+
+  React.useEffect(() => {
+    setLoadingGeneralFees(true);
+    const timer = setTimeout(() => {
+      setLoadingGeneralFees(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
   const handleCourseClick = async (course) => {
     searchStore.handleSelectItem(course);
     setSelectedCourseId(course.courseId || null);
@@ -172,7 +194,22 @@ function ManageFees() {
     }
     searchStore.handleBackToResults();
   };
-  
+
+  function anyFeeChanged() {
+    if (!isEditMode) return false;
+    if (!Array.isArray(editedFees) || !Array.isArray(fees)) return false;
+    if (editedFees.length !== fees.length) return true;
+    for (let i = 0; i < fees.length; i++) {
+      const orig = fees[i];
+      const edit = editedFees[i];
+      if (!orig || !edit) return true;
+      if (orig.name !== edit.name || orig.price !== edit.price || orig.dueDate !== edit.dueDate) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   return (
     <>
       <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
@@ -206,28 +243,61 @@ function ManageFees() {
             <div className="mb-6 sm:mb-8">
               <FeesTable
                 fees={(() => {
-                  const baseFeeRow = baseFee !== null ? [{
-                    description: 'Course Fee',
-                    price: baseFee,
-                    dueDate: '',
-                    isBaseFee: true
-                  }] : [];
-                  // Map backend fee data to table property names
-                  const feeRows = (isEditMode ? editedFees : fees).map(fee => ({
-                    ...fee,
-                    description: fee.name || fee.description || '',
-                    amount: fee.price || fee.amount || '',
-                    dueDate: isEditMode 
-                        ? fee.dueDate 
-                        : (fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '')
-                  }));
+                  const baseFeeRow =
+                    baseFee !== null
+                      ? [
+                          {
+                            description: "Course Fee",
+                            price: baseFee,
+                            dueDate: "",
+                            isBaseFee: true,
+                          },
+                        ]
+                      : [];
+                  const feeRows = (isEditMode ? editedFees : fees).map(
+                    (fee) => ({
+                      ...fee,
+                      description: fee.name || fee.description || "",
+                      amount: fee.price || fee.amount || "",
+                      dueDate: isEditMode
+                        ? fee.dueDate
+                        : fee.dueDate
+                        ? new Date(fee.dueDate).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : "",
+                    })
+                  );
                   return [...baseFeeRow, ...feeRows];
                 })()}
                 isEditMode={isEditMode}
                 onInputChange={handleInputChange}
                 onFieldUndo={handleFieldUndo}
                 hasFieldChanged={hasFieldChanged}
-                onDelete={openDeleteModal}
+                onDelete={(id) => {
+                  Swal.fire({
+                    title: 'Delete this fee?',
+                    text: 'This fee will be removed when you save your changes.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#890E07',
+                    cancelButtonColor: '#6B7280',
+                    confirmButtonText: 'Yes, remove',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true,
+                    customClass: {
+                      popup: 'swal2-popup',
+                      confirmButton: 'swal2-confirm',
+                      cancelButton: 'swal2-cancel',
+                    }
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      feesStore.markFeeForDeletion(id);
+                    }
+                  });
+                }}
               />
             </div>
 
@@ -237,18 +307,80 @@ function ManageFees() {
                   Back to Results
                 </ThinRedButton>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 order-1 sm:order-2">
                 {isEditMode ? (
                   <>
                     <button
-                      onClick={handleDiscard}
+                      onClick={() => {
+                        if (!anyFeeChanged()) {
+                          handleCancelEdit();
+                          return;
+                        }
+                        Swal.fire({
+                          title: 'Discard changes?',
+                          text: 'Your unsaved changes will be lost.',
+                          icon: 'warning',
+                          showCancelButton: true,
+                          confirmButtonColor: '#890E07',
+                          cancelButtonColor: '#6B7280',
+                          confirmButtonText: 'Yes, discard',
+                          cancelButtonText: 'No, Keep Editing',
+                          reverseButtons: true,
+                          customClass: {
+                            popup: 'swal2-popup',
+                            confirmButton: 'swal2-confirm',
+                            cancelButton: 'swal2-cancel',
+                          }
+                        }).then((result) => {
+                          if (result.isConfirmed) {
+                            handleCancelEdit();
+                          }
+                        });
+                      }}
                       className="bg-grey-1 rounded-md hover:bg-grey-2 focus:outline-none text-black font-semibold text-sm sm:text-md px-4 py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={handleConfirm}
+                      onClick={async () => {
+                        if (!feesStore.feesDeepEqual(feesStore.originalFees, feesStore.editedFees)) {
+                          Swal.fire({
+                            title: 'Save changes?',
+                            text: 'Are you sure you want to save these changes?',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonColor: '#890E07',
+                            cancelButtonColor: '#6B7280',
+                            confirmButtonText: 'Yes, save',
+                            cancelButtonText: 'Cancel',
+                            reverseButtons: true,
+                            customClass: {
+                              popup: 'swal2-popup',
+                              confirmButton: 'swal2-confirm',
+                              cancelButton: 'swal2-cancel',
+                            }
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              handleConfirmSave();
+                              setTimeout(() => {
+                                Swal.fire({
+                                  icon: 'success',
+                                  title: 'Changes saved!',
+                                  text: 'Your changes have been saved successfully.',
+                                  confirmButtonColor: '#890E07',
+                                  customClass: {
+                                    popup: 'swal2-popup',
+                                    confirmButton: 'swal2-confirm',
+                                  }
+                                });
+                              }, 300);
+                            }
+                          });
+                        } else {
+                          handleCancelEdit();
+                        }
+                      }}
                       className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-sm sm:text-md px-4 sm:px-6 py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
                     >
                       Save
@@ -270,14 +402,6 @@ function ManageFees() {
         )}
       </div>
 
-  {/* Modals */}
-      {showDeleteModal && (
-        <SaveChangesModal
-          show={showDeleteModal}
-          onConfirm={confirmDeleteFee}
-          onCancel={closeDeleteModal}
-        />
-      )}
       {showAddFeeModal && (
         <AddFeeModal
           isOpen={showAddFeeModal}
@@ -301,13 +425,6 @@ function ManageFees() {
           show={showSaveModal}
           onConfirm={handleConfirmSave}
           onCancel={handleCancelSave}
-        />
-      )}
-
-      {showSaveNotifyModal && (
-        <SaveNotifyModal
-          show={showSaveNotifyModal}
-          onClose={handleCloseSaveNotify}
         />
       )}
     </>
