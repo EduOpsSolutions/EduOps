@@ -173,7 +173,7 @@ const UserActionsDropdown = ({ role, isCompact = false }) => {
           Privacy
         </Link>
         <span className="mx-1"> • </span>
-        <span> EduOps © 2024 </span>
+        <span> EduOps © 2025 </span>
       </Dropdown.Item>
     </Dropdown>
   );
