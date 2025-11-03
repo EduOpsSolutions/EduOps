@@ -5,25 +5,19 @@ import AddFeesModal from "../../components/modals/transactions/AddFeesModal";
 import SaveChangesModal from "../../components/modals/common/SaveChangesModal";
 import Pagination from "../../components/common/Pagination";
 import SearchFormVertical from "../../components/common/SearchFormVertical";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAssessmentSearchStore, useAssessmentStore } from "../../stores/assessmentStore";
 import { useLedgerStore } from "../../stores/ledgerStore";
 
 function Assessment() {
-  const navigate = useNavigate();
-  const [deleteModal, setDeleteModal] = React.useState({ show: false, feeId: null });
+  const location = useLocation();
 
-  // Search store
-  const searchStore = useAssessmentSearchStore();
-  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
-  
   // Assessment store
   const {
     // State
     selectedStudent,
     transactionHistoryModal,
     addFeesModal,
-    
     // Actions
     handleStudentSelect,
     handleBackToResults,
@@ -35,13 +29,35 @@ function Assessment() {
     handleDeleteFee
   } = useAssessmentStore();
 
+  const [studentDetailsLoading, setStudentDetailsLoading] = React.useState(false);
+  React.useEffect(() => {
+    if (selectedStudent) {
+      setStudentDetailsLoading(true);
+      const timeout = setTimeout(() => setStudentDetailsLoading(false), 500);
+      return () => clearTimeout(timeout);
+    } else {
+      setStudentDetailsLoading(false);
+    }
+  }, [selectedStudent]);
+
+  const navigate = useNavigate();
+  const [deleteModal, setDeleteModal] = React.useState({ show: false, feeId: null });
+  const searchStore = useAssessmentSearchStore();
+  const { initializeSearch, handleSearch: performSearch, resetSearch } = searchStore;
+
   useEffect(() => {
-    initializeSearch();
-    performSearch();
+    if (location.state && location.state.selectStudent) {
+      handleStudentSelect(location.state.selectStudent);
+      navigate(location.pathname, { replace: true, state: {} });
+    } else {
+      handleBackToResults();
+      initializeSearch();
+      performSearch();
+    }
     return () => {
       resetSearch();
     };
-  }, [initializeSearch, performSearch, resetSearch]);
+  }, [initializeSearch, performSearch, resetSearch, handleBackToResults, location.state, handleStudentSelect, navigate, location.pathname]);
 
   // Search form config
   const searchFormConfig = {
@@ -158,8 +174,16 @@ function Assessment() {
             </div>
           )}
 
-          {/* Selected Student Details */}
-          {selectedStudent && (
+          {/* Selected Student Details with loading state */}
+          {selectedStudent && studentDetailsLoading && (
+            <div className="flex justify-center items-center h-64">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+                <p className="text-lg">Loading student's assessment...</p>
+              </div>
+            </div>
+          )}
+          {selectedStudent && !studentDetailsLoading && (
             <div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-5 gap-2 sm:gap-0">
                 <p className="font-bold text-base sm:text-lg text-center sm:text-left">
@@ -175,7 +199,6 @@ function Assessment() {
                   Back to Results
                 </button>
               </div>
-              
               <div className="flex flex-col sm:flex-row sm:items-end pb-3 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
                 <p className="uppercase grow text-base sm:text-lg font-semibold text-left">{selectedStudent.name}</p>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
@@ -185,15 +208,13 @@ function Assessment() {
                   <span className="hidden sm:inline mx-2"></span>
                   <ThinRedButton onClick={() => {
                     useLedgerStore.getState().setSelectedStudent(selectedStudent);
-                    navigate("/admin/ledger");
+                    navigate("/admin/ledger", { state: { fromAssessment: true, student: selectedStudent } });
                   }}>
                     Ledger
                   </ThinRedButton>
                 </div>
               </div>
-
               <p className="font-bold text-base sm:text-lg text-center mt-6 sm:mt-9 mb-1">FEES</p>
-              
               {/* Table: Regular Fees */}
               <div className="overflow-x-auto mb-5">
                 <table className="min-w-full">
@@ -223,7 +244,6 @@ function Assessment() {
                   </tbody>
                 </table>
               </div>
-
               {/* Table: Additional Fees / Discounts */}
               {selectedStudent.studentFees && selectedStudent.studentFees.length > 0 && (
                 <>
@@ -272,7 +292,6 @@ function Assessment() {
                   </div>
                 </>
               )}
-
               <div className="flex justify-center sm:justify-end mb-3 sm:mb-5">
                 <button
                   onClick={openAddFeesModal}
@@ -282,7 +301,6 @@ function Assessment() {
                   Add Fees
                 </button>
               </div>
-
               {/* Summary Section */}
               <div className="w-full pt-3 border-t-2 border-dark-red-2">
                 <div className="flex flex-col gap-2 text-xs sm:text-sm lg:text-base">
@@ -305,8 +323,11 @@ function Assessment() {
 
           {/* Loading state */}
           {!searchStore.hasSearched && searchStore.totalItems === 0 && (
-            <div className="text-center py-6 sm:py-10">
-              <p className="text-gray-500 text-sm sm:text-base">Loading students...</p>
+            <div className="flex justify-center items-center h-64">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+                <p className="text-lg">Loading students...</p>
+              </div>
             </div>
           )}
         </div>

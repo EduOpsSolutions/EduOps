@@ -57,8 +57,8 @@ function ManageDocuments() {
             showCancelButton: true,
             confirmButtonColor: "#992525",
             cancelButtonColor: "#6b7280",
-            confirmButtonText: "Yes, Delete Document",
-            cancelButtonText: "No, Keep Document",
+            confirmButtonText: "Yes, delete document",
+            cancelButtonText: "No, keep document",
             reverseButtons: true,
         }).then((result) => {
             if (result.isConfirmed) {

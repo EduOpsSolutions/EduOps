@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import DiscardChangesModal from "../common/DiscardChangesModal";
+import Swal from "sweetalert2";
 import ModalTextField from "../../form/ModalTextField";
 import ModalSelectField from "../../form/ModalSelectField";
 import axiosInstance from "../../../utils/axios";
@@ -19,20 +19,16 @@ function AddTransactionModal({
     amountPaid: "",
     referenceNumber: "",
     remarks: "",
-    courseId: "",
-    academicPeriodId: "",
+    courseId: null,
+    academicPeriodId: null,
   });
-
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState("");
   const [enrollments, setEnrollments] = useState([]);
-  const [selectedEnrollment, setSelectedEnrollment] = useState("");
 
   useEffect(() => {
     if (!addTransactionModal) {
-      setShowDiscardModal(false);
       setFormData({
         studentId: "",
         firstName: "",
@@ -42,8 +38,8 @@ function AddTransactionModal({
         amountPaid: "",
         referenceNumber: "",
         remarks: "",
-        courseId: "",
-        academicPeriodId: "",
+        courseId: null,
+        academicPeriodId: null,
       });
       setError("");
       setNameError("");
@@ -61,12 +57,21 @@ function AddTransactionModal({
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "courseBatch") {
-      const [courseId, academicPeriodId] = value.split("|");
-      setFormData((prev) => ({
-        ...prev,
-        courseId: courseId || "",
-        academicPeriodId: academicPeriodId || "",
-      }));
+      if (!value) {
+        // If empty selection, set both to null
+        setFormData((prev) => ({
+          ...prev,
+          courseId: null,
+          academicPeriodId: null,
+        }));
+      } else {
+        const [courseId, academicPeriodId] = value.split("|");
+        setFormData((prev) => ({
+          ...prev,
+          courseId: courseId || null,
+          academicPeriodId: academicPeriodId || null,
+        }));
+      }
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -110,7 +115,6 @@ function AddTransactionModal({
           lastName: ''
         }));
         setEnrollments([]);
-        setSelectedEnrollment("");
         return false;
       }
 
@@ -124,7 +128,8 @@ function AddTransactionModal({
 
         try {
           const enrollRes = await axiosInstance.get(`/enrollment/${realStudentId}/enrollments`);
-          setEnrollments(enrollRes.data || []);
+          const enrollmentsData = enrollRes.data || [];
+          setEnrollments(enrollmentsData);
         } catch (enrollErr) {
           setEnrollments([]);
         }
@@ -147,11 +152,30 @@ function AddTransactionModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    
+    // If student has enrollments, Course & Batch is required
+    if (enrollments.length > 0 && (!formData.courseId || !formData.academicPeriodId)) {
+      setError("Please select a Course & Batch.");
+      return;
+    }
+    
+    const submitData = {
+      ...formData,
+      courseId: formData.courseId || null,
+      academicPeriodId: formData.academicPeriodId || null,
+    };
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      console.log('Submitting form data:', formData);
-      await onSubmit(formData);
+      await onSubmit(submitData);
       setAddTransactionModal(false);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Transaction Added',
+        text: 'The transaction was added successfully!',
+        confirmButtonColor: '#890E07'
+      });
     } catch (error) {
       let errorMsg = "Failed to add transaction. Please try again.";
       if (error.response && error.response.data) {
@@ -173,22 +197,30 @@ function AddTransactionModal({
     return Object.values(formData).some((value) => value.trim() !== "");
   };
 
-  const handleClose = () => {
+
+  const handleClose = async () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      const result = await Swal.fire({
+        title: 'Discard Changes?',
+        text: 'You have unsaved changes. Are you sure you want to discard them?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#890E07',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Discard',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+      });
+      if (result.isConfirmed) {
+        setAddTransactionModal(false);
+      }
     } else {
       setAddTransactionModal(false);
     }
   };
 
-  const handleDiscardChanges = () => {
-    setShowDiscardModal(false);
-    setAddTransactionModal(false);
-  };
 
-  const handleCancelDiscard = () => {
-    setShowDiscardModal(false);
-  };
+  // Discard modal handlers removed (now handled by Swal)
 
   if (!addTransactionModal) return null;
 
@@ -401,11 +433,7 @@ function AddTransactionModal({
         </div>
       </div>
 
-      <DiscardChangesModal
-        show={showDiscardModal}
-        onConfirm={handleDiscardChanges}
-        onCancel={handleCancelDiscard}
-      />
+
     </>
   );
 }

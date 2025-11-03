@@ -74,7 +74,7 @@ export const sendPaymentLinkEmail = async (
                     .payment-button {
                         display: inline-block;
                         background-color: #DE0000;
-                        color: white;
+                        color: #fff !important;
                         padding: 15px 30px;
                         text-decoration: none;
                         border-radius: 5px;

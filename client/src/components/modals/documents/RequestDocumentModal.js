@@ -97,21 +97,18 @@ function RequestDocumentModal(props) {
                     zipCode: formData.zipCode,
                     country: formData.country
                 }),
-                // Only include payment method for paid documents
                 ...(!isFreeDocument && {
                     paymentMethod: formData.paymentMethod
                 })
             };
 
-            // Check if it's an online payment for a paid document
             const isOnlinePayment = formData.paymentMethod === 'online' && !isFreeDocument;
             
             await createDocumentRequest(requestData, {
-                skipSuccessDialog: isOnlinePayment,  // Skip default success dialog if online payment
+                skipSuccessDialog: isOnlinePayment,  
                 skipLoadingDialog: false
             });
             
-            // Reset form
             setFormData({
                 email: user?.email || '',
                 phone: user?.phoneNumber || '',
@@ -232,7 +229,6 @@ function RequestDocumentModal(props) {
                                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                                 </div>
 
-                                {/* Only show payment method for paid documents */}
                                 {!isFreeDocument && (
                                     <div className="relative z-0 w-full group mb-5">
                                         <label htmlFor="paymentMethod" className="block mb-2 text-sm font-medium text-gray-900">

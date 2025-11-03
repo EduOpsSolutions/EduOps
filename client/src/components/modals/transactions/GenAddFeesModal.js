@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import DiscardChangesModal from "../common/DiscardChangesModal";
 import ModalTextField from "../../form/ModalTextField";
 
@@ -57,6 +58,17 @@ const GenAddFeesModal = ({ isOpen, onClose, onAddFee, courseId, batchId }) => {
       if (onAddFee && typeof onAddFee === "function") {
         await onAddFee(feeData);
       }
+      await Swal.fire({
+        title: 'Success!',
+        text: 'The general fee has been successfully added.',
+        icon: 'success',
+        confirmButtonColor: '#890E07',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'swal2-popup',
+          confirmButton: 'swal2-confirm',
+        }
+      });
       onClose();
     } catch (error) {
       setError(error.message || "Failed to add fee. Please try again.");
@@ -66,12 +78,39 @@ const GenAddFeesModal = ({ isOpen, onClose, onAddFee, courseId, batchId }) => {
   };
 
   const hasChanges = () => {
-    return Object.values(formData).some((value) => value.trim() !== "");
+    const initial = {
+      description: "",
+      amount: "",
+      type: "down_payment",
+      dueDate: "",
+    };
+    return Object.keys(initial).some(
+      (key) => String(formData[key] || "").trim() !== String(initial[key])
+    );
   };
 
   const handleClose = () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      Swal.fire({
+        title: 'Discard changes?',
+        text: 'Your unsaved changes will be lost.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#890E07',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Yes, discard',
+        cancelButtonText: 'No, keep editing',
+        reverseButtons: true,
+        customClass: {
+          popup: 'swal2-popup',
+          confirmButton: 'swal2-confirm',
+          cancelButton: 'swal2-cancel',
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          onClose();
+        }
+      });
     } else {
       onClose();
     }

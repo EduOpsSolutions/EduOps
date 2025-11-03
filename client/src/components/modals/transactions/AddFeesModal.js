@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import DiscardChangesModal from "../common/DiscardChangesModal";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 import ModalTextField from "../../form/ModalTextField";
 import ModalSelectField from "../../form/ModalSelectField";
-import { getCookieItem } from '../../../utils/jwt';
+
 
 const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course, studentId, courseId, batchId }) => {
   const [formData, setFormData] = useState({
@@ -12,12 +13,11 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course, studentI
     type: "",
   });
 
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const MySwal = withReactContent(Swal);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
-      setShowDiscardModal(false);
       setFormData({
         description: "",
         amount: "",
@@ -35,12 +35,7 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course, studentI
     }));
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,20 +65,27 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course, studentI
 
   const handleClose = () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      MySwal.fire({
+        title: 'Discard changes?',
+        text: 'You have unsaved changes. Are you sure you want to discard them?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: "Yes, discard",
+        cancelButtonText: "No, keep editing",
+        confirmButtonColor: '#992525',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true,
+      }).then((result) => {
+        if (result.isConfirmed) {
+          onClose();
+        }
+      });
     } else {
       onClose();
     }
   };
 
-  const handleDiscardChanges = () => {
-    setShowDiscardModal(false);
-    onClose();
-  };
 
-  const handleCancelDiscard = () => {
-    setShowDiscardModal(false);
-  };
 
   if (!isOpen) return null;
 
@@ -196,11 +198,7 @@ const AddFeesModal = ({ isOpen, onClose, onSubmit, studentName, course, studentI
         </div>
       </div>
 
-      <DiscardChangesModal
-        show={showDiscardModal}
-        onConfirm={handleDiscardChanges}
-        onCancel={handleCancelDiscard}
-      />
+
     </>
   );
 };

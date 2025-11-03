@@ -88,10 +88,11 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
         text: 'You have unsaved changes that will be lost. Do you want to continue?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'No, Keep Editing',
-        cancelButtonText: 'Yes, Discard Changes',
-        confirmButtonColor: '#992525',
-        cancelButtonColor: '#6B7280',
+        confirmButtonText: "Yes, discard",
+        cancelButtonText: "No, keep editing",
+        confirmButtonColor: "#992525",
+        cancelButtonColor: "#6b7280",
+        reverseButtons: true,
       }).then((result) => {
         if (
           result.isDismissed ||

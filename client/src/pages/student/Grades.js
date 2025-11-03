@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Spinner from "../../components/common/Spinner";
 import { getCookieItem, decodeToken } from "../../utils/jwt";
 import CommonModal from "../../components/modals/common/CommonModal";
 import Swal from "sweetalert2";
@@ -111,8 +112,8 @@ function Grades() {
   const handleViewDetails = (grade) => {
     if (grade.status === "NO GRADE") {
       Swal.fire({
-        title: 'You haven\'t taken this course',
-        text: 'If you think this is a mistake please contact your instructor or administrator.',
+        title: 'Not Available',
+        text: 'Grade has not been graded or you have not completed the course yet.',
         icon: 'info',
         confirmButtonText: 'OK',
         confirmButtonColor: '#992525'
@@ -152,8 +153,8 @@ function Grades() {
   return (
     <div className="bg-white-yellow-tone min-h-screen">
       {loading && (
-        <div className="text-center py-8 text-lg text-gray-600">
-          Loading grades...
+        <div className="flex justify-center items-center py-12">
+          <Spinner size="lg" color="text-dark-red-2" message="Loading grades..." />
         </div>
       )}
       {error && (
