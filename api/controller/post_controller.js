@@ -70,7 +70,7 @@ export const getPosts = async (req, res) => {
     await logError(
       'Posts - Get Posts Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -84,7 +84,7 @@ export const getPosts = async (req, res) => {
 export const createPost = async (req, res) => {
   try {
     const { title, content, tag = 'global', sendOption } = req.body;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Validate required fields
     if (!title || !content) {
@@ -247,7 +247,7 @@ export const updatePost = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, tag, status } = req.body;
-    const userId = req.user.data.userId;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -324,7 +324,7 @@ export const updatePost = async (req, res) => {
     await logError(
       'Posts - Update Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -338,7 +338,7 @@ export const updatePost = async (req, res) => {
 export const archivePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -412,7 +412,7 @@ export const archivePost = async (req, res) => {
     await logError(
       'Posts - Archive Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -426,7 +426,7 @@ export const archivePost = async (req, res) => {
 export const unarchivePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -500,7 +500,7 @@ export const unarchivePost = async (req, res) => {
     await logError(
       'Posts - Unarchive Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -514,7 +514,7 @@ export const unarchivePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -562,7 +562,7 @@ export const deletePost = async (req, res) => {
     await logError(
       'Posts - Delete Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -576,7 +576,7 @@ export const deletePost = async (req, res) => {
 export const addFilesToPost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -683,7 +683,7 @@ export const addFilesToPost = async (req, res) => {
     await logError(
       'Posts - Add Files Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -697,7 +697,7 @@ export const addFilesToPost = async (req, res) => {
 export const deletePostFile = async (req, res) => {
   try {
     const { postId, fileId } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -746,7 +746,7 @@ export const deletePostFile = async (req, res) => {
     await logError(
       'Posts - Delete File Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
