@@ -31,7 +31,7 @@ const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
       className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div className="relative max-w-full max-h-full">
+      <div className="relative w-full h-full">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
@@ -52,12 +52,14 @@ const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
           </svg>
         </button>
 
-        <img
-          src={imageUrl}
-          alt={imageName || 'Full size image'}
-          className="max-w-full max-h-full object-contain"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div className=" w-full h-[80vh] overflow-hidden object-contain">
+          <img
+            src={imageUrl}
+            alt={imageName || 'Full size image'}
+            className="h-[100%] object-contain mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
         {imageName && (
           <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 text-white text-center p-2 rounded">
             {imageName}
