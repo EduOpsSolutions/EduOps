@@ -21,6 +21,9 @@ function ViewRequestDetailsModal() {
   const isOwnRequest = user && selectedRequest.userId === user.id;
   const canUploadProof = isOwnRequest && (user.role === 'student' || user.role === 'teacher');
   const isAdmin = user && user.role === 'admin';
+  
+  // Check if the document is free
+  const isFreeDocument = selectedRequest.document?.price === 'free' || selectedRequest.price === 'free';
 
   const handleProceedToPayment = () => {
     closeViewDetailsModal();
@@ -496,11 +499,12 @@ function ViewRequestDetailsModal() {
 
           {/* Right Column - Documents & Files */}
           <div className="space-y-3">
-            {/* Payment Status */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment Status</h4>
-              <div className="space-y-2">
-                {selectedRequest.paymentMethod === 'cash' ? (
+            {/* Payment Status - Only show for paid documents */}
+            {!isFreeDocument && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment Status</h4>
+                <div className="space-y-2">
+                  {selectedRequest.paymentMethod === 'cash' ? (
                   <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
                     <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -534,11 +538,12 @@ function ViewRequestDetailsModal() {
                     <span className="font-semibold">Amount:</span> ₱{parseFloat(selectedRequest.paymentAmount).toFixed(2)}
                   </div>
                 )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Admin: Attach Transaction (only for online payments without verified status) */}
-            {isAdmin && selectedRequest.paymentMethod !== 'cash' && selectedRequest.paymentStatus !== 'verified' && (
+            {!isFreeDocument && isAdmin && selectedRequest.paymentMethod !== 'cash' && selectedRequest.paymentStatus !== 'verified' && (
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attach Transaction (Admin)</h4>
                 <TransactionSelector
@@ -561,8 +566,8 @@ function ViewRequestDetailsModal() {
               </div>
             )}
 
-            {/* Proof of Payment - Hidden for cash payments */}
-            {selectedRequest.paymentMethod !== 'cash' && (
+            {/* Proof of Payment - Hidden for free documents and cash payments */}
+            {!isFreeDocument && selectedRequest.paymentMethod !== 'cash' && (
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Proof of Payment</h4>
                 

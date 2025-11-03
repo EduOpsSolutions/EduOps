@@ -12,6 +12,9 @@ function RequestDocumentModal(props) {
     const { createDocumentRequest, loading } = useDocumentRequestStore();
     const user = useAuthStore((state) => state.user);
     
+    // Check if the selected document is free
+    const isFreeDocument = props.selectedDocument?.price === 'free';
+    
     const [formData, setFormData] = useState({
         email: '',
         phone: '',
@@ -85,7 +88,6 @@ function RequestDocumentModal(props) {
                 email: formData.email,
                 phone: formData.phone,
                 mode: selectedMode,
-                paymentMethod: formData.paymentMethod,
                 purpose: formData.purpose,
                 additionalNotes: formData.additionalNotes,
                 ...(selectedMode === 'delivery' && {
@@ -94,11 +96,14 @@ function RequestDocumentModal(props) {
                     state: formData.state,
                     zipCode: formData.zipCode,
                     country: formData.country
+                }),
+                // Only include payment method for paid documents
+                ...(!isFreeDocument && {
+                    paymentMethod: formData.paymentMethod
                 })
             };
 
-            // Check if document is free or paid
-            const isFreeDocument = props.selectedDocument?.price === 'free';
+            // Check if it's an online payment for a paid document
             const isOnlinePayment = formData.paymentMethod === 'online' && !isFreeDocument;
             
             await createDocumentRequest(requestData, {
@@ -227,25 +232,28 @@ function RequestDocumentModal(props) {
                                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                                 </div>
 
-                                <div className="relative z-0 w-full group mb-5">
-                                    <label htmlFor="paymentMethod" className="block mb-2 text-sm font-medium text-gray-900">
-                                        Payment Method *
-                                    </label>
-                                    <select
-                                        name="paymentMethod"
-                                        id="paymentMethod"
-                                        value={formData.paymentMethod}
-                                        onChange={handleInputChange}
-                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
-                                        required
-                                    >
-                                        {paymentOptions.map((option, index) => (
-                                            <option key={index} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                {/* Only show payment method for paid documents */}
+                                {!isFreeDocument && (
+                                    <div className="relative z-0 w-full group mb-5">
+                                        <label htmlFor="paymentMethod" className="block mb-2 text-sm font-medium text-gray-900">
+                                            Payment Method *
+                                        </label>
+                                        <select
+                                            name="paymentMethod"
+                                            id="paymentMethod"
+                                            value={formData.paymentMethod}
+                                            onChange={handleInputChange}
+                                            className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                            required
+                                        >
+                                            {paymentOptions.map((option, index) => (
+                                                <option key={index} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div className="relative z-0 w-full group mb-5">
                                     <label htmlFor="mode" className="block mb-2 text-sm font-medium text-gray-900">
@@ -254,11 +262,11 @@ function RequestDocumentModal(props) {
                                     <select
                                         name="mode"
                                         id="mode"
-                                        className={`mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${formData.paymentMethod === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${!isFreeDocument && formData.paymentMethod === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         required
                                         value={selectedMode}
                                         onChange={(e) => setSelectedMode(e.target.value)}
-                                        disabled={formData.paymentMethod === 'cash'}
+                                        disabled={!isFreeDocument && formData.paymentMethod === 'cash'}
                                     >
                                         {pickupOptions.map((option, index) => (
                                             <option key={index} value={option.value}>
@@ -266,7 +274,7 @@ function RequestDocumentModal(props) {
                                             </option>
                                         ))}
                                     </select>
-                                    {formData.paymentMethod === 'cash' && (
+                                    {!isFreeDocument && formData.paymentMethod === 'cash' && (
                                         <p className="text-xs text-gray-500 mt-1">Cash payment is only available for pickup</p>
                                     )}
                                 </div>
