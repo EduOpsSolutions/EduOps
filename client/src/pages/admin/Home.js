@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import Pagination from '../../components/common/Pagination';
-import { useNavigate } from "react-router-dom";
-import CreatePostModal from "../../components/modals/home/CreatePostModal";
-import PostCard from "../../components/post/PostCard";
-import usePostsStore from "../../stores/postsStore";
-import useAuthStore from "../../stores/authStore";
-import { getCachedProfileImage } from "../../utils/profileImageCache";
+import { useNavigate } from 'react-router-dom';
+import CreatePostModal from '../../components/modals/home/CreatePostModal';
+import PostCard from '../../components/post/PostCard';
+import usePostsStore from '../../stores/postsStore';
+import useAuthStore from '../../stores/authStore';
+import { getCachedProfileImage } from '../../utils/profileImageCache';
 
 function Home() {
   const [create_post_modal, setCreatePostModal] = useState(false);
@@ -47,14 +47,14 @@ function Home() {
       try {
         await fetchPosts();
       } catch (err) {
-        console.error("Failed to load posts:", err);
+        console.error('Failed to load posts:', err);
       }
     };
 
     loadPosts();
   }, [fetchPosts]);
 
-  const visiblePosts = getVisiblePosts("admin");
+  const visiblePosts = getVisiblePosts('admin');
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -64,39 +64,38 @@ function Home() {
     currentPage * itemsPerPage
   );
 
-
   const handleHidePost = (postId) => {
     hidePost(postId);
-    console.log("Post hidden:", postId);
+    console.log('Post hidden:', postId);
   };
 
   const handleUnhidePost = (postId) => {
     unhidePost(postId);
-    console.log("Post unhidden:", postId);
+    console.log('Post unhidden:', postId);
   };
 
   const handleDeletePost = (postId) => {
     deletePost(postId);
-    console.log("Post deleted:", postId);
+    console.log('Post deleted:', postId);
   };
 
   const handleEditPost = (postId) => {
-    console.log("Editing post:", postId);
+    console.log('Editing post:', postId);
   };
 
   const handleArchivesClick = () => {
-    navigate("/admin/archives");
+    navigate('/admin/archives');
   };
 
   const userInitials = String(
-    user?.firstName[0] + user?.lastName[0] || ""
+    user?.firstName[0] + user?.lastName[0] || ''
   ).toUpperCase();
   return (
     <div className="bg_custom bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
       <div className="relative z-[2]">
         <div className="flex flex-col justify-center items-center">
           <div className="w-full max-w-6xl mx-auto my-8 sm:my-12 md:my-16">
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10 md:mb-14">
+            <div className="flex flex-row items-center gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10 md:mb-14">
               <button
                 onClick={() => {
                   setCreatePostModal(true);
@@ -138,7 +137,7 @@ function Home() {
                         setImageError(true);
                         setImageLoading(false);
                       }}
-                      style={{ display: imageLoading ? "none" : "block" }}
+                      style={{ display: imageLoading ? 'none' : 'block' }}
                     />
                   </div>
                 ) : (
