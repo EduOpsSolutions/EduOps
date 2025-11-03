@@ -30,7 +30,7 @@ function Archives() {
             <div className="bg-white flex flex-row w-full rounded-3xl py-6 px-8 mb-8 shadow-lg">
               <button
                 onClick={handleBackClick}
-                className="flex items-center justify-center flex-row w-24 gap-2 bg-white rounded-3xl p-4 sm:p-5 md:p-6 transition-all duration-200 hover:bg-german-red hover:text-white border-slate-300/40 border"
+                className="flex items-center justify-center flex-row w-16 md:w-24 max-h-6 gap-2 bg-white rounded-3xl p-4 sm:p-5 md:p-6 transition-all duration-200 hover:bg-german-red hover:text-white border-slate-300/40 border"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
