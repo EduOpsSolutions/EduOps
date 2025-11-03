@@ -31,7 +31,7 @@ const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
       className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div className="relative max-w-full max-h-full">
+      <div className="relative w-full h-full">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
@@ -52,12 +52,14 @@ const ImageModal = ({ isOpen, onClose, imageUrl, imageName }) => {
           </svg>
         </button>
 
-        <img
-          src={imageUrl}
-          alt={imageName || 'Full size image'}
-          className="max-w-full max-h-full object-contain"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div className=" w-full h-[80vh] overflow-hidden object-contain">
+          <img
+            src={imageUrl}
+            alt={imageName || 'Full size image'}
+            className="h-[100%] object-contain mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
         {imageName && (
           <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 text-white text-center p-2 rounded">
             {imageName}
@@ -74,9 +76,9 @@ const FileAttachment = ({ file, onImageClick }) => {
 
   if (isImage) {
     return (
-      <div className="relative group">
+      <div className="md:w-32 md:h-32 w-24 h-24 justify-center items-center">
         <div
-          className="w-48 h-32 bg-gray-100 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
+          className="w-full h-full bg-gray-100 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
           onClick={() => onImageClick(file.url, file.fileName)}
         >
           <img
@@ -160,15 +162,19 @@ const PostAttachments = ({ files }) => {
       {/* Images Grid */}
       {images.length > 0 && (
         <div
-          className={`grid gap-3 mb-4 justify-start ${
-            images.length === 1
-              ? 'grid-cols-1 max-w-48'
-              : images.length === 2
-              ? 'grid-cols-2'
-              : images.length === 3
-              ? 'grid-cols-3'
-              : 'grid-cols-2 md:grid-cols-3'
-          }`}
+          className={`gap-4 mb-4 justify-start lg:w-[50%] md:w-[60%] w-[90%] 
+            flex flex-wrap flex-row
+             ${
+               //   images.length === 1
+               //     ? 'grid-cols-1 max-w-48'
+               //     : images.length === 2
+               //     ? 'grid-cols-2'
+               //     : images.length === 3
+               //     ? 'grid-cols-3'
+               //     : 'grid-cols-2 md:grid-cols-3'
+               ``
+             }
+          `}
         >
           {images.map((file, index) => (
             <FileAttachment
@@ -350,8 +356,8 @@ const PostCard = ({
             </div>
           )}
           <div>
-            <div className="font-bold">{postedBy}</div>
-            <p>{department}</p>
+            <div className="font-bold text-sm md:text-base">{postedBy}</div>
+            <p className="text-sm md:text-base">{department}</p>
           </div>
 
           {showKebabMenu && (
@@ -448,15 +454,16 @@ const PostCard = ({
           )}
         </div>
 
-        <div className="text-3xl mb-[15px]">{title}</div>
-        <div className="text-justify mb-6">{content}</div>
+        <div className="md:text-3xl text-xl mb-[15px]">{title}</div>
+        <div className="text-justify text-sm md:text-base mb-6">{content}</div>
 
         {/* File Attachments */}
         <PostAttachments files={files} />
 
-        <div className="flex flex-row justify-between items-end">
+        <div className="flex gap-4 md:flex-row flex-col md:justify-between justify-start items-start md:items-end">
           <PostTagButton tag={tag} status={status} />
-          <div className="font-light">{createdAt}</div>
+
+          <div className="font-light text-sm md:text-base">{createdAt}</div>
         </div>
       </div>
 

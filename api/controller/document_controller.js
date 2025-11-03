@@ -5,6 +5,8 @@ import DocumentModel from '../model/document_model.js';
 import { uploadSingle } from '../middleware/multerMiddleware.js';
 import { uploadFile } from '../utils/fileStorage.js';  
 import { filePaths } from '../constants/file_paths.js';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 // Role-based access helper
 const checkDocumentAccess = (userRole, documentPrivacy, operation = 'read') => {
@@ -325,6 +327,7 @@ export const createDocumentRequest = async (req, res) => {
   try {
     const userId = req.user.data.id;
     const userRole = req.user.data.role;
+    const studentId = req.user.data.userId;
 
     // Students and teachers can create document requests
     if (!['student', 'teacher'].includes(userRole)) {
@@ -385,6 +388,71 @@ export const createDocumentRequest = async (req, res) => {
     };
 
     const request = await DocumentModel.createDocumentRequest(requestData);
+
+    // --- Infer courseId and batchId (academicPeriodId) if not provided ---
+    let courseId = req.body.courseId;
+    let batchId = req.body.batchId;
+    if (!courseId || !batchId) {
+      let enrollmentRequest = await prisma.enrollment_request.findFirst({
+        where: {
+          studentId: studentId,
+          enrollmentStatus: { in: ['pending', 'approved', 'PENDING', 'APPROVED', 'PAYMENT_PENDING', 'completed', 'COMPLETED', 'VERIFIED', 'verified'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, coursesToEnroll: true, periodId: true, enrollmentStatus: true },
+      });
+      if (!enrollmentRequest) {
+        enrollmentRequest = await prisma.enrollment_request.findFirst({
+          where: { studentId: userId },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, coursesToEnroll: true, periodId: true, enrollmentStatus: true },
+        });
+      }
+      if (enrollmentRequest) {
+        // Resolve course ID if coursesToEnroll is a course name
+        if (enrollmentRequest.coursesToEnroll && !courseId) {
+          let course = await prisma.course.findFirst({
+            where: { name: enrollmentRequest.coursesToEnroll },
+            select: { id: true },
+          });
+          if (course) {
+            courseId = course.id;
+          } else {
+            // Try as ID
+            course = await prisma.course.findUnique({
+              where: { id: enrollmentRequest.coursesToEnroll },
+              select: { id: true },
+            });
+            if (course) courseId = course.id;
+          }
+        }
+        if (enrollmentRequest.periodId && !batchId) {
+          batchId = enrollmentRequest.periodId;
+        }
+      }
+      await prisma.$disconnect();
+    }
+
+    const documentTemplate = await DocumentModel.getDocumentTemplateById(documentId);
+    const documentFeeAmount = documentTemplate?.amount || 0;
+    const documentFeeName = documentTemplate?.documentName || 'Document Fee';
+
+    if (documentFeeAmount > 0) {
+      // Ensure required fields are present
+      if (!courseId || !batchId) {
+        throw new Error('Unable to determine courseId or batchId for student fee.');
+      }
+      await prisma.student_fee.create({
+        data: {
+          studentId: userId,
+          name: documentFeeName,
+          amount: documentFeeAmount,
+          type: 'fee',
+          courseId,
+          batchId,
+        }
+      });
+    }
 
     res.status(201).json({
       error: false,

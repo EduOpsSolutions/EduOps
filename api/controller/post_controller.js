@@ -4,7 +4,7 @@ import { filePaths } from '../constants/file_paths.js';
 import { logUserActivity, logError } from '../utils/logger.js';
 import { MODULE_TYPES } from '../constants/module_types.js';
 import { sendPostEmail } from '../utils/mailer.js';
-import { getAllUserEmails,getUserEmailsByRole } from '../model/user_model.js';
+import { getAllUserEmails, getUserEmailsByRole } from '../model/user_model.js';
 
 const prisma = new PrismaClient();
 
@@ -70,7 +70,7 @@ export const getPosts = async (req, res) => {
     await logError(
       'Posts - Get Posts Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -84,7 +84,7 @@ export const getPosts = async (req, res) => {
 export const createPost = async (req, res) => {
   try {
     const { title, content, tag = 'global', sendOption } = req.body;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Validate required fields
     if (!title || !content) {
@@ -162,8 +162,8 @@ export const createPost = async (req, res) => {
 
     let recipients = [];
 
-    //EMAIL 
-    if (tag === 'global'){
+    //EMAIL
+    if (tag === 'global') {
       recipients = await getAllUserEmails();
     } else if (tag === 'teacher') {
       recipients = await getUserEmailsByRole('teacher');
@@ -180,25 +180,37 @@ export const createPost = async (req, res) => {
       let recipientUserIds = [];
       console.log('Recipient user IDs:', recipientUserIds);
       if (tag === 'global') {
-        recipientUserIds = (await prisma.users.findMany({ where: { deletedAt: null }, select: { id: true } })).map(u => u.id);
+        recipientUserIds = (
+          await prisma.users.findMany({
+            where: { deletedAt: null },
+            select: { id: true },
+          })
+        ).map((u) => u.id);
       } else if (tag === 'teacher' || tag === 'student') {
-        recipientUserIds = (await prisma.users.findMany({ where: { role: tag, deletedAt: null }, select: { id: true } })).map(u => u.id);
+        recipientUserIds = (
+          await prisma.users.findMany({
+            where: { role: tag, deletedAt: null },
+            select: { id: true },
+          })
+        ).map((u) => u.id);
       }
 
       // Prepare notification data
-      const notifications = recipientUserIds.map(recipientId => ({
+      const notifications = recipientUserIds.map((recipientId) => ({
         userId: recipientId,
         type: 'post',
         title,
         message: content,
         data: { postId: post.id, tag },
       }));
-      
-      console.log('Notification payload:', notifications);
+
+      // console.log('Notification payload:', notifications);
 
       // Bulk create notifications
       if (notifications.length > 0) {
-        const result = await prisma.notification.createMany({ data: notifications });
+        const result = await prisma.notification.createMany({
+          data: notifications,
+        });
         console.log('Notification createMany result:', result);
       }
     }
@@ -220,7 +232,7 @@ export const createPost = async (req, res) => {
     await logError(
       'Posts - Create Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -235,7 +247,7 @@ export const updatePost = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, tag, status } = req.body;
-    const userId = req.user.data.userId;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -312,7 +324,7 @@ export const updatePost = async (req, res) => {
     await logError(
       'Posts - Update Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -326,7 +338,7 @@ export const updatePost = async (req, res) => {
 export const archivePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -400,7 +412,7 @@ export const archivePost = async (req, res) => {
     await logError(
       'Posts - Archive Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -414,7 +426,7 @@ export const archivePost = async (req, res) => {
 export const unarchivePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -488,7 +500,7 @@ export const unarchivePost = async (req, res) => {
     await logError(
       'Posts - Unarchive Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -502,7 +514,7 @@ export const unarchivePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -550,7 +562,7 @@ export const deletePost = async (req, res) => {
     await logError(
       'Posts - Delete Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -564,7 +576,7 @@ export const deletePost = async (req, res) => {
 export const addFilesToPost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -671,7 +683,7 @@ export const addFilesToPost = async (req, res) => {
     await logError(
       'Posts - Add Files Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
@@ -685,7 +697,7 @@ export const addFilesToPost = async (req, res) => {
 export const deletePostFile = async (req, res) => {
   try {
     const { postId, fileId } = req.params;
-    const userId = req.user.data.id;
+    const userId = req.user?.data?.id;
 
     // Check if post exists and user owns it (or user is admin)
     const existingPost = await prisma.posts.findUnique({
@@ -734,7 +746,7 @@ export const deletePostFile = async (req, res) => {
     await logError(
       'Posts - Delete File Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
