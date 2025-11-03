@@ -19,14 +19,13 @@ function AddTransactionModal({
     amountPaid: "",
     referenceNumber: "",
     remarks: "",
-    courseId: "",
-    academicPeriodId: "",
+    courseId: null,
+    academicPeriodId: null,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState("");
   const [enrollments, setEnrollments] = useState([]);
-  const [selectedEnrollment, setSelectedEnrollment] = useState("");
 
   useEffect(() => {
     if (!addTransactionModal) {
@@ -39,8 +38,8 @@ function AddTransactionModal({
         amountPaid: "",
         referenceNumber: "",
         remarks: "",
-        courseId: "",
-        academicPeriodId: "",
+        courseId: null,
+        academicPeriodId: null,
       });
       setError("");
       setNameError("");
@@ -58,12 +57,21 @@ function AddTransactionModal({
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "courseBatch") {
-      const [courseId, academicPeriodId] = value.split("|");
-      setFormData((prev) => ({
-        ...prev,
-        courseId: courseId || "",
-        academicPeriodId: academicPeriodId || "",
-      }));
+      if (!value) {
+        // If empty selection, set both to null
+        setFormData((prev) => ({
+          ...prev,
+          courseId: null,
+          academicPeriodId: null,
+        }));
+      } else {
+        const [courseId, academicPeriodId] = value.split("|");
+        setFormData((prev) => ({
+          ...prev,
+          courseId: courseId || null,
+          academicPeriodId: academicPeriodId || null,
+        }));
+      }
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -107,7 +115,6 @@ function AddTransactionModal({
           lastName: ''
         }));
         setEnrollments([]);
-        setSelectedEnrollment("");
         return false;
       }
 
@@ -121,7 +128,8 @@ function AddTransactionModal({
 
         try {
           const enrollRes = await axiosInstance.get(`/enrollment/${realStudentId}/enrollments`);
-          setEnrollments(enrollRes.data || []);
+          const enrollmentsData = enrollRes.data || [];
+          setEnrollments(enrollmentsData);
         } catch (enrollErr) {
           setEnrollments([]);
         }
@@ -144,25 +152,23 @@ function AddTransactionModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    
+    // If student has enrollments, Course & Batch is required
+    if (enrollments.length > 0 && (!formData.courseId || !formData.academicPeriodId)) {
+      setError("Please select a Course & Batch.");
+      return;
+    }
+    
+    const submitData = {
+      ...formData,
+      courseId: formData.courseId || null,
+      academicPeriodId: formData.academicPeriodId || null,
+    };
+    
+    setLoading(true);
     try {
-      // Check for duplicate OR/Reference Number
-      const refNum = formData.referenceNumber.trim();
-      if (refNum) {
-        const checkResp = await axiosInstance.get(`/transactions/check-reference/${encodeURIComponent(refNum)}`);
-        if (checkResp.data && checkResp.data.exists) {
-          setLoading(false);
-          await Swal.fire({
-            icon: 'error',
-            title: 'Duplicate Reference Number',
-            text: 'The OR / Reference Number already exists. Please enter a unique value.',
-            confirmButtonColor: '#890E07'
-          });
-          return;
-        }
-      }
-      await onSubmit(formData);
+      await onSubmit(submitData);
       setAddTransactionModal(false);
       await Swal.fire({
         icon: 'success',
