@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import DiscardChangesModal from "../common/DiscardChangesModal";
+import Swal from "sweetalert2";
 import ModalTextField from "../../form/ModalTextField";
 import ModalSelectField from "../../form/ModalSelectField";
 import axiosInstance from "../../../utils/axios";
@@ -22,8 +22,6 @@ function AddTransactionModal({
     courseId: "",
     academicPeriodId: "",
   });
-
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState("");
@@ -32,7 +30,6 @@ function AddTransactionModal({
 
   useEffect(() => {
     if (!addTransactionModal) {
-      setShowDiscardModal(false);
       setFormData({
         studentId: "",
         firstName: "",
@@ -147,11 +144,32 @@ function AddTransactionModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      console.log('Submitting form data:', formData);
+      // Check for duplicate OR/Reference Number
+      const refNum = formData.referenceNumber.trim();
+      if (refNum) {
+        const checkResp = await axiosInstance.get(`/transactions/check-reference/${encodeURIComponent(refNum)}`);
+        if (checkResp.data && checkResp.data.exists) {
+          setLoading(false);
+          await Swal.fire({
+            icon: 'error',
+            title: 'Duplicate Reference Number',
+            text: 'The OR / Reference Number already exists. Please enter a unique value.',
+            confirmButtonColor: '#890E07'
+          });
+          return;
+        }
+      }
       await onSubmit(formData);
       setAddTransactionModal(false);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Transaction Added',
+        text: 'The transaction was added successfully!',
+        confirmButtonColor: '#890E07'
+      });
     } catch (error) {
       let errorMsg = "Failed to add transaction. Please try again.";
       if (error.response && error.response.data) {
@@ -173,22 +191,30 @@ function AddTransactionModal({
     return Object.values(formData).some((value) => value.trim() !== "");
   };
 
-  const handleClose = () => {
+
+  const handleClose = async () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      const result = await Swal.fire({
+        title: 'Discard Changes?',
+        text: 'You have unsaved changes. Are you sure you want to discard them?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#890E07',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Discard',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+      });
+      if (result.isConfirmed) {
+        setAddTransactionModal(false);
+      }
     } else {
       setAddTransactionModal(false);
     }
   };
 
-  const handleDiscardChanges = () => {
-    setShowDiscardModal(false);
-    setAddTransactionModal(false);
-  };
 
-  const handleCancelDiscard = () => {
-    setShowDiscardModal(false);
-  };
+  // Discard modal handlers removed (now handled by Swal)
 
   if (!addTransactionModal) return null;
 
@@ -401,11 +427,7 @@ function AddTransactionModal({
         </div>
       </div>
 
-      <DiscardChangesModal
-        show={showDiscardModal}
-        onConfirm={handleDiscardChanges}
-        onCancel={handleCancelDiscard}
-      />
+
     </>
   );
 }

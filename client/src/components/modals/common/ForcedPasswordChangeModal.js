@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import Swal from 'sweetalert2';
-import axiosInstance from '../../../utils/axios';
+import axios from 'axios';
 import useAuthStore from '../../../stores/authStore';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
+import { getCookieItem } from '../../../utils/jwt';
 
-const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
+const ForcedPasswordChangeModal = ({ isOpen, onPasswordChanged }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -38,22 +40,30 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
 
     try {
       setIsLoading(true);
-      const response = await axiosInstance.post(
-        `${process.env.REACT_APP_API_URL}/auth/change-password`,
+
+      // Get token directly from cookies (no interceptor)
+      const token = getCookieItem('token');
+
+      // Use plain axios to avoid interceptors
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/auth/forced-change-password`,
         {
           email: user.email,
           oldPassword: currentPassword,
           newPassword: newPassword,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
+
+      setIsLoading(false);
+
       if (response.status === 200) {
-        Swal.fire({
-          title: 'Success',
-          text: 'Password changed successfully!',
-          icon: 'success',
-          confirmButtonColor: '#890E07',
-        });
-        // Clear the form and close modal
+        // Clear the form
         setCurrentPassword('');
         setNewPassword('');
         setConfirmNewPassword('');
@@ -61,56 +71,68 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
         setShowCurrentPassword(false);
         setShowNewPassword(false);
         setShowConfirmPassword(false);
-        setEditPasswordModal(false);
+
+        // Show success message and wait for user confirmation
+        await Swal.fire({
+          title: 'Success',
+          text: 'Password changed successfully! You can now access the system.',
+          icon: 'success',
+          confirmButtonColor: '#890E07',
+        });
+
+        // Call callback to navigate to dashboard
+        if (onPasswordChanged) {
+          onPasswordChanged();
+        }
       } else {
         setError(response.data.message || 'Something went wrong!');
       }
     } catch (error) {
-      console.error('Something went wrong!', error);
-      setError(
-        error.response?.data?.message ||
-          error.message ||
-          'Something went wrong!'
-      );
-    } finally {
+      console.error('Password change error:', error);
       setIsLoading(false);
-    }
-  };
 
-  const hasChanges = () => {
-    return currentPassword || newPassword || confirmNewPassword;
+      // Handle different error scenarios without interceptor interference
+      if (error.response?.status === 400) {
+        // Validation errors (wrong password, same password, etc.)
+        setError(
+          error.response.data?.message ||
+            'Invalid input. Please check your passwords.'
+        );
+      } else if (error.response?.status === 401) {
+        // Unauthorized
+        setError(
+          error.response.data?.message ||
+            'Unauthorized. Your session may have expired.'
+        );
+      } else if (error.response?.status === 404) {
+        // User not found
+        setError('User not found. Please contact support.');
+      } else if (error.response?.status === 500) {
+        // Server error
+        setError('Server error. Please try again later.');
+      } else if (error.code === 'ERR_NETWORK') {
+        // Network error
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        // Generic error
+        setError(
+          error.response?.data?.message ||
+            error.message ||
+            'Something went wrong! Please try again.'
+        );
+      }
+    }
   };
 
   const handleClose = () => {
-    if (hasChanges()) {
-      Swal.fire({
-        title: 'Unsaved Changes',
-        text: 'You have unsaved changes that will be lost. Do you want to continue?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: "Yes, discard",
-        cancelButtonText: "No, keep editing",
-        confirmButtonColor: "#992525",
-        cancelButtonColor: "#6b7280",
-        reverseButtons: true,
-      }).then((result) => {
-        if (
-          result.isDismissed ||
-          result.dismiss === Swal.DismissReason.cancel
-        ) {
-          setCurrentPassword('');
-          setNewPassword('');
-          setConfirmNewPassword('');
-          setError('');
-          setShowCurrentPassword(false);
-          setShowNewPassword(false);
-          setShowConfirmPassword(false);
-          setEditPasswordModal(false);
-        }
-      });
-    } else {
-      setEditPasswordModal(false);
-    }
+    // Always prevent closing for forced password change
+    Swal.fire({
+      title: 'Password Change Required',
+      text: 'You must change your password to continue using the system.',
+      icon: 'warning',
+      confirmButtonColor: '#992525',
+      allowOutsideClick: false,
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -118,14 +140,21 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
     await changePassword();
   };
 
-  if (!edit_password_modal) return null;
+  if (!isOpen) return null;
 
-  return (
+  // Render modal using React Portal to avoid nested form issues
+  return ReactDOM.createPortal(
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white-yellow-tone rounded-lg p-6 w-full max-w-md mx-4 relative max-h-[90vh] overflow-y-auto">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-center">Change Password</h2>
+            <h2 className="text-2xl font-bold text-center">
+              Password Change Required
+            </h2>
+            <p className="text-sm text-center text-gray-600 mt-2">
+              For security reasons, you must change your password before
+              continuing.
+            </p>
           </div>
 
           {error && (
@@ -259,8 +288,9 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
           </form>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 
-export default EditPasswordModal;
+export default ForcedPasswordChangeModal;

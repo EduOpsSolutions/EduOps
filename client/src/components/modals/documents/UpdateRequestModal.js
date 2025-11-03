@@ -10,7 +10,7 @@ function UpdateDocumentRequestModal({
   updateRemarks, 
   onStatusChange, 
   onRemarksChange, 
-  onSubmit 
+  onSubmit
 }) {
   const [error, setError] = useState("");
   const [initialStatus, setInitialStatus] = useState("");
@@ -38,10 +38,10 @@ function UpdateDocumentRequestModal({
         text: 'You have unsaved changes that will be lost. Do you want to continue?',
         icon: 'warning',
         showCancelButton: true,
-  confirmButtonText: 'No, Keep Editing.',
-  cancelButtonText: 'Yes, Discard Changes!',
-  confirmButtonColor: '#992525',
-  cancelButtonColor: '#6B7280',
+        confirmButtonText: 'No, keep editing.',
+        cancelButtonText: 'Yes, discard changes.',
+        confirmButtonColor: '#992525',
+        cancelButtonColor: '#6B7280',
       }).then((result) => {
         if (result.isDismissed) {
           onClose();

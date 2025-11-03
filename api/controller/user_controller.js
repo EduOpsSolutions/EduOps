@@ -10,6 +10,23 @@ import { getUsersByRole as getUsersByRolesModel } from '../model/user_model.js';
 import { createLog, logSecurityEvent, LogTypes } from '../utils/logger.js';
 import { MODULE_TYPES } from '../constants/module_types.js';
 import { sendEmailChangeNotification } from '../services/userChangeEmailService.js';
+import { generateStandardizedUserId } from '../utils/userIdGenerator.js';
+import { sendAccountCreationEmail } from '../utils/mailer.js';
+
+// Generate default password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
+const generateDefaultPassword = (lastName, firstName, birthYear) => {
+  // Remove whitespaces from lastname and convert to lowercase
+  const cleanLastName = lastName.replace(/\s+/g, '').toLowerCase();
+
+  // Get first 2 letters of firstname (or just 1 if firstname has only 1 letter), convert to lowercase
+  const firstNamePart =
+    firstName.length >= 2
+      ? firstName.substring(0, 2).toLowerCase()
+      : firstName.substring(0, 1).toLowerCase();
+
+  // Combine: lastname + first2letters + yearofbirth
+  return `${cleanLastName}${firstNamePart}${birthYear}`;
+};
 
 // Get all users
 const getAllUsers = async (req, res) => {
@@ -114,22 +131,10 @@ const getUserById = async (req, res) => {
   }
 };
 
-// Helper function to generate unique userId
+// Helper function to generate unique userId - now uses standardized format
+// Format: S2025000001 (S/T/A + Year + 6-digit counter)
 const generateUserId = async (role) => {
-  const prefix = role === 'teacher' ? 'teacher' : 'student';
-  let counter = 1;
-  let userId;
-
-  do {
-    userId = `${prefix}${counter.toString().padStart(3, '0')}`;
-    const existingUser = await prisma.users.findUnique({
-      where: { userId },
-    });
-    if (!existingUser) break;
-    counter++;
-  } while (counter < 1000); // Prevent infinite loop
-
-  return userId;
+  return await generateStandardizedUserId(role);
 };
 
 // Create new student
@@ -144,7 +149,6 @@ const createUser = async (req, res) => {
       birthdate,
       birthyear,
       email,
-      password,
       role = 'student',
     } = req.body;
 
@@ -189,6 +193,13 @@ const createUser = async (req, res) => {
         .json({ error: true, message: 'Email already taken' });
     }
 
+    // Auto-generate password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
+    const generatedPassword = generateDefaultPassword(
+      lastName,
+      firstName,
+      birthyear
+    );
+
     const user = await prisma.users.create({
       data: {
         userId,
@@ -199,11 +210,23 @@ const createUser = async (req, res) => {
         birthdate,
         birthyear,
         email,
-        password: bcrypt.hashSync(password, SALT),
+        password: bcrypt.hashSync(generatedPassword, SALT),
         role,
         status: 'active',
+        changePassword: true, // Force password change on first login
       },
     });
+
+    // Send account creation email with generated password
+    try {
+      await sendAccountCreationEmail(user, generatedPassword);
+    } catch (emailError) {
+      console.error(
+        '[createUser] Error sending account creation email:',
+        emailError
+      );
+      // Don't fail user creation if email fails
+    }
 
     await createLog({
       title: `User created successfully: ${user.userId}`,
@@ -383,29 +406,114 @@ const updateUser = async (req, res) => {
   }
 };
 
-// Delete student
+// Delete user - PERMANENTLY redacts PII and makes account irrecoverable
 const deleteUser = async (req, res) => {
   try {
-    const { id } = req.body;
+    const { id } = req.params;
+    const { confirmDeletion } = req.body;
+
+    // Backend validation - require explicit confirmation
+    if (confirmDeletion !== true) {
+      return res.status(400).json({
+        error: true,
+        message: 'Deletion confirmation required. This action is irreversible.',
+      });
+    }
+
     const userRequest = await verifyJWT(
       req.headers.authorization.split(' ')[1]
     );
     const requesting_user_details = userRequest.payload.data;
 
+    // Get user data before deletion for logging
+    const userToDelete = await prisma.users.findUnique({
+      where: { id },
+    });
+
+    if (!userToDelete) {
+      return res.status(404).json({
+        error: true,
+        message: 'User not found',
+      });
+    }
+
+    // Prevent admin from deleting themselves
+    if (userToDelete.id === requesting_user_details.id) {
+      return res.status(403).json({
+        error: true,
+        message: 'You cannot delete your own account',
+      });
+    }
+
+    // Generate random password hash that user can never login with
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const redactedPasswordHash = bcrypt.hashSync(randomPassword, SALT);
+
+    // Permanently redact PII and set account as deleted
     const deleted = await prisma.users.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        // Redact personal information
+        firstName: 'DELETED',
+        middleName: 'USER',
+        lastName: 'ACCOUNT',
+        email: `deleted_${userToDelete.userId}@system.deleted`,
+        phoneNumber: null,
+        password: redactedPasswordHash,
+        profilePicLink: null,
+        // Reset birthdate to Jan 1, 2000
+        birthyear: 2000,
+        birthmonth: 1,
+        birthdate: 1,
+        // Set status and deletion timestamp
+        status: 'deleted',
+        deletedAt: new Date(),
+        // userId is preserved for audit trail
+      },
     });
+
+    // Comprehensive security logging
     await logSecurityEvent(
-      'User deleted',
+      'User Permanently Deleted - PII Redacted',
       requesting_user_details.userId,
       MODULE_TYPES.AUTH,
-      `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} deleted user [${deleted.userId}] ${deleted.firstName} ${deleted.lastName} at ${deleted.deletedAt} server time.`
+      `IRREVERSIBLE ACTION: Admin [${requesting_user_details.userId}] ${
+        requesting_user_details.firstName
+      } ${requesting_user_details.lastName} permanently deleted user account.
+      
+Original User Details (now redacted):
+- User ID: ${userToDelete.userId} (preserved for audit)
+- Name: ${userToDelete.firstName} ${userToDelete.middleName || ''} ${
+        userToDelete.lastName
+      }
+- Email: ${userToDelete.email}
+- Role: ${userToDelete.role}
+- Status before deletion: ${userToDelete.status}
+
+Redaction Applied:
+- Name changed to: DELETED USER ACCOUNT
+- Email changed to: deleted_${userToDelete.userId}@system.deleted
+- Password: Replaced with unrecoverable hash
+- Phone: Cleared
+- Profile Picture: Removed
+- Birthdate: Reset to Jan 1, 2000
+- Status: Set to 'deleted'
+- Deletion timestamp: ${deleted.deletedAt}
+
+This action is permanent and cannot be undone.`
     );
 
-    res.json({ error: false, message: 'User deleted successfully' });
+    res.json({
+      error: false,
+      message: 'User permanently deleted and PII redacted successfully',
+    });
   } catch (error) {
-    res.status(500).json({ error: true, message: 'Error deleting user' });
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error deleting user',
+      details: error.message,
+    });
   }
 };
 
@@ -552,14 +660,19 @@ const createStudentAccount = async (req, res) => {
         .json({ error: true, message: 'Email already taken' });
     }
 
-    // Auto-generate password: 4 letters of last name + 4 letters of first name + birth year
-    const lastNamePart = lastName.substring(0, 4).toUpperCase();
-    const firstNamePart = firstName.substring(0, 4).toUpperCase();
-    const autoPassword = `${lastNamePart}${firstNamePart}${birthYear}`;
+    // Auto-generate password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
+    const generatedPassword = generateDefaultPassword(
+      lastName,
+      firstName,
+      birthYear
+    );
+
+    // Generate standardized userId if not provided
+    const finalUserId = userId || (await generateStandardizedUserId('student'));
 
     const user = await prisma.users.create({
       data: {
-        userId: userId || `student_${Date.now()}`, // Generate userId if not provided
+        userId: finalUserId,
         firstName,
         middleName,
         lastName,
@@ -567,12 +680,23 @@ const createStudentAccount = async (req, res) => {
         birthdate: birthDay,
         birthyear: birthYear,
         email,
-        password: bcrypt.hashSync(autoPassword, SALT),
+        password: bcrypt.hashSync(generatedPassword, SALT),
         status: 'active',
         role: 'student',
         changePassword: true, // Force password change on first login
       },
     });
+
+    // Send account creation email with generated password
+    try {
+      await sendAccountCreationEmail(user, generatedPassword);
+    } catch (emailError) {
+      console.error(
+        '[createStudentAccount] Error sending account creation email:',
+        emailError
+      );
+      // Don't fail user creation if email fails
+    }
 
     // Link the created user to the specific enrollment request using enrollmentId
     if (req.body.enrollmentId) {

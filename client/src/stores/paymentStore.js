@@ -36,6 +36,14 @@ const usePaymentStore = create((set, get) => ({
     }
   },
 
+  setFormData: (data) => {
+    set((state) => ({
+      formData: { ...state.formData, ...data },
+      nameError: '',
+      phoneError: ''
+    }));
+  },
+
   validateAndFetchStudentByID: async (studentId) => {
     if (!studentId) {
       set({

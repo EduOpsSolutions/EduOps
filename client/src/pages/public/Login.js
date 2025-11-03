@@ -9,6 +9,7 @@ import SecondaryButton from '../../components/buttons/SecondaryButton';
 import DevLoginModal from '../../components/modals/common/DevLoginModal';
 import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
 import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
+import ForcedPasswordChangeModal from '../../components/modals/common/ForcedPasswordChangeModal';
 import TrackEnrollmentModal from '../../components/modals/enrollment/TrackEnrollmentModal';
 import Swal from 'sweetalert2';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
@@ -22,6 +23,7 @@ function Login() {
   const [password_reset_modal, setPasswordResetModal] = useState(false);
   const [dev_login_modal, setDevLoginModal] = useState(false);
   const [trackEnrollmentModal, setTrackEnrollmentModal] = useState(false);
+  const [forced_password_modal, setForcedPasswordModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -31,6 +33,21 @@ function Login() {
       console.log('Login result:', result);
 
       if (result.success) {
+        // Check if user needs to change password
+        if (result.changePassword) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Password Change Required',
+            text: 'You must change your password before proceeding.',
+            confirmButtonColor: '#992525',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+          }).then(() => {
+            setForcedPasswordModal(true);
+          });
+          return;
+        }
+
         const userRole = getUser().role;
         if (userRole === 'student') {
           navigate('/student');
@@ -200,9 +217,27 @@ function Login() {
                 setPasswordResetModal={setPasswordResetModal}
               />
 
+              {/* Forced Password Change Modal (uses plain axios, no interceptors) */}
+              <ForcedPasswordChangeModal
+                isOpen={forced_password_modal}
+                onPasswordChanged={() => {
+                  // Navigate to appropriate page after password change
+                  const userRole = getUser().role;
+                  if (userRole === 'student') {
+                    navigate('/student');
+                  } else if (userRole === 'admin') {
+                    navigate('/admin');
+                  } else if (userRole === 'teacher') {
+                    navigate('/teacher');
+                  } else {
+                    navigate('/');
+                  }
+                }}
+              />
+
               {/* UNCOMMENT AFTER IMPLMENTING BACKEND LOGIC FOR LOGGING IN DIFFERENT USERS
-              <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton> 
-              
+              <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton>
+
               */}
 
               <PrimaryButton

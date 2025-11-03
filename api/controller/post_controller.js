@@ -186,8 +186,8 @@ export const createPost = async (req, res) => {
       }
 
       // Prepare notification data
-      const notifications = recipientUserIds.map(userId => ({
-        userId,
+      const notifications = recipientUserIds.map(recipientId => ({
+        userId: recipientId,
         type: 'post',
         title,
         message: content,

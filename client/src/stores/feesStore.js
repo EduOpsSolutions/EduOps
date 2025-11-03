@@ -126,6 +126,12 @@ const useFeesStore = create((set, get) => ({
   openDeleteModal: (id) => set({ showDeleteModal: true, feeToDelete: id }),
   closeDeleteModal: () => set({ showDeleteModal: false, feeToDelete: null }),
 
+  markFeeForDeletion: (id) => {
+    set((state) => ({
+      editedFees: state.editedFees.filter((fee) => fee.id !== id),
+    }));
+  },
+
   confirmDeleteFee: async () => {
     const { feeToDelete, handleDeleteFee, closeDeleteModal } = get();
     if (feeToDelete) {
@@ -182,15 +188,52 @@ const useFeesStore = create((set, get) => ({
     }));
   },
 
+  feesDeepEqual: (a, b) => {
+    function normalizeFee(fee) {
+      return {
+        id: fee.id,
+        name: String(fee.name ?? ''),
+        price: Number(fee.price),
+        dueDate: fee.dueDate ? new Date(fee.dueDate).toISOString().slice(0, 10) : '',
+      };
+    }
+    if (a.length !== b.length) return false;
+    const aSorted = [...a].map(normalizeFee).sort((x, y) => x.id - y.id);
+    const bSorted = [...b].map(normalizeFee).sort((x, y) => x.id - y.id);
+    for (let i = 0; i < aSorted.length; i++) {
+      const fa = aSorted[i];
+      const fb = bSorted[i];
+      if (
+        fa.id !== fb.id ||
+        fa.name !== fb.name ||
+        fa.price !== fb.price ||
+        fa.dueDate !== fb.dueDate
+      ) {
+        return false;
+      }
+    }
+    return true;
+  },
+
   handleConfirm: () => {
-    set({ showSaveModal: true });
+    const { originalFees, editedFees, feesDeepEqual } = get();
+    if (!feesDeepEqual(originalFees, editedFees)) {
+      set({ showSaveModal: true });
+    }
   },
 
   handleConfirmSave: async () => {
     const { editedFees, originalFees } = get();
     const token = getCookieItem("token");
     try {
-      // Only update fees that have changed
+      const deletedFees = originalFees.filter(
+        (orig) => !editedFees.some((edit) => edit.id === orig.id)
+      );
+
+      for (const fee of deletedFees) {
+        await deleteFee(fee.id);
+      }
+
       for (const fee of editedFees) {
         const payload = {
           name: fee.name,
@@ -199,6 +242,7 @@ const useFeesStore = create((set, get) => ({
         };
         await editFee(fee.id, payload);
       }
+
       set({
         fees: [...editedFees],
         isEditMode: false,
@@ -219,8 +263,12 @@ const useFeesStore = create((set, get) => ({
     set({ showSaveNotifyModal: false });
   },
 
+
   handleDiscard: () => {
-    set({ showDiscardModal: true });
+    const { originalFees, editedFees, feesDeepEqual } = get();
+    if (!feesDeepEqual(originalFees, editedFees)) {
+      set({ showDiscardModal: true });
+    }
   },
 
   handleConfirmDiscard: () => {

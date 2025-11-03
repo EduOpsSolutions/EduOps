@@ -147,6 +147,113 @@ const UserAccountDetailsModal = React.memo(
       setShowResetPasswordModal(true);
     }, []);
 
+    const handleDeleteUser = useCallback(async () => {
+      // First warning - Explain what will happen
+      const firstWarning = await Swal.fire({
+        title: 'PERMANENT DELETION WARNING',
+        html: `
+          <div style="text-align: left; padding: 10px;">
+            <p style="font-weight: bold; color: #dc2626; margin-bottom: 10px;">
+              This action is IRREVERSIBLE and will permanently:
+            </p>
+            <ul style="margin-left: 20px; margin-bottom: 15px;">
+              <li>Delete all personal information (name, email, phone)</li>
+              <li>Remove profile picture and reset birthdate</li>
+              <li>Replace login credentials with unrecoverable data</li>
+              <li>Set account status to "deleted"</li>
+            </ul>
+            <p style="font-weight: bold; color: #dc2626;">
+              User ID <code style="background: #fee; padding: 2px 6px; border-radius: 3px;">${data?.userId}</code> will be preserved for audit trail only.
+            </p>
+            <p style="margin-top: 10px; color: #991b1b;">
+              <strong>The user CANNOT recover their account.</strong>
+            </p>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'I Understand, Continue',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+      });
+
+      if (!firstWarning.isConfirmed) return;
+
+      // Second confirmation - Type to confirm
+      const secondConfirmation = await Swal.fire({
+        title: '🔴 FINAL CONFIRMATION',
+        html: `
+          <div style="text-align: left; padding: 10px;">
+            <p style="margin-bottom: 10px;">
+              You are about to permanently delete:
+            </p>
+            <div style="background: #fee; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+              <strong>User:</strong> ${data?.firstName} ${data?.lastName}<br/>
+              <strong>Email:</strong> ${data?.email}<br/>
+              <strong>User ID:</strong> ${data?.userId}<br/>
+              <strong>Role:</strong> ${data?.role}
+            </div>
+            <p style="color: #dc2626; font-weight: bold;">
+              Type <code style="background: #fee; padding: 2px 6px;">DELETE</code> to confirm:
+            </p>
+          </div>
+        `,
+        input: 'text',
+        inputPlaceholder: 'Type DELETE here',
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonText: 'Delete Permanently',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#991b1b',
+        cancelButtonColor: '#6B7280',
+        reverseButtons: true,
+        inputValidator: (value) => {
+          if (value !== 'DELETE') {
+            return 'You must type DELETE to confirm!';
+          }
+        },
+      });
+
+      if (!secondConfirmation.isConfirmed) return;
+
+      // Proceed with deletion
+      try {
+        const token = getCookieItem('token');
+        await axiosInstance.delete(
+          `${process.env.REACT_APP_API_URL}/users/${data?.id}`,
+          {
+            data: { confirmDeletion: true },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        await Swal.fire({
+          title: 'User Deleted',
+          text: 'The user account has been permanently deleted and all PII has been redacted.',
+          icon: 'success',
+          confirmButtonColor: '#059669',
+        });
+
+        handleClose();
+        // Trigger data refresh in parent component
+        window.location.reload();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        Swal.fire({
+          title: 'Error',
+          text:
+            error.response?.data?.message ||
+            'Failed to delete user. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#dc2626',
+        });
+      }
+    }, [data, handleClose]);
+
     const hasChanges = () => {
       if (!initialData || !formData) return false;
 
@@ -191,8 +298,8 @@ const UserAccountDetailsModal = React.memo(
           text: 'You have unsaved changes that will be lost. Do you want to continue?',
           icon: 'warning',
           showCancelButton: true,
-          confirmButtonText: 'No, Keep Editing',
-          cancelButtonText: 'Yes, Discard Changes',
+          confirmButtonText: 'No, keep editing',
+          cancelButtonText: 'Yes, discard changes',
           confirmButtonColor: '#992525',
           cancelButtonColor: '#6B7280',
           reverseButtons: true,
@@ -443,7 +550,6 @@ const UserAccountDetailsModal = React.memo(
                       { value: 'active', label: 'Active' },
                       { value: 'disabled', label: 'Inactive' },
                       { value: 'suspended', label: 'Suspended' },
-                      { value: 'deleted', label: 'Deleted' },
                     ]}
                   />
                 </div>
@@ -509,14 +615,14 @@ const UserAccountDetailsModal = React.memo(
             </div>
           </div>
 
-          <div className="flex justify-center mt-6">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-6">
             <button
               onClick={handleSaveWithImage}
               disabled={loadingSave}
-              className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-dark-red-2 hover:bg-dark-red-5 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {loadingSave ? (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Saving...</span>
                 </div>
@@ -524,6 +630,18 @@ const UserAccountDetailsModal = React.memo(
                 'Save Changes'
               )}
             </button>
+
+            {/* Delete User Button - Only show for non-deleted users */}
+            {formData?.status !== 'deleted' && (
+              <button
+                onClick={handleDeleteUser}
+                disabled={loadingSave}
+                className="bg-red-700 hover:bg-red-800 text-white px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-red-900 w-full sm:w-auto"
+                title="Permanently delete this user and redact all PII"
+              >
+                Delete User Permanently
+              </button>
+            )}
           </div>
         </div>
 

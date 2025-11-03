@@ -106,7 +106,7 @@ function Documents() {
 
                 {loading ? (
                     <div className="flex justify-center items-center py-12">
-                        <Spinner size="large" />
+                        <Spinner size="lg" color="text-dark-red-2" message="Loading documents..." />
                     </div>
                 ) : (
                     <>
