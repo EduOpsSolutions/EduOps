@@ -143,7 +143,6 @@ const buildPaymentWhereClause = (filters = {}) => {
  * @returns {Promise<Object>} Payment creation result
  */
 export const createManualPayment = async (transactionData) => {
-  console.log('createManualPayment received data:', transactionData);
   const {
     studentId,
     firstName,
@@ -169,14 +168,91 @@ export const createManualPayment = async (transactionData) => {
 
   const customTransactionId = await generatePaymentId();
 
-  // Check for duplicate reference number
-  if (referenceNumber) {
-    const existing = await prisma.payments.findFirst({
-      where: { referenceNumber },
-      select: { id: true }
+  let finalCourseId = courseId;
+  let finalAcademicPeriodId = academicPeriodId;
+
+  // Lookup from enrollment_request if courseId or academicPeriodId not provided
+  if (!finalCourseId || !finalAcademicPeriodId) {
+    let enrollmentRequest = await prisma.enrollment_request.findFirst({
+      where: {
+        studentId: studentId,
+        enrollmentStatus: { in: ['pending', 'approved', 'PENDING', 'APPROVED', 'PAYMENT_PENDING', 'completed', 'COMPLETED'] },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        coursesToEnroll: true,
+        periodId: true,
+        enrollmentStatus: true,
+      },
     });
-    if (existing) {
-      throw new Error('Reference number already exists. Please enter a unique value.');
+
+    // Fallback: try without status filter
+    if (!enrollmentRequest) {
+      enrollmentRequest = await prisma.enrollment_request.findFirst({
+        where: {
+          studentId: studentId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          id: true,
+          coursesToEnroll: true,
+          periodId: true,
+          enrollmentStatus: true,
+        },
+      });
+    }
+
+    if (enrollmentRequest) {
+      // Resolve course ID if coursesToEnroll is a course name
+      if (enrollmentRequest.coursesToEnroll && !finalCourseId) {
+        const course = await prisma.course.findFirst({
+          where: {
+            name: enrollmentRequest.coursesToEnroll,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (course) {
+          finalCourseId = course.id;
+        } else {
+          const courseById = await prisma.course.findUnique({
+            where: {
+              id: enrollmentRequest.coursesToEnroll,
+            },
+            select: {
+              id: true,
+            },
+          });
+          
+          if (courseById) {
+            finalCourseId = courseById.id;
+          }
+        }
+      }
+
+      if (enrollmentRequest.periodId && !finalAcademicPeriodId) {
+        finalAcademicPeriodId = enrollmentRequest.periodId;
+      }
+    }
+  }
+
+  // Check for duplicate reference number
+  if (referenceNumber && referenceNumber.trim() !== '') {
+    const existingPayment = await prisma.payments.findFirst({
+      where: {
+        referenceNumber: referenceNumber.trim(),
+      },
+    });
+
+    if (existingPayment) {
+      throw new Error(`Reference number '${referenceNumber}' already exists. Please use a unique reference number.`);
     }
   }
 
@@ -191,51 +267,13 @@ export const createManualPayment = async (transactionData) => {
     feeType: purpose,
     remarks: remarks || null,
     paidAt: new Date(),
-    academicPeriodId: academicPeriodId || null,
-    courseId: courseId || null,
+    academicPeriodId: finalAcademicPeriodId || null,
+    courseId: finalCourseId || null,
   };
 
-  console.log('Creating payment with data:', paymentData);
   const payment = await prisma.payments.create({
     data: paymentData,
   });
-
-  // Send receipt email for manual payment
-  /*
-  try {
-    console.log(`Sending payment receipt email to ${user.email} for manual payment`);
-    
-    const emailSent = await sendPaymentReceiptEmail(
-      user.email,
-      {
-        transactionId: payment.transactionId,
-        referenceNumber: payment.referenceNumber,
-        amount: parseFloat(payment.amount),
-        paymentMethod: payment.paymentMethod,
-        feeType: payment.feeType,
-        remarks: payment.remarks,
-        paidAt: payment.paidAt,
-        createdAt: payment.createdAt,
-        currency: 'PHP'
-      },
-      {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        student_id: user.userId
-      }
-    );
-
-    if (emailSent) {
-      console.log(`Payment receipt email sent successfully to ${user.email}`);
-    } else {
-      console.error(`Failed to send payment receipt email to ${user.email}`);
-    }
-  } catch (emailError) {
-    console.error('Error sending payment receipt email for manual payment:', emailError);
-    // Don't fail the payment creation if email fails
-  }
-  */
 
   const createdPayment = await prisma.payments.findUnique({
     where: { id: payment.id },
@@ -528,24 +566,19 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     // Fetch enrollment request data to get courseId and academicPeriodId
     let enrollmentData = null;
     if (userId) {
-      // First, get the user's student ID (userId field) from the users table
       const user = await prisma.users.findUnique({
         where: { id: userId },
         select: { userId: true },
       });
 
       if (user) {
-        console.log(
-          `Looking for enrollment request with studentId: ${user.userId}`
-        );
-
         enrollmentData = await prisma.enrollment_request.findFirst({
           where: {
-            studentId: user.userId, // Use the user-facing studentId
-            enrollmentStatus: { in: ['pending', 'approved'] }, // Get active enrollment requests
+            studentId: user.userId,
+            enrollmentStatus: { in: ['pending', 'approved', 'PENDING', 'APPROVED', 'PAYMENT_PENDING', 'completed', 'COMPLETED'] }
           },
           orderBy: {
-            createdAt: 'desc', // Get the most recent one
+            createdAt: 'desc',
           },
           select: {
             id: true,
@@ -555,20 +588,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
           },
         });
 
-        if (enrollmentData) {
-          console.log(
-            `Found enrollment request for user ${user.userId}: ` +
-            `enrollmentRequestId=${enrollmentData.id}, ` +
-            `courseId=${enrollmentData.coursesToEnroll}, ` +
-            `academicPeriodId=${enrollmentData.periodId}, ` +
-            `status=${enrollmentData.enrollmentStatus}`
-          );
-        } else {
-          console.log(
-            `No active enrollment request found for student ${user.userId}. ` +
-            `Checking all enrollment requests...`
-          );
-          
+        if (!enrollmentData) {
+          // Fallback: check all enrollment requests
           const anyEnrollment = await prisma.enrollment_request.findFirst({
             where: {
               studentId: user.userId,
@@ -585,34 +606,15 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
           });
           
           if (anyEnrollment) {
-            console.log(
-              `Found enrollment request (status: ${anyEnrollment.enrollmentStatus}) for user ${user.userId}: ` +
-              `enrollmentRequestId=${anyEnrollment.id}, ` +
-              `courseId=${anyEnrollment.coursesToEnroll}, ` +
-              `academicPeriodId=${anyEnrollment.periodId}`
-            );
             enrollmentData = anyEnrollment;
-          } else {
-            console.log(
-              `No enrollment request found at all for student ${user.userId}. ` +
-              `Payment will be created without courseId/academicPeriodId.`
-            );
           }
         }
-      } else {
-        console.log(
-          `User with id ${userId} not found. Payment will be created without courseId/academicPeriodId.`
-        );
       }
     }
 
     let actualCourseId = enrollmentData?.coursesToEnroll || null;
     if (actualCourseId && enrollmentData) {
       if (actualCourseId.includes(' ') || actualCourseId.includes('-')) {
-        console.log(
-          `coursesToEnroll appears to be a course name: "${actualCourseId}". Looking up actual course ID...`
-        );
-        
         try {
           const course = await prisma.course.findFirst({
             where: {
@@ -624,14 +626,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
           });
 
           if (course) {
-            console.log(
-              `Found course ID: ${course.id} for course name: "${actualCourseId}"`
-            );
             actualCourseId = course.id;
           } else {
-            console.log(
-              `Warning: No course found with name "${actualCourseId}". Setting courseId to null.`
-            );
             actualCourseId = null;
           }
         } catch (error) {
@@ -659,8 +655,6 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         academicPeriodId: enrollmentData?.periodId || null,
       },
     });
-
-    console.log(`Created pending payment record: ${payment.id}`);
 
     // Use dynamic baseUrl for production and development
     const isProd = process.env.ENVIRONMENT === 'production';
