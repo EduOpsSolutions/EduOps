@@ -94,8 +94,8 @@ function Home() {
     <div className="bg_custom bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
       <div className="relative z-[2]">
         <div className="flex flex-col justify-center items-center">
-          <div className="w-full max-w-6xl mx-auto my-8 sm:my-12 md:my-16">
-            <div className="flex flex-row items-center gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10 md:mb-14">
+          <div className="w-full mx-auto my-8 sm:my-12 md:my-16">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10 md:mb-14">
               <button
                 onClick={() => {
                   setCreatePostModal(true);
