@@ -237,7 +237,7 @@ function Assessment() {
                           {fee.amount}
                         </td>
                         <td className="py-2 text-center text-xs sm:text-sm lg:text-base">
-                          {fee.dueDate}
+                          {fee.dueDate || selectedStudent.coursedueDate}
                         </td>
                       </tr>
                     ))}

@@ -91,15 +91,16 @@ export const getAssessmentByStudent = async (req, res) => {
     // 7. Fetch batch details
     const batch = await prisma.academic_period.findUnique({
       where: { id: userSchedule.schedule.periodId },
-      select: { id: true, batchName: true, startAt: true },
+      select: { id: true, batchName: true, startAt: true, enrollmentCloseAt: true },
     });
 
     // 8. Respond with only the relevant data
     res.json({
       studentId: userSchedule.user.id,
       name: `${userSchedule.user.firstName} ${userSchedule.user.lastName}`,
-      course: { id: course.id, name: course.name, price: course.price },
+      course: { id: course.id, name: course.name, price: course.price},
       batch: { id: batch.id, batchName: batch.batchName, year: batch.startAt ? new Date(batch.startAt).getFullYear() : null },
+      coursedueDate: batch.enrollmentCloseAt || null ,
       fees,
       studentFees,
       payments,
@@ -204,6 +205,11 @@ export const listAssessments = async (req, res) => {
         const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
         const remainingBalance = netAssessment - totalPayments;
 
+        // Fetch batch for dueDate
+        const batchObj = await prisma.academic_period.findUnique({
+          where: { id: entry.batchId },
+          select: { enrollmentCloseAt: true },
+        });
         return {
           studentId: entry.studentId,
           name: entry.name,
@@ -212,6 +218,7 @@ export const listAssessments = async (req, res) => {
           batch: entry.batch,
           batchId: entry.batchId,
           year: entry.year,
+          dueDate: batchObj?.enrollmentCloseAt || null,
           netAssessment,
           totalPayments,
           remainingBalance,
@@ -321,6 +328,11 @@ export const getAllAssessmentsForStudent = async (req, res) => {
         const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
         const remainingBalance = netAssessment - totalPayments;
 
+        // Fetch batch for dueDate
+        const batchObj = await prisma.academic_period.findUnique({
+          where: { id: entry.batchId },
+          select: { enrollmentCloseAt: true },
+        });
         return {
           studentId: entry.studentId,
           name: entry.name,
@@ -329,6 +341,7 @@ export const getAllAssessmentsForStudent = async (req, res) => {
           batch: entry.batch,
           batchId: entry.batchId,
           year: entry.year,
+          dueDate: batchObj?.enrollmentCloseAt || null,
           netAssessment,
           totalPayments,
           remainingBalance,

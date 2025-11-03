@@ -254,6 +254,7 @@ function Assessment() {
                 courseId: data.course?.id,
                 batchId: data.batch?.id,
                 fees,
+                coursedueDate: data.coursedueDate ? new Date(data.coursedueDate).toLocaleDateString('en-US') : '',
                 studentFees: data.studentFees || [],
                 netAssessment: Number(data.netAssessment || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
                 totalPayments: Number(data.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
@@ -361,7 +362,7 @@ function Assessment() {
                                             <tr key={i} className="border-b-2 border-[rgb(137,14,7,.49)]">
                                                 <td className="uppercase py-2 text-xs sm:text-sm lg:text-base">{fee.name || fee.description}</td>
                                                 <td className="py-2 text-center text-xs sm:text-sm lg:text-base">{fee.price ? Number(fee.price).toLocaleString('en-US', { minimumFractionDigits: 2 }) : fee.amount}</td>
-                                                <td className="py-2 text-center text-xs sm:text-sm lg:text-base">{fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-US') : ''}</td>
+                                                <td className="py-2 text-center text-xs sm:text-sm lg:text-base">{fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-US') : '' || selectedEnrollment.coursedueDate}</td>
                                             </tr>
                                         ))}
                                     </tbody>

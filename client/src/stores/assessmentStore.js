@@ -124,6 +124,7 @@ const fetchStudentAssessment = async (studentId, courseId, batchId) => {
     courseId: data.course?.id,
     batchId: data.batch?.id,
     fees,
+    coursedueDate: data.coursedueDate ? new Date(data.coursedueDate).toLocaleDateString('en-US') : '',
     studentFees: data.studentFees || [],
     payments: data.payments || [],
     netAssessment: data.netAssessment || 0,
