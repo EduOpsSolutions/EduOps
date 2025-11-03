@@ -4,7 +4,7 @@ import { filePaths } from '../constants/file_paths.js';
 import { logUserActivity, logError } from '../utils/logger.js';
 import { MODULE_TYPES } from '../constants/module_types.js';
 import { sendPostEmail } from '../utils/mailer.js';
-import { getAllUserEmails,getUserEmailsByRole } from '../model/user_model.js';
+import { getAllUserEmails, getUserEmailsByRole } from '../model/user_model.js';
 
 const prisma = new PrismaClient();
 
@@ -162,8 +162,8 @@ export const createPost = async (req, res) => {
 
     let recipients = [];
 
-    //EMAIL 
-    if (tag === 'global'){
+    //EMAIL
+    if (tag === 'global') {
       recipients = await getAllUserEmails();
     } else if (tag === 'teacher') {
       recipients = await getUserEmailsByRole('teacher');
@@ -180,25 +180,37 @@ export const createPost = async (req, res) => {
       let recipientUserIds = [];
       console.log('Recipient user IDs:', recipientUserIds);
       if (tag === 'global') {
-        recipientUserIds = (await prisma.users.findMany({ where: { deletedAt: null }, select: { id: true } })).map(u => u.id);
+        recipientUserIds = (
+          await prisma.users.findMany({
+            where: { deletedAt: null },
+            select: { id: true },
+          })
+        ).map((u) => u.id);
       } else if (tag === 'teacher' || tag === 'student') {
-        recipientUserIds = (await prisma.users.findMany({ where: { role: tag, deletedAt: null }, select: { id: true } })).map(u => u.id);
+        recipientUserIds = (
+          await prisma.users.findMany({
+            where: { role: tag, deletedAt: null },
+            select: { id: true },
+          })
+        ).map((u) => u.id);
       }
 
       // Prepare notification data
-      const notifications = recipientUserIds.map(recipientId => ({
+      const notifications = recipientUserIds.map((recipientId) => ({
         userId: recipientId,
         type: 'post',
         title,
         message: content,
         data: { postId: post.id, tag },
       }));
-      
-      console.log('Notification payload:', notifications);
+
+      // console.log('Notification payload:', notifications);
 
       // Bulk create notifications
       if (notifications.length > 0) {
-        const result = await prisma.notification.createMany({ data: notifications });
+        const result = await prisma.notification.createMany({
+          data: notifications,
+        });
         console.log('Notification createMany result:', result);
       }
     }
@@ -220,7 +232,7 @@ export const createPost = async (req, res) => {
     await logError(
       'Posts - Create Post Error',
       err,
-      req.user?.data?.id || null,
+      req.user?.data?.userId || null,
       MODULE_TYPES.CONTENTS
     );
     res.status(500).json({
