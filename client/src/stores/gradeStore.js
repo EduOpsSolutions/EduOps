@@ -64,14 +64,11 @@ const useGradeStore = create((set, get) => ({
   gradeNotReadyModal: false,
   gradeDetailsModal: false,
   studentsGradeModal: false,
-  gradesVisible: false,
+  gradesVisible: 'hidden', 
   localGrades: [],
   changesMade: false,
   saving: false,
-  pendingFiles: {}, // Store pending files: { studentId: { file, fileName, studentGradeId, studentId, courseId, periodId, userId } }
-
-  _persistentStudentData: {},
-  _persistentVisibility: {},
+  pendingFiles: {}, 
   gradeStatusOptions: [
     { value: 'ng', label: 'NG', color: 'bg-gray-300' },
     { value: 'pass', label: 'PASS', color: 'bg-green-500' },
@@ -140,18 +137,16 @@ const useGradeStore = create((set, get) => ({
     });
   },
 
-  setGradeVisibility: (visible) => {
+  setGradeVisibility: (visibility) => {
     const state = get();
-
-    if (visible !== state.gradesVisible) {
-      set({ gradesVisible: visible, changesMade: true });
+    if (visibility !== state.gradesVisible) {
+      set({ gradesVisible: visibility, changesMade: true });
     }
   },
 
   saveGradeChanges: async () => {
     const state = get();
-    const { localGrades, selectedSchedule, gradesVisible, pendingFiles } = state;
-    const scheduleId = selectedSchedule?.id;
+    const { localGrades, pendingFiles } = state;
 
     set({ saving: true });
 
@@ -198,27 +193,11 @@ const useGradeStore = create((set, get) => ({
       // Don't update students array until after successful save
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      const freshState = get();
-
-      if (scheduleId) {
-        const persistStudents = JSON.parse(JSON.stringify(freshState.students));
-
-        set(state => {
-          const updatedData = {
-            _persistentStudentData: {
-              ...state._persistentStudentData,
-              [scheduleId]: persistStudents
-            },
-            _persistentVisibility: {
-              ...state._persistentVisibility,
-              [scheduleId]: gradesVisible
-            }
-          };
-          return updatedData;
-        });
+      if (localGrades.length > 0) {
+        await get().saveGrades();
       }
-
-      await get().saveGrades();
+      // Always save visibility 
+      await get().saveVisibility();
 
       // Only update students array after successful backend save
       if (localGrades.length > 0) {
@@ -342,6 +321,35 @@ const useGradeStore = create((set, get) => ({
     return await res.json();
   },
 
+  saveVisibility: async () => {
+    const state = get();
+    const { selectedSchedule, gradesVisible } = state;
+    if (!selectedSchedule) return;
+    
+    const courseId = selectedSchedule.courseId;
+    const periodId = selectedSchedule.academicPeriodId;
+    const token = getCookieItem('token');
+    const apiUrl = process.env.REACT_APP_API_URL;
+    
+    const payload = {
+      courseId,
+      periodId,
+      visibility: gradesVisible 
+    };
+    
+    const res = await fetch(`${apiUrl}/grades/visibility`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) throw new Error('Failed to save visibility setting');
+    return await res.json();
+  },
+
   closeGradeDetailsModal: () => set({ gradeDetailsModal: false }),
   closeGradeNotReadyModal: () => set({ gradeNotReadyModal: false }),
   closeStudentsGradeModal: () => set({ studentsGradeModal: false }),
@@ -383,10 +391,19 @@ const useGradeStore = create((set, get) => ({
       });
       if (!res.ok) throw new Error('Failed to fetch students for schedule');
       const data = await res.json();
+
+      let initialVisibility = 'hidden';
+      if (data.students && data.students.length > 0) {
+        const firstStudentWithGrade = data.students.find(s => s.visibility !== undefined);
+        if (firstStudentWithGrade) {
+          initialVisibility = firstStudentWithGrade.visibility;
+        }
+      }
+      
       set({
         students: data.students || [],
         studentsGradeModal: true,
-        gradesVisible: true,
+        gradesVisible: initialVisibility,
         localGrades: [],
         changesMade: false,
         loading: false
@@ -404,10 +421,6 @@ const useGradeStore = create((set, get) => ({
   },
 
   resetStore: () => {
-    const currentState = get();
-    const persistentData = currentState._persistentStudentData;
-    const persistentVisibility = currentState._persistentVisibility;
-
     set({
       selectedSchedule: null,
       gradeNotReadyModal: false,
@@ -415,9 +428,7 @@ const useGradeStore = create((set, get) => ({
       studentsGradeModal: false,
       error: null,
       localGrades: [],
-      changesMade: false,
-      _persistentStudentData: persistentData,
-      _persistentVisibility: persistentVisibility
+      changesMade: false
     });
   }
 }));
