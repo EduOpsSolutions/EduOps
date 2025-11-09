@@ -88,11 +88,21 @@ export const documentRequestsApi = {
   },
 
   // Update document request status (admin only)
-  updateStatus: async (id, status, remarks) => {
+  updateStatus: async (id, status, remarks, paymentId = null) => {
+    console.log('[documentApi.updateStatus] Sending request:', {
+      id,
+      status,
+      remarks,
+      paymentId
+    });
+    
     const response = await axiosInstance.patch(`/documents/requests/${id}/status`, {
       status,
-      remarks
+      remarks,
+      paymentId
     });
+    
+    console.log('[documentApi.updateStatus] Response:', response.data);
     return response.data;
   },
 
@@ -113,6 +123,35 @@ export const documentRequestsApi = {
   removeProofOfPayment: async (id) => {
     const response = await axiosInstance.patch(`/documents/requests/${id}/proof-of-payment`, {
       proofOfPayment: null
+    });
+    return response.data;
+  },
+
+  // Upload completed document (admin only)
+  uploadCompletedDocument: async (id, file) => {
+    const formData = new FormData();
+    formData.append('completedDocument', file);
+    
+    const response = await axiosInstance.patch(`/documents/requests/${id}/completed-document`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Remove completed document (admin only)
+  removeCompletedDocument: async (id) => {
+    const response = await axiosInstance.patch(`/documents/requests/${id}/completed-document`, {
+      fulfilledDocumentUrl: null
+    });
+    return response.data;
+  },
+
+  // Attach transaction to document request (admin only)
+  attachTransaction: async (id, transactionId) => {
+    const response = await axiosInstance.patch(`/documents/requests/${id}/attach-transaction`, {
+      transactionId
     });
     return response.data;
   }
@@ -229,7 +268,7 @@ export const documentHelpers = {
       errors.email = 'Valid email is required';
     }
 
-    if (!requestData.phone || !/^[\d\s\-\+\(\)]+$/.test(requestData.phone)) {
+    if (!requestData.phone || !/^[\d\s\-+()]+$/.test(requestData.phone)) {
       errors.phone = 'Valid phone number is required';
     }
 

@@ -122,32 +122,30 @@ const EditDocumentModal = ({
     const hasChanges = () => {
         if (!selectedDocument) return false;
 
-        let originalPriceValue = "Free";
+        // Determine original price and amount
+        let originalPriceValue = "free";
         let originalAmount = "";
 
-        if (selectedDocument.amount) {
-            const cleanAmount = typeof selectedDocument.amount === 'string' ?
-                selectedDocument.amount.replace(/[^0-9.-]+/g, '') :
-                selectedDocument.amount;
-
-            const parsedAmount = parseFloat(cleanAmount);
-
+        if (selectedDocument.amount && selectedDocument.price === "paid") {
+            const parsedAmount = parseFloat(selectedDocument.amount);
             if (!isNaN(parsedAmount) && parsedAmount > 0) {
-                originalPriceValue = "Paid";
-                originalAmount = parsedAmount.toFixed(2);
+                originalPriceValue = "paid";
+                originalAmount = parsedAmount.toString();
             }
         }
 
-        return (
-            formData.documentName !== (selectedDocument.documentName || "") ||
-            formData.description !== (selectedDocument.description || "") ||
-            formData.privacy !== (selectedDocument.privacy || "Teacher's Only") ||
-            formData.requestBasis !== (selectedDocument.requestBasis || "Yes") ||
-            formData.downloadable !== (selectedDocument.downloadable || "Yes") ||
-            formData.price !== originalPriceValue ||
-            (formData.price === "Paid" && formData.amount !== originalAmount) ||
-            formData.uploadFile !== (selectedDocument.uploadFile || "")
-        );
+        // Check for actual changes
+        const nameChanged = formData.documentName.trim() !== (selectedDocument.documentName || "");
+        const descChanged = formData.description.trim() !== (selectedDocument.description || "");
+        const privacyChanged = formData.privacy !== (selectedDocument.privacy || "teacher_only");
+        const requestBasisChanged = formData.requestBasis !== (selectedDocument.requestBasis !== undefined ? selectedDocument.requestBasis : true);
+        const downloadableChanged = formData.downloadable !== (selectedDocument.downloadable !== undefined ? selectedDocument.downloadable : true);
+        const priceChanged = formData.price !== originalPriceValue;
+        const amountChanged = formData.price === "paid" && formData.amount !== originalAmount;
+        const fileChanged = uploadedFile !== null; // Only check if a new file was uploaded
+
+        return nameChanged || descChanged || privacyChanged || requestBasisChanged || 
+               downloadableChanged || priceChanged || amountChanged || fileChanged;
     };
 
     const handleClose = () => {
@@ -157,10 +155,11 @@ const EditDocumentModal = ({
                 text: 'You have unsaved changes that will be lost. Do you want to continue?',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'No, Keep Editing',
-                cancelButtonText: 'Yes, Discard Changes',
-                confirmButtonColor: '#992525',
-                cancelButtonColor: '#6B7280',
+                confirmButtonText: "Yes, discard",
+                cancelButtonText: "No, keep editing",
+                confirmButtonColor: "#992525",
+                cancelButtonColor: "#6b7280",
+                reverseButtons: true,
             }).then((result) => {
                 if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
                     onClose();

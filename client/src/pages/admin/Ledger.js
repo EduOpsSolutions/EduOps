@@ -1,16 +1,19 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import UpdateLedgerModal from "../../components/modals/transactions/UpdateLedger";
 import { useLedgerSearchStore, useLedgerStore } from "../../stores/ledgerStore";
 import SearchForm from "../../components/common/SearchFormHorizontal";
 import SearchResults from "../../components/common/SearchResults";
 import axios from "axios";
-import axiosInstance from "../../utils/axios";
 import LedgerDetails from "../../components/tables/LedgerDetailsTable";
 import { getCookieItem } from "../../utils/jwt";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 function Ledger() {
+  const [loading, setLoading] = React.useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Search store
   const searchStore = useLedgerSearchStore();
@@ -32,9 +35,23 @@ function Ledger() {
     handleModalSubmit
   } = useLedgerStore();
 
+  const handleBack = () => {
+    if (location.state && location.state.fromAssessment && location.state.student) {
+      navigate("/admin/assessment", { state: { selectStudent: location.state.student } });
+      setTimeout(() => {
+        useLedgerStore.getState().handleBackToResults();
+      }, 100);
+    } else if (location.state && location.state.from) {
+      navigate(location.state.from);
+    } else {
+      initializeSearch();
+    }
+  };
+
   // Fetch students for search (from ledger endpoint)
   useEffect(() => {
     async function fetchStudents() {
+      setLoading(true);
       try {
         const token = getCookieItem("token");
         const res = await axios.get(
@@ -49,11 +66,39 @@ function Ledger() {
         useLedgerSearchStore.getState().performSearch();
       } catch (err) {
         console.error('Failed to fetch students for ledger:', err);
+      } finally {
+        setLoading(false);
       }
     }
     fetchStudents();
     // eslint-disable-next-line
   }, [initializeSearch, performSearch]);
+
+  // Handle navigation from assessment with student selection
+  useEffect(() => {
+    if (location.state && location.state.fromAssessment && location.state.student) {
+      const student = location.state.student;
+      handleStudentClick(student);
+      const studentId = student.studentId || student.id;
+      fetchLedger(studentId);
+    }
+  }, [location.state, handleStudentClick]);
+
+  useEffect(() => {
+    if (!location.state && showLedger) {
+      handleBackToResults();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
+  useEffect(() => {
+    return () => {
+      const isNavigatingToAssessment = window.location.pathname === '/admin/assessment';
+      if (!isNavigatingToAssessment) {
+        useLedgerStore.getState().handleBackToResults();
+      }
+    };
+  }, []);
 
   // Search form config
   const searchFormConfig = {
@@ -158,40 +203,50 @@ function Ledger() {
 
   return (
     <div className="bg-white-yellow-tone min-h-[calc(100vh-80px)] box-border flex flex-col py-4 sm:py-6 px-4 sm:px-8 md:px-12 lg:px-20">
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+            <p className="text-lg">Loading student ledgers...</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Search Form */}
+          <SearchForm
+            searchLogic={searchStore}
+            fields={searchFormConfig}
+            onSearch={handleSearch}
+          />
 
-      {/* Search Form */}
-      <SearchForm
-        searchLogic={searchStore}
-        fields={searchFormConfig}
-        onSearch={handleSearch}
-      />
+          {/* Search Results */}
+          <SearchResults
+            visible={searchStore.showResults && !showLedger}
+            items={searchStore.currentItems}
+            columns={searchResultsColumns}
+            onItemClick={handleStudentClickWrapper}
+            pagination={paginationConfig}
+          />
 
-      {/* Search Results */}
-      <SearchResults
-        visible={searchStore.showResults && !showLedger}
-        items={searchStore.currentItems}
-        columns={searchResultsColumns}
-        onItemClick={handleStudentClickWrapper}
-        pagination={paginationConfig}
-      />
+          {/* Ledger Details */}
+          {showLedger && selectedStudent && (
+            <LedgerDetails
+              student={selectedStudent}
+              onBackClick={handleBack}
+              onAddTransaction={openAddTransactionModal}
+              ledgerEntries={ledgerEntries}
+            />
+          )}
 
-      {/* Ledger Details */}
-      {showLedger && selectedStudent && (
-        <LedgerDetails
-          student={selectedStudent}
-          onBackClick={handleBackToResults}
-          onAddTransaction={openAddTransactionModal}
-          ledgerEntries={ledgerEntries}
-        />
+          {/* Modal */}
+          <UpdateLedgerModal
+            isOpen={isModalOpen}
+            onClose={closeAddTransactionModal}
+            onSubmit={handleModalSubmitAndRefresh}
+            student={selectedStudent}
+          />
+        </>
       )}
-
-      {/* Modal */}
-      <UpdateLedgerModal
-        isOpen={isModalOpen}
-        onClose={closeAddTransactionModal}
-        onSubmit={handleModalSubmitAndRefresh}
-        student={selectedStudent}
-      />
     </div>
   );
 }

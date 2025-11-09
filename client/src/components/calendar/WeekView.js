@@ -1,9 +1,9 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import TileEvent from './TileEvent';
-import { getEventsForTimeSlot as getEventsForTimeSlotUtil } from '../../utils/scheduleUtils';
+import { getEventsForTimeSlot as getEventsForTimeSlotUtil, formatTime } from '../../utils/scheduleUtils';
 
-function WeekView({ weekDates, events = [], onTimeSlotClick }) {
+function WeekView({ weekDates, events = [], onTimeSlotClick, timeFormat = '12h', viewDensity = 'default' }) {
   const weekdays = [
     'Sunday',
     'Monday',
@@ -21,9 +21,14 @@ function WeekView({ weekDates, events = [], onTimeSlotClick }) {
     const endHour = 21;
     for (let h = startHour; h <= endHour; h++) {
       for (const m of [0, 30]) {
-        const hour12 = ((h + 11) % 12) + 1;
-        const period = h >= 12 ? 'PM' : 'AM';
-        slots.push(`${hour12}:${m.toString().padStart(2, '0')} ${period}`);
+        const time24 = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        if (timeFormat === '24h') {
+          slots.push(time24);
+        } else {
+          const hour12 = ((h + 11) % 12) + 1;
+          const period = h >= 12 ? 'PM' : 'AM';
+          slots.push(`${hour12}:${m.toString().padStart(2, '0')} ${period}`);
+        }
       }
     }
     return slots;
@@ -41,6 +46,23 @@ function WeekView({ weekDates, events = [], onTimeSlotClick }) {
   const getEventsForTimeSlot = (timeSlot, date) => {
     return getEventsForTimeSlotUtil(events, timeSlot, date);
   };
+
+  // View density classes
+  const densityClasses = {
+    compact: {
+      cell: 'min-h-[60px] p-1',
+      header: 'p-2',
+      timeLabel: 'text-xs',
+      gap: 'gap-1',
+    },
+    default: {
+      cell: 'min-h-[80px] p-2',
+      header: 'p-3',
+      timeLabel: 'text-sm',
+      gap: 'gap-2',
+    },
+  };
+  const density = densityClasses[viewDensity] || densityClasses.default;
 
   return (
     <div className="w-full overflow-x-auto">
@@ -96,8 +118,8 @@ function WeekView({ weekDates, events = [], onTimeSlotClick }) {
       {/* Time Grid - Desktop */}
       <div className="hidden md:block">
         {timeSlots.map((time, timeIndex) => (
-          <div key={timeIndex} className="grid grid-cols-8 gap-2 mb-2">
-            <div className="p-2 text-sm font-semibold text-gray-600 text-right">
+          <div key={timeIndex} className={`grid grid-cols-8 ${density.gap} mb-2`}>
+            <div className={`${density.header} ${density.timeLabel} font-semibold text-gray-600 text-right`}>
               {time}
             </div>
             {weekDates.map((date, dayIndex) => {
@@ -108,10 +130,10 @@ function WeekView({ weekDates, events = [], onTimeSlotClick }) {
                   onClick={() =>
                     onTimeSlotClick && onTimeSlotClick(date, eventsForSlot)
                   }
-                  className="border-2 border-neutral-200 rounded-md p-2 min-h-[80px] hover:border-red-700 hover:bg-gray-50 transition-colors duration-100 cursor-pointer"
+                  className={`border-2 border-neutral-200 rounded-md ${density.cell} hover:border-red-700 hover:bg-gray-50 transition-colors duration-100 cursor-pointer`}
                 >
                   {eventsForSlot.map((event, eventIndex) => (
-                    <TileEvent key={eventIndex} event={event} />
+                    <TileEvent key={eventIndex} event={event} timeFormat={timeFormat} viewDensity={viewDensity} />
                   ))}
                 </div>
               );
@@ -173,6 +195,8 @@ WeekView.propTypes = {
     })
   ),
   onTimeSlotClick: PropTypes.func, // Callback when time slot is clicked
+  timeFormat: PropTypes.oneOf(['12h', '24h']),
+  viewDensity: PropTypes.oneOf(['compact', 'default']),
 };
 
 export default WeekView;

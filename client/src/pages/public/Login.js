@@ -9,6 +9,7 @@ import SecondaryButton from '../../components/buttons/SecondaryButton';
 import DevLoginModal from '../../components/modals/common/DevLoginModal';
 import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
 import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
+import ForcedPasswordChangeModal from '../../components/modals/common/ForcedPasswordChangeModal';
 import TrackEnrollmentModal from '../../components/modals/enrollment/TrackEnrollmentModal';
 import Swal from 'sweetalert2';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
@@ -22,6 +23,7 @@ function Login() {
   const [password_reset_modal, setPasswordResetModal] = useState(false);
   const [dev_login_modal, setDevLoginModal] = useState(false);
   const [trackEnrollmentModal, setTrackEnrollmentModal] = useState(false);
+  const [forced_password_modal, setForcedPasswordModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -31,6 +33,21 @@ function Login() {
       console.log('Login result:', result);
 
       if (result.success) {
+        // Check if user needs to change password
+        if (result.changePassword) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Password Change Required',
+            text: 'You must change your password before proceeding.',
+            confirmButtonColor: '#992525',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+          }).then(() => {
+            setForcedPasswordModal(true);
+          });
+          return;
+        }
+
         const userRole = getUser().role;
         if (userRole === 'student') {
           navigate('/student');
@@ -47,7 +64,7 @@ function Login() {
         icon: 'error',
         title: 'Login Failed',
         text: error.message || 'A client-side error occurred.',
-        confirmButtonColor: '#DE0000',
+        confirmButtonColor: '#992525',
         customClass: {
           confirmButton: 'bg-german-red hover:bg-dark-red-2 text-white',
         },
@@ -200,9 +217,27 @@ function Login() {
                 setPasswordResetModal={setPasswordResetModal}
               />
 
+              {/* Forced Password Change Modal (uses plain axios, no interceptors) */}
+              <ForcedPasswordChangeModal
+                isOpen={forced_password_modal}
+                onPasswordChanged={() => {
+                  // Navigate to appropriate page after password change
+                  const userRole = getUser().role;
+                  if (userRole === 'student') {
+                    navigate('/student');
+                  } else if (userRole === 'admin') {
+                    navigate('/admin');
+                  } else if (userRole === 'teacher') {
+                    navigate('/teacher');
+                  } else {
+                    navigate('/');
+                  }
+                }}
+              />
+
               {/* UNCOMMENT AFTER IMPLMENTING BACKEND LOGIC FOR LOGGING IN DIFFERENT USERS
-              <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton> 
-              
+              <PrimaryButton onClick={navigateToStudent}>Login</PrimaryButton>
+
               */}
 
               <PrimaryButton
@@ -225,7 +260,7 @@ function Login() {
             </form>
 
             {/* New Student and Enrollment Tracker Area */}
-            <div className="container flex items-center justify-center mt-20 mr-8 lg:mr-0">
+            <div className="container flex items-center justify-center mt-4 mr-8 lg:mr-0">
               <div className="flex flex-col w-1/2 lg:w-1/3">
                 <p className="text-white-yellow-tone text-xs font-sans -mb-3 px-2">
                   New Student?
@@ -248,6 +283,16 @@ function Login() {
                   onClose={() => setTrackEnrollmentModal(false)}
                 />
               </div>
+            </div>
+
+            {/* Pay as Guest Option */}
+            <div className="flex items-center justify-center mt-4">
+              <button
+                onClick={() => navigate('/paymentForm')}
+                className="text-black text-lg font-sans py-2 px-4 bg-yellow-300  hover:bg-yellow-400 font-bold transition-colors duration-200"
+              >
+                Pay as Guest
+              </button>
             </div>
 
             {/* Terms and Privacy Policy Section*/}

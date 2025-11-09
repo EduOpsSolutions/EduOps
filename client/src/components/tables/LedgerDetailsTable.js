@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ThinRedButton from '../buttons/ThinRedButton';
 
 // Print-specific CSS (hide everything except the ledger details card when printing)
@@ -18,14 +18,31 @@ const LedgerDetails = ({
   onAddTransaction,
   ledgerEntries = []
 }) => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    const timeout = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(timeout);
+  }, [ledgerEntries]);
+
   if (!student) return null;
   
   return (
     <>
       {/* Print styles injected only once */}
       <style>{printStyles}</style>
-  <div className="print-ledger-container flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-3 sm:p-5 shadow-[0_4px_3px_0_rgba(0,0,0,0.6)] print-ledger-table">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pb-4 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
+    <div className="print-ledger-container flex flex-col bg-white border-dark-red-2 border-2 rounded-lg p-3 sm:p-5 print-ledger-table">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+              <p className="text-lg">Loading student's ledger...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pb-4 border-b-2 border-dark-red-2 gap-3 sm:gap-0">
           <p className="text-lg sm:text-xl uppercase text-center sm:text-left">{student.name}</p>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 no-print">
             <ThinRedButton onClick={() => window.print()}>Print Ledger</ThinRedButton>
@@ -159,13 +176,9 @@ const LedgerDetails = ({
               </table>
           </div>
         </div>
-      </div>
-
-        <div className="mt-4 no-print">
-          <ThinRedButton onClick={onBackClick}>
-            Back to Results
-          </ThinRedButton>
         </div>
+          </>
+        )}
       </div>
     </>
   );

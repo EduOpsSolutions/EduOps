@@ -125,6 +125,7 @@ const fetchStudentAssessment = async (studentId, courseId, batchId) => {
     batchId: data.batch?.id,
     fees,
     studentFees: data.studentFees || [],
+    payments: data.payments || [],
     netAssessment: data.netAssessment || 0,
     totalPayments: Number(data.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
     remainingBalance: Number(data.remainingBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
@@ -218,4 +219,4 @@ const useAssessmentStore = create((set, get) => ({
 
 }));
 
-export { useAssessmentSearchStore, useAssessmentStore };
+export { useAssessmentSearchStore, useAssessmentStore, fetchStudentAssessment };

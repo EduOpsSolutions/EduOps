@@ -1,13 +1,19 @@
 import { Modal } from "flowbite-react";
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import Spinner from "../../common/Spinner";
+import Swal from 'sweetalert2';
 
 function RequestDocumentModal(props) {
+    const navigate = useNavigate();
     const [selectedMode, setSelectedMode] = useState('pickup');
     const { createDocumentRequest, loading } = useDocumentRequestStore();
     const user = useAuthStore((state) => state.user);
+    
+    // Check if the selected document is free
+    const isFreeDocument = props.selectedDocument?.price === 'free';
     
     const [formData, setFormData] = useState({
         email: '',
@@ -37,9 +43,8 @@ function RequestDocumentModal(props) {
 
     // Payment options
     const paymentOptions = [
-        { value: 'online', label: 'Online (Maya)' },
-        { value: 'cod', label: 'Cash on Delivery' },
-        { value: 'cashPickup', label: 'Cash (Pay upon Pickup)' },
+        { value: 'cash', label: 'Cash (Pickup Only)' },
+        { value: 'online', label: 'Pay Online' },
     ];
 
     // Mode options
@@ -54,6 +59,11 @@ function RequestDocumentModal(props) {
             ...prev,
             [name]: value
         }));
+        
+        // If payment method is changed to cash, lock mode to pickup
+        if (name === 'paymentMethod' && value === 'cash') {
+            setSelectedMode('pickup');
+        }
         
         // Clear error when user starts typing
         if (errors[name]) {
@@ -78,7 +88,6 @@ function RequestDocumentModal(props) {
                 email: formData.email,
                 phone: formData.phone,
                 mode: selectedMode,
-                paymentMethod: formData.paymentMethod,
                 purpose: formData.purpose,
                 additionalNotes: formData.additionalNotes,
                 ...(selectedMode === 'delivery' && {
@@ -87,12 +96,19 @@ function RequestDocumentModal(props) {
                     state: formData.state,
                     zipCode: formData.zipCode,
                     country: formData.country
+                }),
+                ...(!isFreeDocument && {
+                    paymentMethod: formData.paymentMethod
                 })
             };
 
-            await createDocumentRequest(requestData);
+            const isOnlinePayment = formData.paymentMethod === 'online' && !isFreeDocument;
             
-            // Reset form and close modal
+            await createDocumentRequest(requestData, {
+                skipSuccessDialog: isOnlinePayment,  
+                skipLoadingDialog: false
+            });
+            
             setFormData({
                 email: user?.email || '',
                 phone: user?.phoneNumber || '',
@@ -109,6 +125,54 @@ function RequestDocumentModal(props) {
             setErrors({});
             
             props.setRequestDocumentModal(false);
+
+            if (isOnlinePayment && props.selectedDocument) {
+                const result = await Swal.fire({
+                    title: 'Request Submitted!',
+                    html: `
+                        <div style="text-align: center;">
+                            <p style="margin-bottom: 15px; color: #333;">Your document request has been submitted successfully.</p>
+                            <p style="margin: 0; font-size: 0.95rem; color: #6B7280;">
+                                You will now be redirected to the payment form to complete your payment.
+                            </p>
+                        </div>
+                    `,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'Proceed to Payment',
+                    cancelButtonText: 'Pay Later',
+                    confirmButtonColor: '#890E07',
+                    cancelButtonColor: '#6B7280',
+                    reverseButtons: true,
+                    allowOutsideClick: false
+                });
+
+                if (result.isConfirmed) {
+                    // Pass document fee information to payment form
+                    navigate('/paymentForm', {
+                        state: {
+                            documentFee: {
+                                feeType: 'document_fee',
+                                amount: props.selectedDocument.amount
+                            }
+                        }
+                    });
+                }
+            } else if (isFreeDocument) {
+                await Swal.fire({
+                    title: 'Request Submitted!',
+                    html: `
+                        <div style="text-align: center;">
+                            <p style="margin-bottom: 10px; color: #333;">Your document request has been submitted successfully.</p>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#890E07',
+                    allowOutsideClick: false
+                });
+            }
+            
         } catch (error) {
             console.error('Request submission failed:', error);
         }
@@ -165,25 +229,27 @@ function RequestDocumentModal(props) {
                                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                                 </div>
 
-                                <div className="relative z-0 w-full group mb-5">
-                                    <label htmlFor="paymentMethod" className="block mb-2 text-sm font-medium text-gray-900">
-                                        Payment Method *
-                                    </label>
-                                    <select
-                                        name="paymentMethod"
-                                        id="paymentMethod"
-                                        value={formData.paymentMethod}
-                                        onChange={handleInputChange}
-                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
-                                        required
-                                    >
-                                        {paymentOptions.map((option, index) => (
-                                            <option key={index} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                {!isFreeDocument && (
+                                    <div className="relative z-0 w-full group mb-5">
+                                        <label htmlFor="paymentMethod" className="block mb-2 text-sm font-medium text-gray-900">
+                                            Payment Method *
+                                        </label>
+                                        <select
+                                            name="paymentMethod"
+                                            id="paymentMethod"
+                                            value={formData.paymentMethod}
+                                            onChange={handleInputChange}
+                                            className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                            required
+                                        >
+                                            {paymentOptions.map((option, index) => (
+                                                <option key={index} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div className="relative z-0 w-full group mb-5">
                                     <label htmlFor="mode" className="block mb-2 text-sm font-medium text-gray-900">
@@ -192,10 +258,11 @@ function RequestDocumentModal(props) {
                                     <select
                                         name="mode"
                                         id="mode"
-                                        className="mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full"
+                                        className={`mt-2 py-2.5 px-3 bg-white border-2 border-gray-300 rounded-md text-gray-900 text-sm focus:ring-dark-red-2 focus:border-dark-red-2 block w-full ${!isFreeDocument && formData.paymentMethod === 'cash' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         required
                                         value={selectedMode}
                                         onChange={(e) => setSelectedMode(e.target.value)}
+                                        disabled={!isFreeDocument && formData.paymentMethod === 'cash'}
                                     >
                                         {pickupOptions.map((option, index) => (
                                             <option key={index} value={option.value}>
@@ -203,6 +270,9 @@ function RequestDocumentModal(props) {
                                             </option>
                                         ))}
                                     </select>
+                                    {!isFreeDocument && formData.paymentMethod === 'cash' && (
+                                        <p className="text-xs text-gray-500 mt-1">Cash payment is only available for pickup</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="col-span-2">

@@ -45,9 +45,9 @@ model users {
   documentRequests    document_request[]    @relation("UserDocumentRequests")
   documentValidations document_validation[] @relation("UserDocumentValidations")
   studentGrades       student_grade[]       @relation("UserStudentGrades")
-  logs          logs[]
-  studentFees   student_fee[]
-  notifications notification[]
+  logs                logs[]
+  studentFees         student_fee[]
+  notifications       notification[]
 }
 
 model enrollment_request {
@@ -80,7 +80,7 @@ model enrollment_request {
   updatedAt        DateTime @updatedAt
   periodId         String?
 
-  period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  period   academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
   // Relations
   payments payments[]
 }
@@ -98,8 +98,8 @@ model course {
   price       Decimal    @db.Decimal(10, 2)
   schedule    Json?
 
-  courseRequisite course_requisite[] @relation("CourseMain")
-  requisiteFor    course_requisite[] @relation("CourseRequisite")
+  courseRequisite course_requisite[]        @relation("CourseMain")
+  requisiteFor    course_requisite[]        @relation("CourseRequisite")
   academicPeriods academic_period_courses[]
   schedules       schedule[]
   payments        payments[]
@@ -125,7 +125,7 @@ model schedule {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
-  capacity    Int? @default(30)
+  capacity    Int?      @default(30)
 
   course        course?          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   period        academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
@@ -168,36 +168,36 @@ enum EnrollmentStatus {
 }
 
 model course_requisite {
-  id                String   @id @default(cuid())
+  id                String        @id @default(cuid())
   ruleName          String
   type              RequisiteType
   courseId          String
   requisiteCourseId String
-  course            course   @relation("CourseMain", fields: [courseId], references: [id])
-  requisiteCourse   course   @relation("CourseRequisite", fields: [requisiteCourseId], references: [id])
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  course            course        @relation("CourseMain", fields: [courseId], references: [id])
+  requisiteCourse   course        @relation("CourseRequisite", fields: [requisiteCourseId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   deletedAt         DateTime?
 }
 
 model academic_period {
-  id        String               @id @default(cuid())
-  batchName String
-  startAt   DateTime
-  endAt     DateTime
-  enrollmentOpenAt DateTime
-  enrollmentCloseAt DateTime
-  isEnrollmentClosed Boolean @default(false)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  deletedAt DateTime?
+  id                 String    @id @default(cuid())
+  batchName          String
+  startAt            DateTime
+  endAt              DateTime
+  enrollmentOpenAt   DateTime
+  enrollmentCloseAt  DateTime
+  isEnrollmentClosed Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
-  courses     academic_period_courses[]
-  schedules   schedule[]
-  enrollments student_enrollment[]      @relation("PeriodEnrollments")
-  payments    payments[]
+  courses            academic_period_courses[]
+  schedules          schedule[]
+  enrollments        student_enrollment[]      @relation("PeriodEnrollments")
+  payments           payments[]
   enrollment_request enrollment_request[]
-  studentFees   student_fee[]
+  studentFees        student_fee[]
 }
 
 model academic_period_courses {
@@ -219,19 +219,18 @@ model module {
 }
 
 model logs {
-  id        Int   @id @default(autoincrement())
-  title    String
-  content  String? @db.Text
-  reqBody String? @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-  userId String?
+  id         Int        @id @default(autoincrement())
+  title      String
+  content    String?    @db.Text
+  reqBody    String?    @db.Text
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  deletedAt  DateTime?
+  userId     String?
   moduleType ModuleType @default(UNCATEGORIZED)
-  type LogType @default(user_activity)
+  type       LogType    @default(user_activity)
 
-
-  user      users? @relation(fields: [userId], references: [userId])
+  user users? @relation(fields: [userId], references: [userId])
 }
 
 enum LogType {
@@ -312,46 +311,46 @@ enum FileStatus {
 }
 
 model payments {
-  id                  String        @id @default(cuid())
+  id                  String              @id @default(cuid())
   userId              String
-  transactionId       String        @unique // Format (PAY-YYYYMMDD-XXXXX)
-  paymentIntentId     String?       // PayMongo payment intent ID (pi_xxxxx) for matching
-  referenceNumber     String?       // PayMongo reference ID (pay_xxxxx) 
+  transactionId       String              @unique // Format (PAY-YYYYMMDD-XXXXX)
+  paymentIntentId     String? // PayMongo payment intent ID (pi_xxxxx) for matching
+  referenceNumber     String? // PayMongo reference ID (pay_xxxxx) 
   feeId               String?
   enrollmentRequestId String?
   courseId            String?
   academicPeriodId    String?
-  amount              Decimal       @db.Decimal(10, 2)
-  currency            String        @default("PHP")
-  status              PaymentStatus @default(pending)
+  amount              Decimal             @db.Decimal(10, 2)
+  currency            String              @default("PHP")
+  status              PaymentStatus       @default(pending)
   paymentMethod       String?
-  paymongoResponse    Json?         // PayMongo webhook response data
-  remarks             String?       @db.Text
+  paymongoResponse    Json? // PayMongo webhook response data
+  remarks             String?             @db.Text
   paidAt              DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
   feeType             String?
-  paymentEmail        String?       // Email from payment form (for receipt)
+  paymentEmail        String? // Email from payment form (for receipt)
   // Relations
-  user              users               @relation(fields: [userId], references: [id])
-  fee               fees?               @relation(fields: [feeId], references: [id])
-  enrollmentRequest enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
-  course            course?             @relation(fields: [courseId], references: [id], map: "payment_course_fkey")
-  academicPeriod    academic_period?    @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
-  adjustments       adjustments[]
+  user                users               @relation(fields: [userId], references: [id])
+  fee                 fees?               @relation(fields: [feeId], references: [id])
+  enrollmentRequest   enrollment_request? @relation(fields: [enrollmentRequestId], references: [id], map: "payment_enrollment_fkey")
+  course              course?             @relation(fields: [courseId], references: [id], map: "payment_course_fkey")
+  academicPeriod      academic_period?    @relation(fields: [academicPeriodId], references: [id], map: "payment_academic_period_fkey")
+  adjustments         adjustments[]
 }
 
 model fees {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   courseId  String
   batchId   String
-  price     Decimal  @db.Decimal(10, 2)
+  price     Decimal   @db.Decimal(10, 2)
   name      String
   type      FeeType
-  isActive  Boolean  @default(true)
+  isActive  Boolean   @default(true)
   dueDate   DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   course      course        @relation(fields: [courseId], references: [id])
@@ -415,60 +414,69 @@ enum ModuleType {
 }
 
 model document_template {
-  id           String            @id @default(cuid())
+  id           String                @id @default(cuid())
   documentName String
-  description  String?           @db.Text
-  privacy      DocumentPrivacy   @default(public)
-  requestBasis Boolean           @default(false)
-  downloadable Boolean           @default(true)
-  price        DocumentPriceType @default(free)
-  amount       Decimal?          @db.Decimal(10, 2)
-  uploadFile   String?           @db.LongText
-  isActive     Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  description  String?               @db.Text
+  privacy      DocumentPrivacy       @default(public)
+  requestBasis Boolean               @default(false)
+  downloadable Boolean               @default(true)
+  price        DocumentPriceType     @default(free)
+  amount       Decimal?              @db.Decimal(10, 2)
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
   deletedAt    DateTime?
-
-  // Relations
-  requests    document_request[]
-  validations document_validation[]
+  uploadFile   String?               @db.LongText
+  requests     document_request[]
+  validations  document_validation[]
 }
 
 model document_request {
-  id              String                @id @default(cuid())
-  documentId      String
-  userId          String?
-  email           String
-  firstName       String?
-  lastName        String?
-  phone           String?
-  mode            DeliveryMode?         @default(pickup)
-  address         String?
-  city            String?
-  purpose         String?               @db.Text
-  additionalNotes String?               @db.Text
-  status          DocumentRequestStatus @default(in_process)
-  remarks         String?               @db.Text
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id                   String                @id @default(cuid())
+  documentId           String
+  userId               String?
+  email                String
+  firstName            String?
+  lastName             String?
+  phone                String?
+  mode                 DeliveryMode?         @default(pickup)
+  paymentMethod        String?
+  address              String?
+  city                 String?
+  purpose              String?               @db.Text
+  additionalNotes      String?               @db.Text
+  status               DocumentRequestStatus @default(in_process)
+  remarks              String?               @db.Text
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  proofOfPayment       String?               @db.LongText
+  paymentStatus        String?               @default("pending")
+  paymentAmount        Decimal?              @db.Decimal(10, 2)
+  paymentUrl           String?               @db.LongText
+  paymentId            String?
+  fulfilledDocumentUrl String?               @db.LongText
+  document             document_template     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user                 users?                @relation("UserDocumentRequests", fields: [userId], references: [id])
 
-  // Relations
-  document document_template @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  user     users?            @relation("UserDocumentRequests", fields: [userId], references: [id], onDelete: SetNull)
+  @@index([documentId], map: "document_request_documentId_fkey")
+  @@index([userId], map: "document_request_userId_fkey")
 }
 
 model document_validation {
-  id            String   @id @default(cuid())
+  id            String             @id @default(cuid())
   documentId    String?
   userId        String?
   documentName  String?
-  fileSignature String   @unique
-  isValid       Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  fileSignature String             @unique
+  filePath      String?
+  isValid       Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  document      document_template? @relation(fields: [documentId], references: [id])
+  user          users?             @relation("UserDocumentValidations", fields: [userId], references: [id])
 
-  document document_template? @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  user     users?             @relation("UserDocumentValidations", fields: [userId], references: [id], onDelete: SetNull)
+  @@index([documentId], map: "document_validation_documentId_fkey")
+  @@index([userId], map: "document_validation_userId_fkey")
 }
 
 enum DocumentPrivacy {
@@ -496,29 +504,29 @@ enum DocumentRequestStatus {
 }
 
 model student_grade {
-  id           String     @id @default(cuid())
-  studentId    String
-  courseId     String
-  periodId     String?
-  grade        GradeValue
-  approvedBy   String?    // userId of teacher/admin who approved
-  approvedAt   DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id         String     @id @default(cuid())
+  studentId  String
+  courseId   String
+  periodId   String?
+  grade      GradeValue
+  approvedBy String? // userId of teacher/admin who approved
+  approvedAt DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  student users  @relation("UserStudentGrades", fields: [studentId], references: [id])
-  course  course @relation("CourseStudentGrades", fields: [courseId], references: [id])
+  student users        @relation("UserStudentGrades", fields: [studentId], references: [id])
+  course  course       @relation("CourseStudentGrades", fields: [courseId], references: [id])
   files   grade_file[]
 }
 
 model grade_file {
-  id             String     @id @default(cuid())
+  id             String   @id @default(cuid())
   studentGradeId String
-  url            String     @db.LongText
+  url            String   @db.LongText
   fileName       String?
   fileType       String?
-  uploadedBy     String?    // userId of uploader
-  uploadedAt     DateTime   @default(now())
+  uploadedBy     String? // userId of uploader
+  uploadedAt     DateTime @default(now())
 
   studentGrade student_grade @relation(fields: [studentGradeId], references: [id], onDelete: Cascade)
 }
@@ -530,7 +538,7 @@ enum GradeValue {
 }
 
 model student_fee {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   studentId String
   courseId  String
   batchId   String
@@ -538,32 +546,32 @@ model student_fee {
   amount    Decimal
   type      StudentFeeType
   dueDate   DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   deletedAt DateTime?
 
-  student users   @relation(fields: [studentId], references: [id])
-  course  course  @relation(fields: [courseId], references: [id])
+  student users           @relation(fields: [studentId], references: [id])
+  course  course          @relation(fields: [courseId], references: [id])
   batch   academic_period @relation(fields: [batchId], references: [id])
 }
 
-enum StudentFeeType{
+enum StudentFeeType {
   fee
   discount
 }
 
 model notification {
-  id         String   @id @default(cuid())
-  userId     String
-  type       String
-  title      String
-  message    String
-  data       Json?
-  isRead     Boolean  @default(false)
-  delivered  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  deletedAt  DateTime?
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String @db.Text
+  data      Json?
+  isRead    Boolean   @default(false)
+  delivered Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   user users @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

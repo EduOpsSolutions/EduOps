@@ -10,6 +10,7 @@ function Assessment() {
     const [enrollments, setEnrollments] = useState([]);
     const [filteredEnrollments, setFilteredEnrollments] = useState([]);
     const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+    const [studentDetailsLoading, setStudentDetailsLoading] = useState(false);
     const [searchParams, setSearchParams] = useState({ course: '', batch: '', year: '' });
     const [courseOptions, setCourseOptions] = useState([{ value: '', label: 'All Courses' }]);
     const [batchOptions, setBatchOptions] = useState([{ value: '', label: 'All Batches' }]);
@@ -208,6 +209,7 @@ function Assessment() {
 
     // Handler to select an enrollment and fetch full assessment details
     const handleSelectEnrollment = async (enroll) => {
+        setStudentDetailsLoading(true);
         setSelectedEnrollment(null); // Optionally show loading state
         try {
             const token = getCookieItem('token');
@@ -259,6 +261,8 @@ function Assessment() {
             });
         } catch (err) {
             setSelectedEnrollment(enroll); // fallback to basic info
+        } finally {
+            setStudentDetailsLoading(false);
         }
     };
 
@@ -279,8 +283,8 @@ function Assessment() {
                     <p className="font-bold text-lg sm:text-xl lg:text-2xl text-center mb-3 sm:mb-5">
                         Tuition Fee Assessment
                     </p>
-                    {/* List View */}
-                    {!selectedEnrollment ? (
+                    {/* List View or Loading State */}
+                    {!selectedEnrollment && !studentDetailsLoading ? (
                         <>
                             <p className="font-semibold mb-3 text-sm sm:text-base">
                                 {filteredEnrollments.length === 0 ? "No assessments found." : `Your Assessments (${filteredEnrollments.length})`}
@@ -308,6 +312,13 @@ function Assessment() {
                                 ))}
                             </div>
                         </>
+                    ) : studentDetailsLoading ? (
+                        <div className="flex justify-center items-center h-64">
+                            <div className="flex items-center space-x-2">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dark-red-2"></div>
+                                <p className="text-lg">Loading student's assessment...</p>
+                            </div>
+                        </div>
                     ) : (
                         <div>
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 sm:mb-5 gap-2 sm:gap-0">
@@ -400,7 +411,7 @@ function Assessment() {
                                     </div>
                                 </div>
                             </div>
-                            <Link to="" className="flex flex-row justify-end mt-10">
+                            <Link to="/paymentform" className="flex flex-row justify-end mt-10">
                                 <span className="m-0">
                                     <ThinRedButton>Proceed to Payment</ThinRedButton>
                                 </span>
@@ -408,6 +419,9 @@ function Assessment() {
                             <TransactionHistoryModal
                                 transaction_history_modal={transaction_history_modal}
                                 setTransactionHistoryModal={setTransactionHistoryModal}
+                                studentId={selectedEnrollment.id}
+                                courseId={selectedEnrollment.courseId}
+                                batchId={selectedEnrollment.batchId}
                             />
                         </div>
                     )}

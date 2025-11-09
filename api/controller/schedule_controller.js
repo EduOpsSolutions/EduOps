@@ -311,11 +311,11 @@ export const createSchedule = async (req, res) => {
     }
 
     // Validate capacity
-    const capacity = parseInt(req.body.capacity, 10);
-    if (capacity && (capacity < 1 || capacity > 100)) {
+    const capacity = req.body.capacity !== undefined ? parseInt(req.body.capacity, 10) : 30;
+    if (isNaN(capacity) || capacity < 0 || capacity > 100) {
       return res.status(400).json({
         error: true,
-        message: "Capacity must be between 1 and 100",
+        message: "Capacity must be between 0 and 100",
       });
     }
 
@@ -331,7 +331,7 @@ export const createSchedule = async (req, res) => {
       periodEnd: req.body.periodEnd,
       color: req.body.color,
       notes: req.body.notes,
-      capacity: capacity || 30,
+      capacity: capacity,
     };
 
     const schedule = await ScheduleModel.createSchedule(body);
@@ -412,13 +412,14 @@ export const updateSchedule = async (req, res) => {
         });
       }
     }
-    // Validate capacity if provided
+    // Parse and validate capacity if provided
+    const updateData = { ...req.body };
     if (req.body.capacity !== undefined) {
       const capacity = parseInt(req.body.capacity, 10);
-      if (capacity < 1 || capacity > 100) {
+      if (isNaN(capacity) || capacity < 0 || capacity > 100) {
         return res.status(400).json({
           error: true,
-          message: "Capacity must be between 1 and 100",
+          message: "Capacity must be between 0 and 100",
         });
       }
 
@@ -432,11 +433,14 @@ export const updateSchedule = async (req, res) => {
           message: `Cannot reduce capacity below current enrollment count of ${count}`,
         });
       }
+
+      // Update the capacity with parsed integer value
+      updateData.capacity = capacity;
     }
 
     const schedule = await ScheduleModel.updateSchedule(
       req.params.id,
-      req.body
+      updateData
     );
 
     // Transform the response
@@ -633,6 +637,258 @@ export const removeStudentsFromSchedule = async (req, res) => {
     return res.status(500).json({
       error: true,
       message: "Failed to remove students from schedule",
+    });
+  }
+};
+
+/**
+ * Validate bulk student IDs from CSV
+ * POST /api/v1/schedules/:id/students:validate-bulk
+ * Body: { userIds: string[], days, time_start, time_end, periodId }
+ */
+export const validateBulkStudents = async (req, res) => {
+  try {
+    const scheduleId = parseInt(req.params.id, 10);
+    const { userIds, days, time_start, time_end, periodId } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "userIds array is required",
+      });
+    }
+
+    // Fetch users by userId (not id)
+    const users = await prisma.users.findMany({
+      where: {
+        userId: { in: userIds },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    const approved = [];
+    const rejected = [];
+    const conflicts = [];
+
+    // Check each userId
+    for (const userId of userIds) {
+      const user = users.find(u => u.userId === userId);
+
+      // User not found
+      if (!user) {
+        rejected.push({
+          userId,
+          reason: 'User not found',
+        });
+        continue;
+      }
+
+      // User is not a student
+      if (user.role.toLowerCase() !== 'student') {
+        rejected.push({
+          userId,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          reason: `Incompatible role: ${user.role.toLowerCase()}`,
+        });
+        continue;
+      }
+
+      // Check for schedule conflicts if schedule details provided
+      let hasConflict = false;
+      let conflictDetails = null;
+
+      if (days && time_start && time_end && periodId) {
+        try {
+          const conflictResp = await prisma.$queryRaw`
+            SELECT s.id, c.name as courseName, s.days, s.time_start, s.time_end
+            FROM user_schedule us
+            JOIN schedule s ON us.scheduleId = s.id
+            JOIN course c ON s.courseId = c.id
+            WHERE us.userId = ${user.id}
+              AND us.deletedAt IS NULL
+              AND s.deletedAt IS NULL
+              AND s.periodId = ${periodId}
+              AND s.id != ${scheduleId}
+          `;
+
+          for (const existingSchedule of conflictResp) {
+            const existingDays = String(existingSchedule.days).split(',').map(d => d.trim());
+            const newDays = String(days).split(',').map(d => d.trim());
+            const hasOverlappingDays = existingDays.some(d => newDays.includes(d));
+
+            if (hasOverlappingDays) {
+              const [sh, sm] = String(time_start).split(':').map(Number);
+              const [eh, em] = String(time_end).split(':').map(Number);
+              const [esh, esm] = String(existingSchedule.time_start).split(':').map(Number);
+              const [eeh, eem] = String(existingSchedule.time_end).split(':').map(Number);
+
+              const newStart = sh * 60 + sm;
+              const newEnd = eh * 60 + em;
+              const existingStart = esh * 60 + esm;
+              const existingEnd = eeh * 60 + eem;
+
+              if (newStart < existingEnd && newEnd > existingStart) {
+                hasConflict = true;
+                conflictDetails = {
+                  courseName: existingSchedule.courseName,
+                  days: existingSchedule.days,
+                  time: `${existingSchedule.time_start} - ${existingSchedule.time_end}`,
+                };
+                break;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error checking conflicts:', error);
+        }
+      }
+
+      const studentData = {
+        userId: user.userId,
+        name: `${user.firstName}${user.middleName ? ' ' + user.middleName : ''} ${user.lastName}`,
+        email: user.email,
+        dbId: user.id,
+      };
+
+      if (hasConflict) {
+        conflicts.push({
+          ...studentData,
+          conflict: conflictDetails,
+        });
+      } else {
+        approved.push(studentData);
+      }
+    }
+
+    return res.json({
+      success: true,
+      approved,
+      rejected,
+      conflicts,
+      summary: {
+        total: userIds.length,
+        approved: approved.length,
+        rejected: rejected.length,
+        conflicts: conflicts.length,
+      },
+    });
+  } catch (err) {
+    console.error("validateBulkStudents error:", err);
+    return res.status(500).json({
+      error: true,
+      message: "Failed to validate bulk students",
+    });
+  }
+};
+
+/**
+ * Bulk add students to schedule
+ * POST /api/v1/schedules/:id/students:bulk-add
+ * Body: { userIds: number[] } - array of user database IDs
+ */
+export const bulkAddStudentsToSchedule = async (req, res) => {
+  try {
+    const scheduleId = parseInt(req.params.id, 10);
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        error: true,
+        message: "userIds array is required",
+      });
+    }
+
+    // Ensure schedule exists
+    const schedule = await prisma.schedule.findFirst({
+      where: { id: scheduleId, deletedAt: null },
+      select: { id: true, capacity: true },
+    });
+
+    if (!schedule) {
+      return res.status(404).json({
+        error: true,
+        message: "Schedule not found",
+      });
+    }
+
+    // Check capacity
+    const currentCount = await prisma.user_schedule.count({
+      where: { scheduleId, deletedAt: null },
+    });
+
+    const availableSlots = schedule.capacity - currentCount;
+    if (availableSlots < userIds.length) {
+      return res.status(400).json({
+        error: true,
+        message: `Not enough capacity. Available: ${availableSlots}, Requested: ${userIds.length}`,
+      });
+    }
+
+    // Get existing enrollments to avoid duplicates
+    const existing = await prisma.user_schedule.findMany({
+      where: {
+        scheduleId,
+        userId: { in: userIds },
+      },
+      select: { userId: true, deletedAt: true },
+    });
+
+    const existingMap = new Map(existing.map(e => [e.userId, e.deletedAt]));
+    const toCreate = [];
+    const toRestore = [];
+
+    for (const userId of userIds) {
+      const deletedAt = existingMap.get(userId);
+      if (deletedAt === null) {
+        // Already enrolled
+        continue;
+      } else if (deletedAt) {
+        // Was deleted, restore it
+        toRestore.push(userId);
+      } else {
+        // New enrollment
+        toCreate.push({ scheduleId, userId });
+      }
+    }
+
+    // Create new enrollments
+    if (toCreate.length > 0) {
+      await prisma.user_schedule.createMany({
+        data: toCreate,
+        skipDuplicates: true,
+      });
+    }
+
+    // Restore soft-deleted enrollments
+    if (toRestore.length > 0) {
+      await prisma.user_schedule.updateMany({
+        where: {
+          scheduleId,
+          userId: { in: toRestore },
+        },
+        data: { deletedAt: null },
+      });
+    }
+
+    return res.json({
+      success: true,
+      added: toCreate.length + toRestore.length,
+    });
+  } catch (err) {
+    console.error("bulkAddStudentsToSchedule error:", err);
+    return res.status(500).json({
+      error: true,
+      message: "Failed to bulk add students",
     });
   }
 };

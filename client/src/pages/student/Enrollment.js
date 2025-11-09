@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import UserNavbar from "../../components/navbars/UserNav";
-import useEnrollmentStore from "../../stores/enrollmentProgressStore";
-import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
-import Swal from "sweetalert2";
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import UserNavbar from '../../components/navbars/UserNav';
+import useEnrollmentStore from '../../stores/enrollmentProgressStore';
+import EnrollmentProgressBar from '../../components/enrollment/ProgressBar';
+import Swal from 'sweetalert2';
 
 function Enrollment() {
   const navigate = useNavigate();
@@ -41,23 +41,30 @@ function Enrollment() {
     try {
       await uploadPaymentProof();
     } catch (error) {
-      console.error("Error uploading payment proof:", error);
+      console.error('Error uploading payment proof:', error);
     }
   };
 
   // Helper component for status indicators
   const StatusIndicator = ({ type, children }) => {
     const colors = {
-      uploading: "bg-blue-50 border-blue-200 text-blue-800",
-      success: "bg-green-50 border-green-200 text-green-800",
+      uploading: 'bg-blue-50 border-blue-200 text-blue-800',
+      success: 'bg-green-50 border-green-200 text-green-800',
     };
-    
+
     return (
       <div className={`mt-2 p-2 rounded-md ${colors[type]}`}>
         <p className="text-sm flex items-center">
           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            {type === "uploading" ? (
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            {type === 'uploading' ? (
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
             ) : (
               <path
                 fillRule="evenodd"
@@ -74,7 +81,7 @@ function Enrollment() {
 
   // Handle Pay Now - redirect to payment form to create PayMongo link
   const handlePayNow = () => {
-    navigate("/paymentForm");
+    navigate('/paymentForm');
   };
 
   // Copy Student ID to clipboard
@@ -87,8 +94,6 @@ function Enrollment() {
         text: 'Student ID copied to clipboard',
         timer: 1500,
         showConfirmButton: false,
-        toast: true,
-        position: 'top-end'
       });
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -98,8 +103,6 @@ function Enrollment() {
         text: 'Please copy manually',
         timer: 2000,
         showConfirmButton: false,
-        toast: true,
-        position: 'top-end'
       });
     }
   };
@@ -107,22 +110,47 @@ function Enrollment() {
   // Payment proof status logic
   const getPaymentProofStatus = () => {
     if (isUploadingPaymentProof) {
-      return <StatusIndicator type="uploading">Uploading your proof of payment...</StatusIndicator>;
+      return (
+        <StatusIndicator type="uploading">
+          Uploading your proof of payment...
+        </StatusIndicator>
+      );
     }
     if (paymentProof && !isUploadingPaymentProof) {
-      return <StatusIndicator type="success">File uploaded successfully: {paymentProof.name}</StatusIndicator>;
+      return (
+        <StatusIndicator type="success">
+          File uploaded successfully: {paymentProof.name}
+        </StatusIndicator>
+      );
     }
-    if (hasPaymentProof && !paymentProof && !isUploadingPaymentProof) {
-      return <StatusIndicator type="success">Payment proof already uploaded and being processed</StatusIndicator>;
+    if (
+      hasPaymentProof &&
+      !paymentProof &&
+      !isUploadingPaymentProof &&
+      enrollmentStatus?.toLowerCase() !== 'rejected'
+    ) {
+      return (
+        <StatusIndicator type="success">
+          Payment proof already uploaded and being processed
+        </StatusIndicator>
+      );
     }
     return null;
   };
 
   // Show payment note when no proof is uploaded
-  const shouldShowPaymentNote = currentStep === 3 && !paymentProof && !hasPaymentProof && !isUploadingPaymentProof;
-  
+  const shouldShowPaymentNote =
+    currentStep === 3 &&
+    !paymentProof &&
+    !hasPaymentProof &&
+    !isUploadingPaymentProof;
+
   // Show payment button when user needs to pay
-  const shouldShowPaymentButton = currentStep === 3 && !paymentProof && !hasPaymentProof && !isUploadingPaymentProof;
+  const shouldShowPaymentButton =
+    currentStep === 3 &&
+    !paymentProof &&
+    !hasPaymentProof &&
+    !isUploadingPaymentProof;
 
   // No enrollment data state
   if (!enrollmentId) {
@@ -186,6 +214,22 @@ function Enrollment() {
                   <span className="font-bold text-dark-red">
                     {enrollmentId}
                   </span>
+                  {enrollmentId && (
+                    <button
+                      onClick={() => copyToClipboard(enrollmentId)}
+                      className="inline-flex items-center justify-center w-7 h-7 bg-red-50 hover:bg-red-100 text-dark-red rounded transition-colors duration-150 border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+                      title="Copy Enrollee ID"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
                 {fullName && (
                   <div className="flex items-center gap-2">
@@ -219,32 +263,36 @@ function Enrollment() {
                   <span className="text-gray-600 font-medium">Status:</span>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      enrollmentStatus?.toLowerCase() === "pending"
-                        ? "bg-amber-50 text-amber-700 border border-amber-200"
-                        : enrollmentStatus?.toLowerCase() === "verified"
-                        ? "bg-sky-50 text-sky-700 border border-sky-200"
-                        : enrollmentStatus?.toLowerCase() === "payment_pending"
-                        ? "bg-orange-50 text-orange-700 border border-orange-200"
-                        : enrollmentStatus?.toLowerCase() === "approved"
-                        ? "bg-violet-50 text-violet-700 border border-violet-200"
-                        : enrollmentStatus?.toLowerCase() === "completed"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : enrollmentStatus?.toLowerCase() === "rejected"
-                        ? "bg-rose-50 text-rose-700 border border-rose-200"
-                        : "bg-slate-50 text-slate-700 border border-slate-200"
+                      enrollmentStatus?.toLowerCase() === 'pending'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : enrollmentStatus?.toLowerCase() === 'verified'
+                        ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                        : enrollmentStatus?.toLowerCase() === 'payment_pending'
+                        ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                        : enrollmentStatus?.toLowerCase() === 'approved'
+                        ? 'bg-violet-50 text-violet-700 border border-violet-200'
+                        : enrollmentStatus?.toLowerCase() === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : enrollmentStatus?.toLowerCase() === 'rejected'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : 'bg-slate-50 text-slate-700 border border-slate-200'
                     }`}
                   >
-                    {enrollmentStatus?.replace(/_/g, ' ').toUpperCase()}
+                    {enrollmentStatus?.toLowerCase() === 'rejected'
+                      ? currentStep === 3
+                        ? 'PAYMENT REJECTED'
+                        : 'FORM REJECTED'
+                      : enrollmentStatus?.replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>
                 {createdAt && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 font-medium">Applied:</span>
                     <span className="text-gray-800">
-                      {new Date(createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
+                      {new Date(createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
                       })}
                     </span>
                   </div>
@@ -286,14 +334,14 @@ function Enrollment() {
                       <label
                         className={`inline-block text-sm border py-1 px-3 rounded text-center whitespace-nowrap transition-colors ${
                           isUploadingPaymentProof
-                            ? "border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "border-dark-red bg-german-red text-white hover:bg-dark-red cursor-pointer"
+                            ? 'border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'border-dark-red bg-german-red text-white hover:bg-dark-red cursor-pointer'
                         }`}
                         htmlFor="paymentProof"
                       >
                         {isUploadingPaymentProof
-                          ? "Uploading..."
-                          : "Choose File"}
+                          ? 'Uploading...'
+                          : 'Choose File'}
                       </label>
                       <input
                         className="hidden"
@@ -307,10 +355,10 @@ function Enrollment() {
                       />
                       <div className="text-sm text-black bg-white py-1 px-3 rounded border border-gray-300 truncate flex-1">
                         {isUploadingPaymentProof
-                          ? "Uploading file..."
+                          ? 'Uploading file...'
                           : paymentProof
                           ? paymentProof.name
-                          : "No file chosen"}
+                          : 'No file chosen'}
                       </div>
                     </div>
                   </div>
@@ -361,7 +409,9 @@ function Enrollment() {
                           />
                         </svg>
                         <span>Student ID:&nbsp;</span>
-                        <strong className="mr-2">{studentId || 'Pending...'}</strong>
+                        <strong className="mr-2">
+                          {studentId || 'Pending...'}
+                        </strong>
                         {studentId && (
                           <button
                             onClick={() => copyToClipboard(studentId)}
@@ -436,30 +486,26 @@ function Enrollment() {
             {/* Action Buttons */}
             <div className="flex justify-center my-6">
               {shouldShowPaymentButton && (
-                  <button
-                    onClick={handlePayNow}
-                    className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
+                <button
+                  onClick={handlePayNow}
+                  className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
+                >
+                  <span>{coursePrice ? `Pay Now` : 'Proceed to Payment'}</span>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <span>
-                      {coursePrice
-                        ? `Pay Now`
-                        : "Proceed to Payment"}
-                    </span>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </button>
-                )}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              )}
 
               {/* Temporary Next Button for Demo
               <button
@@ -475,11 +521,11 @@ function Enrollment() {
             {/* Contact Information Footer */}
             <div className="mt-8 text-sm text-gray-600 pt-4 text-center">
               <p>
-                For enrollment concerns please contact:{" "}
+                For enrollment concerns please contact:{' '}
                 <span className="font-medium">(+63) 97239232223</span>
               </p>
               <p>
-                Email:{" "}
+                Email:{' '}
                 <span className="font-medium">
                   info@sprachinstitut-cebu.inc
                 </span>

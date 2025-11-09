@@ -49,6 +49,7 @@ async function login(req, res) {
       });
     }
     let { data } = user;
+    const changePassword = data.changePassword || false;
     delete data.password;
 
     if (data.status !== 'active') {
@@ -69,7 +70,12 @@ async function login(req, res) {
       maxAge: 10, //10 seconds
       // maxAge: 24 * 60 * 60 * 1000,
     });
-    res.status(200).json({ token, error: false, message: 'Login successful' });
+    res.status(200).json({
+      token,
+      error: false,
+      message: 'Login successful',
+      changePassword,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -255,14 +261,14 @@ async function changePassword(req, res) {
       user.data?.password
     );
     if (isTheSamePassword) {
-      return res.status(401).json({
+      return res.status(400).json({
         error: true,
         message: 'New password cannot be the same as the old password',
       });
     }
 
     if (!isValidPassword) {
-      return res.status(401).json({
+      return res.status(400).json({
         error: true,
         message: 'Current password is incorrect',
       });
@@ -271,21 +277,128 @@ async function changePassword(req, res) {
     const hashedPassword = await bcrypt.hash(newPassword, bcryptSalt);
 
     console.log('hashedPassword', hashedPassword);
-    // Add a function in your user_model.js to update the password
-    const updated = await updateUserPassword(email, hashedPassword);
+    // Update the password and set changePassword to false
+    const updated = await prisma.users.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        changePassword: false,
+      },
+    });
 
     if (updated) {
-      res.status(200).json({
+      await logSecurityEvent(
+        'Password Change for User: ' + user.data.email,
+        user.data.userId,
+        MODULE_TYPES.AUTH,
+        `Password changed for user: ${user.data.email} via system change password requirement.`
+      );
+      return res.status(200).json({
+        error: false,
+        message: 'Password updated successfully',
+      });
+    }
+    return res.status(500).json({
+      error: true,
+      message: 'Failed to update password',
+    });
+  } catch (error) {
+    res.status(500).json({ error: true, message: error.message });
+  }
+}
+
+async function forcedChangePassword(req, res) {
+  try {
+    const { oldPassword, newPassword, email } = req.body;
+    console.log('forcedChangePassword - Called for email:', email);
+
+    // Validate input
+    if (!oldPassword || !newPassword || !email) {
+      console.log('forcedChangePassword - Validation failed: missing fields');
+      return res.status(400).json({
+        error: true,
+        message: 'Old password, new password, and email are required',
+      });
+    }
+
+    const user = await getStudentByEmail(email);
+
+    if (!user || user.error) {
+      return res.status(404).json({
+        error: true,
+        message: 'User not found',
+      });
+    }
+
+    // Verify the old password first (MUST use await with bcrypt.compare)
+    const isValidPassword = await bcrypt.compare(
+      oldPassword,
+      user.data?.password
+    );
+    console.log('forcedChangePassword - Password valid:', isValidPassword);
+
+    if (!isValidPassword) {
+      console.log('forcedChangePassword - Invalid password');
+      return res.status(400).json({
+        error: true,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    // Check if new password is the same as old (MUST use await with bcrypt.compare)
+    const isTheSamePassword = await bcrypt.compare(
+      newPassword,
+      user.data?.password
+    );
+
+    if (isTheSamePassword) {
+      return res.status(400).json({
+        error: true,
+        message: 'New password cannot be the same as the old password',
+      });
+    }
+
+    // Verify user actually needs to change password (optional security check)
+    if (user.data.changePassword !== true) {
+      return res.status(400).json({
+        error: true,
+        message: 'Password change not required for this account',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, bcryptSalt);
+
+    // Update the password and set changePassword to false
+    const updated = await prisma.users.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        changePassword: false,
+      },
+    });
+
+    if (updated) {
+      console.log('forcedChangePassword - Password updated successfully for:', email);
+      console.log('forcedChangePassword - changePassword flag set to:', updated.changePassword);
+      await logSecurityEvent(
+        'Forced Password Change - ' + user.data.email,
+        user.data.userId,
+        MODULE_TYPES.AUTH,
+        `Password changed for user: ${user.data.email} via forced password change requirement.`
+      );
+      return res.status(200).json({
         error: false,
         message: 'Password updated successfully',
       });
     } else {
-      res.status(500).json({
+      console.log('forcedChangePassword - Update returned null/undefined');
+      return res.status(500).json({
         error: true,
         message: 'Failed to update password',
       });
     }
   } catch (error) {
+    console.log('forcedChangePassword - Error:', error.message);
     res.status(500).json({ error: true, message: error.message });
   }
 }
@@ -364,4 +477,5 @@ export {
   resetPassword,
   requestResetPassword,
   adminResetPassword,
+  forcedChangePassword,
 };

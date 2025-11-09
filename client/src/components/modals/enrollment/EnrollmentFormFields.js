@@ -135,12 +135,6 @@ export default function EnrollmentFormFields({
               value={(() => {
                 let statusValue = (formData?.enrollmentStatus || originalData?.enrollmentStatus || originalData?.status || "pending").toLowerCase();
                 
-                // If status is rejected, show the appropriate current step instead
-                if (statusValue === "rejected") {
-                  const hasPaymentProof = formData?.paymentProofPath || originalData?.paymentProofPath;
-                  statusValue = hasPaymentProof ? "payment_pending" : "verified";
-                }
-                
                 return statusValue;
               })()}
               onChange={onInputChange}
@@ -148,16 +142,12 @@ export default function EnrollmentFormFields({
                 // Use original data for validation to prevent UI issues when validation fails
                 let currentStatus = (originalData?.enrollmentStatus || originalData?.status || "pending").toLowerCase();
                 
-                // If status is rejected, determine the actual current step based on payment proof
+                // If current status is rejected, treat it as pending for validation purposes
+                // This allows any forward movement or another rejection
                 if (currentStatus === "rejected") {
                   const hasPaymentProof = formData?.paymentProofPath || originalData?.paymentProofPath;
-                  if (hasPaymentProof) {
-                    // Payment was rejected, go back to step 3
-                    currentStatus = "payment_pending";
-                  } else {
-                    // Form was rejected, go back to step 2
-                    currentStatus = "verified";
-                  }
+                  // Determine what step they were at when rejected
+                  currentStatus = hasPaymentProof ? "payment_pending" : "pending";
                 }
                 
                 // Check for account existence in multiple ways
@@ -168,7 +158,6 @@ export default function EnrollmentFormFields({
                   { value: "verified", label: "2. Verified (Account Created)" },
                   { value: "payment_pending", label: "3. Payment Pending" },
                   { value: "approved", label: "4. Payment Verified" },
-                  { value: "completed", label: "5. Enrollment Complete" },
                   { value: "rejected", label: "Rejected" },
                 ];
                 
@@ -181,14 +170,24 @@ export default function EnrollmentFormFields({
                   let disabled = false;
                   let colorClass = "";
                   
-                  // Check if trying to advance to step 2 onwards without account (except rejected)
-                  if (optionIndex >= 1 && !hasAccount && option.value !== "rejected") {
+                  // Rejected should always be available at any step
+                  if (option.value === "rejected") {
+                    return {
+                      ...option,
+                      disabled: false,
+                      label: option.label,
+                      className: ""
+                    };
+                  }
+                  
+                  // Check if trying to advance to step 2 onwards without account
+                  if (optionIndex >= 1 && !hasAccount) {
                     disabled = true;
                     colorClass = "text-gray-400";
                   }
                   
-                  // Check if trying to skip steps forward (except rejected)
-                  if (optionIndex > currentIndex + 1 && option.value !== "rejected") {
+                  // Check if trying to skip steps forward
+                  if (optionIndex > currentIndex + 1) {
                     disabled = true;
                     colorClass = "text-gray-400";
                   }
