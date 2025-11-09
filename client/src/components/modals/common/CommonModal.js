@@ -13,6 +13,7 @@ export default function CommonModal({
   children,
   show,
   fileUrl = null,
+  fileType: providedFileType = null,
   className = 'w-full max-w-4xl',
   showVerifyPayment = false,
   onVerifyPayment = null,
@@ -20,7 +21,7 @@ export default function CommonModal({
 }) {
   if (!show) return null;
 
-  const fileType = getFileType(fileUrl);
+  const fileType = providedFileType || getFileType(fileUrl);
   const fileName = getFileNameFromUrl(fileUrl);
 
   const handleDownload = () => {

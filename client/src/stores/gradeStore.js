@@ -68,6 +68,7 @@ const useGradeStore = create((set, get) => ({
   localGrades: [],
   changesMade: false,
   saving: false,
+  pendingFiles: {}, // Store pending files: { studentId: { file, fileName, studentGradeId, studentId, courseId, periodId, userId } }
 
   _persistentStudentData: {},
   _persistentVisibility: {},
@@ -149,12 +150,51 @@ const useGradeStore = create((set, get) => ({
 
   saveGradeChanges: async () => {
     const state = get();
-    const { localGrades, selectedSchedule, gradesVisible } = state;
+    const { localGrades, selectedSchedule, gradesVisible, pendingFiles } = state;
     const scheduleId = selectedSchedule?.id;
 
     set({ saving: true });
 
     try {
+      // Upload pending files first
+      const pendingFilesList = Object.values(pendingFiles);
+      if (pendingFilesList.length > 0) {
+        const token = getCookieItem('token');
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const uploadPromises = pendingFilesList.map(async (fileData) => {
+          const formData = new FormData();
+          formData.append('file', fileData.file);
+
+          if (!fileData.studentGradeId || fileData.studentGradeId === null) {
+            formData.append('studentId', fileData.studentId);
+            formData.append('courseId', fileData.courseId);
+            if (fileData.periodId) {
+              formData.append('periodId', fileData.periodId);
+            }
+          }
+
+          const res = await fetch(
+            `${apiUrl}/grades/${fileData.studentGradeId || 'null'}/files`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: formData,
+            }
+          );
+
+          if (!res.ok) {
+            throw new Error(`Failed to upload file for ${fileData.userId}`);
+          }
+          return res.json();
+        });
+
+        await Promise.all(uploadPromises);
+        // Clear pending files after successful upload
+        set({ pendingFiles: {} });
+      }
+
       // Don't update students array until after successful save
       await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -219,10 +259,43 @@ const useGradeStore = create((set, get) => ({
   },
 
   resetGradeChanges: () => {
-    set({ localGrades: [], changesMade: false });
+    set({ localGrades: [], changesMade: false, pendingFiles: {} });
   },
 
   setChangesMade: (value) => set({ changesMade: value }),
+
+  addPendingFile: (studentId, fileData) => {
+    // Create a preview URL for the file 
+    const previewUrl = URL.createObjectURL(fileData.file);
+    
+    set(state => ({
+      pendingFiles: {
+        ...state.pendingFiles,
+        [studentId]: {
+          ...fileData,
+          previewUrl // Add preview URL for immediate display
+        }
+      },
+      changesMade: true
+    }));
+  },
+
+  // Check if student has a pending file
+  hasPendingFile: (studentId) => {
+    const state = get();
+    return !!state.pendingFiles[studentId];
+  },
+
+  // Get pending file for a student
+  getPendingFile: (studentId) => {
+    const state = get();
+    return state.pendingFiles[studentId];
+  },
+
+  // Clear all pending files
+  clearPendingFiles: () => {
+    set({ pendingFiles: {} });
+  },
 
   saveGrades: async () => {
     const state = get();
