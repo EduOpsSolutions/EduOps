@@ -110,8 +110,8 @@ function GradeModalFooter({
           <input
             id="inline-checkbox"
             type="checkbox"
-            checked={isVisible}
-            onChange={(e) => handleVisibilityToggle(e.target.checked)}
+            checked={isVisible === 'visible'}
+            onChange={(e) => handleVisibilityToggle(e.target.checked ? 'visible' : 'hidden')}
             className="w-3 h-3 sm:w-4 sm:h-4 ml-2 text-dark-red-2 bg-gray-100 border-gray-300 rounded focus:ring-dark-red-2 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
           />
         </div>
@@ -149,7 +149,7 @@ function GradeModalFooter({
           disabled={saving}
           className="w-full sm:w-auto text-xs sm:text-sm px-3 py-1"
         >
-          {saving ? 'Saving...' : 'Save Grades'}
+          {saving ? 'Saving...' : 'Save'}
         </ThinRedButton>
       </div>
     </div>
