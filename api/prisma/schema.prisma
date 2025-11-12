@@ -565,7 +565,7 @@ model notification {
   userId    String
   type      String
   title     String
-  message   String
+  message   String @db.Text
   data      Json?
   isRead    Boolean   @default(false)
   delivered Boolean   @default(false)
