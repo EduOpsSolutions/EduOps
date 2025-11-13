@@ -38,8 +38,9 @@ function PaymentForm() {
     return feesOptions;
   };
 
-  // Auto-fill authenticated user details
+  // Auto-fill user details
   useEffect(() => {
+    // Auto-fill authenticated user details
     if (isAuthenticated && user?.userId) {
       updateFormField('student_id', user.userId);
 
@@ -55,15 +56,15 @@ function PaymentForm() {
     }
   }, [isAuthenticated, user, validateAndFetchStudentByID, validateAndFetchTeacherByID, updateFormField]);
 
-  // Auto-fill document fee from location state (when navigating from document request)
   useEffect(() => {
     if (location.state?.documentFee) {
       const { feeType, amount } = location.state.documentFee;
-      if (feeType) {
+      // Only auto-fill if it's explicitly a document fee
+      if (feeType === 'document_fee') {
         updateFormField('fee', feeType);
-      }
-      if (amount) {
-        updateFormField('amount', amount.toString());
+        if (amount) {
+          updateFormField('amount', amount.toString());
+        }
       }
     }
   }, [location.state, updateFormField]);
@@ -455,8 +456,8 @@ function PaymentForm() {
                 step="0.01"
                 value={formData.amount}
                 onChange={handleInputChange}
-                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')}
-                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? 'bg-gray-100' : ''}`}
+                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') && formData.fee === 'document_fee'}
+                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') && formData.fee === 'document_fee' ? 'bg-gray-100' : ''}`}
               />
             </div>
 
