@@ -720,8 +720,21 @@ export const uploadCompletedDocument = async (req, res) => {
     }
 
     let completedDocumentUrl = null;
+    let fileSignature = null;
 
     if (req.file) {
+      const fileBuffer = req.file.buffer;
+      fileSignature = crypto
+        .createHash("sha256")
+        .update(fileBuffer)
+        .digest("hex")
+        .substring(0, 7);
+
+      console.log(
+        "[uploadCompletedDocument] Generated file signature (before upload):",
+        fileSignature
+      );
+
       const { uploadFile } = await import("../utils/fileStorage.js");
       const { filePaths } = await import("../constants/file_paths.js");
       const uploadResult = await uploadFile(req.file, filePaths.documents);
@@ -755,6 +768,7 @@ export const uploadCompletedDocument = async (req, res) => {
       {
         hasFile: !!req.file,
         hasUrl: !!completedDocumentUrl,
+        hasSignature: !!fileSignature,
         requestUser: request.user
           ? `${request.user.firstName} ${request.user.lastName}`
           : "null",
@@ -762,18 +776,10 @@ export const uploadCompletedDocument = async (req, res) => {
       }
     );
 
-    if (req.file && completedDocumentUrl) {
+    if (fileSignature && completedDocumentUrl) {
       try {
-        // Generate file signature from the uploaded file
-        const fileBuffer = req.file.buffer;
-        const fileSignature = crypto
-          .createHash("sha256")
-          .update(fileBuffer)
-          .digest("hex")
-          .substring(0, 7);
-
         console.log(
-          "[uploadCompletedDocument] Generated file signature:",
+          "[uploadCompletedDocument] Using pre-generated file signature:",
           fileSignature
         );
 
