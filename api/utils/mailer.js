@@ -9,11 +9,20 @@ export const sendEmail = async (
   attachments = undefined
 ) => {
   const transporter = createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // use STARTTLS
     auth: {
       user: process.env.MAIL_USER,
       pass: process.env.MAIL_PASSWORD,
     },
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000,   // 30 seconds
+    socketTimeout: 60000,     // 60 seconds
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    }
   });
 
   console.log('[sendEmail] Sending email...');
