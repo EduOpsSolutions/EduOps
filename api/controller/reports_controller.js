@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 import { convert24To12HourFormatLocale } from "../utils/format.js";
 // Report 1: Student Enrollment Report

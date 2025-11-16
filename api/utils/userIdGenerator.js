@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 
 const prisma = new PrismaClient();
 
@@ -13,12 +14,12 @@ const prisma = new PrismaClient();
 export const generateStandardizedUserId = async (role) => {
   // Determine prefix based on role
   const prefixMap = {
-    student: 'S',
-    teacher: 'T',
-    admin: 'A',
+    student: "S",
+    teacher: "T",
+    admin: "A",
   };
 
-  const prefix = prefixMap[role] || 'S'; // Default to 'S' if role not found
+  const prefix = prefixMap[role] || "S"; // Default to 'S' if role not found
   const currentYear = new Date().getFullYear();
   const basePattern = `${prefix}${currentYear}`;
 
@@ -33,7 +34,7 @@ export const generateStandardizedUserId = async (role) => {
       userId: true,
     },
     orderBy: {
-      userId: 'desc',
+      userId: "desc",
     },
   });
 
@@ -56,7 +57,7 @@ export const generateStandardizedUserId = async (role) => {
 
   // Loop to ensure uniqueness (in case of race conditions or gaps)
   while (exists && counter <= 999999) {
-    userId = `${basePattern}${counter.toString().padStart(6, '0')}`;
+    userId = `${basePattern}${counter.toString().padStart(6, "0")}`;
 
     const existingUser = await prisma.users.findUnique({
       where: { userId },
@@ -107,6 +108,6 @@ export const parseUserId = (userId) => {
     year: userId.slice(1, 5),
     counter: userId.slice(5),
     role:
-      userId[0] === 'S' ? 'student' : userId[0] === 'T' ? 'teacher' : 'admin',
+      userId[0] === "S" ? "student" : userId[0] === "T" ? "teacher" : "admin",
   };
 };
