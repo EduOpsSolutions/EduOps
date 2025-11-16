@@ -6,7 +6,8 @@ import {
   getGradeFiles,
   approveGrade,
   getStudentsBySchedule,
-  getGradesByStudent
+  getGradesByStudent,
+  updateGradesVisibility
 } from '../../controller/grades_controller.js';
 import multerMiddleware from '../../middleware/multerMiddleware.js';
 import {
@@ -71,6 +72,14 @@ router.post(
   verifyToken,
   validateUserIsAdmin,
   approveGrade
+);
+
+// Update grades visibility for a course/period (admin)
+router.patch(
+  '/visibility',
+  verifyToken,
+  validateUserIsAdmin,
+  updateGradesVisibility
 );
 
 export { router };

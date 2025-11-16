@@ -1,16 +1,16 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 import {
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-} from '../constants/payment_constants.js';
+} from "../constants/payment_constants.js";
 import {
   sendPaymentLinkEmail,
   sendPaymentReceiptEmail,
-} from './paymentEmailService.js';
-import { logSecurityEvent } from '../utils/logger.js';
-import { MODULE_TYPES } from '../constants/module_types.js';
+} from "./paymentEmailService.js";
+import { logSecurityEvent } from "../utils/logger.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -21,19 +21,19 @@ const prisma = new PrismaClient();
  * @returns {Promise<string>} Unique payment ID
  */
 export const generatePaymentId = async () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const date = new Date();
   const dateStr =
     date.getFullYear() +
-    String(date.getMonth() + 1).padStart(2, '0') +
-    String(date.getDate()).padStart(2, '0');
+    String(date.getMonth() + 1).padStart(2, "0") +
+    String(date.getDate()).padStart(2, "0");
 
   let paymentId;
 
   do {
     const suffix = Array.from({ length: 5 }, () =>
       chars.charAt(Math.floor(Math.random() * chars.length))
-    ).join('');
+    ).join("");
     paymentId = `PAY-${dateStr}-${suffix}`;
     const existing = await prisma.payments.findUnique({
       where: { transactionId: paymentId },
@@ -60,17 +60,17 @@ const calculatePagination = (page, limit, total) => {
  */
 const mapPayMongoStatusToPrisma = (paymongoStatus) => {
   const statusMap = {
-    paid: 'paid',
-    pending: 'pending',
-    unpaid: 'failed',
-    failed: 'failed',
-    expired: 'failed',
-    cancelled: 'cancelled',
-    canceled: 'cancelled',
-    refunded: 'refunded',
+    paid: "paid",
+    pending: "pending",
+    unpaid: "failed",
+    failed: "failed",
+    expired: "failed",
+    cancelled: "cancelled",
+    canceled: "cancelled",
+    refunded: "refunded",
   };
 
-  return statusMap[paymongoStatus] || 'pending';
+  return statusMap[paymongoStatus] || "pending";
 };
 
 /**
@@ -103,7 +103,7 @@ const transformPaymentForFrontend = (payment, _options) => {
     firstName: payment.user ? payment.user.firstName : null,
     lastName: payment.user ? payment.user.lastName : null,
     email: payment.user ? payment.user.email : null,
-    paymentEmail: payment.paymentEmail || null, 
+    paymentEmail: payment.paymentEmail || null,
     courseId: payment.courseId || null,
     academicPeriodId: payment.academicPeriodId || null,
   };
@@ -126,10 +126,10 @@ const buildPaymentWhereClause = (filters = {}) => {
 
   if (searchTerm && String(searchTerm).trim().length > 0) {
     where.OR = [
-      { transactionId: { contains: searchTerm, mode: 'insensitive' } },
-      { referenceNumber: { contains: searchTerm, mode: 'insensitive' } },
-      { paymentMethod: { contains: searchTerm, mode: 'insensitive' } },
-      { remarks: { contains: searchTerm, mode: 'insensitive' } },
+      { transactionId: { contains: searchTerm, mode: "insensitive" } },
+      { referenceNumber: { contains: searchTerm, mode: "insensitive" } },
+      { paymentMethod: { contains: searchTerm, mode: "insensitive" } },
+      { remarks: { contains: searchTerm, mode: "insensitive" } },
     ];
   }
 
@@ -176,10 +176,20 @@ export const createManualPayment = async (transactionData) => {
     let enrollmentRequest = await prisma.enrollment_request.findFirst({
       where: {
         studentId: studentId,
-        enrollmentStatus: { in: ['pending', 'approved', 'PENDING', 'APPROVED', 'PAYMENT_PENDING', 'completed', 'COMPLETED'] },
+        enrollmentStatus: {
+          in: [
+            "pending",
+            "approved",
+            "PENDING",
+            "APPROVED",
+            "PAYMENT_PENDING",
+            "completed",
+            "COMPLETED",
+          ],
+        },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       select: {
         id: true,
@@ -196,7 +206,7 @@ export const createManualPayment = async (transactionData) => {
           studentId: studentId,
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         select: {
           id: true,
@@ -230,7 +240,7 @@ export const createManualPayment = async (transactionData) => {
               id: true,
             },
           });
-          
+
           if (courseById) {
             finalCourseId = courseById.id;
           }
@@ -244,7 +254,7 @@ export const createManualPayment = async (transactionData) => {
   }
 
   // Check for duplicate reference number
-  if (referenceNumber && referenceNumber.trim() !== '') {
+  if (referenceNumber && referenceNumber.trim() !== "") {
     const existingPayment = await prisma.payments.findFirst({
       where: {
         referenceNumber: referenceNumber.trim(),
@@ -252,7 +262,9 @@ export const createManualPayment = async (transactionData) => {
     });
 
     if (existingPayment) {
-      throw new Error(`Reference number '${referenceNumber}' already exists. Please use a unique reference number.`);
+      throw new Error(
+        `Reference number '${referenceNumber}' already exists. Please use a unique reference number.`
+      );
     }
   }
 
@@ -262,7 +274,7 @@ export const createManualPayment = async (transactionData) => {
     userId: user.id,
     amount: parseFloat(amountPaid),
     status: PAYMENT_STATUS.PAID,
-    paymentMethod: paymentMethod || 'Physical Payment',
+    paymentMethod: paymentMethod || "Physical Payment",
     referenceNumber: referenceNumber,
     feeType: purpose,
     remarks: remarks || null,
@@ -317,7 +329,7 @@ export const getPaymentsByUser = async (userId, options = {}) => {
   const [payments, total] = await Promise.all([
     prisma.payments.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: parseInt(limit),
       include: PAYMENT_INCLUDES.WITH_USER,
@@ -348,7 +360,7 @@ export const getAllTransactions = async (options = {}) => {
   const [payments, total] = await Promise.all([
     prisma.payments.findMany({
       where: whereClause,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: parseInt(limit),
       include: PAYMENT_INCLUDES.WITH_USER,
@@ -374,9 +386,9 @@ export const getAllTransactions = async (options = {}) => {
 export const getAvailablePaymentMethods = async () => {
   return {
     methods: [
-      { id: 'gcash', name: 'GCash', type: 'gcash' },
-      { id: 'maya', name: 'Maya', type: 'maya' },
-      { id: 'card', name: 'Credit/Debit Card', type: 'card' },
+      { id: "gcash", name: "GCash", type: "gcash" },
+      { id: "maya", name: "Maya", type: "maya" },
+      { id: "card", name: "Credit/Debit Card", type: "card" },
     ],
   };
 };
@@ -400,7 +412,7 @@ export const forceSyncPaymentStatus = async (paymentId) => {
     return {
       paymentId: payment.id,
       status: payment.status,
-      message: 'Not an online payment, no sync needed',
+      message: "Not an online payment, no sync needed",
     };
   }
 
@@ -411,7 +423,7 @@ export const forceSyncPaymentStatus = async (paymentId) => {
   return {
     paymentId: payment.id,
     status: payment.status,
-    message: 'Payment status retrieved',
+    message: "Payment status retrieved",
   };
 };
 
@@ -471,7 +483,7 @@ export const bulkSyncPendingPayments = async () => {
  * @returns {Promise<Object>} Cleanup result
  */
 export const cleanupOrphanedPayments = async () => {
-  console.log('Starting orphaned payments cleanup...');
+  console.log("Starting orphaned payments cleanup...");
 
   // Find pending payments older than 24 hours
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -502,21 +514,21 @@ export const cleanupOrphanedPayments = async () => {
       await prisma.payments.update({
         where: { id: payment.id },
         data: {
-          status: 'failed',
+          status: "failed",
         },
       });
 
       updatedCount++;
       results.push({
         paymentId: payment.id,
-        action: 'marked_as_failed',
-        reason: 'Payment expired',
+        action: "marked_as_failed",
+        reason: "Payment expired",
       });
     } catch (error) {
       console.error(`Error checking orphaned payment ${payment.id}:`, error);
       results.push({
         paymentId: payment.id,
-        action: 'error',
+        action: "error",
         error: error.message,
       });
     }
@@ -545,7 +557,7 @@ export const cleanupOrphanedPayments = async () => {
 export const sendSuccess = (
   res,
   data,
-  message = 'Operation successful',
+  message = "Operation successful",
   statusCode = 200
 ) => {
   return res.status(statusCode).json({ success: true, message, data });
@@ -575,10 +587,20 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         enrollmentData = await prisma.enrollment_request.findFirst({
           where: {
             studentId: user.userId,
-            enrollmentStatus: { in: ['pending', 'approved', 'PENDING', 'APPROVED', 'PAYMENT_PENDING', 'completed', 'COMPLETED'] }
+            enrollmentStatus: {
+              in: [
+                "pending",
+                "approved",
+                "PENDING",
+                "APPROVED",
+                "PAYMENT_PENDING",
+                "completed",
+                "COMPLETED",
+              ],
+            },
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
           select: {
             id: true,
@@ -595,7 +617,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
               studentId: user.userId,
             },
             orderBy: {
-              createdAt: 'desc',
+              createdAt: "desc",
             },
             select: {
               id: true,
@@ -604,7 +626,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
               enrollmentStatus: true,
             },
           });
-          
+
           if (anyEnrollment) {
             enrollmentData = anyEnrollment;
           }
@@ -614,7 +636,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
 
     let actualCourseId = enrollmentData?.coursesToEnroll || null;
     if (actualCourseId && enrollmentData) {
-      if (actualCourseId.includes(' ') || actualCourseId.includes('-')) {
+      if (actualCourseId.includes(" ") || actualCourseId.includes("-")) {
         try {
           const course = await prisma.course.findFirst({
             where: {
@@ -646,22 +668,22 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         userId: userId || null,
         amount: parseFloat(amount),
         status: PAYMENT_STATUS.PENDING,
-        paymentMethod: 'Online Payment',
-        feeType: feeType || 'tuition_fee',
+        paymentMethod: "Online Payment",
+        feeType: feeType || "tuition_fee",
         remarks: description || `Payment for ${firstName} ${lastName}`,
         paymentEmail: email, // Store the email from payment form
         enrollmentRequestId: enrollmentData?.id || null,
-        courseId: actualCourseId, 
+        courseId: actualCourseId,
         academicPeriodId: enrollmentData?.periodId || null,
       },
     });
 
     // Use dynamic baseUrl for production and development
-    const isProd = process.env.ENVIRONMENT === 'production';
+    const isProd = process.env.ENVIRONMENT === "production";
     const baseUrl = isProd
       ? process.env.PRODUCTION_CLIENT_URL ||
-        'https://preprod-eduops.danred-server.uk'
-      : process.env.CLIENT_URL || 'http://localhost:3000';
+        "https://preprod-eduops.danred-server.uk"
+      : process.env.CLIENT_URL || "http://localhost:3000";
     const checkoutUrl = `${baseUrl}/payment?paymentId=${payment.id}`;
 
     // User and payment details for email
@@ -669,7 +691,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     const paymentDetails = {
       amount: parseFloat(amount),
       description,
-      remarks: feeType ? `Fee Type: ${feeType.replace('_', ' ')}` : '',
+      remarks: feeType ? `Fee Type: ${feeType.replace("_", " ")}` : "",
     };
 
     const emailSent = await sendPaymentLinkEmail(
@@ -682,24 +704,24 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     if (emailSent) {
       // Log successful payment link creation
       await logSecurityEvent(
-        'Payment link created and sent',
+        "Payment link created and sent",
         null,
         MODULE_TYPES.PAYMENTS,
         `Payment link created: Transaction ID [${customTransactionId}] for ${firstName} ${lastName} (${email}). Amount: ₱${parseFloat(
           amount
-        ).toFixed(2)}, Fee Type: ${feeType || 'tuition_fee'}, Description: ${
-          description || 'N/A'
+        ).toFixed(2)}, Fee Type: ${feeType || "tuition_fee"}, Description: ${
+          description || "N/A"
         }`
       );
       return {
         success: true,
-        message: 'Payment link sent to your email successfully!',
+        message: "Payment link sent to your email successfully!",
         paymentId: payment.id,
       };
     } else {
       await logSecurityEvent(
-        'Payment link email failed',
-        userId || null,
+        "Payment link email failed",
+        null,
         MODULE_TYPES.PAYMENTS,
         `Failed to send payment link email for Transaction ID [${customTransactionId}] to ${email}. Amount: ₱${parseFloat(
           amount
@@ -708,14 +730,14 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       await prisma.payments.delete({
         where: { id: payment.id },
       });
-      throw new Error('Failed to send email');
+      throw new Error("Failed to send email");
     }
   } catch (error) {
-    console.error('Error sending payment link via email:', error);
+    console.error("Error sending payment link via email:", error);
     // Log payment link creation failure
     await logSecurityEvent(
-      'Payment link creation failed',
-      userId || null,
+      "Payment link creation failed",
+      null,
       MODULE_TYPES.PAYMENTS,
       `Error creating payment link for ${firstName} ${lastName} (${email}). Amount: ₱${parseFloat(
         amount
@@ -723,7 +745,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     );
     return {
       success: false,
-      message: 'Failed to send payment link via email',
+      message: "Failed to send payment link via email",
       error: error.message,
     };
   }

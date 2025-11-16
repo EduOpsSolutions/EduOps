@@ -504,15 +504,16 @@ enum DocumentRequestStatus {
 }
 
 model student_grade {
-  id         String     @id @default(cuid())
-  studentId  String
-  courseId   String
-  periodId   String?
-  grade      GradeValue
-  approvedBy String? // userId of teacher/admin who approved
-  approvedAt DateTime?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id               String     @id @default(cuid())
+  studentId        String
+  courseId         String
+  periodId         String?
+  grade            GradeValue
+  visibility       Visibility @default(hidden) 
+  approvedBy       String? // userId of teacher/admin who approved
+  approvedAt       DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   student users        @relation("UserStudentGrades", fields: [studentId], references: [id])
   course  course       @relation("CourseStudentGrades", fields: [courseId], references: [id])

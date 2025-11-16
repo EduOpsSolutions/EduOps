@@ -28,18 +28,30 @@ export const setOrUpdateGrade = async (req, res) => {
     console.log('Incoming grades payload:', req.body);
     const grades = Array.isArray(req.body) ? req.body : [req.body];
     const results = [];
-    for (const { studentId, courseId, periodId, grade } of grades) {
+    for (const { studentId, courseId, periodId, grade, visibility } of grades) {
       let studentGrade = await prisma.student_grade.findFirst({
         where: { studentId, courseId, periodId },
       });
+      
+      const updateData = { grade };
+      if (visibility === 'visible' || visibility === 'hidden') {
+        updateData.visibility = visibility;
+      }
+      
       if (studentGrade) {
         studentGrade = await prisma.student_grade.update({
           where: { id: studentGrade.id },
-          data: { grade },
+          data: updateData,
         });
       } else {
         studentGrade = await prisma.student_grade.create({
-          data: { studentId, courseId, periodId, grade },
+          data: { 
+            studentId, 
+            courseId, 
+            periodId, 
+            grade,
+            visibility: visibility || 'hidden'
+          },
         });
       }
       results.push(studentGrade);
@@ -174,16 +186,18 @@ export const getStudentsBySchedule = async (req, res) => {
         let gradeRecord = null;
         let hasDoc = false;
         let studentGradeId = null;
+        let visibility = 'hidden';
         if (schedule && us.userId && schedule.courseId) {
           gradeRecord = await prisma.student_grade.findFirst({
             where: {
               studentId: us.userId,
               courseId: schedule.courseId,
             },
-            select: { id: true, grade: true },
+            select: { id: true, grade: true, visibility: true },
           });
           if (gradeRecord && gradeRecord.id) {
             studentGradeId = gradeRecord.id;
+            visibility = gradeRecord.visibility;
             // Check if any files exist for this studentGradeId
             const fileCount = await prisma.grade_file.count({
               where: { studentGradeId: gradeRecord.id },
@@ -195,6 +209,7 @@ export const getStudentsBySchedule = async (req, res) => {
           ...us,
           grade: gradeRecord ? gradeRecord.grade : null,
           studentGradeId,
+          visibility,
           hasDoc,
         };
       })
@@ -219,22 +234,57 @@ export const getGradesByStudent = async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     // For each grade, keep only the latest file (by uploadedAt)
+    // If visibility is 'hidden', show grade as 'NoGrade' and no files
     grades = grades.map((g) => {
+      const isVisible = g.visibility === 'visible';
+      
       let latestFile = null;
-      if (g.files && g.files.length > 0) {
+      if (isVisible && g.files && g.files.length > 0) {
         latestFile = [...g.files].sort(
           (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
         )[0];
       }
+      
       return {
         ...g,
-        files: latestFile ? [latestFile] : [],
+        grade: isVisible ? g.grade : 'NoGrade',
+        files: isVisible && latestFile ? [latestFile] : [],
       };
     });
     res.json(grades);
   } catch (err) {
     console.error('Error fetching grades:', err);
     res.status(500).json({ error: 'Failed to fetch grades.' });
+  }
+};
+
+export const updateGradesVisibility = async (req, res) => {
+  try {
+    const { courseId, periodId, visibility } = req.body;
+
+    if (!courseId || (visibility !== 'visible' && visibility !== 'hidden')) {
+      return res.status(400).json({ 
+        error: 'courseId and visibility (visible or hidden) are required.' 
+      });
+    }
+    const result = await prisma.student_grade.updateMany({
+      where: {
+        courseId,
+        ...(periodId && { periodId })
+      },
+      data: {
+        visibility
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      updated: result.count,
+      visibility
+    });
+  } catch (err) {
+    console.error('Update visibility error:', err);
+    res.status(500).json({ error: 'Failed to update grades visibility.' });
   }
 };
 
@@ -246,4 +296,5 @@ export default {
   approveGrade,
   getStudentsBySchedule,
   getGradesByStudent,
+  updateGradesVisibility,
 };
