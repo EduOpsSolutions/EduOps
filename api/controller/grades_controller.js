@@ -289,6 +289,36 @@ export const updateGradesVisibility = async (req, res) => {
   }
 };
 
+export const updateGradesVisibility = async (req, res) => {
+  try {
+    const { courseId, periodId, visibility } = req.body;
+
+    if (!courseId || (visibility !== 'visible' && visibility !== 'hidden')) {
+      return res.status(400).json({ 
+        error: 'courseId and visibility (visible or hidden) are required.' 
+      });
+    }
+    const result = await prisma.student_grade.updateMany({
+      where: {
+        courseId,
+        ...(periodId && { periodId })
+      },
+      data: {
+        visibility
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      updated: result.count,
+      visibility
+    });
+  } catch (err) {
+    console.error('Update visibility error:', err);
+    res.status(500).json({ error: 'Failed to update grades visibility.' });
+  }
+};
+
 export default {
   getGradesByCourse,
   setOrUpdateGrade,
