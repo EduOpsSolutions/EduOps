@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();

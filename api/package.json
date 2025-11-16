@@ -8,9 +8,10 @@
   },
   "scripts": {
     "start": "node index.js",
+    "start:prod": "npm run build && node index.js",
     "seed_students": "node prisma/seed_students_sample.js",
     "dev": "nodemon -e js,mysql,env -w .env -w . index.js",
-    "build": "npx prisma migrate deploy && npx prisma generate && npx prisma db seed && node prisma/seed_students_sample.js",
+    "build": "npx prisma migrate deploy && npx prisma generate",
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
