@@ -64,13 +64,11 @@ const useGradeStore = create((set, get) => ({
   gradeNotReadyModal: false,
   gradeDetailsModal: false,
   studentsGradeModal: false,
-  gradesVisible: false,
+  gradesVisible: 'hidden', 
   localGrades: [],
   changesMade: false,
   saving: false,
-
-  _persistentStudentData: {},
-  _persistentVisibility: {},
+  pendingFiles: {}, 
   gradeStatusOptions: [
     { value: 'ng', label: 'NG', color: 'bg-gray-300' },
     { value: 'pass', label: 'PASS', color: 'bg-green-500' },
@@ -139,46 +137,67 @@ const useGradeStore = create((set, get) => ({
     });
   },
 
-  setGradeVisibility: (visible) => {
+  setGradeVisibility: (visibility) => {
     const state = get();
-
-    if (visible !== state.gradesVisible) {
-      set({ gradesVisible: visible, changesMade: true });
+    if (visibility !== state.gradesVisible) {
+      set({ gradesVisible: visibility, changesMade: true });
     }
   },
 
   saveGradeChanges: async () => {
     const state = get();
-    const { localGrades, selectedSchedule, gradesVisible } = state;
-    const scheduleId = selectedSchedule?.id;
+    const { localGrades, pendingFiles } = state;
 
     set({ saving: true });
 
     try {
+      // Upload pending files first
+      const pendingFilesList = Object.values(pendingFiles);
+      if (pendingFilesList.length > 0) {
+        const token = getCookieItem('token');
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const uploadPromises = pendingFilesList.map(async (fileData) => {
+          const formData = new FormData();
+          formData.append('file', fileData.file);
+
+          if (!fileData.studentGradeId || fileData.studentGradeId === null) {
+            formData.append('studentId', fileData.studentId);
+            formData.append('courseId', fileData.courseId);
+            if (fileData.periodId) {
+              formData.append('periodId', fileData.periodId);
+            }
+          }
+
+          const res = await fetch(
+            `${apiUrl}/grades/${fileData.studentGradeId || 'null'}/files`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: formData,
+            }
+          );
+
+          if (!res.ok) {
+            throw new Error(`Failed to upload file for ${fileData.userId}`);
+          }
+          return res.json();
+        });
+
+        await Promise.all(uploadPromises);
+        // Clear pending files after successful upload
+        set({ pendingFiles: {} });
+      }
+
       // Don't update students array until after successful save
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      const freshState = get();
-
-      if (scheduleId) {
-        const persistStudents = JSON.parse(JSON.stringify(freshState.students));
-
-        set(state => {
-          const updatedData = {
-            _persistentStudentData: {
-              ...state._persistentStudentData,
-              [scheduleId]: persistStudents
-            },
-            _persistentVisibility: {
-              ...state._persistentVisibility,
-              [scheduleId]: gradesVisible
-            }
-          };
-          return updatedData;
-        });
+      if (localGrades.length > 0) {
+        await get().saveGrades();
       }
-
-      await get().saveGrades();
+      // Always save visibility 
+      await get().saveVisibility();
 
       // Only update students array after successful backend save
       if (localGrades.length > 0) {
@@ -219,10 +238,43 @@ const useGradeStore = create((set, get) => ({
   },
 
   resetGradeChanges: () => {
-    set({ localGrades: [], changesMade: false });
+    set({ localGrades: [], changesMade: false, pendingFiles: {} });
   },
 
   setChangesMade: (value) => set({ changesMade: value }),
+
+  addPendingFile: (studentId, fileData) => {
+    // Create a preview URL for the file 
+    const previewUrl = URL.createObjectURL(fileData.file);
+    
+    set(state => ({
+      pendingFiles: {
+        ...state.pendingFiles,
+        [studentId]: {
+          ...fileData,
+          previewUrl // Add preview URL for immediate display
+        }
+      },
+      changesMade: true
+    }));
+  },
+
+  // Check if student has a pending file
+  hasPendingFile: (studentId) => {
+    const state = get();
+    return !!state.pendingFiles[studentId];
+  },
+
+  // Get pending file for a student
+  getPendingFile: (studentId) => {
+    const state = get();
+    return state.pendingFiles[studentId];
+  },
+
+  // Clear all pending files
+  clearPendingFiles: () => {
+    set({ pendingFiles: {} });
+  },
 
   saveGrades: async () => {
     const state = get();
@@ -269,6 +321,35 @@ const useGradeStore = create((set, get) => ({
     return await res.json();
   },
 
+  saveVisibility: async () => {
+    const state = get();
+    const { selectedSchedule, gradesVisible } = state;
+    if (!selectedSchedule) return;
+    
+    const courseId = selectedSchedule.courseId;
+    const periodId = selectedSchedule.academicPeriodId;
+    const token = getCookieItem('token');
+    const apiUrl = process.env.REACT_APP_API_URL;
+    
+    const payload = {
+      courseId,
+      periodId,
+      visibility: gradesVisible 
+    };
+    
+    const res = await fetch(`${apiUrl}/grades/visibility`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) throw new Error('Failed to save visibility setting');
+    return await res.json();
+  },
+
   closeGradeDetailsModal: () => set({ gradeDetailsModal: false }),
   closeGradeNotReadyModal: () => set({ gradeNotReadyModal: false }),
   closeStudentsGradeModal: () => set({ studentsGradeModal: false }),
@@ -310,10 +391,19 @@ const useGradeStore = create((set, get) => ({
       });
       if (!res.ok) throw new Error('Failed to fetch students for schedule');
       const data = await res.json();
+
+      let initialVisibility = 'hidden';
+      if (data.students && data.students.length > 0) {
+        const firstStudentWithGrade = data.students.find(s => s.visibility !== undefined);
+        if (firstStudentWithGrade) {
+          initialVisibility = firstStudentWithGrade.visibility;
+        }
+      }
+      
       set({
         students: data.students || [],
         studentsGradeModal: true,
-        gradesVisible: true,
+        gradesVisible: initialVisibility,
         localGrades: [],
         changesMade: false,
         loading: false
@@ -331,10 +421,6 @@ const useGradeStore = create((set, get) => ({
   },
 
   resetStore: () => {
-    const currentState = get();
-    const persistentData = currentState._persistentStudentData;
-    const persistentVisibility = currentState._persistentVisibility;
-
     set({
       selectedSchedule: null,
       gradeNotReadyModal: false,
@@ -342,9 +428,7 @@ const useGradeStore = create((set, get) => ({
       studentsGradeModal: false,
       error: null,
       localGrades: [],
-      changesMade: false,
-      _persistentStudentData: persistentData,
-      _persistentVisibility: persistentVisibility
+      changesMade: false
     });
   }
 }));

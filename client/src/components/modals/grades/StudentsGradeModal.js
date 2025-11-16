@@ -48,6 +48,10 @@ function StudentsGradeModal(props) {
     setLocalGrades,
     handleGradeStudents,
     selectedSchedule,
+    addPendingFile,
+    getPendingFile,
+    hasPendingFile,
+    pendingFiles,
   } = useGradeStore();
 
   const courseInfo = {
@@ -57,105 +61,56 @@ function StudentsGradeModal(props) {
     courseRoom: props.course ? props.course.room : '',
   };
 
-  // Upload handler: sends file to backend
-  const handleDocumentUpload = async (studentGradeId, file, userId) => {
-    const apiUrl = process.env.REACT_APP_API_URL;
-    const token = getCookieItem('token');
-    const formData = new FormData();
-    formData.append('file', file);
+  // Stage file locally 
+  const handleDocumentUpload = (studentGradeId, file, userId) => {
+    const student = students.find(
+      (s) =>
+        (s.user?.userId || s.userId) === userId ||
+        s.user?.id === userId ||
+        s.userId === userId
+    );
+    const studentId = student?.user?.id || student?.userId;
+    const schedule = selectedSchedule || props.schedule;
+    const courseId = schedule?.courseId || schedule?.course?.id;
+    const periodId =
+      schedule?.periodId ||
+      schedule?.academicPeriodId ||
+      schedule?.period?.id;
 
-    // If studentGradeId is null, we need to pass studentId, courseId, and periodId
-    if (
-      !studentGradeId ||
-      studentGradeId === null ||
-      studentGradeId === 'null' ||
-      studentGradeId === 'undefined'
-    ) {
-      // Find the student by userId (the readable ID) to get the actual studentId
-      const student = students.find(
-        (s) =>
-          (s.user?.userId || s.userId) === userId ||
-          s.user?.id === userId ||
-          s.userId === userId
-      );
-      const studentId = student?.user?.id || student?.userId;
-
-      // Get courseId and periodId from selectedSchedule or props.schedule
-      const schedule = selectedSchedule || props.schedule;
-      const courseId = schedule?.courseId || schedule?.course?.id;
-      const periodId =
-        schedule?.periodId ||
-        schedule?.academicPeriodId ||
-        schedule?.period?.id;
-
-      if (studentId && courseId) {
-        formData.append('studentId', studentId);
-        formData.append('courseId', courseId);
-        if (periodId) {
-          formData.append('periodId', periodId);
-        }
-      } else {
-        Swal.fire({
-          title: 'Error!',
-          text: 'Missing required information to upload file. Please ensure the student and course are properly selected.',
-          icon: 'error',
-          confirmButtonColor: '#992525',
-        });
-        return;
-      }
-    }
-
-    Swal.fire({
-      title: 'Uploading...',
-      text: `Uploading "${file.name}" for ${userId || 'student'}`,
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-    });
-
-    try {
-      const res = await fetch(
-        `${apiUrl}/grades/${studentGradeId || 'null'}/files`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            // Do NOT set Content-Type for FormData
-          },
-          body: formData,
-        }
-      );
-      if (!res.ok) {
-        const errorData = await res
-          .json()
-          .catch(() => ({ error: 'Upload failed' }));
-        throw new Error(errorData.error || 'Upload failed');
-      }
-      Swal.fire({
-        title: 'Success!',
-        text: `Document "${file.name}" uploaded successfully for ${
-          userId || 'student'
-        }`,
-        icon: 'success',
-        confirmButtonColor: '#992525',
-      });
-      setChangesMade(true);
-      // Refresh students list to get updated studentGradeId
-      if (selectedSchedule && handleGradeStudents) {
-        await handleGradeStudents(selectedSchedule);
-      }
-    } catch (err) {
+    if (!studentId || !courseId) {
       Swal.fire({
         title: 'Error!',
-        text: 'File upload failed: ' + (err.message || 'Unknown error'),
+        text: 'Missing required information. Please ensure the student and course are properly selected.',
         icon: 'error',
         confirmButtonColor: '#992525',
       });
+      return;
     }
+
+    addPendingFile(studentId, {
+      file,
+      fileName: file.name,
+      studentGradeId,
+      studentId,
+      courseId,
+      periodId,
+      userId,
+    });
   };
 
-  const handleViewDocument = async (studentGradeId) => {
+  const handleViewDocument = async (studentGradeId, studentId) => {
+    const pendingFile = getPendingFile(studentId);
+    if (pendingFile) {
+      // Use the preview URL that was already created in the store
+      setPreviewFile({
+        url: pendingFile.previewUrl,
+        title: `${pendingFile.fileName} (Not Saved Yet)`,
+        isImage: pendingFile.file.type.startsWith('image/'),
+      });
+      setShowPreview(true);
+      return;
+    }
+
     const apiUrl = process.env.REACT_APP_API_URL;
     const token = getCookieItem('token');
     try {
@@ -203,9 +158,14 @@ function StudentsGradeModal(props) {
 
   const handleSaveGrades = async () => {
     try {
+      const pendingCount = Object.keys(pendingFiles).length;
+      const hasPendingFiles = pendingCount > 0;
+
       const result = await Swal.fire({
         title: 'Save Grades',
-        text: 'Are you sure you want to save the grades?',
+        text: hasPendingFiles
+          ? `Are you sure you want to save the grades? ${pendingCount} file(s) will be uploaded.`
+          : 'Are you sure you want to save the grades?',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Save',
@@ -218,7 +178,9 @@ function StudentsGradeModal(props) {
       if (result.isConfirmed) {
         Swal.fire({
           title: 'Saving...',
-          text: 'Please wait while we save the grades.',
+          text: hasPendingFiles
+            ? 'Uploading files and saving grades...'
+            : 'Please wait while we save the grades.',
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
@@ -234,7 +196,9 @@ function StudentsGradeModal(props) {
 
         Swal.fire({
           title: 'Success!',
-          text: 'Grades saved successfully',
+          text: hasPendingFiles
+            ? 'Files uploaded and grades saved successfully'
+            : 'Grades saved successfully',
           icon: 'success',
           confirmButtonColor: '#992525',
         });
@@ -250,10 +214,17 @@ function StudentsGradeModal(props) {
   };
 
   const handleModalClose = async () => {
-    if (changesMade) {
+    const hasPendingFiles = Object.keys(pendingFiles).length > 0;
+
+    if (changesMade || hasPendingFiles) {
+      const pendingCount = Object.keys(pendingFiles).length;
+      const message = hasPendingFiles
+        ? `You have ${pendingCount} pending file upload(s) and unsaved changes. All will be lost. Are you sure you want to close?`
+        : 'Any unsaved changes will be lost. Are you sure you want to close?';
+
       const result = await Swal.fire({
         title: 'Discard Changes?',
-        text: 'Any unsaved changes will be lost. Are you sure you want to close?',
+        text: message,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Discard',
@@ -321,6 +292,8 @@ function StudentsGradeModal(props) {
                     handleDocumentUpload={handleDocumentUpload}
                     handleViewDocument={handleViewDocument}
                     teacherName={props.schedule?.teacherName}
+                    hasPendingFile={hasPendingFile}
+                    getPendingFile={getPendingFile}
                   />
                 </div>
               </div>
@@ -341,10 +314,11 @@ function StudentsGradeModal(props) {
         title={previewFile.title}
         handleClose={() => {
           setShowPreview(false);
-          setPreviewFile({ url: null, title: '' });
+          setPreviewFile({ url: null, title: '', isImage: false });
         }}
         show={showPreview}
         fileUrl={previewFile.url}
+        fileType={previewFile.isImage ? 'image' : undefined}
       />
     </>
   );
