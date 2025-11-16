@@ -1,5 +1,6 @@
 import * as ScheduleModel from "../model/schedule_model.js";
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 import { verifyJWT } from "../utils/jwt.js";
 const prisma = new PrismaClient();
 
@@ -311,7 +312,8 @@ export const createSchedule = async (req, res) => {
     }
 
     // Validate capacity
-    const capacity = req.body.capacity !== undefined ? parseInt(req.body.capacity, 10) : 30;
+    const capacity =
+      req.body.capacity !== undefined ? parseInt(req.body.capacity, 10) : 30;
     if (isNaN(capacity) || capacity < 0 || capacity > 100) {
       return res.status(400).json({
         error: true,
@@ -681,19 +683,19 @@ export const validateBulkStudents = async (req, res) => {
 
     // Check each userId
     for (const userId of userIds) {
-      const user = users.find(u => u.userId === userId);
+      const user = users.find((u) => u.userId === userId);
 
       // User not found
       if (!user) {
         rejected.push({
           userId,
-          reason: 'User not found',
+          reason: "User not found",
         });
         continue;
       }
 
       // User is not a student
-      if (user.role.toLowerCase() !== 'student') {
+      if (user.role.toLowerCase() !== "student") {
         rejected.push({
           userId,
           name: `${user.firstName} ${user.lastName}`,
@@ -722,15 +724,25 @@ export const validateBulkStudents = async (req, res) => {
           `;
 
           for (const existingSchedule of conflictResp) {
-            const existingDays = String(existingSchedule.days).split(',').map(d => d.trim());
-            const newDays = String(days).split(',').map(d => d.trim());
-            const hasOverlappingDays = existingDays.some(d => newDays.includes(d));
+            const existingDays = String(existingSchedule.days)
+              .split(",")
+              .map((d) => d.trim());
+            const newDays = String(days)
+              .split(",")
+              .map((d) => d.trim());
+            const hasOverlappingDays = existingDays.some((d) =>
+              newDays.includes(d)
+            );
 
             if (hasOverlappingDays) {
-              const [sh, sm] = String(time_start).split(':').map(Number);
-              const [eh, em] = String(time_end).split(':').map(Number);
-              const [esh, esm] = String(existingSchedule.time_start).split(':').map(Number);
-              const [eeh, eem] = String(existingSchedule.time_end).split(':').map(Number);
+              const [sh, sm] = String(time_start).split(":").map(Number);
+              const [eh, em] = String(time_end).split(":").map(Number);
+              const [esh, esm] = String(existingSchedule.time_start)
+                .split(":")
+                .map(Number);
+              const [eeh, eem] = String(existingSchedule.time_end)
+                .split(":")
+                .map(Number);
 
               const newStart = sh * 60 + sm;
               const newEnd = eh * 60 + em;
@@ -749,13 +761,15 @@ export const validateBulkStudents = async (req, res) => {
             }
           }
         } catch (error) {
-          console.error('Error checking conflicts:', error);
+          console.error("Error checking conflicts:", error);
         }
       }
 
       const studentData = {
         userId: user.userId,
-        name: `${user.firstName}${user.middleName ? ' ' + user.middleName : ''} ${user.lastName}`,
+        name: `${user.firstName}${
+          user.middleName ? " " + user.middleName : ""
+        } ${user.lastName}`,
         email: user.email,
         dbId: user.id,
       };
@@ -843,7 +857,7 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
       select: { userId: true, deletedAt: true },
     });
 
-    const existingMap = new Map(existing.map(e => [e.userId, e.deletedAt]));
+    const existingMap = new Map(existing.map((e) => [e.userId, e.deletedAt]));
     const toCreate = [];
     const toRestore = [];
 

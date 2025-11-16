@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 /**
@@ -51,7 +52,7 @@ export const getAllSchedules = async (options = {}) => {
         : false,
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
 };
@@ -208,7 +209,7 @@ export const getSchedulesByStudent = async (studentId) => {
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
 };
@@ -359,7 +360,7 @@ export const checkScheduleConflicts = async (
   }
 
   // Parse days array
-  const daysArray = days.split(',').map((d) => d.trim());
+  const daysArray = days.split(",").map((d) => d.trim());
 
   // Find schedules with same teacher and overlapping days
   const conflictingSchedules = await prisma.schedule.findMany({
@@ -383,7 +384,7 @@ export const checkScheduleConflicts = async (
   // Filter for time and date overlaps
   return conflictingSchedules.filter((schedule) => {
     // Check if days overlap
-    const scheduleDays = schedule.days.split(',').map((d) => d.trim());
+    const scheduleDays = schedule.days.split(",").map((d) => d.trim());
     const daysOverlap = daysArray.some((day) => scheduleDays.includes(day));
 
     if (!daysOverlap) return false;

@@ -1,15 +1,16 @@
-import axios from 'axios';
-import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import axios from "axios";
+import crypto from "crypto";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 import {
   PAYMONGO_CONFIG,
   createPayMongoAuthHeaders,
   PAYMONGO_METHOD_MAP,
   PAYMONGO_EVENTS,
-} from '../constants/payment_constants.js';
-import { sendPaymentReceiptEmail } from './paymentEmailService.js';
-import { logSecurityEvent } from '../utils/logger.js';
-import { MODULE_TYPES } from '../constants/module_types.js';
+} from "../constants/payment_constants.js";
+import { sendPaymentReceiptEmail } from "./paymentEmailService.js";
+import { logSecurityEvent } from "../utils/logger.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ const prisma = new PrismaClient();
  * @returns {string} Formatted payment method
  */
 export const getPaymentMethodFromPayMongo = (eventData) => {
-  let paymentMethod = 'Online Payment';
+  let paymentMethod = "Online Payment";
 
   try {
     if (
@@ -51,7 +52,7 @@ export const getPaymentMethodFromPayMongo = (eventData) => {
       paymentMethod = formatPaymentMethod(eventData.attributes.method);
     }
   } catch (error) {
-    console.error('Error extracting payment method from PayMongo data:', error);
+    console.error("Error extracting payment method from PayMongo data:", error);
   }
 
   return paymentMethod;
@@ -63,7 +64,7 @@ export const getPaymentMethodFromPayMongo = (eventData) => {
  * @returns {string} Formatted payment method name
  */
 export const formatPaymentMethod = (rawMethod) => {
-  if (!rawMethod) return 'Online Payment';
+  if (!rawMethod) return "Online Payment";
 
   const lowerMethod = rawMethod.toLowerCase();
   return (
@@ -80,17 +81,17 @@ export const formatPaymentMethod = (rawMethod) => {
 export const verifyWebhookSignature = (req) => {
   const webhookSecret = PAYMONGO_CONFIG.WEBHOOK_SECRET;
   if (!webhookSecret) {
-    throw new Error('Webhook secret not configured');
+    throw new Error("Webhook secret not configured");
   }
 
-  const signature = req.get('Paymongo-Signature');
+  const signature = req.get("Paymongo-Signature");
   if (!signature) {
-    throw new Error('Missing Paymongo-Signature header');
+    throw new Error("Missing Paymongo-Signature header");
   }
 
   // Parse signature
-  const sigParts = signature.split(',').reduce((acc, part) => {
-    const [key, value] = part.split('=');
+  const sigParts = signature.split(",").reduce((acc, part) => {
+    const [key, value] = part.split("=");
     acc[key] = value;
     return acc;
   }, {});
@@ -101,20 +102,20 @@ export const verifyWebhookSignature = (req) => {
 
   // Use test signature for test mode, live signature for live mode
   const expectedSignature =
-    process.env.NODE_ENV === 'production' ? liveSignature : testSignature;
+    process.env.NODE_ENV === "production" ? liveSignature : testSignature;
 
   // Create signature string using raw body when available
   let rawBody = null;
   try {
     if (req.body && Buffer.isBuffer(req.body)) {
-      rawBody = req.body.toString('utf8');
-    } else if (typeof req.body === 'string') {
+      rawBody = req.body.toString("utf8");
+    } else if (typeof req.body === "string") {
       rawBody = req.body;
     } else if (req.rawBody) {
       rawBody =
-        typeof req.rawBody === 'string'
+        typeof req.rawBody === "string"
           ? req.rawBody
-          : Buffer.from(req.rawBody).toString('utf8');
+          : Buffer.from(req.rawBody).toString("utf8");
     } else {
       rawBody = JSON.stringify(req.body);
     }
@@ -125,26 +126,26 @@ export const verifyWebhookSignature = (req) => {
 
   // Generate HMAC
   const computedSignature = crypto
-    .createHmac('sha256', webhookSecret)
+    .createHmac("sha256", webhookSecret)
     .update(signatureString)
-    .digest('hex');
+    .digest("hex");
 
   // Try both test and live signatures to handle environments without NODE_ENV
   const isTestValid = testSignature && computedSignature === testSignature;
   const isLiveValid = liveSignature && computedSignature === liveSignature;
 
   if (!isTestValid && !isLiveValid) {
-    console.error('[WebhookVerify] Signature mismatch', {
+    console.error("[WebhookVerify] Signature mismatch", {
       computed: computedSignature,
       testProvided: testSignature,
       liveProvided: liveSignature,
       hasTestSig: !!testSignature,
       hasLiveSig: !!liveSignature,
     });
-    throw new Error('Invalid webhook signature');
+    throw new Error("Invalid webhook signature");
   }
 
-  console.log('[WebhookVerify] Signature verified successfully', {
+  console.log("[WebhookVerify] Signature verified successfully", {
     usedTestMode: isTestValid,
     usedLiveMode: isLiveValid,
   });
@@ -171,7 +172,7 @@ export const processWebhookEvent = async (event) => {
       const linkPaymentMethod = getPaymentMethodFromPayMongo(eventData);
 
       updateData = {
-        status: 'paid',
+        status: "paid",
         paidAt: new Date(),
         paymentMethod: linkPaymentMethod,
         referenceNumber: eventData.attributes.reference_number || eventData.id,
@@ -200,7 +201,7 @@ export const processWebhookEvent = async (event) => {
         eventData.attributes?.payment_intent_id;
 
       updateData = {
-        status: 'paid',
+        status: "paid",
         paidAt: new Date(),
         paymentMethod: directPaymentMethod,
         referenceNumber: paymentId,
@@ -233,13 +234,13 @@ export const processWebhookEvent = async (event) => {
 
         const recentPayments = await prisma.payments.findMany({
           where: {
-            status: 'pending',
-            paymentMethod: 'Online Payment',
+            status: "pending",
+            paymentMethod: "Online Payment",
             createdAt: {
               gte: new Date(Date.now() - 2 * 60 * 60 * 1000), // Last 2 hours
             },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 5,
         });
 
@@ -274,7 +275,7 @@ export const processWebhookEvent = async (event) => {
     case PAYMONGO_EVENTS.PAYMENT_FAILED:
     case PAYMONGO_EVENTS.LINK_PAYMENT_FAILED:
       updateData = {
-        status: 'failed',
+        status: "failed",
         referenceNumber: eventData.attributes.reference_number || eventData.id,
       };
 
@@ -289,18 +290,18 @@ export const processWebhookEvent = async (event) => {
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
         paymentRecord = await prisma.payments.findFirst({
           where: {
-            status: 'pending',
-            paymentMethod: 'Online Payment',
+            status: "pending",
+            paymentMethod: "Online Payment",
             createdAt: { gte: yesterday },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         });
       }
       break;
 
     case PAYMONGO_EVENTS.LINK_PAYMENT_EXPIRED:
       updateData = {
-        status: 'failed',
+        status: "failed",
       };
 
       paymentRecord = await prisma.payments.findFirst({
@@ -316,12 +317,12 @@ export const processWebhookEvent = async (event) => {
       const linkStatus = eventData.attributes.status;
 
       if (
-        linkStatus === 'failed' ||
-        linkStatus === 'expired' ||
-        linkStatus === 'unpaid'
+        linkStatus === "failed" ||
+        linkStatus === "expired" ||
+        linkStatus === "unpaid"
       ) {
         updateData = {
-          status: 'failed',
+          status: "failed",
         };
 
         paymentRecord = await prisma.payments.findFirst({
@@ -339,7 +340,7 @@ export const processWebhookEvent = async (event) => {
     case PAYMONGO_EVENTS.PAYMENT_CANCELLED:
     case PAYMONGO_EVENTS.PAYMENT_CANCELED:
       updateData = {
-        status: 'cancelled',
+        status: "cancelled",
       };
 
       paymentRecord = await prisma.payments.findFirst({
@@ -355,7 +356,7 @@ export const processWebhookEvent = async (event) => {
       const refundedPaymentId = eventData.attributes.payment_id;
 
       updateData = {
-        status: 'refunded',
+        status: "refunded",
       };
 
       paymentRecord = await prisma.payments.findFirst({
@@ -376,7 +377,7 @@ export const processWebhookEvent = async (event) => {
       console.log(`Unhandled event type: ${eventType}`);
       return {
         handled: false,
-        message: 'Event type not handled but acknowledged',
+        message: "Event type not handled but acknowledged",
       };
   }
 
@@ -391,17 +392,17 @@ export const processWebhookEvent = async (event) => {
       });
 
       // Log payment status change
-      if (updateData.status === 'paid') {
+      if (updateData.status === "paid") {
         // Log successful payment
         const userName = updatedPayment.user
           ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`
-          : 'Guest';
+          : "Guest";
         const userEmail =
-          updatedPayment.paymentEmail || updatedPayment.user?.email || 'N/A';
+          updatedPayment.paymentEmail || updatedPayment.user?.email || "N/A";
 
         await logSecurityEvent(
-          'Payment successful',
-          updatedPayment.user?.userId || 'GUEST',
+          "Payment successful",
+          updatedPayment.user?.userId || "GUEST",
           MODULE_TYPES.PAYMENTS,
           MODULE_TYPES.PAYMENTS,
           `Payment completed: Transaction ID [${
@@ -409,34 +410,34 @@ export const processWebhookEvent = async (event) => {
           }] for ${userName} (${userEmail}). Amount: ₱${parseFloat(
             updatedPayment.amount
           ).toFixed(2)}, Payment Method: ${
-            updatedPayment.paymentMethod || 'Online Payment'
-          }, Fee Type: ${updatedPayment.feeType || 'N/A'}, Reference: ${
-            updatedPayment.referenceNumber || 'N/A'
+            updatedPayment.paymentMethod || "Online Payment"
+          }, Fee Type: ${updatedPayment.feeType || "N/A"}, Reference: ${
+            updatedPayment.referenceNumber || "N/A"
           }`
         );
-      } else if (updateData.status === 'failed') {
+      } else if (updateData.status === "failed") {
         // Log failed payment
         const userName = updatedPayment.user
           ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`
-          : 'Guest';
+          : "Guest";
         const userEmail =
-          updatedPayment.paymentEmail || updatedPayment.user?.email || 'N/A';
+          updatedPayment.paymentEmail || updatedPayment.user?.email || "N/A";
 
         logSecurityEvent(
-          'Payment failed',
-          updatedPayment.user?.userId || 'GUEST',
+          "Payment failed",
+          updatedPayment.user?.userId || "GUEST",
           MODULE_TYPES.PAYMENTS,
           `Payment failed: Transaction ID [${
             updatedPayment.transactionId
           }] for ${userName} (${userEmail}). Amount: ₱${parseFloat(
             updatedPayment.amount
-          ).toFixed(2)}, Reference: ${updatedPayment.referenceNumber || 'N/A'}`
+          ).toFixed(2)}, Reference: ${updatedPayment.referenceNumber || "N/A"}`
         );
       }
 
       // Send receipt email if payment was successful
       if (
-        updateData.status === 'paid' &&
+        updateData.status === "paid" &&
         (updatedPayment.paymentEmail || updatedPayment.user)
       ) {
         const receiptEmail =
@@ -450,7 +451,7 @@ export const processWebhookEvent = async (event) => {
               transactionId: updatedPayment.transactionId,
               referenceNumber: updatedPayment.referenceNumber,
               amount: parseFloat(updatedPayment.amount),
-              paymentMethod: updatedPayment.paymentMethod || 'Online Payment',
+              paymentMethod: updatedPayment.paymentMethod || "Online Payment",
               feeType: updatedPayment.feeType,
               remarks: updatedPayment.remarks,
               paidAt: updatedPayment.paidAt,
@@ -458,8 +459,8 @@ export const processWebhookEvent = async (event) => {
               currency: updatedPayment.currency,
             },
             {
-              firstName: updatedPayment.user?.firstName || 'Student',
-              lastName: updatedPayment.user?.lastName || '',
+              firstName: updatedPayment.user?.firstName || "Student",
+              lastName: updatedPayment.user?.lastName || "",
               email:
                 updatedPayment.paymentEmail ||
                 updatedPayment.user?.email ||
@@ -467,7 +468,7 @@ export const processWebhookEvent = async (event) => {
               student_id: updatedPayment.user?.userId,
               studentName: updatedPayment.user
                 ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`
-                : 'N/A',
+                : "N/A",
             }
           );
 
@@ -481,7 +482,7 @@ export const processWebhookEvent = async (event) => {
             );
           }
         } catch (emailError) {
-          console.error('Error sending payment receipt email:', emailError);
+          console.error("Error sending payment receipt email:", emailError);
         }
       }
     } catch (updateError) {
@@ -493,7 +494,7 @@ export const processWebhookEvent = async (event) => {
 
     return {
       handled: true,
-      message: 'Payment updated successfully',
+      message: "Payment updated successfully",
       paymentId: paymentRecord.id,
     };
   } else if (!paymentRecord) {
@@ -506,13 +507,13 @@ export const processWebhookEvent = async (event) => {
     );
     return {
       handled: false,
-      message: 'Payment record not found',
+      message: "Payment record not found",
     };
   }
 
   return {
     handled: true,
-    message: 'Event processed successfully',
+    message: "Event processed successfully",
   };
 };
 
@@ -527,15 +528,15 @@ export const createPaymentIntent = async (paymentData) => {
   try {
     const {
       amount,
-      currency = 'PHP',
+      currency = "PHP",
       description,
-      payment_method_allowed = ['card', 'gcash', 'paymaya'],
+      payment_method_allowed = ["card", "gcash", "paymaya"],
       payment_method_options,
     } = paymentData;
 
     // Validate amount
     if (!amount || amount <= 0) {
-      throw new Error('Amount is required and must be greater than 0');
+      throw new Error("Amount is required and must be greater than 0");
     }
 
     const requestBody = {
@@ -569,15 +570,15 @@ export const createPaymentIntent = async (paymentData) => {
     };
   } catch (error) {
     console.error(
-      'Error creating PayMongo Payment Intent:',
+      "Error creating PayMongo Payment Intent:",
       error.response?.data || error.message
     );
 
-    let errorMessage = 'Failed to create payment intent';
+    let errorMessage = "Failed to create payment intent";
     if (error.response?.data?.errors) {
       errorMessage = error.response.data.errors
         .map((err) => err.detail || err.title)
-        .join(', ');
+        .join(", ");
     } else if (error.response?.data?.message) {
       errorMessage = error.response.data.message;
     } else if (error.message) {
@@ -616,14 +617,14 @@ export const attachPaymentMethod = async (attachData) => {
       }
     );
 
-    console.log('PayMongo Payment Method attached:', response.data);
+    console.log("PayMongo Payment Method attached:", response.data);
     return {
       success: true,
       data: response.data,
     };
   } catch (error) {
     console.error(
-      'Error attaching PayMongo Payment Method:',
+      "Error attaching PayMongo Payment Method:",
       error.response?.data || error.message
     );
     return {
@@ -647,14 +648,14 @@ export const getPaymentIntent = async (paymentIntentId) => {
       }
     );
 
-    console.log('PayMongo Payment Intent retrieved:', response.data);
+    console.log("PayMongo Payment Intent retrieved:", response.data);
     return {
       success: true,
       data: response.data,
     };
   } catch (error) {
     console.error(
-      'Error retrieving PayMongo Payment Intent:',
+      "Error retrieving PayMongo Payment Intent:",
       error.response?.data || error.message
     );
     return {
@@ -678,14 +679,14 @@ export const getPaymentFromPayMongo = async (paymentId) => {
       }
     );
 
-    console.log('PayMongo Payment retrieved:', response.data);
+    console.log("PayMongo Payment retrieved:", response.data);
     return {
       success: true,
       data: response.data,
     };
   } catch (error) {
     console.error(
-      'Error retrieving PayMongo Payment:',
+      "Error retrieving PayMongo Payment:",
       error.response?.data || error.message
     );
     return {

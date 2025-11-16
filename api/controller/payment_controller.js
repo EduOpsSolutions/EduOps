@@ -11,8 +11,8 @@ import {
   sendSuccess,
   sendError,
   generatePaymentId,
-} from '../services/payment_service.js';
-import { sendPaymentReceiptEmail } from '../services/paymentEmailService.js';
+} from "../services/payment_service.js";
+import { sendPaymentReceiptEmail } from "../services/paymentEmailService.js";
 import {
   verifyWebhookSignature,
   processWebhookEvent,
@@ -20,13 +20,14 @@ import {
   attachPaymentMethod as attachPayMongoPaymentMethod,
   getPaymentIntent as getPayMongoPaymentIntent,
   formatPaymentMethod,
-} from '../services/paymongo_service.js';
+} from "../services/paymongo_service.js";
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
   PAYMENT_INCLUDES,
-} from '../constants/payment_constants.js';
-import { PrismaClient } from '@prisma/client';
+} from "../constants/payment_constants.js";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 
 const prisma = new PrismaClient();
 
@@ -113,7 +114,7 @@ const refreshPaymentStatus = async (req, res) => {
   try {
     const { paymentId } = req.params;
     const result = await getPaymentWithSync(paymentId);
-    return sendSuccess(res, result, 'Payment status refreshed successfully');
+    return sendSuccess(res, result, "Payment status refreshed successfully");
   } catch (error) {
     return sendError(
       res,
@@ -150,7 +151,7 @@ const forceSyncPaymentStatusController = async (req, res) => {
   try {
     const { paymentId } = req.params;
     const result = await forceSyncPaymentStatus(paymentId);
-    return sendSuccess(res, result, 'Payment status force synced successfully');
+    return sendSuccess(res, result, "Payment status force synced successfully");
   } catch (error) {
     return sendError(
       res,
@@ -167,14 +168,14 @@ const manualSyncPayment = async (req, res) => {
     const { paymentIntentId } = req.params;
 
     if (!paymentIntentId) {
-      return sendError(res, 'Payment intent ID is required', 400);
+      return sendError(res, "Payment intent ID is required", 400);
     }
 
     // Get the latest status from PayMongo
     const paymongoResult = await getPayMongoPaymentIntent(paymentIntentId);
 
     if (!paymongoResult?.success) {
-      return sendError(res, 'Failed to get payment status from PayMongo', 500);
+      return sendError(res, "Failed to get payment status from PayMongo", 500);
     }
 
     // Find the payment record
@@ -184,16 +185,16 @@ const manualSyncPayment = async (req, res) => {
     });
 
     if (!payment) {
-      return sendError(res, 'Payment record not found', 404);
+      return sendError(res, "Payment record not found", 404);
     }
 
     const paymongoStatus = paymongoResult.data?.data?.attributes?.status;
 
-    if (paymongoStatus === 'succeeded' && payment.status === 'pending') {
+    if (paymongoStatus === "succeeded" && payment.status === "pending") {
       const updatedPayment = await prisma.payments.update({
         where: { id: payment.id },
         data: {
-          status: 'paid',
+          status: "paid",
           paidAt: new Date(),
         },
         include: PAYMENT_INCLUDES.WITH_USER,
@@ -201,7 +202,9 @@ const manualSyncPayment = async (req, res) => {
 
       // Send receipt email when payment status changes to paid
       if (updatedPayment.user && updatedPayment.user.email) {
-        console.log(`Sending payment receipt email to ${updatedPayment.user.email} after manual sync`);
+        console.log(
+          `Sending payment receipt email to ${updatedPayment.user.email} after manual sync`
+        );
 
         try {
           const emailSent = await sendPaymentReceiptEmail(
@@ -210,29 +213,36 @@ const manualSyncPayment = async (req, res) => {
               transactionId: updatedPayment.transactionId,
               referenceNumber: updatedPayment.referenceNumber,
               amount: parseFloat(updatedPayment.amount),
-              paymentMethod: updatedPayment.paymentMethod || 'Online Payment',
+              paymentMethod: updatedPayment.paymentMethod || "Online Payment",
               feeType: updatedPayment.feeType,
               remarks: updatedPayment.remarks,
               paidAt: updatedPayment.paidAt,
               createdAt: updatedPayment.createdAt,
-              currency: updatedPayment.currency || 'PHP'
+              currency: updatedPayment.currency || "PHP",
             },
             {
               studentName: `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`,
               firstName: updatedPayment.user.firstName,
               lastName: updatedPayment.user.lastName,
               email: updatedPayment.user.email,
-              student_id: updatedPayment.user.userId
+              student_id: updatedPayment.user.userId,
             }
           );
 
           if (emailSent) {
-            console.log(`Payment receipt email sent successfully to ${updatedPayment.user.email}`);
+            console.log(
+              `Payment receipt email sent successfully to ${updatedPayment.user.email}`
+            );
           } else {
-            console.error(`Failed to send payment receipt email to ${updatedPayment.user.email}`);
+            console.error(
+              `Failed to send payment receipt email to ${updatedPayment.user.email}`
+            );
           }
         } catch (emailError) {
-          console.error('Error sending payment receipt email after manual sync:', emailError);
+          console.error(
+            "Error sending payment receipt email after manual sync:",
+            emailError
+          );
         }
       }
 
@@ -240,11 +250,11 @@ const manualSyncPayment = async (req, res) => {
         res,
         {
           paymentId: payment.id,
-          oldStatus: 'pending',
-          newStatus: 'paid',
+          oldStatus: "pending",
+          newStatus: "paid",
           paymongoStatus: paymongoStatus,
         },
-        'Payment status synced successfully'
+        "Payment status synced successfully"
       );
     }
 
@@ -255,9 +265,9 @@ const manualSyncPayment = async (req, res) => {
         status: payment.status,
         paymongoStatus: paymongoStatus,
         synced: false,
-        reason: 'Status already up to date',
+        reason: "Status already up to date",
       },
-      'Payment status is already up to date'
+      "Payment status is already up to date"
     );
   } catch (error) {
     return sendError(
@@ -273,7 +283,7 @@ const manualSyncPayment = async (req, res) => {
 const bulkSyncPendingPaymentsController = async (req, res) => {
   try {
     const result = await bulkSyncPendingPayments();
-    return sendSuccess(res, result, 'Bulk sync of pending payments completed');
+    return sendSuccess(res, result, "Bulk sync of pending payments completed");
   } catch (error) {
     return sendError(
       res,
@@ -288,7 +298,7 @@ const bulkSyncPendingPaymentsController = async (req, res) => {
 const cleanupOrphanedPaymentsController = async (req, res) => {
   try {
     const result = await cleanupOrphanedPayments();
-    return sendSuccess(res, result, 'Orphaned payments cleanup completed');
+    return sendSuccess(res, result, "Orphaned payments cleanup completed");
   } catch (error) {
     return sendError(
       res,
@@ -305,8 +315,8 @@ const handleWebhook = async (req, res) => {
     // Read raw body if provided by raw parser; otherwise use JSON body
     let rawBodyString = null;
     if (req.body && Buffer.isBuffer(req.body)) {
-      rawBodyString = req.body.toString('utf8');
-    } else if (typeof req.body === 'string') {
+      rawBodyString = req.body.toString("utf8");
+    } else if (typeof req.body === "string") {
       rawBodyString = req.body;
     }
 
@@ -316,7 +326,7 @@ const handleWebhook = async (req, res) => {
     // Immediately ACK success
     res.status(200).json({
       statusCode: 200,
-      body: { message: 'SUCCESS' },
+      body: { message: "SUCCESS" },
     });
 
     // Process asynchronously after ACK
@@ -324,31 +334,31 @@ const handleWebhook = async (req, res) => {
       const event = rawBodyString ? JSON.parse(rawBodyString) : req.body;
       await processWebhookEvent(event);
     } catch (processingError) {
-      console.error('Webhook processing error:', processingError);
+      console.error("Webhook processing error:", processingError);
     }
     return; // response already sent
   } catch (error) {
-    console.error('[Webhook] Error processing webhook:', error.message);
-    console.error('[Webhook] Error stack:', error.stack);
+    console.error("[Webhook] Error processing webhook:", error.message);
+    console.error("[Webhook] Error stack:", error.stack);
 
     // Handle specific webhook errors
-    if (error.message.includes('Webhook secret not configured')) {
-      console.error('[Webhook] Webhook secret not configured in environment');
-      return res.status(500).json({ error: 'Webhook secret not configured' });
+    if (error.message.includes("Webhook secret not configured")) {
+      console.error("[Webhook] Webhook secret not configured in environment");
+      return res.status(500).json({ error: "Webhook secret not configured" });
     }
 
     if (
-      error.message.includes('Missing') ||
-      error.message.includes('Invalid')
+      error.message.includes("Missing") ||
+      error.message.includes("Invalid")
     ) {
-      console.error('[Webhook] Signature verification failed:', error.message);
+      console.error("[Webhook] Signature verification failed:", error.message);
       return res.status(400).json({ error: error.message });
     }
 
-    console.error('[Webhook] Acknowledging webhook with error state');
+    console.error("[Webhook] Acknowledging webhook with error state");
     return res.status(200).json({
       statusCode: 200,
-      body: { message: 'ERROR_ACKNOWLEDGED' },
+      body: { message: "ERROR_ACKNOWLEDGED" },
     });
   }
 };
@@ -394,7 +404,7 @@ const createPaymentIntent = async (req, res) => {
       feeType,
       paymentId,
     } = req.body;
-    console.log('[CreateIntent] incoming body:', {
+    console.log("[CreateIntent] incoming body:", {
       userId,
       amount,
       feeType,
@@ -407,25 +417,25 @@ const createPaymentIntent = async (req, res) => {
     if (!amount || amount <= 0) {
       return sendError(
         res,
-        'Amount is required and must be greater than 0',
+        "Amount is required and must be greater than 0",
         400
       );
     }
 
     if (!userId) {
-      return sendError(res, 'User ID is required', 400);
+      return sendError(res, "User ID is required", 400);
     }
 
     let paymongoDescription = remarks || description;
     if (!paymongoDescription && purpose && (firstName || lastName)) {
-      paymongoDescription = `${purpose} - Payment for ${firstName || ''} ${
-        lastName || ''
+      paymongoDescription = `${purpose} - Payment for ${firstName || ""} ${
+        lastName || ""
       }`.trim();
     }
-    if (!paymongoDescription) paymongoDescription = 'Payment';
+    if (!paymongoDescription) paymongoDescription = "Payment";
 
     console.log(
-      '[CreateIntent] calling PayMongo createPaymentIntent with description:',
+      "[CreateIntent] calling PayMongo createPaymentIntent with description:",
       paymongoDescription
     );
     const result = await createPayMongoPaymentIntent({
@@ -436,7 +446,7 @@ const createPaymentIntent = async (req, res) => {
     if (result.success) {
       const paymentIntentId = result.data?.data?.id;
       console.log(
-        '[CreateIntent] paymongo response success, intentId:',
+        "[CreateIntent] paymongo response success, intentId:",
         paymentIntentId
       );
 
@@ -446,7 +456,7 @@ const createPaymentIntent = async (req, res) => {
             const existing = await prisma.payments.findUnique({
               where: { id: paymentId },
             });
-            console.log('[CreateIntent] reuse check existing payment:', {
+            console.log("[CreateIntent] reuse check existing payment:", {
               paymentId,
               exists: !!existing,
               status: existing?.status,
@@ -454,18 +464,18 @@ const createPaymentIntent = async (req, res) => {
             if (!existing) {
               return sendError(
                 res,
-                'Payment record not found for provided paymentId',
+                "Payment record not found for provided paymentId",
                 404
               );
             }
-            if (existing.status !== 'pending') {
+            if (existing.status !== "pending") {
               console.warn(
-                '[CreateIntent] payment not pending, lock enforced',
+                "[CreateIntent] payment not pending, lock enforced",
                 { paymentId, status: existing.status }
               );
               return sendError(
                 res,
-                'Payment link is locked or already processed',
+                "Payment link is locked or already processed",
                 409
               );
             }
@@ -475,27 +485,27 @@ const createPaymentIntent = async (req, res) => {
                 paymentIntentId: paymentIntentId,
                 remarks: existing.remarks || paymongoDescription,
                 feeType:
-                  existing.feeType || feeType || purpose || 'tuition_fee',
+                  existing.feeType || feeType || purpose || "tuition_fee",
               },
             });
-            console.log('[CreateIntent] reused existing pending payment', {
+            console.log("[CreateIntent] reused existing pending payment", {
               paymentId,
               paymentIntentId,
             });
           } catch (dbError) {
             console.error(
-              'Failed to update existing payment record with intent:',
+              "Failed to update existing payment record with intent:",
               dbError
             );
           }
         } else {
           const customTransactionId = await generatePaymentId();
-          console.log('[CreateIntent] creating new pending payment row', {
+          console.log("[CreateIntent] creating new pending payment row", {
             customTransactionId,
           });
 
           let finalUserId = userId;
-          if (typeof userId === 'string' && userId.length <= 20) {
+          if (typeof userId === "string" && userId.length <= 20) {
             try {
               const user = await prisma.users.findUnique({
                 where: { userId: userId },
@@ -506,7 +516,7 @@ const createPaymentIntent = async (req, res) => {
                 finalUserId = user.id;
               }
             } catch (userError) {
-              console.error('Error finding user:', userError);
+              console.error("Error finding user:", userError);
             }
           }
           try {
@@ -515,16 +525,16 @@ const createPaymentIntent = async (req, res) => {
                 transactionId: customTransactionId,
                 userId: finalUserId,
                 amount: parseFloat(amount),
-                status: 'pending',
-                paymentMethod: 'Online Payment',
+                status: "pending",
+                paymentMethod: "Online Payment",
                 paymentIntentId: paymentIntentId,
-                feeType: feeType || purpose || 'tuition_fee',
+                feeType: feeType || purpose || "tuition_fee",
                 remarks: paymongoDescription,
               },
             });
-            console.log('[CreateIntent] new pending payment inserted OK');
+            console.log("[CreateIntent] new pending payment inserted OK");
           } catch (dbError) {
-            console.error('Failed to create payment record:', dbError);
+            console.error("Failed to create payment record:", dbError);
           }
         }
       }
@@ -532,17 +542,17 @@ const createPaymentIntent = async (req, res) => {
       return sendSuccess(
         res,
         result.data,
-        'Payment intent created successfully'
+        "Payment intent created successfully"
       );
     } else {
       console.warn(
-        '[CreateIntent] paymongo response failed:',
+        "[CreateIntent] paymongo response failed:",
         result.message || result.error
       );
       return sendError(res, result.message, 500, result.error);
     }
   } catch (error) {
-    console.error('Create payment intent error', error);
+    console.error("Create payment intent error", error);
     return sendError(
       res,
       error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
@@ -555,7 +565,7 @@ const createPaymentIntent = async (req, res) => {
 /* Attach payment method to payment intent */
 const attachPaymentMethod = async (req, res) => {
   try {
-    console.log('[AttachMethod] incoming body:', {
+    console.log("[AttachMethod] incoming body:", {
       hasPi: !!req.body?.payment_intent_id,
       hasPm: !!req.body?.payment_method_id,
       hasClient: !!req.body?.client_key,
@@ -566,23 +576,23 @@ const attachPaymentMethod = async (req, res) => {
         result.data?.data?.data?.attributes?.status ||
         result.data?.data?.attributes?.status;
       console.log(
-        '[AttachMethod] paymongo attach success. intent status:',
+        "[AttachMethod] paymongo attach success. intent status:",
         status
       );
       return sendSuccess(
         res,
         result.data,
-        'Payment method attached successfully'
+        "Payment method attached successfully"
       );
     } else {
       console.warn(
-        '[AttachMethod] paymongo attach failed:',
+        "[AttachMethod] paymongo attach failed:",
         result.message || result.error
       );
       return sendError(res, result.message, 500, result.error);
     }
   } catch (error) {
-    console.error('Attach payment method error:', error);
+    console.error("Attach payment method error:", error);
     return sendError(
       res,
       error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
@@ -596,11 +606,11 @@ const attachPaymentMethod = async (req, res) => {
 const checkPaymentStatus = async (req, res) => {
   try {
     const { paymentIntentId } = req.params;
-    console.log('[CheckStatus] start for intent:', paymentIntentId);
+    console.log("[CheckStatus] start for intent:", paymentIntentId);
 
     const paymongoResult = await getPayMongoPaymentIntent(paymentIntentId);
     console.log(
-      '[CheckStatus] paymongo intent fetch ok:',
+      "[CheckStatus] paymongo intent fetch ok:",
       !!paymongoResult?.success
     );
 
@@ -631,19 +641,19 @@ const checkPaymentStatus = async (req, res) => {
             p?.data?.attributes?.reference_number || null;
         }
       }
-      console.log('[CheckStatus] derived paymongo payment/ref:', {
+      console.log("[CheckStatus] derived paymongo payment/ref:", {
         intentDerivedPaymentId,
         intentDerivedReference,
       });
     } catch (e) {
-      console.warn('Unable to derive payment id from intent:', e);
+      console.warn("Unable to derive payment id from intent:", e);
     }
 
     let payment = await prisma.payments.findFirst({
       where: { paymentIntentId: paymentIntentId },
       include: PAYMENT_INCLUDES.WITH_USER,
     });
-    console.log('[CheckStatus] db payment by intent:', {
+    console.log("[CheckStatus] db payment by intent:", {
       found: !!payment,
       status: payment?.status,
     });
@@ -653,7 +663,7 @@ const checkPaymentStatus = async (req, res) => {
         where: { referenceNumber: paymentIntentId },
         include: PAYMENT_INCLUDES.WITH_USER,
       });
-      console.log('[CheckStatus] db payment by referenceNumber:', {
+      console.log("[CheckStatus] db payment by referenceNumber:", {
         found: !!payment,
         status: payment?.status,
       });
@@ -673,11 +683,11 @@ const checkPaymentStatus = async (req, res) => {
           status: true,
           createdAt: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 10,
       });
       const unmatchedPayment = recentPayments.find(
-        (p) => !p.paymentIntentId && p.status === 'pending'
+        (p) => !p.paymentIntentId && p.status === "pending"
       );
       if (unmatchedPayment) {
         try {
@@ -688,12 +698,12 @@ const checkPaymentStatus = async (req, res) => {
               referenceNumber: intentDerivedPaymentId || intentDerivedReference,
               status:
                 paymongoResult?.success &&
-                paymongoResult.data?.data?.attributes?.status === 'succeeded'
-                  ? 'paid'
-                  : 'pending',
+                paymongoResult.data?.data?.attributes?.status === "succeeded"
+                  ? "paid"
+                  : "pending",
               paidAt:
                 paymongoResult?.success &&
-                paymongoResult.data?.data?.attributes?.status === 'succeeded'
+                paymongoResult.data?.data?.attributes?.status === "succeeded"
                   ? new Date()
                   : null,
             },
@@ -701,7 +711,7 @@ const checkPaymentStatus = async (req, res) => {
           });
         } catch (updateError) {
           console.error(
-            'Failed to update existing payment record:',
+            "Failed to update existing payment record:",
             updateError
           );
         }
@@ -719,10 +729,10 @@ const checkPaymentStatus = async (req, res) => {
           const customTransactionId = await generatePaymentId();
 
           let userId = null;
-          let feeType = 'unknown';
-          let remarks = 'Payment created from PayMongo data';
+          let feeType = "unknown";
+          let remarks = "Payment created from PayMongo data";
 
-          const description = intentData?.description || '';
+          const description = intentData?.description || "";
           console.log(`PayMongo description: ${description}`);
 
           const recentPayments = await prisma.payments.findMany({
@@ -737,13 +747,13 @@ const checkPaymentStatus = async (req, res) => {
               feeType: true,
               remarks: true,
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             take: 1,
           });
 
           if (recentPayments.length > 0) {
             userId = recentPayments[0].userId;
-            feeType = recentPayments[0].feeType || 'unknown';
+            feeType = recentPayments[0].feeType || "unknown";
             remarks = recentPayments[0].remarks || description;
           } else {
             const existingUser = await prisma.users.findFirst({
@@ -759,13 +769,13 @@ const checkPaymentStatus = async (req, res) => {
               transactionId: customTransactionId,
               userId: userId,
               amount: paymongoAmount || 0,
-              status: intentData?.status === 'succeeded' ? 'paid' : 'pending',
-              paymentMethod: 'Online Payment',
+              status: intentData?.status === "succeeded" ? "paid" : "pending",
+              paymentMethod: "Online Payment",
               paymentIntentId: paymentIntentId,
               referenceNumber: intentDerivedPaymentId || intentDerivedReference,
               feeType: feeType,
               remarks: remarks,
-              paidAt: intentData?.status === 'succeeded' ? new Date() : null,
+              paidAt: intentData?.status === "succeeded" ? new Date() : null,
             },
             include: PAYMENT_INCLUDES.WITH_USER,
           });
@@ -774,7 +784,7 @@ const checkPaymentStatus = async (req, res) => {
           );
         } catch (createError) {
           console.error(
-            'Failed to create payment record from PayMongo data:',
+            "Failed to create payment record from PayMongo data:",
             createError
           );
         }
@@ -783,7 +793,7 @@ const checkPaymentStatus = async (req, res) => {
       if (!payment) {
         return sendError(
           res,
-          'Payment not found. The payment may still be processing. Please wait for the webhook or contact support.',
+          "Payment not found. The payment may still be processing. Please wait for the webhook or contact support.",
           404
         );
       }
@@ -794,10 +804,10 @@ const checkPaymentStatus = async (req, res) => {
     );
 
     let finalPaymentMethod = payment.paymentMethod;
-    if (finalPaymentMethod === 'Online Payment' && paymongoResult?.success) {
+    if (finalPaymentMethod === "Online Payment" && paymongoResult?.success) {
       const intentData = paymongoResult.data?.data?.attributes;
       console.log(
-        'Attempting to extract payment method from PayMongo intent data:',
+        "Attempting to extract payment method from PayMongo intent data:",
         JSON.stringify(intentData, null, 2)
       );
 
@@ -806,7 +816,7 @@ const checkPaymentStatus = async (req, res) => {
       if (intentData?.payments && intentData.payments.length > 0) {
         const paymentData = intentData.payments[0];
         console.log(
-          'Payment data from payments array:',
+          "Payment data from payments array:",
           JSON.stringify(paymentData, null, 2)
         );
 
@@ -841,31 +851,33 @@ const checkPaymentStatus = async (req, res) => {
           });
           console.log(`Updated payment method in database: ${extractedMethod}`);
         } catch (updateError) {
-          console.error('Failed to update payment method:', updateError);
+          console.error("Failed to update payment method:", updateError);
         }
       } else {
-        console.log('Could not extract payment method from PayMongo response');
+        console.log("Could not extract payment method from PayMongo response");
       }
     }
 
-    if (payment.status === 'pending' && paymongoResult?.success) {
+    if (payment.status === "pending" && paymongoResult?.success) {
       const paymongoStatus = paymongoResult.data?.data?.attributes?.status;
 
-      if (paymongoStatus === 'succeeded') {
+      if (paymongoStatus === "succeeded") {
         try {
           await prisma.payments.update({
             where: { id: payment.id },
             data: {
-              status: 'paid',
+              status: "paid",
               paidAt: new Date(),
             },
           });
-          payment.status = 'paid';
+          payment.status = "paid";
           payment.paidAt = new Date();
 
           // Send receipt email when payment status changes to paid
           if (payment.user && payment.user.email) {
-            console.log(`Sending payment receipt email to ${payment.user.email} after status sync`);
+            console.log(
+              `Sending payment receipt email to ${payment.user.email} after status sync`
+            );
 
             try {
               const emailSent = await sendPaymentReceiptEmail(
@@ -879,38 +891,45 @@ const checkPaymentStatus = async (req, res) => {
                   remarks: payment.remarks,
                   paidAt: payment.paidAt,
                   createdAt: payment.createdAt,
-                  currency: payment.currency || 'PHP'
+                  currency: payment.currency || "PHP",
                 },
                 {
                   studentName: `${payment.user.firstName} ${payment.user.lastName}`,
                   firstName: payment.user.firstName,
                   lastName: payment.user.lastName,
                   email: payment.user.email,
-                  student_id: payment.user.userId
+                  student_id: payment.user.userId,
                 }
               );
 
               if (emailSent) {
-                console.log(`Payment receipt email sent successfully to ${payment.user.email}`);
+                console.log(
+                  `Payment receipt email sent successfully to ${payment.user.email}`
+                );
               } else {
-                console.error(`Failed to send payment receipt email to ${payment.user.email}`);
+                console.error(
+                  `Failed to send payment receipt email to ${payment.user.email}`
+                );
               }
             } catch (emailError) {
-              console.error('Error sending payment receipt email after status sync:', emailError);
+              console.error(
+                "Error sending payment receipt email after status sync:",
+                emailError
+              );
             }
           }
         } catch (updateError) {
-          console.error('Failed to update payment status:', updateError);
+          console.error("Failed to update payment status:", updateError);
         }
       }
     }
 
     const statusMap = {
-      paid: 'succeeded',
-      pending: 'awaiting_payment_method',
-      failed: 'failed',
-      cancelled: 'cancelled',
-      refunded: 'refunded',
+      paid: "succeeded",
+      pending: "awaiting_payment_method",
+      failed: "failed",
+      cancelled: "cancelled",
+      refunded: "refunded",
     };
 
     const responseData = {
@@ -922,7 +941,7 @@ const checkPaymentStatus = async (req, res) => {
       paymongoPaymentId: undefined,
       referenceNumber: payment.referenceNumber,
       paymentMethod: finalPaymentMethod,
-      description: payment.remarks || 'Payment',
+      description: payment.remarks || "Payment",
       paidAt: payment.paidAt,
       user: payment.user
         ? {
@@ -935,7 +954,7 @@ const checkPaymentStatus = async (req, res) => {
 
     return sendSuccess(res, responseData);
   } catch (error) {
-    console.error('Check payment status error:', error);
+    console.error("Check payment status error:", error);
     return sendError(
       res,
       error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
@@ -950,7 +969,7 @@ const cancelPayment = async (req, res) => {
     const { paymentId } = req.params;
 
     if (!paymentId) {
-      return sendError(res, 'Payment ID is required', 400);
+      return sendError(res, "Payment ID is required", 400);
     }
 
     console.log(`Attempting to cancel payment: ${paymentId}`);
@@ -962,23 +981,23 @@ const cancelPayment = async (req, res) => {
     });
 
     if (!payment) {
-      return sendError(res, 'Payment not found', 404);
+      return sendError(res, "Payment not found", 404);
     }
 
     // Check if payment can be cancelled
-    if (payment.status === 'paid') {
-      return sendError(res, 'Cannot cancel a paid payment', 400);
+    if (payment.status === "paid") {
+      return sendError(res, "Cannot cancel a paid payment", 400);
     }
 
-    if (payment.status === 'cancelled') {
-      return sendError(res, 'Payment is already cancelled', 400);
+    if (payment.status === "cancelled") {
+      return sendError(res, "Payment is already cancelled", 400);
     }
 
     // Update payment status to cancelled
     const updatedPayment = await prisma.payments.update({
       where: { id: payment.id },
       data: {
-        status: 'cancelled',
+        status: "cancelled",
         updatedAt: new Date(),
       },
     });
@@ -995,10 +1014,10 @@ const cancelPayment = async (req, res) => {
         status: updatedPayment.status,
         cancelledAt: updatedPayment.updatedAt,
       },
-      'Payment cancelled successfully'
+      "Payment cancelled successfully"
     );
   } catch (error) {
-    console.error('Cancel payment error:', error);
+    console.error("Cancel payment error:", error);
     return sendError(
       res,
       error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,

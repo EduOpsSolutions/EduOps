@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 // List all requisites for a course
@@ -8,15 +9,20 @@ export const listRequisites = async (req, res) => {
     let where = {};
     if (courseIds) {
       // Support comma-separated list
-      const ids = courseIds.split(',').map(id => id.trim()).filter(Boolean);
+      const ids = courseIds
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
       if (ids.length === 0) {
-        return res.status(400).json({ error: 'No valid courseIds provided.' });
+        return res.status(400).json({ error: "No valid courseIds provided." });
       }
       where.courseId = { in: ids };
     } else if (courseId) {
       where.courseId = courseId;
     } else {
-      return res.status(400).json({ error: 'Missing courseId or courseIds query parameter.' });
+      return res
+        .status(400)
+        .json({ error: "Missing courseId or courseIds query parameter." });
     }
     const requisites = await prisma.course_requisite.findMany({
       where,
@@ -26,7 +32,7 @@ export const listRequisites = async (req, res) => {
     });
     res.json(requisites);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch requisites.' });
+    res.status(500).json({ error: "Failed to fetch requisites." });
   }
 };
 
@@ -36,7 +42,9 @@ export const createRequisite = async (req, res) => {
   try {
     // Prevent self-requisite
     if (courseId === requisiteCourseId) {
-      return res.status(400).json({ error: 'A course cannot be its own requisite.' });
+      return res
+        .status(400)
+        .json({ error: "A course cannot be its own requisite." });
     }
     // Prevent duplicate
     const existing = await prisma.course_requisite.findFirst({
@@ -46,7 +54,9 @@ export const createRequisite = async (req, res) => {
       },
     });
     if (existing) {
-      return res.status(400).json({ error: 'This course-requisite pair already exists.' });
+      return res
+        .status(400)
+        .json({ error: "This course-requisite pair already exists." });
     }
     const newRequisite = await prisma.course_requisite.create({
       data: {
@@ -58,7 +68,7 @@ export const createRequisite = async (req, res) => {
     });
     res.status(201).json(newRequisite);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create requisite.' });
+    res.status(500).json({ error: "Failed to create requisite." });
   }
 };
 
@@ -77,7 +87,7 @@ export const updateRequisite = async (req, res) => {
     });
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update requisite.' });
+    res.status(500).json({ error: "Failed to update requisite." });
   }
 };
 
@@ -88,13 +98,13 @@ export const deleteRequisite = async (req, res) => {
     await prisma.course_requisite.delete({ where: { id } });
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete requisite.' });
+    res.status(500).json({ error: "Failed to delete requisite." });
   }
 };
 
 export default {
-    listRequisites,
-    createRequisite,
-    updateRequisite,
-    deleteRequisite
-}
+  listRequisites,
+  createRequisite,
+  updateRequisite,
+  deleteRequisite,
+};

@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 // Create a new student fee
@@ -11,7 +12,7 @@ export const createStudentFee = async (req, res) => {
     res.status(201).json(studentFee);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to create student fee.' });
+    res.status(500).json({ error: "Failed to create student fee." });
   }
 };
 
@@ -28,7 +29,7 @@ export const listStudentFees = async (req, res) => {
     res.json(studentFees);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch student fees.' });
+    res.status(500).json({ error: "Failed to fetch student fees." });
   }
 };
 
@@ -36,12 +37,15 @@ export const listStudentFees = async (req, res) => {
 export const getStudentFee = async (req, res) => {
   try {
     const { id } = req.params;
-    const studentFee = await prisma.student_fee.findFirst({ where: { id, deletedAt: null } });
-    if (!studentFee) return res.status(404).json({ error: 'Student fee not found.' });
+    const studentFee = await prisma.student_fee.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!studentFee)
+      return res.status(404).json({ error: "Student fee not found." });
     res.json(studentFee);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch student fee.' });
+    res.status(500).json({ error: "Failed to fetch student fee." });
   }
 };
 
@@ -51,13 +55,16 @@ export const updateStudentFee = async (req, res) => {
     const { id } = req.params;
     const data = req.body;
     // Only update if not soft-deleted
-    const existing = await prisma.student_fee.findFirst({ where: { id, deletedAt: null } });
-    if (!existing) return res.status(404).json({ error: 'Student fee not found.' });
+    const existing = await prisma.student_fee.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Student fee not found." });
     const studentFee = await prisma.student_fee.update({ where: { id }, data });
     res.json(studentFee);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to update student fee.' });
+    res.status(500).json({ error: "Failed to update student fee." });
   }
 };
 
@@ -65,13 +72,19 @@ export const updateStudentFee = async (req, res) => {
 export const deleteStudentFee = async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = await prisma.student_fee.findFirst({ where: { id, deletedAt: null } });
-    if (!existing) return res.status(404).json({ error: 'Student fee not found.' });
-    await prisma.student_fee.update({ where: { id }, data: { deletedAt: new Date() } });
+    const existing = await prisma.student_fee.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!existing)
+      return res.status(404).json({ error: "Student fee not found." });
+    await prisma.student_fee.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
     res.status(204).end();
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to delete student fee.' });
+    res.status(500).json({ error: "Failed to delete student fee." });
   }
 };
 
