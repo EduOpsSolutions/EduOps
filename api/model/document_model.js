@@ -89,6 +89,26 @@ class DocumentModel {
 
   // Document Requests CRUD
 
+  // Helper method to get validation signature for a completed document
+  static async getValidationSignatureForRequest(request) {
+    if (!request || !request.fulfilledDocumentUrl) {
+      return null;
+    }
+
+    const validation = await prisma.document_validation.findFirst({
+      where: {
+        OR: [
+          { filePath: request.fulfilledDocumentUrl },
+          { documentName: { contains: `${request.user?.firstName} ${request.user?.lastName}` } }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 1
+    });
+
+    return validation?.fileSignature || null;
+  }
+
   static async createDocumentRequest(data) {
     try {
       const documentExists = await prisma.document_template.findUnique({
@@ -138,7 +158,7 @@ class DocumentModel {
   }
 
   static async getAllDocumentRequests() {
-    return await prisma.document_request.findMany({
+    const requests = await prisma.document_request.findMany({
       include: {
         document: true,
         user: {
@@ -153,10 +173,17 @@ class DocumentModel {
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    // Add validation signature for completed documents
+    for (const request of requests) {
+      request.validationSignature = await this.getValidationSignatureForRequest(request);
+    }
+
+    return requests;
   }
 
   static async getDocumentRequestById(id) {
-    return await prisma.document_request.findUnique({
+    const request = await prisma.document_request.findUnique({
       where: { id },
       include: {
         document: true,
@@ -172,16 +199,39 @@ class DocumentModel {
         }
       }
     });
+
+    // Add validation signature for completed documents
+    if (request) {
+      request.validationSignature = await this.getValidationSignatureForRequest(request);
+    }
+
+    return request;
   }
 
   static async getDocumentRequestsByStudent(studentId) {
-    return await prisma.document_request.findMany({
+    const requests = await prisma.document_request.findMany({
       where: { userId: studentId },
       include: {
-        document: true
+        document: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            email: true,
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    // Add validation signature for completed documents
+    for (const request of requests) {
+      request.validationSignature = await this.getValidationSignatureForRequest(request);
+    }
+
+    return requests;
   }
 
   static async updateDocumentRequestStatus(id, status, remarks, paymentId = null) {

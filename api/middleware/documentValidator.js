@@ -126,18 +126,30 @@ const validateUpdateDocumentRequestStatus = [
         .withMessage('Request ID must be provided'),
     
     body('status')
-        .isIn(['in_process', 'in_transit', 'delivered', 'failed', 'fulfilled', 'In Process', 'In Transit', 'Delivered', 'Failed', 'Fulfilled'])
-        .withMessage('Invalid status'),
+        .custom((value) => {
+            const validStatuses = ['in_process', 'in_transit', 'delivered', 'failed', 'fulfilled'];
+            const normalizedValue = value.toLowerCase().replace(/\s+/g, '_');
+            return validStatuses.includes(normalizedValue);
+        })
+        .withMessage('Invalid status. Must be one of: in_process, in_transit, delivered, failed, fulfilled')
+        .customSanitizer((value) => {
+            return value.toLowerCase().replace(/\s+/g, '_');
+        }),
     
     body('remarks')
-        .optional()
+        .optional({ checkFalsy: true })
+        .isString()
         .isLength({ max: 500 })
         .withMessage('Remarks must be less than 500 characters'),
     
     body('paymentId')
-        .optional()
-        .isString()
-        .withMessage('Payment ID must be a valid string'),
+        .optional({ nullable: true, checkFalsy: true })
+        .custom((value) => {
+            // Allow null, undefined, or valid string
+            if (value === null || value === undefined || value === '') return true;
+            return typeof value === 'string';
+        })
+        .withMessage('Payment ID must be a valid string or null'),
     
     handleValidationErrors
 ];

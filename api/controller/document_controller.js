@@ -673,8 +673,18 @@ export const uploadCompletedDocument = async (req, res) => {
     }
 
     let completedDocumentUrl = null;
+    let fileSignature = null;
 
     if (req.file) {
+      const fileBuffer = req.file.buffer;
+      fileSignature = crypto
+        .createHash('sha256')
+        .update(fileBuffer)
+        .digest('hex')
+        .substring(0, 7);
+
+      console.log('[uploadCompletedDocument] Generated file signature (before upload):', fileSignature);
+
       const { uploadFile } = await import('../utils/fileStorage.js');
       const { filePaths } = await import('../constants/file_paths.js');
       const uploadResult = await uploadFile(req.file, filePaths.documents);
@@ -705,21 +715,14 @@ export const uploadCompletedDocument = async (req, res) => {
     console.log('[uploadCompletedDocument] Checking auto-validation conditions:', {
       hasFile: !!req.file,
       hasUrl: !!completedDocumentUrl,
+      hasSignature: !!fileSignature,
       requestUser: request.user ? `${request.user.firstName} ${request.user.lastName}` : 'null',
       documentName: request.document?.documentName || 'null'
     });
 
-    if (req.file && completedDocumentUrl) {
+    if (fileSignature && completedDocumentUrl) {
       try {
-        // Generate file signature from the uploaded file
-        const fileBuffer = req.file.buffer;
-        const fileSignature = crypto
-          .createHash('sha256')
-          .update(fileBuffer)
-          .digest('hex')
-          .substring(0, 7);
-
-        console.log('[uploadCompletedDocument] Generated file signature:', fileSignature);
+        console.log('[uploadCompletedDocument] Using pre-generated file signature:', fileSignature);
 
         // Check if this file signature already exists
         const existingValidation = await DocumentModel.getDocumentValidationBySignature(fileSignature);
