@@ -59,8 +59,11 @@ const PaymentPage = () => {
       try {
         const resp = await axiosInstance.get(`/payments/${paymentId}/status`);
         const payment = resp?.data?.data;
-        if (payment && (payment.status === 'paid' || payment.status === 'cancelled' || payment.status === 'refunded')) {
-          setIsLocked(true);
+        if (payment) {
+          if (['paid', 'cancelled', 'refunded', 'failed'].includes(payment.status)) {
+            setIsLocked(true);
+          }
+          setPaymentData((prev) => ({ ...prev, status: payment.status }));
         }
       } catch (_e) {
       }
@@ -84,7 +87,7 @@ const PaymentPage = () => {
         email: payment.paymentEmail || payment.email || ''
       } : null;
 
-      setPaymentData({ amount, description, studentInfo });
+      setPaymentData({ amount, description, studentInfo, status: payment.status });
       persist(amount, studentInfo);
     };
 
@@ -200,7 +203,7 @@ const PaymentPage = () => {
                         error?.message || 
                         "There was an issue processing your payment.";
 
-    const result = await Swal.fire({
+    await Swal.fire({
       icon: "error",
       title: "Payment Failed",
       html: `
@@ -216,23 +219,17 @@ const PaymentPage = () => {
             </ul>
           </div>
           <p class="mt-3 text-sm text-gray-600">
-            Your payment information has been saved. You can try again or contact support if the issue persists.
+            This payment link is now locked. To retry, please start a new payment from the beginning.<br />If you need help, contact support.
           </p>
         </div>
       `,
-      showCancelButton: true,
+      showCancelButton: false,
       confirmButtonColor: "#890E07",
-      cancelButtonColor: "#6B7280",
-      confirmButtonText: '<i class="fas fa-redo mr-2"></i>Try Again',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: 'OK',
       customClass: {
         popup: 'swal-wide'
       }
     });
-
-    if (result.isConfirmed) {
-      window.location.reload();
-    }
   };
 
   const displayPaymentForm = (optionId) => {
@@ -281,8 +278,10 @@ const PaymentPage = () => {
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-5xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden shadow-lg">
           {isLocked && (
-            <div className="mb-4 p-4 rounded border border-green-300 bg-green-50 text-green-800">
-              This payment has already been completed. Payment form is locked.
+            <div className={`mb-4 p-4 rounded border ${paymentData.status === 'failed' ? 'border-red-300 bg-red-50 text-red-800' : 'border-green-300 bg-green-50 text-green-800'}`}>
+              {paymentData.status === 'failed'
+                ? 'This payment has failed. Please request a new one. Payment form is locked.'
+                : 'This payment has already been completed. Payment form is locked.'}
             </div>
           )}
           {/* Header */}
