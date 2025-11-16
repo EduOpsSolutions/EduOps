@@ -198,10 +198,9 @@ const PaymentPage = () => {
 
   const handlePaymentError = async (error) => {
     console.error("Payment error:", error);
-    
     const errorMessage = typeof error === 'string' ? error : 
-                        error?.message || 
-                        "There was an issue processing your payment.";
+      error?.message || 
+      "There was an issue processing your payment.";
 
     await Swal.fire({
       icon: "error",
@@ -213,7 +212,6 @@ const PaymentPage = () => {
             <h4 class="font-medium text-red-800 mb-2">Common Reasons:</h4>
             <ul class="list-disc list-inside space-y-1 text-red-700">
               <li>Insufficient funds</li>
-              <li>Incorrect card details</li>
               <li>Network connectivity issues</li>
               <li>Card blocked by bank</li>
             </ul>
@@ -230,6 +228,22 @@ const PaymentPage = () => {
         popup: 'swal-wide'
       }
     });
+    // After alert, refresh payment status and lock the button
+    if (currentPaymentId) {
+      try {
+        await axiosInstance.get(`/payments/${currentPaymentId}/status`).then(resp => {
+          const payment = resp?.data?.data;
+          if (payment) {
+            setIsLocked(true);
+            setPaymentData((prev) => ({ ...prev, status: payment.status }));
+          }
+        });
+      } catch (e) {
+        setIsLocked(true); 
+      }
+    } else {
+      setIsLocked(true);
+    }
   };
 
   const displayPaymentForm = (optionId) => {
