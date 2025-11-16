@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 
 const prisma = new PrismaClient();
 
@@ -10,7 +11,7 @@ async function getUserByEmail(email) {
     if (!data) {
       return {
         error: true,
-        message: 'Account does not exist',
+        message: "Account does not exist",
       };
     }
     return {
@@ -27,7 +28,7 @@ async function getUserByEmail(email) {
 }
 
 async function getUserByToken(token) {
-  console.log('token', token);
+  console.log("token", token);
   try {
     let data = await prisma.users.findFirst({
       where: {
@@ -47,18 +48,18 @@ async function getUserByToken(token) {
         // Excluding sensitive fields like password, resetToken, resetTokenExpiry
       },
     });
-    console.log('data', data);
+    console.log("data", data);
 
     if (!data) {
       return {
         error: true,
-        message: 'Invalid or expired token',
+        message: "Invalid or expired token",
       };
     }
     if (!data) {
       return {
         error: true,
-        message: 'Invalid or expired token',
+        message: "Invalid or expired token",
       };
     }
     return {
@@ -92,7 +93,7 @@ export async function updateUserPassword(email, hashedPassword) {
     }
     return false;
   } catch (error) {
-    console.error('Error updating password:', error);
+    console.error("Error updating password:", error);
     return false;
   }
 }
@@ -101,7 +102,7 @@ export async function getUsersByRole(role) {
   if (!role) {
     return {
       error: true,
-      message: 'Role is required',
+      message: "Role is required",
     };
   }
   try {
@@ -113,7 +114,7 @@ export async function getUsersByRole(role) {
       data: users,
     };
   } catch (error) {
-    console.error('Error getting users by role:', error);
+    console.error("Error getting users by role:", error);
     return {
       error: true,
       message: error.message,
@@ -127,9 +128,9 @@ export async function getAllUserEmails() {
       where: { deletedAt: null },
       select: { email: true },
     });
-    return users.map(user => user.email);
+    return users.map((user) => user.email);
   } catch (error) {
-    console.error('Error fetching user emails:', error);
+    console.error("Error fetching user emails:", error);
     return [];
   }
 }
@@ -140,9 +141,9 @@ export async function getUserEmailsByRole(role) {
       where: { role, deletedAt: null },
       select: { email: true },
     });
-    return users.map(user => user.email);
+    return users.map((user) => user.email);
   } catch (error) {
-    console.error('Error fetching user emails by role:', error);
+    console.error("Error fetching user emails by role:", error);
     return [];
   }
 }

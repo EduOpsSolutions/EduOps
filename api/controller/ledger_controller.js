@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 export const getStudentsWithOngoingPeriod = async (req, res) => {
@@ -14,13 +15,14 @@ export const getStudentsWithOngoingPeriod = async (req, res) => {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   // Deduplicate by student, keeping the latest schedule
   const studentMap = {};
-  userSchedules.forEach(us => {
-    if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period) return;
+  userSchedules.forEach((us) => {
+    if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period)
+      return;
     const studentId = us.user.id;
     // Only keep the first (latest by createdAt due to orderBy)
     if (!studentMap[studentId]) {
@@ -30,7 +32,9 @@ export const getStudentsWithOngoingPeriod = async (req, res) => {
         name: `${us.user.firstName} ${us.user.lastName}`,
         course: us.schedule.course.name,
         batch: us.schedule.period.batchName,
-        year: us.schedule.period.startAt ? new Date(us.schedule.period.startAt).getFullYear() : null,
+        year: us.schedule.period.startAt
+          ? new Date(us.schedule.period.startAt).getFullYear()
+          : null,
       };
     }
   });
@@ -38,7 +42,6 @@ export const getStudentsWithOngoingPeriod = async (req, res) => {
   const result = Object.values(studentMap);
   res.json(result);
 };
-
 
 // Returns an itemized ledger for a student (fees, student fees/discounts, payments)
 export const getStudentLedger = async (req, res) => {
@@ -70,8 +73,8 @@ export const getStudentLedger = async (req, res) => {
           description: `Course Fee (${course.name})`,
           debit: Number(course.price),
           credit: 0,
-          type: 'Course Fee',
-          remarks: '',
+          type: "Course Fee",
+          remarks: "",
         });
       }
       // 2. Other course fees (debits)
@@ -82,14 +85,14 @@ export const getStudentLedger = async (req, res) => {
           isActive: true,
         },
       });
-      courseFees.forEach(fee => {
+      courseFees.forEach((fee) => {
         ledgerRows.push({
           date: fee.createdAt,
           description: fee.name,
           debit: Number(fee.price),
           credit: 0,
-          type: 'Other Fee',
-          remarks: '',
+          type: "Other Fee",
+          remarks: "",
         });
       });
       // 3. Student fees/discounts
@@ -101,24 +104,24 @@ export const getStudentLedger = async (req, res) => {
           deletedAt: null,
         },
       });
-      studentFees.forEach(sf => {
-        if (sf.type === 'fee') {
+      studentFees.forEach((sf) => {
+        if (sf.type === "fee") {
           ledgerRows.push({
             date: sf.createdAt,
             description: sf.name,
             debit: Number(sf.amount),
             credit: 0,
-            type: 'Additional Fee',
-            remarks: '',
+            type: "Additional Fee",
+            remarks: "",
           });
-        } else if (sf.type === 'discount') {
+        } else if (sf.type === "discount") {
           ledgerRows.push({
             date: sf.createdAt,
             description: sf.name,
             debit: 0,
             credit: Number(sf.amount),
-            type: 'Discount',
-            remarks: '',
+            type: "Discount",
+            remarks: "",
           });
         }
       });
@@ -128,18 +131,18 @@ export const getStudentLedger = async (req, res) => {
     const payments = await prisma.payments.findMany({
       where: {
         userId: studentId,
-        status: 'paid',
+        status: "paid",
       },
     });
-    payments.forEach(payment => {
+    payments.forEach((payment) => {
       ledgerRows.push({
         date: payment.paidAt || payment.createdAt,
-        description: 'Payment',
+        description: "Payment",
         debit: 0,
         credit: Number(payment.amount),
-        type: 'Payment',
-        remarks: payment.remarks || '',
-        orNumber: payment.orNumber || payment.referenceNumber || '',
+        type: "Payment",
+        remarks: payment.remarks || "",
+        orNumber: payment.orNumber || payment.referenceNumber || "",
       });
     });
 
@@ -148,7 +151,7 @@ export const getStudentLedger = async (req, res) => {
 
     // 5. Add running balance
     let balance = 0;
-    ledgerRows = ledgerRows.map(row => {
+    ledgerRows = ledgerRows.map((row) => {
       balance += (row.debit || 0) - (row.credit || 0);
       return { ...row, balance };
     });
@@ -156,11 +159,11 @@ export const getStudentLedger = async (req, res) => {
     res.json(ledgerRows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch student ledger.' });
+    res.status(500).json({ error: "Failed to fetch student ledger." });
   }
 };
 
-export default { 
-    getStudentsWithOngoingPeriod, 
-    getStudentLedger 
+export default {
+  getStudentsWithOngoingPeriod,
+  getStudentLedger,
 };

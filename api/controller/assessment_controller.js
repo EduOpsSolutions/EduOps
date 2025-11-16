@@ -1,4 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 export const getAssessmentByStudent = async (req, res) => {
@@ -13,7 +14,7 @@ export const getAssessmentByStudent = async (req, res) => {
         schedule: {
           ...(courseId ? { courseId } : {}),
           ...(academicPeriodId ? { periodId: academicPeriodId } : {}),
-        }
+        },
       },
       include: {
         schedule: {
@@ -27,7 +28,9 @@ export const getAssessmentByStudent = async (req, res) => {
     });
 
     if (!userSchedule || !userSchedule.schedule) {
-      return res.status(404).json({ error: 'Assessment not found for this student/course/period.' });
+      return res.status(404).json({
+        error: "Assessment not found for this student/course/period.",
+      });
     }
 
     // 2. Fetch fees for this course and batch
@@ -53,7 +56,7 @@ export const getAssessmentByStudent = async (req, res) => {
     const payments = await prisma.payments.findMany({
       where: {
         userId: studentId,
-        status: 'paid',
+        status: "paid",
         courseId: userSchedule.schedule.courseId,
         academicPeriodId: userSchedule.schedule.periodId,
       },
@@ -76,8 +79,8 @@ export const getAssessmentByStudent = async (req, res) => {
 
     // 6. Calculate totals (include student_fee: add 'fee', subtract 'discount')
     const studentFeeTotal = studentFees.reduce((sum, sf) => {
-      if (sf.type === 'fee') return sum + Number(sf.amount);
-      if (sf.type === 'discount') return sum - Number(sf.amount);
+      if (sf.type === "fee") return sum + Number(sf.amount);
+      if (sf.type === "discount") return sum - Number(sf.amount);
       return sum;
     }, 0);
     const netAssessment =
@@ -85,7 +88,10 @@ export const getAssessmentByStudent = async (req, res) => {
       courseBasePrice +
       studentFeeTotal -
       adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
-    const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const totalPayments = payments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0
+    );
     const remainingBalance = netAssessment - totalPayments;
 
     // 7. Fetch batch details
@@ -99,7 +105,11 @@ export const getAssessmentByStudent = async (req, res) => {
       studentId: userSchedule.user.id,
       name: `${userSchedule.user.firstName} ${userSchedule.user.lastName}`,
       course: { id: course.id, name: course.name, price: course.price },
-      batch: { id: batch.id, batchName: batch.batchName, year: batch.startAt ? new Date(batch.startAt).getFullYear() : null },
+      batch: {
+        id: batch.id,
+        batchName: batch.batchName,
+        year: batch.startAt ? new Date(batch.startAt).getFullYear() : null,
+      },
       fees,
       studentFees,
       payments,
@@ -111,7 +121,7 @@ export const getAssessmentByStudent = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch assessment data.' });
+    res.status(500).json({ error: "Failed to fetch assessment data." });
   }
 };
 
@@ -133,8 +143,14 @@ export const listAssessments = async (req, res) => {
 
     // 2. Group by student, course, and batch
     const assessmentMap = {};
-    userSchedules.forEach(us => {
-      if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period) return;
+    userSchedules.forEach((us) => {
+      if (
+        !us.user ||
+        !us.schedule ||
+        !us.schedule.course ||
+        !us.schedule.period
+      )
+        return;
       const key = `${us.user.id}|${us.schedule.course.id}|${us.schedule.period.id}`;
       if (!assessmentMap[key]) {
         assessmentMap[key] = {
@@ -178,7 +194,7 @@ export const listAssessments = async (req, res) => {
         const payments = await prisma.payments.findMany({
           where: {
             userId: entry.studentId,
-            status: 'paid',
+            status: "paid",
             courseId: entry.courseId,
             academicPeriodId: entry.batchId,
           },
@@ -191,8 +207,8 @@ export const listAssessments = async (req, res) => {
         });
 
         const studentFeeTotal = studentFees.reduce((sum, sf) => {
-          if (sf.type === 'fee') return sum + Number(sf.amount);
-          if (sf.type === 'discount') return sum - Number(sf.amount);
+          if (sf.type === "fee") return sum + Number(sf.amount);
+          if (sf.type === "discount") return sum - Number(sf.amount);
           return sum;
         }, 0);
 
@@ -201,7 +217,10 @@ export const listAssessments = async (req, res) => {
           courseBasePrice +
           studentFeeTotal -
           adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
-        const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const totalPayments = payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0
+        );
         const remainingBalance = netAssessment - totalPayments;
 
         return {
@@ -223,7 +242,7 @@ export const listAssessments = async (req, res) => {
     res.json(results);
   } catch (error) {
     console.error("ListAssessments error:", error, error?.stack);
-    res.status(500).json({ error: 'Failed to list assessments.' });
+    res.status(500).json({ error: "Failed to list assessments." });
   }
 };
 
@@ -250,8 +269,14 @@ export const getAllAssessmentsForStudent = async (req, res) => {
 
     // 2. Group by course and batch (period)
     const assessmentMap = {};
-    userSchedules.forEach(us => {
-      if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period) return;
+    userSchedules.forEach((us) => {
+      if (
+        !us.user ||
+        !us.schedule ||
+        !us.schedule.course ||
+        !us.schedule.period
+      )
+        return;
       const key = `${us.user.id}|${us.schedule.course.id}|${us.schedule.period.id}`;
       if (!assessmentMap[key]) {
         assessmentMap[key] = {
@@ -261,7 +286,9 @@ export const getAllAssessmentsForStudent = async (req, res) => {
           course: us.schedule.course.name,
           batchId: us.schedule.period.id,
           batch: us.schedule.period.batchName,
-          year: us.schedule.period.startAt ? new Date(us.schedule.period.startAt).getFullYear() : null,
+          year: us.schedule.period.startAt
+            ? new Date(us.schedule.period.startAt).getFullYear()
+            : null,
         };
       }
     });
@@ -295,7 +322,7 @@ export const getAllAssessmentsForStudent = async (req, res) => {
         const payments = await prisma.payments.findMany({
           where: {
             userId: entry.studentId,
-            status: 'paid',
+            status: "paid",
             courseId: entry.courseId,
             academicPeriodId: entry.batchId,
           },
@@ -308,8 +335,8 @@ export const getAllAssessmentsForStudent = async (req, res) => {
         });
 
         const studentFeeTotal = studentFees.reduce((sum, sf) => {
-          if (sf.type === 'fee') return sum + Number(sf.amount);
-          if (sf.type === 'discount') return sum - Number(sf.amount);
+          if (sf.type === "fee") return sum + Number(sf.amount);
+          if (sf.type === "discount") return sum - Number(sf.amount);
           return sum;
         }, 0);
 
@@ -318,7 +345,10 @@ export const getAllAssessmentsForStudent = async (req, res) => {
           courseBasePrice +
           studentFeeTotal -
           adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
-        const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const totalPayments = payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0
+        );
         const remainingBalance = netAssessment - totalPayments;
 
         return {
@@ -340,12 +370,14 @@ export const getAllAssessmentsForStudent = async (req, res) => {
     res.json(results);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch all assessments for student.' });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch all assessments for student." });
   }
 };
 
 export default {
   getAssessmentByStudent,
   listAssessments,
-  getAllAssessmentsForStudent
+  getAllAssessmentsForStudent,
 };

@@ -1,22 +1,23 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 const SALT = parseInt(process.env.BCRYPT_SALT);
-import { verifyJWT } from '../utils/jwt.js';
-import { uploadFile } from '../utils/fileStorage.js';
-import { getUserByEmail } from '../model/user_model.js';
-import { getUsersByRole as getUsersByRolesModel } from '../model/user_model.js';
-import { createLog, logSecurityEvent, LogTypes } from '../utils/logger.js';
-import { MODULE_TYPES } from '../constants/module_types.js';
-import { sendEmailChangeNotification } from '../services/userChangeEmailService.js';
-import { generateStandardizedUserId } from '../utils/userIdGenerator.js';
-import { sendAccountCreationEmail } from '../utils/mailer.js';
+import { verifyJWT } from "../utils/jwt.js";
+import { uploadFile } from "../utils/fileStorage.js";
+import { getUserByEmail } from "../model/user_model.js";
+import { getUsersByRole as getUsersByRolesModel } from "../model/user_model.js";
+import { createLog, logSecurityEvent, LogTypes } from "../utils/logger.js";
+import { MODULE_TYPES } from "../constants/module_types.js";
+import { sendEmailChangeNotification } from "../services/userChangeEmailService.js";
+import { generateStandardizedUserId } from "../utils/userIdGenerator.js";
+import { sendAccountCreationEmail } from "../utils/mailer.js";
 
 // Generate default password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
 const generateDefaultPassword = (lastName, firstName, birthYear) => {
   // Remove whitespaces from lastname and convert to lowercase
-  const cleanLastName = lastName.replace(/\s+/g, '').toLowerCase();
+  const cleanLastName = lastName.replace(/\s+/g, "").toLowerCase();
 
   // Get first 2 letters of firstname (or just 1 if firstname has only 1 letter), convert to lowercase
   const firstNamePart =
@@ -45,7 +46,7 @@ const getAllUsers = async (req, res) => {
     let whereClause = {};
     if (role) whereClause.role = role;
     if (status) whereClause.status = status;
-    if (showDeleted === 'true') {
+    if (showDeleted === "true") {
       // Show both deleted and non-deleted users
       whereClause.deletedAt = undefined;
     } else {
@@ -106,10 +107,10 @@ const getAllUsers = async (req, res) => {
     };
     res.json(response);
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error("Error fetching users:", error);
     res
       .status(500)
-      .json({ error: 'Error fetching users', details: error.message });
+      .json({ error: "Error fetching users", details: error.message });
   }
 };
 
@@ -122,12 +123,12 @@ const getUserById = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ error: 'Student not found' });
+      return res.status(404).json({ error: "Student not found" });
     }
 
     res.json(student);
   } catch (error) {
-    res.status(500).json({ error: true, message: 'Error fetching student' });
+    res.status(500).json({ error: true, message: "Error fetching student" });
   }
 };
 
@@ -149,7 +150,7 @@ const createUser = async (req, res) => {
       birthdate,
       birthyear,
       email,
-      role = 'student',
+      role = "student",
     } = req.body;
 
     // Validate birthdate - must be before current date
@@ -161,7 +162,7 @@ const createUser = async (req, res) => {
       if (userBirthDate >= currentDate) {
         return res.status(400).json({
           error: true,
-          message: 'Birthdate must be before the current date',
+          message: "Birthdate must be before the current date",
         });
       }
     }
@@ -179,7 +180,7 @@ const createUser = async (req, res) => {
       if (isUserIdTaken) {
         return res
           .status(400)
-          .json({ error: true, message: 'User ID already taken' });
+          .json({ error: true, message: "User ID already taken" });
       }
     }
 
@@ -190,7 +191,7 @@ const createUser = async (req, res) => {
     if (isEmailTaken) {
       return res
         .status(400)
-        .json({ error: true, message: 'Email already taken' });
+        .json({ error: true, message: "Email already taken" });
     }
 
     // Auto-generate password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
@@ -212,7 +213,7 @@ const createUser = async (req, res) => {
         email,
         password: bcrypt.hashSync(generatedPassword, SALT),
         role,
-        status: 'active',
+        status: "active",
         changePassword: true, // Force password change on first login
       },
     });
@@ -222,7 +223,7 @@ const createUser = async (req, res) => {
       await sendAccountCreationEmail(user, generatedPassword);
     } catch (emailError) {
       console.error(
-        '[createUser] Error sending account creation email:',
+        "[createUser] Error sending account creation email:",
         emailError
       );
       // Don't fail user creation if email fails
@@ -238,7 +239,7 @@ const createUser = async (req, res) => {
     });
     res.status(201).json({
       error: false,
-      message: 'User created successfully',
+      message: "User created successfully",
       data: { userId: user.userId },
     });
   } catch (error) {
@@ -251,7 +252,7 @@ const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const userRequest = await verifyJWT(
-      req.headers.authorization.split(' ')[1]
+      req.headers.authorization.split(" ")[1]
     );
 
     // Get current user data before update to track changes
@@ -276,7 +277,7 @@ const updateUser = async (req, res) => {
     if (!userBeforeUpdate) {
       return res.status(404).json({
         error: true,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -319,7 +320,7 @@ const updateUser = async (req, res) => {
           `Email change notification sent to ${userBeforeUpdate.email}`
         );
       } catch (emailError) {
-        console.error('Failed to send email change notification:', emailError);
+        console.error("Failed to send email change notification:", emailError);
         // Don't block the update if email fails, but log it
       }
     }
@@ -332,36 +333,36 @@ const updateUser = async (req, res) => {
     // Build detailed change log
     const changes = [];
     const fieldMapping = {
-      userId: 'User ID',
-      firstName: 'First Name',
-      middleName: 'Middle Name',
-      lastName: 'Last Name',
-      email: 'Email',
-      phoneNumber: 'Phone Number',
-      status: 'Status',
-      role: 'Role',
-      profilePicLink: 'Profile Picture',
+      userId: "User ID",
+      firstName: "First Name",
+      middleName: "Middle Name",
+      lastName: "Last Name",
+      email: "Email",
+      phoneNumber: "Phone Number",
+      status: "Status",
+      role: "Role",
+      profilePicLink: "Profile Picture",
     };
 
     // Handle birthdate changes as a single field
     if (
-      updateData.hasOwnProperty('birthmonth') ||
-      updateData.hasOwnProperty('birthdate') ||
-      updateData.hasOwnProperty('birthyear')
+      updateData.hasOwnProperty("birthmonth") ||
+      updateData.hasOwnProperty("birthdate") ||
+      updateData.hasOwnProperty("birthyear")
     ) {
-      const oldBirthdate = `${userBeforeUpdate.birthyear || ''}-${String(
-        userBeforeUpdate.birthmonth || ''
-      ).padStart(2, '0')}-${String(userBeforeUpdate.birthdate || '').padStart(
+      const oldBirthdate = `${userBeforeUpdate.birthyear || ""}-${String(
+        userBeforeUpdate.birthmonth || ""
+      ).padStart(2, "0")}-${String(userBeforeUpdate.birthdate || "").padStart(
         2,
-        '0'
+        "0"
       )}`;
       const newBirthdate = `${
-        updateData.birthyear || userBeforeUpdate.birthyear || ''
+        updateData.birthyear || userBeforeUpdate.birthyear || ""
       }-${String(
-        updateData.birthmonth || userBeforeUpdate.birthmonth || ''
-      ).padStart(2, '0')}-${String(
-        updateData.birthdate || userBeforeUpdate.birthdate || ''
-      ).padStart(2, '0')}`;
+        updateData.birthmonth || userBeforeUpdate.birthmonth || ""
+      ).padStart(2, "0")}-${String(
+        updateData.birthdate || userBeforeUpdate.birthdate || ""
+      ).padStart(2, "0")}`;
 
       if (oldBirthdate !== newBirthdate) {
         changes.push(`Birthdate: "${oldBirthdate}" → "${newBirthdate}"`);
@@ -369,13 +370,13 @@ const updateUser = async (req, res) => {
     }
 
     for (const [key, displayName] of Object.entries(fieldMapping)) {
-      if (updateData.hasOwnProperty(key) && key !== 'password') {
-        const oldValue = userBeforeUpdate[key] || 'null';
-        const newValue = updateData[key] || 'null';
+      if (updateData.hasOwnProperty(key) && key !== "password") {
+        const oldValue = userBeforeUpdate[key] || "null";
+        const newValue = updateData[key] || "null";
 
         if (oldValue !== newValue) {
-          if (key === 'profilePicLink') {
-            changes.push(`${displayName}: ${oldValue ? 'Changed' : 'Added'}`);
+          if (key === "profilePicLink") {
+            changes.push(`${displayName}: ${oldValue ? "Changed" : "Added"}`);
           } else {
             changes.push(`${displayName}: "${oldValue}" → "${newValue}"`);
           }
@@ -384,14 +385,14 @@ const updateUser = async (req, res) => {
     }
 
     if (updateData.password) {
-      changes.push('Password: Updated');
+      changes.push("Password: Updated");
     }
 
     const changeLog =
-      changes.length > 0 ? changes.join(', ') : 'No changes detected';
+      changes.length > 0 ? changes.join(", ") : "No changes detected";
 
     await logSecurityEvent(
-      'User account updated',
+      "User account updated",
       requesting_user_details.userId,
       MODULE_TYPES.AUTH,
       `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} updated user [${result.userId}] ${result.firstName} ${result.lastName}. Changes: ${changeLog}`
@@ -399,7 +400,7 @@ const updateUser = async (req, res) => {
 
     res.status(200).json({
       error: false,
-      message: 'User updated successfully',
+      message: "User updated successfully",
     });
   } catch (error) {
     res.status(500).json({ message: error.message, error: true });
@@ -416,12 +417,12 @@ const deleteUser = async (req, res) => {
     if (confirmDeletion !== true) {
       return res.status(400).json({
         error: true,
-        message: 'Deletion confirmation required. This action is irreversible.',
+        message: "Deletion confirmation required. This action is irreversible.",
       });
     }
 
     const userRequest = await verifyJWT(
-      req.headers.authorization.split(' ')[1]
+      req.headers.authorization.split(" ")[1]
     );
     const requesting_user_details = userRequest.payload.data;
 
@@ -433,7 +434,7 @@ const deleteUser = async (req, res) => {
     if (!userToDelete) {
       return res.status(404).json({
         error: true,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -441,12 +442,12 @@ const deleteUser = async (req, res) => {
     if (userToDelete.id === requesting_user_details.id) {
       return res.status(403).json({
         error: true,
-        message: 'You cannot delete your own account',
+        message: "You cannot delete your own account",
       });
     }
 
     // Generate random password hash that user can never login with
-    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const randomPassword = crypto.randomBytes(32).toString("hex");
     const redactedPasswordHash = bcrypt.hashSync(randomPassword, SALT);
 
     // Permanently redact PII and set account as deleted
@@ -454,9 +455,9 @@ const deleteUser = async (req, res) => {
       where: { id },
       data: {
         // Redact personal information
-        firstName: 'DELETED',
-        middleName: 'USER',
-        lastName: 'ACCOUNT',
+        firstName: "DELETED",
+        middleName: "USER",
+        lastName: "ACCOUNT",
         email: `deleted_${userToDelete.userId}@system.deleted`,
         phoneNumber: null,
         password: redactedPasswordHash,
@@ -466,7 +467,7 @@ const deleteUser = async (req, res) => {
         birthmonth: 1,
         birthdate: 1,
         // Set status and deletion timestamp
-        status: 'deleted',
+        status: "deleted",
         deletedAt: new Date(),
         // userId is preserved for audit trail
       },
@@ -474,7 +475,7 @@ const deleteUser = async (req, res) => {
 
     // Comprehensive security logging
     await logSecurityEvent(
-      'User Permanently Deleted - PII Redacted',
+      "User Permanently Deleted - PII Redacted",
       requesting_user_details.userId,
       MODULE_TYPES.AUTH,
       `IRREVERSIBLE ACTION: Admin [${requesting_user_details.userId}] ${
@@ -483,7 +484,7 @@ const deleteUser = async (req, res) => {
       
 Original User Details (now redacted):
 - User ID: ${userToDelete.userId} (preserved for audit)
-- Name: ${userToDelete.firstName} ${userToDelete.middleName || ''} ${
+- Name: ${userToDelete.firstName} ${userToDelete.middleName || ""} ${
         userToDelete.lastName
       }
 - Email: ${userToDelete.email}
@@ -505,13 +506,13 @@ This action is permanent and cannot be undone.`
 
     res.json({
       error: false,
-      message: 'User permanently deleted and PII redacted successfully',
+      message: "User permanently deleted and PII redacted successfully",
     });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error("Error deleting user:", error);
     res.status(500).json({
       error: true,
-      message: 'Error deleting user',
+      message: "Error deleting user",
       details: error.message,
     });
   }
@@ -521,24 +522,24 @@ const deactivateUser = async (req, res) => {
   try {
     const { id } = req.query;
     const userRequest = await verifyJWT(
-      req.headers.authorization.split(' ')[1]
+      req.headers.authorization.split(" ")[1]
     );
     const requesting_user_details = userRequest.payload.data;
 
     const deactivated = await prisma.users.update({
       where: { id },
-      data: { status: 'disabled' },
+      data: { status: "disabled" },
     });
 
     await logSecurityEvent(
-      'User deactivated',
+      "User deactivated",
       requesting_user_details.userId,
       MODULE_TYPES.AUTH,
       `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} deactivated user [${deactivated.userId}] ${deactivated.firstName} ${deactivated.lastName} at ${deactivated.updatedAt} server time.`
     );
-    res.json({ error: false, message: 'User deactivated successfully' });
+    res.json({ error: false, message: "User deactivated successfully" });
   } catch (error) {
-    res.status(500).json({ error: true, message: 'Error deactivating user' });
+    res.status(500).json({ error: true, message: "Error deactivating user" });
   }
 };
 
@@ -546,26 +547,26 @@ const activateUser = async (req, res) => {
   try {
     const { id } = req.query;
     const userRequest = await verifyJWT(
-      req.headers.authorization.split(' ')[1]
+      req.headers.authorization.split(" ")[1]
     );
     const requesting_user_details = userRequest.payload.data;
 
     const activated = await prisma.users.update({
       where: { id },
-      data: { status: 'active', deletedAt: null },
+      data: { status: "active", deletedAt: null },
     });
 
     await logSecurityEvent(
-      'User activated',
+      "User activated",
       requesting_user_details.userId,
       MODULE_TYPES.AUTH,
       `Admin [${requesting_user_details.userId}] ${requesting_user_details.firstName} ${requesting_user_details.lastName} activated user [${activated.userId}] ${activated.firstName} ${activated.lastName} at ${activated.updatedAt} server time.`
     );
-    res.json({ error: false, message: 'User activated successfully' });
+    res.json({ error: false, message: "User activated successfully" });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error activating user',
+      message: "Error activating user",
       error_details: error.message,
       error_info: error,
     });
@@ -574,11 +575,11 @@ const activateUser = async (req, res) => {
 
 const changePassword = async (req, res) => {
   const { password } = req.body;
-  const token = req.headers.authorization.split(' ')[1];
+  const token = req.headers.authorization.split(" ")[1];
   const decoded = await verifyJWT(token);
   const user = await getUserByEmail(decoded.email);
   if (user.error) {
-    return res.status(404).json({ error: true, message: 'User not found' });
+    return res.status(404).json({ error: true, message: "User not found" });
   }
   try {
     await prisma.users.update({
@@ -586,16 +587,16 @@ const changePassword = async (req, res) => {
       data: { password: bcrypt.hashSync(password, SALT) },
     });
     await logSecurityEvent(
-      'Password changed successfully',
+      "Password changed successfully",
       user.data.id,
       MODULE_TYPES.AUTH,
-      'password_changed'
+      "password_changed"
     );
-    res.json({ error: false, message: 'Password changed successfully' });
+    res.json({ error: false, message: "Password changed successfully" });
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error changing password',
+      message: "Error changing password",
       error_message: error.message,
       error_info: error,
     });
@@ -620,7 +621,7 @@ const createStudentAccount = async (req, res) => {
     if (!birthdateValue) {
       return res.status(400).json({
         error: true,
-        message: 'Birth date is required',
+        message: "Birth date is required",
       });
     }
 
@@ -632,7 +633,7 @@ const createStudentAccount = async (req, res) => {
     if (!email || !firstName || !lastName) {
       return res.status(400).json({
         error: true,
-        message: 'Email, first name, and last name are required',
+        message: "Email, first name, and last name are required",
       });
     }
 
@@ -645,7 +646,7 @@ const createStudentAccount = async (req, res) => {
       if (isUserIdTaken) {
         return res
           .status(400)
-          .json({ error: true, message: 'User ID already taken' });
+          .json({ error: true, message: "User ID already taken" });
       }
     }
 
@@ -657,7 +658,7 @@ const createStudentAccount = async (req, res) => {
     if (isEmailTaken) {
       return res
         .status(400)
-        .json({ error: true, message: 'Email already taken' });
+        .json({ error: true, message: "Email already taken" });
     }
 
     // Auto-generate password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
@@ -668,7 +669,7 @@ const createStudentAccount = async (req, res) => {
     );
 
     // Generate standardized userId if not provided
-    const finalUserId = userId || (await generateStandardizedUserId('student'));
+    const finalUserId = userId || (await generateStandardizedUserId("student"));
 
     const user = await prisma.users.create({
       data: {
@@ -681,8 +682,8 @@ const createStudentAccount = async (req, res) => {
         birthyear: birthYear,
         email,
         password: bcrypt.hashSync(generatedPassword, SALT),
-        status: 'active',
-        role: 'student',
+        status: "active",
+        role: "student",
         changePassword: true, // Force password change on first login
       },
     });
@@ -692,7 +693,7 @@ const createStudentAccount = async (req, res) => {
       await sendAccountCreationEmail(user, generatedPassword);
     } catch (emailError) {
       console.error(
-        '[createStudentAccount] Error sending account creation email:',
+        "[createStudentAccount] Error sending account creation email:",
         emailError
       );
       // Don't fail user creation if email fails
@@ -717,7 +718,7 @@ const createStudentAccount = async (req, res) => {
 
     res.status(201).json({
       error: false,
-      message: 'User created successfully',
+      message: "User created successfully",
       data: {
         id: user.id,
         userId: user.userId,
@@ -736,7 +737,7 @@ const inspectEmailExists = async (req, res) => {
     if (!email && !altEmail) {
       return res
         .status(400)
-        .json({ error: true, message: 'Email or altEmail is required' });
+        .json({ error: true, message: "Email or altEmail is required" });
     }
     if (!altEmail) {
       user = await prisma.users.findFirst({
@@ -753,7 +754,7 @@ const inspectEmailExists = async (req, res) => {
     }
     res.json({
       error: false,
-      message: 'Email exists',
+      message: "Email exists",
       data: user ? true : false,
       user: user
         ? {
@@ -773,7 +774,7 @@ const inspectEmailExists = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: 'Failed to inspect user with email',
+      message: "Failed to inspect user with email",
       error: true,
       error_details: error,
       error_info: error,
@@ -796,11 +797,11 @@ const searchStudentsForCoursePeriod = async (req, res) => {
     if (!periodId || !courseId) {
       return res
         .status(400)
-        .json({ error: true, message: 'periodId and courseId are required' });
+        .json({ error: true, message: "periodId and courseId are required" });
     }
 
     // If the request is specifically for enrolled students only, pull directly from user_schedule
-    if (String(enrolledOnly) === 'true') {
+    if (String(enrolledOnly) === "true") {
       const enrolled = await prisma.user_schedule.findMany({
         where: {
           deletedAt: null,
@@ -811,7 +812,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
           },
           user: {
             deletedAt: null,
-            role: 'student',
+            role: "student",
             ...(q
               ? {
                   OR: [
@@ -847,7 +848,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
         .filter(Boolean)
         .map((s) => ({
           ...s,
-          name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+          name: `${s.firstName}${s.middleName ? " " + s.middleName : ""} ${
             s.lastName
           }`.trim(),
           enrolledInCourse: true,
@@ -858,7 +859,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
 
     // Otherwise, search students and annotate whether enrolled
     const whereClause = {
-      role: 'student',
+      role: "student",
       deletedAt: null,
       ...(q
         ? {
@@ -886,7 +887,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
       },
       take: parseInt(take),
       skip: (parseInt(page) - 1) * parseInt(take),
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     const studentIds = students.map((s) => s.id);
@@ -908,7 +909,7 @@ const searchStudentsForCoursePeriod = async (req, res) => {
 
     const data = students.map((s) => ({
       ...s,
-      name: `${s.firstName}${s.middleName ? ' ' + s.middleName : ''} ${
+      name: `${s.firstName}${s.middleName ? " " + s.middleName : ""} ${
         s.lastName
       }`.trim(),
       enrolledInCourse: enrolledSet.has(s.id),
@@ -916,8 +917,8 @@ const searchStudentsForCoursePeriod = async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error('searchStudentsForCoursePeriod error', error);
-    res.status(500).json({ error: true, message: 'Failed to search students' });
+    console.error("searchStudentsForCoursePeriod error", error);
+    res.status(500).json({ error: true, message: "Failed to search students" });
   }
 };
 
@@ -930,11 +931,11 @@ const checkStudentScheduleConflicts = async (req, res) => {
       return res.status(400).json({
         error: true,
         message:
-          'studentId, periodId, days, time_start and time_end are required',
+          "studentId, periodId, days, time_start and time_end are required",
       });
     }
 
-    const daysArray = days.split(',').map((d) => d.trim());
+    const daysArray = days.split(",").map((d) => d.trim());
 
     // Get all schedules the student is already attached to within the period
     const existing = await prisma.user_schedule.findMany({
@@ -954,12 +955,12 @@ const checkStudentScheduleConflicts = async (req, res) => {
     const conflicts = existing.filter((us) => {
       const s = us.schedule;
       if (!s) return false;
-      const scheduleDays = (s.days || '').split(',').map((d) => d.trim());
+      const scheduleDays = (s.days || "").split(",").map((d) => d.trim());
       const daysOverlap = daysArray.some((d) => scheduleDays.includes(d));
       if (!daysOverlap) return false;
 
       const timeOverlap =
-        time_start < (s.time_end || '') && time_end > (s.time_start || '');
+        time_start < (s.time_end || "") && time_end > (s.time_start || "");
       return timeOverlap;
     });
 
@@ -974,10 +975,10 @@ const checkStudentScheduleConflicts = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('checkStudentScheduleConflicts error', error);
+    console.error("checkStudentScheduleConflicts error", error);
     res
       .status(500)
-      .json({ error: true, message: 'Failed to check schedule conflicts' });
+      .json({ error: true, message: "Failed to check schedule conflicts" });
   }
 };
 
@@ -988,18 +989,18 @@ const updateProfilePicture = async (req, res) => {
     if (!profilePic) {
       return res.status(400).json({
         error: true,
-        message: 'No profile picture file provided',
+        message: "No profile picture file provided",
       });
     }
 
     // Extract user ID from JWT token
-    const token = req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(" ")[1];
     const decoded = await verifyJWT(token);
 
     if (!decoded || !decoded.payload) {
       return res.status(401).json({
         error: true,
-        message: 'Invalid or expired token',
+        message: "Invalid or expired token",
       });
     }
 
@@ -1008,15 +1009,15 @@ const updateProfilePicture = async (req, res) => {
     if (userResult.error) {
       return res.status(404).json({
         error: true,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
-    const result = await uploadFile(profilePic, 'user-profile');
+    const result = await uploadFile(profilePic, "user-profile");
     if (!result) {
       return res
         .status(400)
-        .json({ error: true, message: 'Error uploading profile picture' });
+        .json({ error: true, message: "Error uploading profile picture" });
     }
 
     // Use the user ID from the JWT token
@@ -1027,7 +1028,7 @@ const updateProfilePicture = async (req, res) => {
 
     res.json({
       error: false,
-      message: 'Profile picture updated successfully',
+      message: "Profile picture updated successfully",
       data: {
         id: user.id,
         profilePicLink: user.profilePicLink,
@@ -1036,7 +1037,7 @@ const updateProfilePicture = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error updating profile picture',
+      message: "Error updating profile picture",
       error_details: error.message,
       error_info: error,
     });
@@ -1046,13 +1047,13 @@ const updateProfilePicture = async (req, res) => {
 const removeProfilePicture = async (req, res) => {
   try {
     // Extract user ID from JWT token
-    const token = req.headers.authorization.split(' ')[1];
+    const token = req.headers.authorization.split(" ")[1];
     const decoded = await verifyJWT(token);
 
     if (!decoded || !decoded.payload) {
       return res.status(401).json({
         error: true,
-        message: 'Invalid or expired token',
+        message: "Invalid or expired token",
       });
     }
 
@@ -1061,7 +1062,7 @@ const removeProfilePicture = async (req, res) => {
     if (userResult.error) {
       return res.status(404).json({
         error: true,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -1073,7 +1074,7 @@ const removeProfilePicture = async (req, res) => {
 
     res.json({
       error: false,
-      message: 'Profile picture removed successfully',
+      message: "Profile picture removed successfully",
       data: {
         id: user.id,
         profilePicLink: user.profilePicLink,
@@ -1082,7 +1083,7 @@ const removeProfilePicture = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: 'Error removing profile picture',
+      message: "Error removing profile picture",
       error_details: error.message,
       error_info: error,
     });
@@ -1097,7 +1098,7 @@ const getStudentById = async (req, res) => {
     return res.status(400).json({
       error: true,
       success: false,
-      message: 'Student ID is required',
+      message: "Student ID is required",
     });
   }
 
@@ -1105,7 +1106,7 @@ const getStudentById = async (req, res) => {
     const student = await prisma.users.findFirst({
       where: {
         userId: studentId,
-        role: 'STUDENT',
+        role: "STUDENT",
         deletedAt: null,
       },
       select: {
@@ -1122,7 +1123,7 @@ const getStudentById = async (req, res) => {
       return res.status(404).json({
         error: true,
         success: false,
-        message: 'Student not found with the provided ID',
+        message: "Student not found with the provided ID",
       });
     }
 
@@ -1130,14 +1131,14 @@ const getStudentById = async (req, res) => {
       error: false,
       success: true,
       data: student,
-      message: 'Student found successfully',
+      message: "Student found successfully",
     });
   } catch (error) {
-    console.error('Error fetching student by ID:', error);
+    console.error("Error fetching student by ID:", error);
     res.status(500).json({
       error: true,
       success: false,
-      message: 'Server error while fetching student',
+      message: "Server error while fetching student",
       error_details: error.message,
     });
   }
@@ -1150,7 +1151,7 @@ const getTeacherById = async (req, res) => {
     return res.status(400).json({
       error: true,
       success: false,
-      message: 'Teacher ID is required',
+      message: "Teacher ID is required",
     });
   }
 
@@ -1158,7 +1159,7 @@ const getTeacherById = async (req, res) => {
     const teacher = await prisma.users.findFirst({
       where: {
         userId: teacherId,
-        role: 'TEACHER',
+        role: "TEACHER",
         deletedAt: null,
       },
       select: {
@@ -1175,7 +1176,7 @@ const getTeacherById = async (req, res) => {
       return res.status(404).json({
         error: true,
         success: false,
-        message: 'Teacher not found with the provided ID',
+        message: "Teacher not found with the provided ID",
       });
     }
 
@@ -1183,14 +1184,14 @@ const getTeacherById = async (req, res) => {
       error: false,
       success: true,
       data: teacher,
-      message: 'Teacher found successfully',
+      message: "Teacher found successfully",
     });
   } catch (error) {
-    console.error('Error fetching teacher by ID:', error);
+    console.error("Error fetching teacher by ID:", error);
     res.status(500).json({
       error: true,
       success: false,
-      message: 'Server error while fetching teacher',
+      message: "Server error while fetching teacher",
       error_details: error.message,
     });
   }
@@ -1204,16 +1205,16 @@ const getUsersByRole = async (req, res) => {
       return res.status(404).json({
         error: true,
         success: false,
-        message: 'Users not found',
+        message: "Users not found",
       });
     }
 
     res.json({ error: false, success: true, data: users.data });
   } catch (error) {
-    console.error('Error fetching users by role:', error);
+    console.error("Error fetching users by role:", error);
     return {
       error: true,
-      message: 'Server error while fetching users by role',
+      message: "Server error while fetching users by role",
       error_details: error.message,
     };
   }
