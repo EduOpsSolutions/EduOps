@@ -273,8 +273,11 @@ export const processWebhookEvent = async (event) => {
 
     case PAYMONGO_EVENTS.PAYMENT_FAILED:
     case PAYMONGO_EVENTS.LINK_PAYMENT_FAILED:
+      const failedPaymentMethod = getPaymentMethodFromPayMongo(eventData);
+      
       updateData = {
         status: 'failed',
+        paymentMethod: failedPaymentMethod,
         referenceNumber: eventData.attributes.reference_number || eventData.id,
       };
 
@@ -360,14 +363,14 @@ export const processWebhookEvent = async (event) => {
 
       paymentRecord = await prisma.payments.findFirst({
         where: {
-          referenceNumber:
-            eventData.attributes.reference_number || refundedPaymentId,
+          referenceNumber: refundedPaymentId,
+          status: 'paid', 
         },
       });
 
       if (!paymentRecord) {
         console.log(
-          `Payment not found for refund. Refund ID: ${eventData.id}, Payment ID: ${refundedPaymentId}`
+          `Paid payment not found for refund. Refund ID: ${eventData.id}, Payment ID: ${refundedPaymentId}`
         );
       }
       break;
