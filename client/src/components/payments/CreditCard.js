@@ -28,6 +28,30 @@ const CreditCard = ({
   const [paymentStatus, setPaymentStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [expiryError, setExpiryError] = useState('');
+
+  const validateExpiryDate = (month, year) => {
+    if (!month || !year) return '';
+    
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; 
+    
+    const expYear = parseInt(year);
+    const expMonth = parseInt(month);
+    
+    // Check if year is in the past
+    if (expYear < currentYear) {
+      return 'Card has expired. Please use a valid card.';
+    }
+    
+    // Check if month is in the past (for current year)
+    if (expYear === currentYear && expMonth < currentMonth) {
+      return 'Card has expired. Please use a valid card.';
+    }
+    
+    return '';
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -280,6 +304,16 @@ const CreditCard = ({
 
     setEmailError('');
 
+    // Validate expiry date
+    const expiryValidation = validateExpiryDate(formData.month, formData.year);
+    if (expiryValidation) {
+      setIsProcessing(false);
+      setExpiryError(expiryValidation);
+      return;
+    }
+
+    setExpiryError('');
+
     try {
       const paymentIntent = await createPaymentIntent();
       const paymentMethod = await createPaymentMethod();
@@ -373,7 +407,11 @@ const CreditCard = ({
               name="month"
               className={styles.select}
               value={formData.month}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                handleInputChange(e);
+                const error = validateExpiryDate(e.target.value, formData.year);
+                setExpiryError(error);
+              }}
               required
             >
               <option value="">Month</option>
@@ -395,11 +433,14 @@ const CreditCard = ({
               name="year"
               className={styles.select}
               value={formData.year}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                handleInputChange(e);
+                const error = validateExpiryDate(formData.month, e.target.value);
+                setExpiryError(error);
+              }}
               required
             >
               <option value="">Year</option>
-              <option value="2024">24</option>
               <option value="2025">25</option>
               <option value="2026">26</option>
               <option value="2027">27</option>
@@ -413,6 +454,9 @@ const CreditCard = ({
               <option value="2035">35</option>
             </select>
           </div>
+          {expiryError && (
+            <small style={{ color: '#b71c1c', display: 'block', marginTop: '4px' }}>{expiryError}</small>
+          )}
         </div>
         <div className={styles.formField}>
           <label htmlFor="sec-code">Security code:</label>

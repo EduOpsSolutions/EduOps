@@ -275,30 +275,63 @@ export const processWebhookEvent = async (event) => {
     case PAYMONGO_EVENTS.PAYMENT_FAILED:
     case PAYMONGO_EVENTS.LINK_PAYMENT_FAILED:
       const failedPaymentMethod = getPaymentMethodFromPayMongo(eventData);
+      const failedReferenceNumber = eventData.attributes.reference_number || eventData.id;
+      const failedPaymentIntentId = eventData.attributes.payment_intent_id || eventData.attributes.payment_intent?.id;
       
       updateData = {
         status: 'failed',
         paymentMethod: failedPaymentMethod,
-        referenceNumber: eventData.attributes.reference_number || eventData.id,
+        referenceNumber: failedReferenceNumber,
       };
 
-      paymentRecord = await prisma.payments.findFirst({
-        where: {
-          referenceNumber:
-            eventData.attributes.reference_number || eventData.id,
-        },
+      console.log(`[PAYMENT_FAILED] Looking for payment with:`, {
+        referenceNumber: failedReferenceNumber,
+        paymentIntentId: failedPaymentIntentId,
+        eventId: eventData.id,
       });
 
-      if (!paymentRecord) {
-        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      if (failedPaymentIntentId) {
         paymentRecord = await prisma.payments.findFirst({
-          where: {
-            status: "pending",
-            paymentMethod: "Online Payment",
-            createdAt: { gte: yesterday },
-          },
-          orderBy: { createdAt: "desc" },
+          where: { paymentIntentId: failedPaymentIntentId },
         });
+        if (paymentRecord) {
+          console.log(`[PAYMENT_FAILED] Found by paymentIntentId: ${paymentRecord.transactionId}`);
+        }
+      }
+      if (!paymentRecord) {
+        paymentRecord = await prisma.payments.findFirst({
+          where: { referenceNumber: failedReferenceNumber },
+        });
+        if (paymentRecord) {
+          console.log(`[PAYMENT_FAILED] Found by referenceNumber: ${paymentRecord.transactionId}`);
+        }
+      }
+
+      if (!paymentRecord && eventData.id) {
+        paymentRecord = await prisma.payments.findFirst({
+          where: { referenceNumber: eventData.id },
+        });
+        if (paymentRecord) {
+          console.log(`[PAYMENT_FAILED] Found by eventData.id: ${paymentRecord.transactionId}`);
+        }
+      }
+
+      if (!paymentRecord) {
+        console.error(
+          `[PAYMENT_FAILED] No payment found - cannot safely mark as failed`
+        );
+        console.error(`[PAYMENT_FAILED] Webhook data:`, JSON.stringify({
+          eventId: event.data.id,
+          eventType: eventType,
+          referenceNumber: failedReferenceNumber,
+          paymentIntentId: failedPaymentIntentId,
+          dataId: eventData.id,
+          dataAttributes: Object.keys(eventData.attributes || {}),
+        }, null, 2));
+        console.error(
+          `[PAYMENT_FAILED] Manual investigation required to identify the failed payment`
+        );
+        paymentRecord = null;
       }
       break;
 
@@ -357,22 +390,56 @@ export const processWebhookEvent = async (event) => {
     case PAYMONGO_EVENTS.PAYMENT_REFUNDED:
     case PAYMONGO_EVENTS.PAYMENT_REFUND_UPDATED:
       const refundedPaymentId = eventData.attributes.payment_id;
+      const refundAmount = eventData.attributes.amount;
+
+      console.log(`[REFUND] Processing refund webhook:`, {
+        refundId: eventData.id,
+        paymentId: refundedPaymentId,
+        refundAmount: refundAmount ? refundAmount / 100 : 'unknown',
+        eventType: eventType,
+      });
 
       updateData = {
         status: "refunded",
       };
 
+      // Build where clause - must match payment ID and be paid status
+      const refundWhereClause = {
+        referenceNumber: refundedPaymentId,
+        status: 'paid',
+      };
+
+      // If refund amount is provided, also match the amount
+      if (refundAmount) {
+        refundWhereClause.amount = refundAmount / 100;
+      }
+
+      // Find the exact payment that was refunded
       paymentRecord = await prisma.payments.findFirst({
-        where: {
-          referenceNumber: refundedPaymentId,
-          status: 'paid', 
-        },
+        where: refundWhereClause,
       });
 
       if (!paymentRecord) {
-        console.log(
-          `Paid payment not found for refund. Refund ID: ${eventData.id}, Payment ID: ${refundedPaymentId}`
+        console.error(
+          `[REFUND] Paid payment not found for refund. Refund ID: ${eventData.id}, Payment ID: ${refundedPaymentId}, Amount: ${refundAmount ? refundAmount / 100 : 'N/A'}`
         );
+        console.error(`[REFUND] This refund will be ignored to prevent updating wrong payment`);
+        // Don't update any payment if we can't find the exact match
+        paymentRecord = null;
+      } else {
+        console.log(`[REFUND] Found payment to refund:`, {
+          transactionId: paymentRecord.transactionId,
+          amount: paymentRecord.amount,
+          referenceNumber: paymentRecord.referenceNumber,
+          paymentId: paymentRecord.id,
+        });
+        
+        // verify the amounts match if refund amount is provided
+        if (refundAmount && parseFloat(paymentRecord.amount) !== refundAmount / 100) {
+          console.error(`[REFUND] Amount mismatch! Payment amount: ${paymentRecord.amount}, Refund amount: ${refundAmount / 100}`);
+          console.error(`[REFUND] Refund will be ignored due to amount mismatch`);
+          paymentRecord = null;
+        }
       }
       break;
 

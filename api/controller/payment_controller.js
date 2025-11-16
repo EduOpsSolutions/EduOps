@@ -1,12 +1,7 @@
 import {
   createManualPayment,
   getPaymentWithSync,
-  getPaymentsByUser,
   getAllTransactions,
-  getAvailablePaymentMethods,
-  forceSyncPaymentStatus,
-  bulkSyncPendingPayments,
-  cleanupOrphanedPayments,
   sendPaymentLinkViaEmail,
   sendSuccess,
   sendError,
@@ -74,41 +69,6 @@ const getPaymentDetails = async (req, res) => {
   }
 };
 
-/* Get payments by user ID */
-const getPaymentsByUserId = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { page, limit, status } = req.query;
-
-    const result = await getPaymentsByUser(userId, { page, limit, status });
-    return sendSuccess(res, result);
-  } catch (error) {
-    const statusCode =
-      error.message === ERROR_MESSAGES.USER_NOT_FOUND ? 404 : 500;
-    return sendError(
-      res,
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      statusCode,
-      error.message
-    );
-  }
-};
-
-/* Get available payment method */
-const getPaymentMethods = async (req, res) => {
-  try {
-    const result = await getAvailablePaymentMethods();
-    return sendSuccess(res, result);
-  } catch (error) {
-    return sendError(
-      res,
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      500,
-      error.message
-    );
-  }
-};
-
 /* Refresh payment status from PayMongo */
 const refreshPaymentStatus = async (req, res) => {
   try {
@@ -136,22 +96,6 @@ const getAllPaymentTransactions = async (req, res) => {
       searchTerm,
     });
     return sendSuccess(res, result);
-  } catch (error) {
-    return sendError(
-      res,
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      500,
-      error.message
-    );
-  }
-};
-
-/* Force sync payment status with PayMongo */
-const forceSyncPaymentStatusController = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-    const result = await forceSyncPaymentStatus(paymentId);
-    return sendSuccess(res, result, "Payment status force synced successfully");
   } catch (error) {
     return sendError(
       res,
@@ -279,38 +223,11 @@ const manualSyncPayment = async (req, res) => {
   }
 };
 
-/* Bulk sync all pending payments (Admin endpoint) */
-const bulkSyncPendingPaymentsController = async (req, res) => {
-  try {
-    const result = await bulkSyncPendingPayments();
-    return sendSuccess(res, result, "Bulk sync of pending payments completed");
-  } catch (error) {
-    return sendError(
-      res,
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      500,
-      error.message
-    );
-  }
-};
-
-/* Clean up orphaned payments (Admin endpoint) */
-const cleanupOrphanedPaymentsController = async (req, res) => {
-  try {
-    const result = await cleanupOrphanedPayments();
-    return sendSuccess(res, result, "Orphaned payments cleanup completed");
-  } catch (error) {
-    return sendError(
-      res,
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      500,
-      error.message
-    );
-  }
-};
-
 // Webhook Handling
 const handleWebhook = async (req, res) => {
+  const startTime = Date.now();
+  let webhookEventRecord = null;
+  
   try {
     // Read raw body if provided by raw parser; otherwise use JSON body
     let rawBodyString = null;
@@ -320,26 +237,94 @@ const handleWebhook = async (req, res) => {
       rawBodyString = req.body;
     }
 
-    // Verify webhook signature (uses raw body if available)
-    verifyWebhookSignature(req);
+    const event = rawBodyString ? JSON.parse(rawBodyString) : req.body;
+    const signature = req.get("Paymongo-Signature");
+    const eventId = event?.data?.id;
+    const eventType = event?.data?.attributes?.type;
 
-    // Immediately ACK success
+    // Create initial webhook event log
+    webhookEventRecord = await prisma.webhook_events.create({
+      data: {
+        eventId: eventId,
+        eventType: eventType || "unknown",
+        payload: event,
+        signature: signature,
+        signatureVerified: false,
+        status: "pending",
+      },
+    });
+
+    // Verify webhook signature (uses raw body if available)
+    const isVerified = verifyWebhookSignature(req);
+
+    // Update signature verification status
+    await prisma.webhook_events.update({
+      where: { id: webhookEventRecord.id },
+      data: { signatureVerified: isVerified },
+    });
+
     res.status(200).json({
       statusCode: 200,
       body: { message: "SUCCESS" },
     });
 
-    // Process asynchronously after ACK
     try {
-      const event = rawBodyString ? JSON.parse(rawBodyString) : req.body;
-      await processWebhookEvent(event);
+      await prisma.webhook_events.update({
+        where: { id: webhookEventRecord.id },
+        data: { status: "processing" },
+      });
+
+      const result = await processWebhookEvent(event);
+      const processingTime = Date.now() - startTime;
+
+      // Update webhook event log with success
+      await prisma.webhook_events.update({
+        where: { id: webhookEventRecord.id },
+        data: {
+          status: "success",
+          processedAt: new Date(),
+          processingTimeMs: processingTime,
+          paymentId: result?.paymentId || null,
+        },
+      });
+
+      console.log(`[Webhook] Successfully processed ${eventType} in ${processingTime}ms`);
     } catch (processingError) {
       console.error("Webhook processing error:", processingError);
+      const processingTime = Date.now() - startTime;
+
+      // Update webhook event log with failure
+      await prisma.webhook_events.update({
+        where: { id: webhookEventRecord.id },
+        data: {
+          status: "failed",
+          error: processingError.message || "Unknown processing error",
+          processedAt: new Date(),
+          processingTimeMs: processingTime,
+        },
+      });
     }
     return; // response already sent
   } catch (error) {
     console.error("[Webhook] Error processing webhook:", error.message);
     console.error("[Webhook] Error stack:", error.stack);
+
+    // Log error to webhook_events if record was created
+    if (webhookEventRecord) {
+      try {
+        await prisma.webhook_events.update({
+          where: { id: webhookEventRecord.id },
+          data: {
+            status: "failed",
+            error: error.message,
+            processedAt: new Date(),
+            processingTimeMs: Date.now() - startTime,
+          },
+        });
+      } catch (logError) {
+        console.error("[Webhook] Failed to log error:", logError);
+      }
+    }
 
     // Handle specific webhook errors
     if (error.message.includes("Webhook secret not configured")) {
@@ -460,6 +445,7 @@ const createPaymentIntent = async (req, res) => {
               paymentId,
               exists: !!existing,
               status: existing?.status,
+              hasIntentId: !!existing?.paymentIntentId,
             });
             if (!existing) {
               return sendError(
@@ -479,6 +465,22 @@ const createPaymentIntent = async (req, res) => {
                 409
               );
             }
+            
+            if (existing.paymentIntentId && existing.paymentIntentId !== paymentIntentId) {
+              console.warn(
+                "[CreateIntent] Payment already has a different intent ID, returning existing",
+                { 
+                  existingIntentId: existing.paymentIntentId, 
+                  newIntentId: paymentIntentId 
+                }
+              );
+              return sendSuccess(
+                res,
+                result.data,
+                "Payment intent already exists for this payment"
+              );
+            }
+            
             await prisma.payments.update({
               where: { id: paymentId },
               data: {
@@ -497,8 +499,33 @@ const createPaymentIntent = async (req, res) => {
               "Failed to update existing payment record with intent:",
               dbError
             );
+            return sendError(
+              res,
+              "Failed to update payment record",
+              500
+            );
           }
         } else {
+          // Check if a payment already exists for this intent ID to prevent duplicates
+          const existingPaymentWithIntent = await prisma.payments.findFirst({
+            where: {
+              paymentIntentId: paymentIntentId,
+              status: "pending",
+            },
+          });
+
+          if (existingPaymentWithIntent) {
+            console.log("[CreateIntent] payment with this intent already exists, reusing", {
+              paymentId: existingPaymentWithIntent.id,
+              transactionId: existingPaymentWithIntent.transactionId,
+            });
+            return sendSuccess(
+              res,
+              result.data,
+              "Payment intent created successfully"
+            );
+          }
+
           const customTransactionId = await generatePaymentId();
           console.log("[CreateIntent] creating new pending payment row", {
             customTransactionId,
@@ -535,6 +562,11 @@ const createPaymentIntent = async (req, res) => {
             console.log("[CreateIntent] new pending payment inserted OK");
           } catch (dbError) {
             console.error("Failed to create payment record:", dbError);
+            return sendError(
+              res,
+              "Failed to create payment record",
+              500
+            );
           }
         }
       }
@@ -963,87 +995,17 @@ const checkPaymentStatus = async (req, res) => {
   }
 };
 
-/* Cancel payment */
-const cancelPayment = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-
-    if (!paymentId) {
-      return sendError(res, "Payment ID is required", 400);
-    }
-
-    console.log(`Attempting to cancel payment: ${paymentId}`);
-
-    const payment = await prisma.payments.findFirst({
-      where: {
-        OR: [{ id: paymentId }, { transactionId: paymentId }],
-      },
-    });
-
-    if (!payment) {
-      return sendError(res, "Payment not found", 404);
-    }
-
-    // Check if payment can be cancelled
-    if (payment.status === "paid") {
-      return sendError(res, "Cannot cancel a paid payment", 400);
-    }
-
-    if (payment.status === "cancelled") {
-      return sendError(res, "Payment is already cancelled", 400);
-    }
-
-    // Update payment status to cancelled
-    const updatedPayment = await prisma.payments.update({
-      where: { id: payment.id },
-      data: {
-        status: "cancelled",
-        updatedAt: new Date(),
-      },
-    });
-
-    console.log(
-      `Successfully cancelled payment: ${payment.id} (${payment.transactionId})`
-    );
-
-    return sendSuccess(
-      res,
-      {
-        id: updatedPayment.id,
-        transactionId: updatedPayment.transactionId,
-        status: updatedPayment.status,
-        cancelledAt: updatedPayment.updatedAt,
-      },
-      "Payment cancelled successfully"
-    );
-  } catch (error) {
-    console.error("Cancel payment error:", error);
-    return sendError(
-      res,
-      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      500,
-      error.message
-    );
-  }
-};
-
 //Export Controller Functions
 export {
   createManualTransaction,
   getPaymentDetails,
-  getPaymentsByUserId,
   getAllPaymentTransactions,
-  getPaymentMethods,
   refreshPaymentStatus,
-  forceSyncPaymentStatusController,
-  bulkSyncPendingPaymentsController,
-  cleanupOrphanedPaymentsController,
   createPaymentIntent,
   attachPaymentMethod,
   sendPaymentLinkEmail,
   checkPaymentStatus,
   handleWebhook,
-  cancelPayment,
   manualSyncPayment,
 };
 
@@ -1051,18 +1013,12 @@ export {
 export default {
   createManualTransaction,
   getPaymentDetails,
-  getPaymentsByUserId,
   getAllTransactions: getAllPaymentTransactions,
-  getAvailablePaymentMethods: getPaymentMethods,
   refreshPaymentStatus,
-  forceSyncPaymentStatus: forceSyncPaymentStatusController,
   manualSyncPayment,
-  bulkSyncPendingPayments: bulkSyncPendingPaymentsController,
-  cleanupOrphanedPayments: cleanupOrphanedPaymentsController,
   createPaymentIntent,
   attachPaymentMethod,
   sendPaymentLinkEmail,
   checkPaymentStatus,
   handleWebhook,
-  cancelPayment,
 };

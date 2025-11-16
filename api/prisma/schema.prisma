@@ -576,3 +576,32 @@ model notification {
 
   user users @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model webhook_events {
+  id                 String    @id @default(cuid())
+  eventId            String?   @unique // PayMongo event ID
+  eventType          String    // payment.paid, payment.failed, etc.
+  payload            Json      // Full webhook payload
+  signature          String?   @db.Text // Paymongo-Signature header
+  signatureVerified  Boolean   @default(false)
+  status             WebhookEventStatus @default(pending)
+  processedAt        DateTime?
+  processingTimeMs   Int?      // Time taken to process in milliseconds
+  error              String?   @db.Text
+  retryCount         Int       @default(0)
+  lastRetryAt        DateTime?
+  paymentId          String?   // Link to payment if found
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WebhookEventStatus {
+  pending
+  processing
+  success
+  failed
+}
