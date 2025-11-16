@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SearchField from '../../components/textFields/SearchField';
 import ThinRedButton from '../../components/buttons/ThinRedButton';
+import Pagination from '../../components/common/Pagination';
 import axiosInstance from '../../utils/axios.js';
 import EnrollmentDetailsModal from '../../components/modals/enrollment/EnrollmentDetailsModal';
 import { getCookieItem } from '../../utils/jwt';
@@ -17,6 +18,27 @@ function EnrollmentRequests() {
     useState(false);
   const [activePeriods, setActivePeriods] = useState([]);
   const [currentPeriodInfo, setCurrentPeriodInfo] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Calculate pagination
+  const totalItems = enrollmentRequests.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRequests = enrollmentRequests.slice(startIndex, endIndex);
+  
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+  
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
   
   const { endEnrollment } = useEnrollmentPeriodStore();
   useEffect(() => {
@@ -398,7 +420,7 @@ function EnrollmentRequests() {
                         </tr>
                       </thead>
                       <tbody>
-                        {enrollmentRequests.map((request, index) => (
+                        {paginatedRequests.map((request, index) => (
                           <tr
                             key={request.id || index}
                             className="cursor-pointer transition-colors duration-200 hover:bg-dark-red hover:text-white"
@@ -517,6 +539,19 @@ function EnrollmentRequests() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={handleItemsPerPageChange}
+                    totalItems={totalItems}
+                    itemName="enrollment requests"
+                    showItemsPerPageSelector={true}
+                  />
                 </div>
               </>
             )}

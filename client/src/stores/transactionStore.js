@@ -36,7 +36,7 @@ const useTransactionStore = create((set, get) => ({
   fetchTransactions: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axiosInstance.get("/payments/admin/allTransactions");
+      const response = await axiosInstance.get("/payments/admin/allTransactions?limit=100");
       const transactions = response.data.data?.payments || [];
       
       set({ transactions, loading: false });
@@ -56,7 +56,7 @@ const useTransactionStore = create((set, get) => ({
   // Auto-refresh function for webhook updates
   refreshTransactions: async () => {
     try {
-      const response = await axiosInstance.get("/payments/admin/allTransactions");
+      const response = await axiosInstance.get("/payments/admin/allTransactions?limit=1000");
       const transactions = response.data.data?.payments || [];
       
       set({ transactions });

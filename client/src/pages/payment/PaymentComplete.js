@@ -100,6 +100,91 @@ const PaymentComplete = () => {
 
   // Success state
   if (paymentData && !error) {
+    // Show error UI for failed or expired payments
+    if (
+      paymentData.dbStatus === 'expired' ||
+      paymentData.status === 'expired' ||
+      paymentData.dbStatus === 'failed' ||
+      paymentData.status === 'failed'
+    ) {
+      return (
+        <div className="bg_custom bg-white-yellow-tone">
+          <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
+          <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8 min-h-[calc(100vh-80px)]">
+            <div className="w-full max-w-2xl bg-white border-2 border-dark-red rounded-lg p-6 sm:p-8 md:p-10 shadow-lg">
+              {/* Error Icon */}
+              <div className="text-center mb-6">
+                <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <svg
+                    className="w-12 h-12 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                  Payment Issue
+                </h1>
+              </div>
+
+              {/* Error Details */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold text-red-800 mb-2">Common Reasons:</h3>
+                <ul className="list-disc list-inside space-y-1 text-red-700 text-sm">
+                  <li>Payment session expired or failed</li>
+                  <li>Insufficient funds in account</li>
+                  <li>Network connectivity issues</li>
+                </ul>
+              </div>
+
+              {/* Help Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  <strong>Need Help?</strong> If you believe this is an error or if
+                  the amount was deducted from your account, please contact support.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    if (isAuthenticated && user?.role) {
+                      navigate(`/${user.role}`);
+                    } else {
+                      navigate('/login');
+                    }
+                  }}
+                  className="w-full px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
+                >
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    />
+                  </svg>
+                  Go to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="bg_custom bg-white-yellow-tone">
         <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
@@ -253,7 +338,6 @@ const PaymentComplete = () => {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
               Payment Issue
             </h1>
-            <p className="text-gray-600">{error}</p>
           </div>
 
           {/* Error Details */}
@@ -262,7 +346,6 @@ const PaymentComplete = () => {
             <ul className="list-disc list-inside space-y-1 text-red-700 text-sm">
               <li>Insufficient funds in account</li>
               <li>Network connectivity issues</li>
-              <li>Payment is still being processed</li>
             </ul>
           </div>
 
@@ -276,37 +359,6 @@ const PaymentComplete = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => {
-                const paymentIntentId = searchParams.get('payment_intent_id');
-                if (paymentIntentId) {
-                  setError(null);
-                  setLoading(true);
-                  setRetryCount(0);
-                  setTimeout(() => {
-                    checkPaymentStatus(paymentIntentId);
-                  }, 1000);
-                } else {
-                  navigate('/paymentForm');
-                }
-              }}
-              className="flex-1 px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
-            >
-              <svg
-                className="w-5 h-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Try Again
-            </button>
             <button
               onClick={() => {
                 if (isAuthenticated && user?.role) {
