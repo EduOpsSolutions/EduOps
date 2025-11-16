@@ -1,7 +1,8 @@
 import admin from "firebase-admin";
 import { randomUUID } from "crypto";
 import { filePaths } from "../constants/file_paths.js";
-import { PrismaClient } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 import { logUserActivity, logError } from "./logger.js";
 import { MODULE_TYPES } from "../constants/module_types.js";
 

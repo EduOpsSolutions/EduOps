@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from "@prisma/client";
+const { PrismaClient } = pkg;
 import { uploadFile } from '../utils/fileStorage.js';
 import { filePaths } from '../constants/file_paths.js';
 import { logUserActivity, logError } from '../utils/logger.js';

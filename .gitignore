@@ -15,3 +15,19 @@ uploads/*
 .DS_Store
 /.claude
 /api/.env.preprod
+
+# SSH Keys (never commit these!)
+*.pem
+*.key
+*_rsa
+*_ed25519
+eduops_deploy
+eduops_deploy.pub
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Deployment logs
+deploy.log
+deployment.log
