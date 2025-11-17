@@ -157,7 +157,8 @@ export const sendPaymentLinkEmail = async (
 export const sendPaymentReceiptEmail = async (
     email,
     paymentDetails,
-    user
+    user,
+    bcc = undefined
 ) => {
     try {
         // Format date
@@ -437,7 +438,8 @@ export const sendPaymentReceiptEmail = async (
                 </div>
             </body>
             </html>
-            `
+            `,
+            bcc
         );
 
         return emailSent;

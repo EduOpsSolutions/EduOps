@@ -145,14 +145,19 @@ const manualSyncPayment = async (req, res) => {
       });
 
       // Send receipt email when payment status changes to paid
-      if (updatedPayment.user && updatedPayment.user.email) {
+      if (updatedPayment.user && (updatedPayment.paymentEmail || updatedPayment.user.email)) {
+        const recipientEmail = updatedPayment.paymentEmail || updatedPayment.user.email;
+        // BCC to student's email if payer email is different
+        const bccEmail = updatedPayment.paymentEmail && updatedPayment.user.email !== updatedPayment.paymentEmail
+          ? updatedPayment.user.email
+          : undefined;
         console.log(
-          `Sending payment receipt email to ${updatedPayment.user.email} after manual sync`
+          `Sending payment receipt email to ${recipientEmail} after manual sync${bccEmail ? ` (BCC: ${bccEmail})` : ''}`
         );
 
         try {
           const emailSent = await sendPaymentReceiptEmail(
-            updatedPayment.user.email,
+            recipientEmail,
             {
               transactionId: updatedPayment.transactionId,
               referenceNumber: updatedPayment.referenceNumber,
@@ -170,16 +175,17 @@ const manualSyncPayment = async (req, res) => {
               lastName: updatedPayment.user.lastName,
               email: updatedPayment.user.email,
               student_id: updatedPayment.user.userId,
-            }
+            },
+            bccEmail
           );
 
           if (emailSent) {
             console.log(
-              `Payment receipt email sent successfully to ${updatedPayment.user.email}`
+              `Payment receipt email sent successfully to ${recipientEmail}`
             );
           } else {
             console.error(
-              `Failed to send payment receipt email to ${updatedPayment.user.email}`
+              `Failed to send payment receipt email to ${recipientEmail}`
             );
           }
         } catch (emailError) {
@@ -906,14 +912,19 @@ const checkPaymentStatus = async (req, res) => {
           payment.paidAt = new Date();
 
           // Send receipt email when payment status changes to paid
-          if (payment.user && payment.user.email) {
+          if (payment.user && (payment.paymentEmail || payment.user.email)) {
+            const recipientEmail = payment.paymentEmail || payment.user.email;
+            // BCC to student's email if payer email is different
+            const bccEmail = payment.paymentEmail && payment.user.email !== payment.paymentEmail
+              ? payment.user.email
+              : undefined;
             console.log(
-              `Sending payment receipt email to ${payment.user.email} after status sync`
+              `Sending payment receipt email to ${recipientEmail} after status sync${bccEmail ? ` (BCC: ${bccEmail})` : ''}`
             );
 
             try {
               const emailSent = await sendPaymentReceiptEmail(
-                payment.user.email,
+                recipientEmail,
                 {
                   transactionId: payment.transactionId,
                   referenceNumber: payment.referenceNumber,
@@ -931,16 +942,17 @@ const checkPaymentStatus = async (req, res) => {
                   lastName: payment.user.lastName,
                   email: payment.user.email,
                   student_id: payment.user.userId,
-                }
+                },
+                bccEmail
               );
 
               if (emailSent) {
                 console.log(
-                  `Payment receipt email sent successfully to ${payment.user.email}`
+                  `Payment receipt email sent successfully to ${recipientEmail}`
                 );
               } else {
                 console.error(
-                  `Failed to send payment receipt email to ${payment.user.email}`
+                  `Failed to send payment receipt email to ${recipientEmail}`
                 );
               }
             } catch (emailError) {
