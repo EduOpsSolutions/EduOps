@@ -88,19 +88,16 @@ const useFeesSearchStore = createSearchStore({
     batch: "",
     year: "",
   },
-  searchableFields: ["name"],
+  searchableFields: ["courseName"],
   exactMatchFields: ["batch", "year"],
   initialItemsPerPage: 10,
   filterFunction: (data, params) => {
     return data.filter((course) => {
-      return (
-        (params.courseName === "" ||
-          course.name
-            .toLowerCase()
-            .includes(params.courseName.toLowerCase())) &&
-        (params.batch === "" || course.batch === params.batch) &&
-        (params.year === "" || course.year === params.year)
-      );
+      const courseNameMatch = !params.courseName || 
+        course.courseName?.toLowerCase().includes(params.courseName.toLowerCase());
+      const batchMatch = !params.batch || course.batchName === params.batch;
+      const yearMatch = !params.year || String(course.year) === String(params.year);
+      return courseNameMatch && batchMatch && yearMatch;
     });
   },
   fetchData: fetchCourseBatchPairs,
@@ -224,7 +221,6 @@ const useFeesStore = create((set, get) => ({
 
   handleConfirmSave: async () => {
     const { editedFees, originalFees } = get();
-    const token = getCookieItem("token");
     try {
       const deletedFees = originalFees.filter(
         (orig) => !editedFees.some((edit) => edit.id === orig.id)
