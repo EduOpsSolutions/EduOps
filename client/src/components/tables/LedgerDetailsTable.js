@@ -1,12 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import ThinRedButton from '../buttons/ThinRedButton';
 
-// Print-specific CSS (hide everything except the ledger details card when printing)
+// Print-specific CSS 
 const printStyles = `
   @media print {
     body * { visibility: hidden !important; }
     .print-ledger-container, .print-ledger-container * { visibility: visible !important; }
-    .print-ledger-container { position: absolute !important; left: 0; top: 0; width: 100vw !important; background: #fff !important; box-shadow: none !important; border: 1px solid #000 !important; z-index: 9999; }
+    .print-ledger-container {
+      position: absolute !important;
+      left: 0;
+      top: 0;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      min-width: 0 !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
+      background: #fff !important;
+    }
+    table {
+      width: 100% !important;
+      max-width: 100vw !important;
+      table-layout: auto !important;
+      font-size: 12px !important;
+    }
+    th, td {
+      white-space: normal !important;
+      word-break: break-word !important;
+      overflow-wrap: break-word !important;
+      font-size: 12px !important;
+      padding: 4px !important;
+    }
     .no-print { display: none !important; }
   }
 `;
@@ -118,45 +141,29 @@ const LedgerDetails = ({
                       }
                       return (
                         <tr key={entry.id || referenceNumber || idx} className="border-b border-[rgb(137,14,7,.49)]">
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={date}>
-                              {date}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={date}>
+                            {date}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={time}>
-                              {time}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={time}>
+                            {time}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-24 sm:max-w-28 md:max-w-none" title={referenceNumber}>
-                              {referenceNumber}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={referenceNumber}>
+                            {referenceNumber}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={debitAmount != null ? debitAmount : " "}>
-                              {debitAmount != null ? debitAmount : " "}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={debitAmount != null ? debitAmount : " "}>
+                            {debitAmount != null ? debitAmount : " "}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={creditAmount != null ? creditAmount : " "}>
-                              {creditAmount != null ? creditAmount : " "}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={creditAmount != null ? creditAmount : " "}>
+                            {creditAmount != null ? creditAmount : " "}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={balance != null ? balance : "N/A"}>
-                              {balance != null ? balance : "N/A"}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={balance != null ? balance : "N/A"}>
+                            {balance != null ? balance : "N/A"}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-20 sm:max-w-24 md:max-w-none" title={feeType}>
-                              {feeType}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={feeType}>
+                            {feeType}
                           </td>
-                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base">
-                            <div className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none" title={entry.remarks}>
-                              {entry.remarks}
-                            </div>
+                          <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 text-center text-xs sm:text-sm md:text-base" title={entry.remarks}>
+                            {entry.remarks}
                           </td>
                         </tr>
                       );
