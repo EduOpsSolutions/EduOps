@@ -233,7 +233,11 @@ const manualSyncPayment = async (req, res) => {
 const handleWebhook = async (req, res) => {
   const startTime = Date.now();
   let webhookEventRecord = null;
-  
+
+  console.log("[Webhook] ===== WEBHOOK RECEIVED =====");
+  console.log("[Webhook] Timestamp:", new Date().toISOString());
+  console.log("[Webhook] Headers:", JSON.stringify(req.headers, null, 2));
+
   try {
     // Read raw body if provided by raw parser; otherwise use JSON body
     let rawBodyString = null;
@@ -247,6 +251,9 @@ const handleWebhook = async (req, res) => {
     const signature = req.get("Paymongo-Signature");
     const eventId = event?.data?.id;
     const eventType = event?.data?.attributes?.type;
+
+    console.log("[Webhook] Event Type:", eventType);
+    console.log("[Webhook] Event ID:", eventId);
 
     // Create initial webhook event log
     webhookEventRecord = await prisma.webhook_events.create({
@@ -694,6 +701,9 @@ const checkPaymentStatus = async (req, res) => {
     console.log("[CheckStatus] db payment by intent:", {
       found: !!payment,
       status: payment?.status,
+      hasPaymentEmail: !!payment?.paymentEmail,
+      paymentEmail: payment?.paymentEmail,
+      userEmail: payment?.user?.email,
     });
 
     if (!payment) {
@@ -896,10 +906,16 @@ const checkPaymentStatus = async (req, res) => {
       }
     }
 
+    // Check if payment just became paid (within last 10 seconds)
+    // This catches rapid polling where payment was updated but email wasn't sent
+    const isRecentlyPaid = payment.status === "paid" && payment.paidAt &&
+      (new Date() - new Date(payment.paidAt)) < 10 * 1000;
+
     if (payment.status === "pending" && paymongoResult?.success) {
       const paymongoStatus = paymongoResult.data?.data?.attributes?.status;
 
       if (paymongoStatus === "succeeded") {
+        console.log("[CheckStatus] Payment transitioning from pending to paid");
         try {
           await prisma.payments.update({
             where: { id: payment.id },
@@ -964,6 +980,64 @@ const checkPaymentStatus = async (req, res) => {
           }
         } catch (updateError) {
           console.error("Failed to update payment status:", updateError);
+        }
+      }
+    } else if (isRecentlyPaid) {
+      // Payment is already paid but was recently updated (within 10 seconds)
+      // This handles race condition where payment was updated to 'paid' but email wasn't sent
+      // due to rapid polling or webhook delay
+      console.log("[CheckStatus] Payment is recently paid, checking if receipt email should be sent");
+      console.log("[CheckStatus] Payment paid at:", payment.paidAt);
+      console.log("[CheckStatus] Time since paid:", Math.round((new Date() - new Date(payment.paidAt)) / 1000), "seconds");
+
+      if (payment.user && (payment.paymentEmail || payment.user.email)) {
+        const recipientEmail = payment.paymentEmail || payment.user.email;
+        const bccEmail = payment.paymentEmail && payment.user.email !== payment.paymentEmail
+          ? payment.user.email
+          : undefined;
+
+        console.log(
+          `[CheckStatus] Sending receipt email for recently paid payment to ${recipientEmail}${bccEmail ? ` (BCC: ${bccEmail})` : ''}`
+        );
+
+        try {
+          const emailSent = await sendPaymentReceiptEmail(
+            recipientEmail,
+            {
+              transactionId: payment.transactionId,
+              referenceNumber: payment.referenceNumber,
+              amount: parseFloat(payment.amount),
+              paymentMethod: finalPaymentMethod,
+              feeType: payment.feeType,
+              remarks: payment.remarks,
+              paidAt: payment.paidAt,
+              createdAt: payment.createdAt,
+              currency: payment.currency || "PHP",
+            },
+            {
+              studentName: `${payment.user.firstName} ${payment.user.lastName}`,
+              firstName: payment.user.firstName,
+              lastName: payment.user.lastName,
+              email: payment.user.email,
+              student_id: payment.user.userId,
+            },
+            bccEmail
+          );
+
+          if (emailSent) {
+            console.log(
+              `[CheckStatus] Receipt email sent successfully to ${recipientEmail}`
+            );
+          } else {
+            console.error(
+              `[CheckStatus] Failed to send receipt email to ${recipientEmail}`
+            );
+          }
+        } catch (emailError) {
+          console.error(
+            "[CheckStatus] Error sending receipt email for recently paid payment:",
+            emailError
+          );
         }
       }
     }
