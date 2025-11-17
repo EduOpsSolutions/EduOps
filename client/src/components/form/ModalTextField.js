@@ -83,7 +83,7 @@ const ModalTextField = ({
             type === 'number'
               ? '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
               : ''
-          } ${children ? 'pl-8 pr-3' : ''} ${inputClassName}`}
+          } ${children ? 'pl-8 pr-3' : ''} ${disabled ? 'bg-gray-200 text-gray-600' : ''} ${inputClassName}`}
           {...props}
         />
       </div>
