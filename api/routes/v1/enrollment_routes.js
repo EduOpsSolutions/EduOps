@@ -55,7 +55,6 @@ router.get(
   "/:studentId/enrollments",
   verifyToken,
   validateIsActiveUser,
-  validateUserIsAdmin,
   getStudentEnrollments
 );
 
