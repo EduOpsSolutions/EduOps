@@ -472,8 +472,7 @@ export const processWebhookEvent = async (event) => {
 
         await logSecurityEvent(
           "Payment successful",
-          updatedPayment.user?.userId || "GUEST",
-          MODULE_TYPES.PAYMENTS,
+          updatedPayment.user?.userId || null,
           MODULE_TYPES.PAYMENTS,
           `Payment completed: Transaction ID [${
             updatedPayment.transactionId
@@ -495,7 +494,7 @@ export const processWebhookEvent = async (event) => {
 
         logSecurityEvent(
           "Payment failed",
-          updatedPayment.user?.userId || "GUEST",
+          updatedPayment.user?.userId || null,
           MODULE_TYPES.PAYMENTS,
           `Payment failed: Transaction ID [${
             updatedPayment.transactionId

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../../utils/axios";
-import DiscardChangesModal from "../common/DiscardChangesModal";
+import Swal from "sweetalert2";
 import ModalTextField from "../../form/ModalTextField";
 import ModalSelectField from "../../form/ModalSelectField";
 
@@ -64,13 +64,11 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
     }
   }, [isOpen, enrollments, formData, student]);
 
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false); 
 
   useEffect(() => {
     if (!isOpen) {
-      setShowDiscardModal(false);
       setFormData({
         typeOfFee: "",
         orNumber: "",
@@ -112,9 +110,22 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
         isDebitDisabled,
         isCreditDisabled
       });
+      await Swal.fire({
+        icon: 'success',
+        title: 'Ledger Updated',
+        text: 'The ledger was updated successfully!',
+        confirmButtonColor: '#992525'
+      });
       onClose();
     } catch (error) {
-      setError(error.message || "Failed to update ledger. Please try again.");
+      let errorMsg = error.message || "Failed to update ledger. Please try again.";
+      await Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: errorMsg,
+        confirmButtonColor: '#992525'
+      });
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -124,21 +135,25 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
     return Object.values(formData).some((value) => value.trim() !== "");
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     if (hasChanges()) {
-      setShowDiscardModal(true);
+      const result = await Swal.fire({
+        title: 'Discard Changes?',
+        text: 'You have unsaved changes. Are you sure you want to discard them?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#992525',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Discard',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+      });
+      if (result.isConfirmed) {
+        onClose();
+      }
     } else {
       onClose();
     }
-  };
-
-  const handleDiscardChanges = () => {
-    setShowDiscardModal(false);
-    onClose();
-  };
-
-  const handleCancelDiscard = () => {
-    setShowDiscardModal(false);
   };
 
   if (!isOpen) return null;
@@ -311,11 +326,6 @@ const UpdateLedgerModal = ({ isOpen, onClose, onSubmit, student }) => {
         </div>
       </div>
 
-      <DiscardChangesModal
-        show={showDiscardModal}
-        onConfirm={handleDiscardChanges}
-        onCancel={handleCancelDiscard}
-      />
     </>
   );
 };
