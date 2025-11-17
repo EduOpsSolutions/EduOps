@@ -54,39 +54,43 @@ function ViewStudentsModal({
   // Load enrolled students list (main list)
   useEffect(() => {
     if (!isOpen || disabled) return;
+
+    // If no scheduleId, this is a new schedule - don't fetch any enrolled students
+    if (!scheduleId) {
+      setEnrolledStudents([]);
+      setEnrolledCount(0);
+      setEnrolledLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     (async () => {
       try {
         setEnrolledLoading(true);
 
-        // If we have a scheduleId, get students directly from the schedule
-        if (scheduleId) {
-          const resp = await axiosInstance.get(
-            `/schedules/${scheduleId}/students`,
-            {
-              signal: controller.signal,
-            }
-          );
-          const students = Array.isArray(resp.data) ? resp.data : [];
-          setEnrolledStudents(students);
-          setEnrolledCount(students.length);
-          setSelectedIds([]);
-        } else {
-          // Otherwise, search for enrolled students by course and period
-          const resp = await axiosInstance.get(`/users/search-students`, {
-            params: {
-              courseId,
-              periodId,
-              enrolledOnly: true,
-              take: 50,
-            },
+        // Get students directly from the specific schedule
+        const resp = await axiosInstance.get(
+          `/schedules/${scheduleId}/students`,
+          {
             signal: controller.signal,
-          });
-          const students = Array.isArray(resp.data) ? resp.data : [];
-          setEnrolledStudents(students);
-          setEnrolledCount(students.length);
-          setSelectedIds([]);
+          }
+        );
+        const students = Array.isArray(resp.data) ? resp.data : [];
+
+        // Deduplicate students by ID to prevent React key warnings
+        const uniqueStudents = Array.from(
+          new Map(students.map(s => [s.id, s])).values()
+        );
+
+        if (students.length !== uniqueStudents.length) {
+          console.warn(
+            `Removed ${students.length - uniqueStudents.length} duplicate student(s) from enrolled list`
+          );
         }
+
+        setEnrolledStudents(uniqueStudents);
+        setEnrolledCount(uniqueStudents.length);
+        setSelectedIds([]);
       } catch (e) {
         if (e.name !== 'CanceledError') {
           setEnrolledStudents([]);
@@ -119,7 +123,14 @@ function ViewStudentsModal({
           },
           signal: controller.signal,
         });
-        setSuggestions(Array.isArray(resp.data) ? resp.data : []);
+        const suggestions = Array.isArray(resp.data) ? resp.data : [];
+
+        // Deduplicate suggestions by ID
+        const uniqueSuggestions = Array.from(
+          new Map(suggestions.map(s => [s.id, s])).values()
+        );
+
+        setSuggestions(uniqueSuggestions);
       } catch (e) {
         if (e.name !== 'CanceledError') {
           setSuggestions([]);
