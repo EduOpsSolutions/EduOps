@@ -85,21 +85,26 @@ export default function EnrollmentDetailsModal({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Validate enrollment status changes before updating form data
     if (name === "enrollmentStatus") {
       const currentStatus = formData?.enrollmentStatus || "pending";
       const newStatus = value;
-      
+
       // Define step progression order
       const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
-      const currentIndex = statusOrder.indexOf(currentStatus);
-      const newIndex = statusOrder.indexOf(newStatus);
-      
+      const currentIndex = statusOrder.indexOf(currentStatus.toLowerCase());
+      const newIndex = statusOrder.indexOf(newStatus.toLowerCase());
+
       const hasAccountForThisEnrollment = !!(formData?.userId || formData?.studentId || originalData?.userId || originalData?.studentId || emailExists);
-      const isMovingBackwards = newIndex < currentIndex;
-      
-      if (!isMovingBackwards) {
+
+      // Allow changes from rejected or completed status (admin override)
+      // Also allow moving backwards in the workflow
+      const isMovingBackwards = newIndex < currentIndex && currentIndex !== -1 && newIndex !== -1;
+      const isFromSpecialStatus = currentStatus.toLowerCase() === "rejected" || currentStatus.toLowerCase() === "completed";
+
+      // Skip validation if moving backwards or from a special status
+      if (!isMovingBackwards && !isFromSpecialStatus) {
         if (newIndex >= 1 && !hasAccountForThisEnrollment && newStatus !== "rejected") {
           Swal.fire({
             title: "Account Required",
@@ -109,12 +114,12 @@ export default function EnrollmentDetailsModal({
           });
           return;
         }
-        
+
         if (newIndex > currentIndex + 1 && newStatus !== "rejected") {
           const currentStep = currentIndex + 1;
           const nextStep = currentIndex + 2;
           const targetStep = newIndex + 1;
-          
+
           Swal.fire({
             title: "Cannot Skip Steps",
             text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
@@ -394,15 +399,17 @@ export default function EnrollmentDetailsModal({
     // Validate step progression before saving
     const currentStatus = originalData?.enrollmentStatus || "pending";
     const newStatus = formData?.enrollmentStatus;
-    
+
     if (newStatus && newStatus !== "rejected") {
       const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
-      const currentIndex = statusOrder.indexOf(currentStatus);
-      const newIndex = statusOrder.indexOf(newStatus);
+      const currentIndex = statusOrder.indexOf(currentStatus.toLowerCase());
+      const newIndex = statusOrder.indexOf(newStatus.toLowerCase());
       const hasAccountForThisEnrollment = !!(formData?.userId || formData?.studentId || originalData?.userId || originalData?.studentId || emailExists);
-      const isMovingBackwards = newIndex < currentIndex;
-      
-      if (!isMovingBackwards) {
+      const isMovingBackwards = newIndex < currentIndex && currentIndex !== -1 && newIndex !== -1;
+      const isFromSpecialStatus = currentStatus.toLowerCase() === "rejected" || currentStatus.toLowerCase() === "completed";
+
+      // Skip validation if moving backwards or from a special status
+      if (!isMovingBackwards && !isFromSpecialStatus) {
         if (newStatus === "verified" && !hasAccountForThisEnrollment) {
           Swal.fire({
             title: "Account Required",
@@ -412,12 +419,12 @@ export default function EnrollmentDetailsModal({
           });
           return;
         }
-        
+
         if (newIndex > currentIndex + 1) {
           const currentStep = currentIndex + 1;
           const nextStep = currentIndex + 2;
           const targetStep = newIndex + 1;
-          
+
           Swal.fire({
             title: "Cannot Skip Steps",
             text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
@@ -426,7 +433,7 @@ export default function EnrollmentDetailsModal({
           });
           return;
         }
-        
+
         if (newIndex >= 1 && !hasAccountForThisEnrollment) {
           Swal.fire({
             title: "Account Required",

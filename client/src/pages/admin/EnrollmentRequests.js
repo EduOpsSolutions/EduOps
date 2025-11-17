@@ -18,33 +18,28 @@ function EnrollmentRequests() {
     useState(false);
   const [activePeriods, setActivePeriods] = useState([]);
   const [currentPeriodInfo, setCurrentPeriodInfo] = useState(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
-  // Calculate pagination
-  const totalItems = enrollmentRequests.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedRequests = enrollmentRequests.slice(startIndex, endIndex);
-  
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   // Pagination handlers
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
-  
+
   const handleItemsPerPageChange = (newItemsPerPage) => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
   };
-  
+
   const { endEnrollment } = useEnrollmentPeriodStore();
   useEffect(() => {
     fetchEnrollmentRequests();
     fetchActivePeriods();
-  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEnrollmentRequests = async () => {
     try {
@@ -53,6 +48,8 @@ function EnrollmentRequests() {
       const response = await axiosInstance.get('/enrollment/requests', {
         params: {
           search: searchTerm,
+          page: currentPage,
+          limit: itemsPerPage,
         },
         headers: {
           Authorization: `Bearer ${getCookieItem('token')}`,
@@ -60,6 +57,8 @@ function EnrollmentRequests() {
       });
       if (!response.data.error) {
         setEnrollmentRequests(response.data.data);
+        setTotalItems(response.data.total);
+        setTotalPages(response.data.totalPages);
       } else {
         setError(
           'Error fetching enrollment requests: ' + response.data.message
@@ -78,6 +77,7 @@ function EnrollmentRequests() {
   };
 
   const handleSearch = () => {
+    setCurrentPage(1); // Reset to first page when searching
     fetchEnrollmentRequests();
   };
 
@@ -420,7 +420,7 @@ function EnrollmentRequests() {
                         </tr>
                       </thead>
                       <tbody>
-                        {paginatedRequests.map((request, index) => (
+                        {enrollmentRequests.map((request, index) => (
                           <tr
                             key={request.id || index}
                             className="cursor-pointer transition-colors duration-200 hover:bg-dark-red hover:text-white"

@@ -19,8 +19,22 @@ function CSVPreviewModal({
       setLocalApproved(validationData.approved || []);
       setLocalRejected(validationData.rejected || []);
       setLocalConflicts(validationData.conflicts || []);
+    } else {
+      // Reset state when validationData is cleared
+      setLocalApproved([]);
+      setLocalRejected([]);
+      setLocalConflicts([]);
     }
   }, [validationData]);
+
+  // Reset all state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setLocalApproved([]);
+      setLocalRejected([]);
+      setLocalConflicts([]);
+    }
+  }, [isOpen]);
 
   if (!isOpen || !validationData) return null;
 
