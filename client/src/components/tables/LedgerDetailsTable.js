@@ -18,14 +18,13 @@ const LedgerDetails = ({
   onAddTransaction,
   ledgerEntries = []
 }) => {
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     const timeout = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timeout);
   }, [ledgerEntries]);
-
   if (!student) return null;
   
   return (
@@ -176,9 +175,15 @@ const LedgerDetails = ({
               </table>
           </div>
         </div>
+      </div>
+
+        <div className="mt-4 no-print">
+          <ThinRedButton onClick={onBackClick}>
+            Back to Results
+          </ThinRedButton>
         </div>
           </>
-        )}
+          )}
       </div>
     </>
   );
