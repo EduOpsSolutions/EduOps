@@ -450,23 +450,30 @@ const getEnrollmentRequests = async (req, res) => {
     search,
     order = "desc",
   } = req.query;
+
+  // Parse pagination parameters as integers
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+
+  // Build the where clause (used for both findMany and count)
+  const whereClause = {
+    ...(id && { id: id }),
+    ...(status && { enrollmentStatus: status }),
+    ...(search && {
+      OR: [
+        { enrollmentId: { contains: search } },
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
+        { preferredEmail: { contains: search } },
+        ...(search ? [{ altEmail: { contains: search } }] : []),
+      ],
+    }),
+  };
+
   const enrollmentRequests = await prisma.enrollment_request.findMany({
-    where: {
-      id: id,
-      enrollmentStatus: status,
-      enrollmentStatus: status,
-      ...(search && {
-        OR: [
-          { enrollmentId: { contains: search } },
-          { firstName: { contains: search } },
-          { lastName: { contains: search } },
-          { preferredEmail: { contains: search } },
-          { altEmail: { contains: search } },
-        ],
-      }),
-    },
-    skip: (page - 1) * limit,
-    take: limit,
+    where: whereClause,
+    skip: (pageNum - 1) * limitNum,
+    take: limitNum,
     orderBy: { createdAt: order },
   });
 
@@ -474,12 +481,18 @@ const getEnrollmentRequests = async (req, res) => {
     enrollmentRequests.map(async (item) => {
       const progressData = await trackEnrollmentProgress(item);
 
+      // Build OR conditions, only include altEmail if it exists
+      const emailConditions = [{ email: item.preferredEmail }];
+      if (item.altEmail) {
+        emailConditions.push({ email: item.altEmail });
+      }
+
       return {
         ...item,
         currentStep: progressData.currentStep,
         isUserCreated: (await prisma.users.findFirst({
           where: {
-            OR: [{ email: item.preferredEmail }, { email: item.altEmail }],
+            OR: emailConditions,
           },
         }))
           ? true
@@ -488,19 +501,17 @@ const getEnrollmentRequests = async (req, res) => {
     })
   );
 
+  // Use the same where clause for count to ensure accurate pagination
   const total = await prisma.enrollment_request.count({
-    where: {
-      id: id,
-      enrollmentStatus: status,
-      enrollmentStatus: status,
-    },
+    where: whereClause,
   });
 
   const retval = {
     data: new_data,
     total: total,
-    page: page,
-    limit: limit,
+    page: pageNum,
+    limit: limitNum,
+    totalPages: Math.ceil(total / limitNum),
   };
 
   res.status(200).json({ ...retval, error: false });
@@ -573,33 +584,36 @@ const trackEnrollment = async (req, res) => {
     const coursePrice = course ? parseFloat(course.price) : null;
     const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : "";
 
-    switch (enrollmentRequest.enrollmentStatus.toUpperCase()) {
-      case "PENDING":
+    // Normalize status to lowercase for consistent comparison
+    const normalizedStatus = enrollmentRequest.enrollmentStatus?.toLowerCase() || "pending";
+
+    switch (normalizedStatus) {
+      case "pending":
         currentStep = 2;
         completedSteps = [1];
         remarkMsg = `Your enrollment form has been submitted and is pending verification by an administrator.`;
         break;
-      case "VERIFIED":
+      case "verified":
         currentStep = 3;
         completedSteps = [1, 2];
         remarkMsg = `Your form has been verified. Please pay the Downpayment Fee: ₱3000 or full amount${priceText}`;
         break;
-      case "PAYMENT_PENDING":
+      case "payment_pending":
         currentStep = 4;
         completedSteps = [1, 2, 3];
         remarkMsg = `Your payment is being verified. This may take 1-2 business days.`;
         break;
-      case "APPROVED":
+      case "approved":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4];
         remarkMsg = `Congratulations! Your enrollment has been approved.`;
         break;
-      case "COMPLETED":
+      case "completed":
         currentStep = 5;
         completedSteps = [1, 2, 3, 4, 5];
         remarkMsg = `Congratulations! Your payment has been verified and your enrollment is now complete.`;
         break;
-      case "REJECTED":
+      case "rejected":
         const hasPaymentProof =
           enrollmentRequest.paymentProofPath &&
           enrollmentRequest.paymentProofPath.trim() !== "";
@@ -754,37 +768,40 @@ const trackEnrollmentProgress = async (enrollmentRequest) => {
   let completedSteps = [];
   let remarkMsg = "";
 
-  switch (enrollmentStatus.toUpperCase()) {
-    case "PENDING":
+  // Normalize status to lowercase for consistent comparison
+  const normalizedStatus = enrollmentStatus?.toLowerCase() || "pending";
+
+  switch (normalizedStatus) {
+    case "pending":
       currentStep = 1;
       completedSteps = [];
       remarkMsg =
         "Your enrollment form has been submitted and is pending verification by an administrator.";
       break;
-    case "VERIFIED":
+    case "verified":
       currentStep = 2;
       completedSteps = [1];
       remarkMsg =
         "Your enrollment form has been verified. Please proceed with payment.";
       break;
-    case "PAYMENT_PENDING":
+    case "payment_pending":
       currentStep = 3;
       completedSteps = [1, 2];
       remarkMsg =
         "Your payment is being verified. This may take 1-2 business days.";
       break;
-    case "APPROVED":
-      currentStep = 5;
-      completedSteps = [1, 2, 3, 4];
+    case "approved":
+      currentStep = 4;
+      completedSteps = [1, 2, 3];
       remarkMsg =
         "Your payment has been verified. Enrollment is being processed.";
       break;
-    case "COMPLETED":
+    case "completed":
       currentStep = 5;
-      completedSteps = [1, 2, 3, 4, 5];
+      completedSteps = [1, 2, 3, 4];
       remarkMsg = "Congratulations! Your enrollment is complete.";
       break;
-    case "REJECTED":
+    case "rejected":
       // Determine where to go back based on what was previously verified
       const hasPaymentProof =
         enrollmentRequest.paymentProofPath &&

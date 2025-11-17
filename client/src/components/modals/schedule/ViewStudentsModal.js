@@ -35,12 +35,21 @@ function ViewStudentsModal({
 
   const disabled = useMemo(() => !courseId || !periodId, [courseId, periodId]);
 
+  // Reset all state when modal opens or scheduleId changes
   useEffect(() => {
     if (!isOpen) return;
+
+    // Reset all search and selection state
     setQuery('');
     setEnrolledStudents([]);
     setSuggestions([]);
-  }, [isOpen]);
+    setSelectedIds([]);
+
+    // Reset all CSV-related state
+    setShowCSVPreview(false);
+    setCsvValidationData(null);
+    setCsvLoading(false);
+  }, [isOpen, scheduleId]);
 
   // Load enrolled students list (main list)
   useEffect(() => {
@@ -238,7 +247,16 @@ function ViewStudentsModal({
       studentIds.push(...values);
     }
 
-    return studentIds.filter((id) => id && id.length > 0);
+    // Filter out empty IDs and remove duplicates using Set
+    const validIds = studentIds.filter((id) => id && id.length > 0);
+    const uniqueIds = [...new Set(validIds)];
+
+    // Log if duplicates were found
+    if (validIds.length !== uniqueIds.length) {
+      console.log(`Removed ${validIds.length - uniqueIds.length} duplicate ID(s) from CSV`);
+    }
+
+    return uniqueIds;
   };
 
   const handleFileChange = async (e) => {
@@ -317,7 +335,10 @@ function ViewStudentsModal({
         ...dataToUse.conflicts.map((s) => s.dbId),
       ];
 
-      if (studentIdsToAdd.length === 0) {
+      // Remove duplicates using Set (defensive measure)
+      const uniqueStudentIds = [...new Set(studentIdsToAdd)];
+
+      if (uniqueStudentIds.length === 0) {
         Swal.fire({
           icon: 'info',
           title: 'No Students to Add',
@@ -326,9 +347,14 @@ function ViewStudentsModal({
         return;
       }
 
+      // Log if duplicates were found
+      if (studentIdsToAdd.length !== uniqueStudentIds.length) {
+        console.log(`Removed ${studentIdsToAdd.length - uniqueStudentIds.length} duplicate student(s) before adding`);
+      }
+
       // Call bulk add endpoint
       await axiosInstance.post(`/schedules/${scheduleId}/students:bulk-add`, {
-        userIds: studentIdsToAdd,
+        userIds: uniqueStudentIds,
       });
 
       // Close CSV preview modal
@@ -339,7 +365,7 @@ function ViewStudentsModal({
       Swal.fire({
         icon: 'success',
         title: 'Students Added',
-        text: `Successfully added ${studentIdsToAdd.length} student(s) to the schedule.`,
+        text: `Successfully added ${uniqueStudentIds.length} student(s) to the schedule.`,
         timer: 2000,
         showConfirmButton: false,
       });

@@ -681,6 +681,18 @@ export const validateBulkStudents = async (req, res) => {
     const rejected = [];
     const conflicts = [];
 
+    // Fetch all currently enrolled students in this schedule (optimization)
+    const enrolledStudents = await prisma.user_schedule.findMany({
+      where: {
+        scheduleId,
+        deletedAt: null,
+      },
+      select: {
+        userId: true,
+      },
+    });
+    const enrolledUserIds = new Set(enrolledStudents.map((es) => es.userId));
+
     // Check each userId
     for (const userId of userIds) {
       const user = users.find((u) => u.userId === userId);
@@ -701,6 +713,17 @@ export const validateBulkStudents = async (req, res) => {
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
           reason: `Incompatible role: ${user.role.toLowerCase()}`,
+        });
+        continue;
+      }
+
+      // Check if already enrolled in this schedule
+      if (enrolledUserIds.has(user.id)) {
+        rejected.push({
+          userId,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          reason: "Already enrolled in this schedule",
         });
         continue;
       }
@@ -790,7 +813,7 @@ export const validateBulkStudents = async (req, res) => {
       rejected,
       conflicts,
       summary: {
-        total: userIds.length,
+        total: approved.length + conflicts.length, // Only count students that can be added
         approved: approved.length,
         rejected: rejected.length,
         conflicts: conflicts.length,
@@ -822,6 +845,14 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
       });
     }
 
+    // Remove duplicates from userIds array
+    const uniqueUserIds = [...new Set(userIds)];
+
+    // Log if duplicates were removed
+    if (uniqueUserIds.length !== userIds.length) {
+      console.log(`Removed ${userIds.length - uniqueUserIds.length} duplicate user ID(s) in bulk-add request`);
+    }
+
     // Ensure schedule exists
     const schedule = await prisma.schedule.findFirst({
       where: { id: scheduleId, deletedAt: null },
@@ -841,10 +872,10 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
     });
 
     const availableSlots = schedule.capacity - currentCount;
-    if (availableSlots < userIds.length) {
+    if (availableSlots < uniqueUserIds.length) {
       return res.status(400).json({
         error: true,
-        message: `Not enough capacity. Available: ${availableSlots}, Requested: ${userIds.length}`,
+        message: `Not enough capacity. Available: ${availableSlots}, Requested: ${uniqueUserIds.length}`,
       });
     }
 
@@ -852,7 +883,7 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
     const existing = await prisma.user_schedule.findMany({
       where: {
         scheduleId,
-        userId: { in: userIds },
+        userId: { in: uniqueUserIds },
       },
       select: { userId: true, deletedAt: true },
     });
@@ -861,7 +892,7 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
     const toCreate = [];
     const toRestore = [];
 
-    for (const userId of userIds) {
+    for (const userId of uniqueUserIds) {
       const deletedAt = existingMap.get(userId);
       if (deletedAt === null) {
         // Already enrolled
