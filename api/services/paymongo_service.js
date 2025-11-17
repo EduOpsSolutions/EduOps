@@ -512,7 +512,11 @@ export const processWebhookEvent = async (event) => {
       ) {
         const receiptEmail =
           updatedPayment.paymentEmail || updatedPayment.user?.email;
-        console.log(`Sending payment receipt email to ${receiptEmail}`);
+        // BCC to student's email if payer email is different
+        const bccEmail = updatedPayment.paymentEmail && updatedPayment.user?.email !== updatedPayment.paymentEmail
+          ? updatedPayment.user.email
+          : undefined;
+        console.log(`Sending payment receipt email to ${receiptEmail}${bccEmail ? ` (BCC: ${bccEmail})` : ''}`);
 
         try {
           const emailSent = await sendPaymentReceiptEmail(
@@ -539,7 +543,8 @@ export const processWebhookEvent = async (event) => {
               studentName: updatedPayment.user
                 ? `${updatedPayment.user.firstName} ${updatedPayment.user.lastName}`
                 : "N/A",
-            }
+            },
+            bccEmail
           );
 
           if (emailSent) {
