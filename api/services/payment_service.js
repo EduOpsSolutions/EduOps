@@ -665,7 +665,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
 
     // Fallback: use courseId and academicPeriodId from paymentData if provided
     let finalCourseId = paymentData.courseId || actualCourseId;
-    let finalAcademicPeriodId = paymentData.academicPeriodId || enrollmentData?.periodId || null;
+    let finalAcademicPeriodId =
+      paymentData.academicPeriodId || enrollmentData?.periodId || null;
 
     // If still missing, try to fetch from latest enrollment request
     if ((!finalCourseId || !finalAcademicPeriodId) && userId) {
