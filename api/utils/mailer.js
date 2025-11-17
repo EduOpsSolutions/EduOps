@@ -1,4 +1,4 @@
-import { createTransport } from 'nodemailer';
+import { createTransport } from "nodemailer";
 
 export const sendEmail = async (
   to,
@@ -9,7 +9,7 @@ export const sendEmail = async (
   attachments = undefined
 ) => {
   const transporter = createTransport({
-    host: 'smtp.gmail.com',
+    host: "smtp.gmail.com",
     port: 587,
     secure: false, // use STARTTLS
     auth: {
@@ -17,21 +17,21 @@ export const sendEmail = async (
       pass: process.env.MAIL_PASSWORD,
     },
     connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 30000,   // 30 seconds
-    socketTimeout: 60000,     // 60 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 60000, // 60 seconds
     tls: {
       rejectUnauthorized: false,
-      ciphers: 'SSLv3'
-    }
+      ciphers: "SSLv3",
+    },
   });
 
-  console.log('[sendEmail] Sending email...');
-  console.log('To:', to);
-  if (bcc) console.log('BCC:', bcc);
-  console.log('Subject:', subject);
+  console.log("[sendEmail] Sending email...");
+  console.log("To:", to);
+  if (bcc) console.log("BCC:", bcc);
+  console.log("Subject:", subject);
   if (attachments)
     console.log(
-      'Attachments:',
+      "Attachments:",
       attachments.map((a) => a.filename)
     );
 
@@ -46,17 +46,17 @@ export const sendEmail = async (
     if (bcc) mailOptions.bcc = bcc;
     if (attachments) mailOptions.attachments = attachments;
     const info = await transporter.sendMail(mailOptions);
-    console.log('[sendEmail] Email sent:', info.response);
+    console.log("[sendEmail] Email sent:", info.response);
     return true;
   } catch (error) {
-    console.log('[sendEmail] Error sending email:', error);
+    console.log("[sendEmail] Error sending email:", error);
     return false;
   }
 };
 
 export const sendPostEmail = async (post, recipients) => {
   const subject = `New Announcement: ${post.title}`;
-  let filesHtml = '';
+  let filesHtml = "";
   if (post.files && Array.isArray(post.files) && post.files.length > 0) {
     filesHtml = `
       <div style="margin-top: 24px;">
@@ -67,7 +67,7 @@ export const sendPostEmail = async (post, recipients) => {
               (file) =>
                 `<li><a href="${file.url}" style="color: #007bff; text-decoration: underline;" target="_blank">${file.fileName}</a></li>`
             )
-            .join('')}
+            .join("")}
         </ul>
       </div>
     `;
@@ -87,8 +87,8 @@ export const sendPostEmail = async (post, recipients) => {
           ${filesHtml}
           <hr style="margin: 32px 0; border: none; border-top: 1px solid #eee;">
           <p style="color: #555; font-size: 1rem;">
-            <strong>Posted by:</strong> ${post.user?.firstName || ''} ${
-    post.user?.lastName || ''
+            <strong>Posted by:</strong> ${post.user?.firstName || ""} ${
+    post.user?.lastName || ""
   }
           </p>
         </div>
@@ -109,17 +109,25 @@ export const sendPostEmail = async (post, recipients) => {
     }));
   }
 
-  console.log('[sendPostEmail] Recipients:', recipients);
+  console.log("[sendPostEmail] Recipients:", recipients);
   if (attachments)
     console.log(
-      '[sendPostEmail] Attachments:',
+      "[sendPostEmail] Attachments:",
       attachments.map((a) => a.filename)
     );
-  return sendEmail('', subject, '', html, recipients, attachments);
+  // Send BCC-only email by setting to as sender's email and recipients in BCC
+  return sendEmail(
+    process.env.MAIL_USER,
+    subject,
+    "",
+    html,
+    recipients,
+    attachments
+  );
 };
 
 export const sendAccountCreationEmail = async (user, generatedPassword) => {
-  const subject = 'Your EduOps Account Has Been Created';
+  const subject = "Your EduOps Account Has Been Created";
   const html = `
     <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden;">
