@@ -201,6 +201,84 @@ export const getMySchedules = async (req, res) => {
 };
 
 /**
+ * Get schedules for the logged-in teacher
+ */
+export const getMyTeachingSchedules = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = await verifyJWT(token);
+    if (!decoded.payload.data.id) {
+      return res.status(401).json({ error: true, message: "Unauthorized" });
+    }
+
+    // Get the teacher's information
+    const teacher = await prisma.users.findUnique({
+      where: { id: decoded.payload.data.id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!teacher) {
+      return res.status(404).json({ error: true, message: "Teacher not found" });
+    }
+
+    const schedules = await ScheduleModel.getSchedulesByTeacher(
+      decoded.payload.data.id
+    );
+
+    // Get student counts for each schedule
+    const schedulesWithCounts = await Promise.all(
+      schedules.map(async (schedule) => {
+        const studentCount = await prisma.user_schedule.count({
+          where: {
+            scheduleId: schedule.id,
+            deletedAt: null,
+          },
+        });
+
+        return {
+          id: schedule.id,
+          courseId: schedule.course?.id || "",
+          courseName: schedule.course?.name || "",
+          academicPeriodId: schedule.period?.id || schedule.periodId,
+          academicPeriodName: schedule.period
+            ? `${schedule.period.batchName || ""}`
+            : "",
+          teacherId: decoded.payload.data.id,
+          teacherName: `${teacher.firstName} ${teacher.lastName}`,
+          location: schedule.location,
+          days: schedule.days,
+          time_start: schedule.time_start,
+          time_end: schedule.time_end,
+          periodStart: schedule.periodStart
+            ? schedule.periodStart.toISOString().split("T")[0]
+            : null,
+          periodEnd: schedule.periodEnd
+            ? schedule.periodEnd.toISOString().split("T")[0]
+            : null,
+          color: schedule.color || "#FFCF00",
+          notes: schedule.notes,
+          capacity: schedule.capacity,
+          studentCount: studentCount,
+          createdAt: schedule.createdAt,
+          updatedAt: schedule.updatedAt,
+        };
+      })
+    );
+
+    return res.json(schedulesWithCounts);
+  } catch (err) {
+    console.error("Get my teaching schedules error:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Failed to get teaching schedules" });
+  }
+};
+
+/**
  * Get students enrolled in a schedule (read-only)
  * Admins/teachers can view any schedule's students.
  * Students can only view if they are enrolled in the schedule.

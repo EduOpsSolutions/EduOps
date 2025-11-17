@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { MdClose, MdPerson } from 'react-icons/md';
+import { MdClose, MdPerson, MdDownload } from 'react-icons/md';
 import axiosInstance from '../../../utils/axios';
 import Spinner from '../../common/Spinner';
+import useAuthStore from '../../../stores/authStore';
 
 function ViewScheduleModal({ isOpen, onClose, event }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
+
+  // Check if user is teacher or admin
+  const canDownloadCSV = user?.role === 'teacher' || user?.role === 'admin';
 
   const calculateTotalHours = (ev) => {
     try {
@@ -51,6 +56,56 @@ function ViewScheduleModal({ isOpen, onClose, event }) {
     } catch (e) {
       return '';
     }
+  };
+
+  // Download students list as CSV
+  const handleDownloadCSV = () => {
+    if (students.length === 0) {
+      alert('No students to download.');
+      return;
+    }
+
+    // Prepare CSV content
+    const headers = ['Student ID', 'Name', 'Email', 'Status'];
+    const rows = students.map(s => [
+      s.userId || '',
+      s.name || '',
+      s.email || '',
+      s.status || 'active'
+    ]);
+
+    // Create CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row =>
+        row.map(cell => {
+          // Escape cells that contain commas, quotes, or newlines
+          const cellStr = String(cell);
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return `"${cellStr.replace(/"/g, '""')}"`;
+          }
+          return cellStr;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    // Generate filename with course name and date
+    const courseName = (event.courseName || 'schedule').replace(/[^a-z0-9]/gi, '_');
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `${courseName}_students_${date}.csv`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
@@ -153,9 +208,22 @@ function ViewScheduleModal({ isOpen, onClose, event }) {
         </div>
 
         <div className="px-4 pb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <MdPerson />
-            <h4 className="font-semibold">Enrolled Students</h4>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <MdPerson />
+              <h4 className="font-semibold">Enrolled Students</h4>
+              <span className="text-sm text-gray-500">({students.length})</span>
+            </div>
+            {canDownloadCSV && students.length > 0 && (
+              <button
+                onClick={handleDownloadCSV}
+                className="flex items-center gap-2 px-3 py-1.5 bg-dark-red hover:bg-red-700 text-white text-sm rounded-lg transition-colors duration-200"
+                title="Download student list as CSV"
+              >
+                <MdDownload size={18} />
+                Download CSV
+              </button>
+            )}
           </div>
           <div className="border rounded">
             <div className="max-h-64 overflow-y-auto">

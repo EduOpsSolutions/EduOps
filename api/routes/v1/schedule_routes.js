@@ -5,6 +5,7 @@ import {
   getSchedulesByPeriod,
   getSchedulesByTeacher,
   getMySchedules,
+  getMyTeachingSchedules,
   getScheduleStudents,
   createSchedule,
   updateSchedule,
@@ -46,6 +47,12 @@ router.get('/teacher/:teacherId', verifyToken, getSchedulesByTeacher);
  * Get schedules for the logged-in student
  */
 router.get('/mine', verifyToken, getMySchedules);
+
+/**
+ * GET /api/v1/schedules/my-teaching
+ * Get schedules for the logged-in teacher
+ */
+router.get('/my-teaching', verifyToken, getMyTeachingSchedules);
 
 /**
  * GET /api/v1/schedules/:id/students
