@@ -59,7 +59,82 @@ function Assessment() {
     };
   }, [initializeSearch, performSearch, resetSearch, handleBackToResults, location.state, handleStudentSelect, navigate, location.pathname]);
 
-  // Search form config
+  // Dynamic options for search form
+  const [courseOptions, setCourseOptions] = React.useState([{ value: '', label: 'All Courses' }]);
+  const [batchOptions, setBatchOptions] = React.useState([{ value: '', label: 'All Batches' }]);
+  const [yearOptions, setYearOptions] = React.useState([{ value: '', label: 'All Years' }]);
+
+  React.useEffect(() => {
+    async function fetchCourses() {
+      try {
+        const token = localStorage.getItem('token');
+        const url = `${process.env.REACT_APP_API_URL}/courses`;
+        const res = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const options = [
+            { value: '', label: 'All Courses' },
+            ...data.map(course => ({ value: course.name, label: course.name }))
+          ];
+          setCourseOptions(options);
+        }
+      } catch (err) {
+        setCourseOptions([{ value: '', label: 'All Courses' }]);
+      }
+    }
+
+    async function fetchBatchesAndYears() {
+      try {
+        const token = localStorage.getItem('token');
+        const url = `${process.env.REACT_APP_API_URL}/academic-periods`;
+        const res = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Batch options
+          const batchOpts = [
+            { value: '', label: 'All Batches' },
+            ...data.map(batch => ({ value: batch.batchName, label: batch.batchName }))
+          ];
+          setBatchOptions(batchOpts);
+          // Year options (unique years from batch.startAt)
+          const years = Array.from(new Set(
+            data
+              .map(batch => {
+                if (batch.startAt) {
+                  const d = new Date(batch.startAt);
+                  if (!isNaN(d)) return d.getFullYear();
+                }
+                return null;
+              })
+              .filter(Boolean)
+          )).sort((a, b) => b - a);
+          const yearOpts = [
+            { value: '', label: 'All Years' },
+            ...years.map(y => ({ value: y, label: y }))
+          ];
+          setYearOptions(yearOpts);
+        }
+      } catch (err) {
+        setBatchOptions([{ value: '', label: 'All Batches' }]);
+        setYearOptions([{ value: '', label: 'All Years' }]);
+      }
+    }
+
+    fetchCourses();
+    fetchBatchesAndYears();
+  }, []);
+
+  // Search form config using dynamic options
   const searchFormConfig = {
     title: "SEARCH",
     formFields: [
@@ -73,34 +148,19 @@ function Assessment() {
         name: "course",
         label: "Course",
         type: "select",
-        options: [
-          { value: "", label: "All Courses" },
-          { value: "A1", label: "A1 German Basic Course" },
-          { value: "A2", label: "A2 German Basic Course" },
-          { value: "A3", label: "A3 German Basic Course" }
-        ]
+        options: courseOptions
       },
       {
         name: "batch",
         label: "Batch",
         type: "select",
-        options: [
-          { value: "", label: "All Batches" },
-          { value: "Batch 1", label: "Batch 1" },
-          { value: "Batch 2", label: "Batch 2" },
-          { value: "Batch 3", label: "Batch 3" }
-        ]
+        options: batchOptions
       },
       {
         name: "year",
         label: "Year",
         type: "select",
-        options: [
-          { value: "", label: "All Years" },
-          { value: "2024", label: "2024" },
-          { value: "2023", label: "2023" },
-          { value: "2022", label: "2022" }
-        ]
+        options: yearOptions
       }
     ]
   };
