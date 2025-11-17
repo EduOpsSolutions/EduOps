@@ -233,7 +233,11 @@ const manualSyncPayment = async (req, res) => {
 const handleWebhook = async (req, res) => {
   const startTime = Date.now();
   let webhookEventRecord = null;
-  
+
+  console.log("[Webhook] ===== WEBHOOK RECEIVED =====");
+  console.log("[Webhook] Timestamp:", new Date().toISOString());
+  console.log("[Webhook] Headers:", JSON.stringify(req.headers, null, 2));
+
   try {
     // Read raw body if provided by raw parser; otherwise use JSON body
     let rawBodyString = null;
@@ -247,6 +251,9 @@ const handleWebhook = async (req, res) => {
     const signature = req.get("Paymongo-Signature");
     const eventId = event?.data?.id;
     const eventType = event?.data?.attributes?.type;
+
+    console.log("[Webhook] Event Type:", eventType);
+    console.log("[Webhook] Event ID:", eventId);
 
     // Create initial webhook event log
     webhookEventRecord = await prisma.webhook_events.create({
@@ -694,6 +701,9 @@ const checkPaymentStatus = async (req, res) => {
     console.log("[CheckStatus] db payment by intent:", {
       found: !!payment,
       status: payment?.status,
+      hasPaymentEmail: !!payment?.paymentEmail,
+      paymentEmail: payment?.paymentEmail,
+      userEmail: payment?.user?.email,
     });
 
     if (!payment) {

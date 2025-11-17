@@ -506,6 +506,11 @@ export const processWebhookEvent = async (event) => {
       }
 
       // Send receipt email if payment was successful
+      console.log("[Webhook] Checking if should send receipt email...");
+      console.log("[Webhook] updateData.status:", updateData.status);
+      console.log("[Webhook] updatedPayment.paymentEmail:", updatedPayment.paymentEmail);
+      console.log("[Webhook] updatedPayment.user?.email:", updatedPayment.user?.email);
+
       if (
         updateData.status === "paid" &&
         (updatedPayment.paymentEmail || updatedPayment.user)
@@ -516,7 +521,7 @@ export const processWebhookEvent = async (event) => {
         const bccEmail = updatedPayment.paymentEmail && updatedPayment.user?.email !== updatedPayment.paymentEmail
           ? updatedPayment.user.email
           : undefined;
-        console.log(`Sending payment receipt email to ${receiptEmail}${bccEmail ? ` (BCC: ${bccEmail})` : ''}`);
+        console.log(`[Webhook] Sending payment receipt email to ${receiptEmail}${bccEmail ? ` (BCC: ${bccEmail})` : ''}`);
 
         try {
           const emailSent = await sendPaymentReceiptEmail(
