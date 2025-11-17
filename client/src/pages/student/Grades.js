@@ -56,7 +56,9 @@ function Grades() {
         });
 
         // Map all courses with student grades (if any)
-        const mapped = sortedCourses.map(course => {
+        const mapped = sortedCourses
+          .filter(course => gradesMap[course.id])
+          .map(course => {
           const grade = gradesMap[course.id];
           return {
             id: grade?.id || course.id,
@@ -67,6 +69,7 @@ function Grades() {
             completedDate: grade?.updatedAt || null,
             courseId: course.id,
             studentId: studentId,
+            batchId: grade?.periodId,
             files: grade?.files || [],
           };
         });
@@ -84,6 +87,24 @@ function Grades() {
       console.warn("[Grades Page] No studentId found, not fetching grades.");
     }
   }, [studentId, token]);
+
+  const fetchAssessmentList = async (studentId, courseId, batchId) => {
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const res = await fetch(`${apiUrl}/assessment/student/${studentId}?courseId=${courseId}&academicPeriodId=${batchId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) throw new Error("Failed to fetch assessments");
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.error("[Grades Page] Error fetching assessment list:", err);
+      return [];
+    }
+  };
 
   // gradesData is now fetched from backend
 
@@ -109,7 +130,7 @@ function Grades() {
     });
   };
 
-  const handleViewDetails = (grade) => {
+  const handleViewDetails = async (grade) => {
     if (grade.status === "NO GRADE") {
       Swal.fire({
         title: 'Not Available',
@@ -118,35 +139,61 @@ function Grades() {
         confirmButtonText: 'OK',
         confirmButtonColor: '#992525'
       });
-    } else {
-      // Open the latest file if available
-      if (grade.files && grade.files.length > 0) {
-        // Sort files by uploadedAt descending (latest first)
-        const sortedFiles = [...grade.files].sort(
-          (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
-        );
-        const latestFile = sortedFiles[0];
-        if (latestFile.url) {
-          setPreviewFile({ url: latestFile.url, title: "Certificate Preview" });
-          setShowPreview(true);
-        } else {
-          Swal.fire({
-            title: "File Error",
-            text: "No file URL found.",
-            icon: "error",
-            confirmButtonText: "OK",
-            confirmButtonColor: "#992525",
-          });
-        }
+      return;
+    }
+
+    try{
+      const assessmentData = await fetchAssessmentList(grade.studentId, grade.courseId, grade.batchId);
+      console.log('Calling fetchAssessmentList with:', grade.studentId, grade.courseId, grade.batchId);
+      console.log('Assessment Data:', assessmentData);
+      if (Array.isArray(assessmentData) && assessmentData.length > 0 && assessmentData[0].remainingBalance > 0) {
+        Swal.fire({
+          title: "Outstanding Balance",
+          text: "You have an outstanding balance for this course. Please clear your dues to access the certificate.",
+          icon: "warning",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#992525",
+        });
+        return;
+      } 
+    } catch (err) {
+      console.error("[Grades Page] Error checking assessment balance:", err);
+      Swal.fire({
+        title: "Error",
+        text: "An error occurred while checking your assessment balance. Please try again later.",
+        icon: "error",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#992525",
+      });
+      return;
+     }
+    
+    if (grade.files && grade.files.length > 0) {
+      // Sort files by uploadedAt descending (latest first)
+      const sortedFiles = [...grade.files].sort(
+        (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
+      );
+      const latestFile = sortedFiles[0];
+      if (latestFile.url) {
+        setPreviewFile({ url: latestFile.url, title: "Certificate Preview" });
+        setShowPreview(true);
       } else {
         Swal.fire({
-          title: "No File Available",
-          text: "No grade file has been uploaded for this course.",
-          icon: "info",
+          title: "File Error",
+          text: "No file URL found.",
+          icon: "error",
           confirmButtonText: "OK",
           confirmButtonColor: "#992525",
         });
       }
+    } else {
+      Swal.fire({
+        title: "No File Available",
+        text: "No grade file has been uploaded for this course.",
+        icon: "info",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#992525",
+      });
     }
   };
 
@@ -209,7 +256,10 @@ function Grades() {
                     <tr
                       key={grade.id}
                       className="cursor-pointer transition-all duration-200 hover:bg-red-50 hover:border-red-200 hover:shadow-sm"
-                      onClick={() => handleViewDetails(grade)}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await handleViewDetails(grade);
+                      }}
                     >
                       <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                         <div>
@@ -234,9 +284,9 @@ function Grades() {
                       </td>
                       <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base text-center">
                         <button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            handleViewDetails(grade);
+                            await handleViewDetails(grade);
                           }}
                           className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors duration-200 ${
                             grade.status === "NO GRADE"
