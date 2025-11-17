@@ -194,7 +194,11 @@ function AddTransactionModal({
   };
 
   const hasChanges = () => {
-    return Object.values(formData).some((value) => value.trim() !== "");
+    return Object.values(formData).some((value) => {
+      if (value === null || value === undefined) return false;
+      if (typeof value === 'string') return value.trim() !== "";
+      return value !== "";
+    });
   };
 
 

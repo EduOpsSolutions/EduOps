@@ -34,7 +34,8 @@ export const createPayMongoAuthHeaders = () => {
 export const PAYMONGO_METHOD_MAP = {
   'card': 'Credit/Debit Card',
   'gcash': 'GCash',
-  'maya': 'Maya'
+  'maya': 'Maya',
+  'paymaya': 'Maya'
 };
 
 // Payment status constants 

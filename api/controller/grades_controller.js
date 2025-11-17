@@ -171,7 +171,10 @@ export const getStudentsBySchedule = async (req, res) => {
     const { scheduleId } = req.params;
     // Find all user_schedule entries for this schedule
     const userSchedules = await prisma.user_schedule.findMany({
-      where: { scheduleId: Number(scheduleId) },
+      where: { 
+        scheduleId: Number(scheduleId),
+        deletedAt: null,
+      },
       include: {
         user: true,
       },
