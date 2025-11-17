@@ -663,6 +663,32 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       }
     }
 
+    // Fallback: use courseId and academicPeriodId from paymentData if provided
+    let finalCourseId = paymentData.courseId || actualCourseId;
+    let finalAcademicPeriodId = paymentData.academicPeriodId || enrollmentData?.periodId || null;
+
+    // If still missing, try to fetch from latest enrollment request
+    if ((!finalCourseId || !finalAcademicPeriodId) && userId) {
+      const fallbackEnrollment = await prisma.enrollment_request.findFirst({
+        where: { studentId: userId },
+        orderBy: { createdAt: "desc" },
+        select: { coursesToEnroll: true, periodId: true },
+      });
+      if (fallbackEnrollment) {
+        if (!finalCourseId && fallbackEnrollment.coursesToEnroll) {
+          // Try to resolve courseId from name
+          const course = await prisma.course.findFirst({
+            where: { name: fallbackEnrollment.coursesToEnroll },
+            select: { id: true },
+          });
+          if (course) finalCourseId = course.id;
+        }
+        if (!finalAcademicPeriodId && fallbackEnrollment.periodId) {
+          finalAcademicPeriodId = fallbackEnrollment.periodId;
+        }
+      }
+    }
+
     const payment = await prisma.payments.create({
       data: {
         transactionId: customTransactionId,
@@ -674,8 +700,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         remarks: description || `Payment for ${firstName} ${lastName}`,
         paymentEmail: email, // Store the email from payment form
         enrollmentRequestId: enrollmentData?.id || null,
-        courseId: actualCourseId,
-        academicPeriodId: enrollmentData?.periodId || null,
+        courseId: finalCourseId,
+        academicPeriodId: finalAcademicPeriodId,
       },
     });
 
