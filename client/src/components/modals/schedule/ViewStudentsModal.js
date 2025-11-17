@@ -35,49 +35,62 @@ function ViewStudentsModal({
 
   const disabled = useMemo(() => !courseId || !periodId, [courseId, periodId]);
 
+  // Reset all state when modal opens or scheduleId changes
   useEffect(() => {
     if (!isOpen) return;
+
+    // Reset all search and selection state
     setQuery('');
     setEnrolledStudents([]);
     setSuggestions([]);
-  }, [isOpen]);
+    setSelectedIds([]);
+
+    // Reset all CSV-related state
+    setShowCSVPreview(false);
+    setCsvValidationData(null);
+    setCsvLoading(false);
+  }, [isOpen, scheduleId]);
 
   // Load enrolled students list (main list)
   useEffect(() => {
     if (!isOpen || disabled) return;
+
+    // If no scheduleId, this is a new schedule - don't fetch any enrolled students
+    if (!scheduleId) {
+      setEnrolledStudents([]);
+      setEnrolledCount(0);
+      setEnrolledLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     (async () => {
       try {
         setEnrolledLoading(true);
 
-        // If we have a scheduleId, get students directly from the schedule
-        if (scheduleId) {
-          const resp = await axiosInstance.get(
-            `/schedules/${scheduleId}/students`,
-            {
-              signal: controller.signal,
-            }
-          );
-          const students = Array.isArray(resp.data) ? resp.data : [];
-          setEnrolledStudents(students);
-          setEnrolledCount(students.length);
-          setSelectedIds([]);
-        } else {
-          // Otherwise, search for enrolled students by course and period
-          const resp = await axiosInstance.get(`/users/search-students`, {
-            params: {
-              courseId,
-              periodId,
-              enrolledOnly: true,
-              take: 50,
-            },
+        // Get students directly from the specific schedule
+        const resp = await axiosInstance.get(
+          `/schedules/${scheduleId}/students`,
+          {
             signal: controller.signal,
-          });
-          const students = Array.isArray(resp.data) ? resp.data : [];
-          setEnrolledStudents(students);
-          setEnrolledCount(students.length);
-          setSelectedIds([]);
+          }
+        );
+        const students = Array.isArray(resp.data) ? resp.data : [];
+
+        // Deduplicate students by ID to prevent React key warnings
+        const uniqueStudents = Array.from(
+          new Map(students.map(s => [s.id, s])).values()
+        );
+
+        if (students.length !== uniqueStudents.length) {
+          console.warn(
+            `Removed ${students.length - uniqueStudents.length} duplicate student(s) from enrolled list`
+          );
         }
+
+        setEnrolledStudents(uniqueStudents);
+        setEnrolledCount(uniqueStudents.length);
+        setSelectedIds([]);
       } catch (e) {
         if (e.name !== 'CanceledError') {
           setEnrolledStudents([]);
@@ -110,7 +123,14 @@ function ViewStudentsModal({
           },
           signal: controller.signal,
         });
-        setSuggestions(Array.isArray(resp.data) ? resp.data : []);
+        const suggestions = Array.isArray(resp.data) ? resp.data : [];
+
+        // Deduplicate suggestions by ID
+        const uniqueSuggestions = Array.from(
+          new Map(suggestions.map(s => [s.id, s])).values()
+        );
+
+        setSuggestions(uniqueSuggestions);
       } catch (e) {
         if (e.name !== 'CanceledError') {
           setSuggestions([]);
@@ -238,7 +258,16 @@ function ViewStudentsModal({
       studentIds.push(...values);
     }
 
-    return studentIds.filter((id) => id && id.length > 0);
+    // Filter out empty IDs and remove duplicates using Set
+    const validIds = studentIds.filter((id) => id && id.length > 0);
+    const uniqueIds = [...new Set(validIds)];
+
+    // Log if duplicates were found
+    if (validIds.length !== uniqueIds.length) {
+      console.log(`Removed ${validIds.length - uniqueIds.length} duplicate ID(s) from CSV`);
+    }
+
+    return uniqueIds;
   };
 
   const handleFileChange = async (e) => {
@@ -317,7 +346,10 @@ function ViewStudentsModal({
         ...dataToUse.conflicts.map((s) => s.dbId),
       ];
 
-      if (studentIdsToAdd.length === 0) {
+      // Remove duplicates using Set (defensive measure)
+      const uniqueStudentIds = [...new Set(studentIdsToAdd)];
+
+      if (uniqueStudentIds.length === 0) {
         Swal.fire({
           icon: 'info',
           title: 'No Students to Add',
@@ -326,9 +358,14 @@ function ViewStudentsModal({
         return;
       }
 
+      // Log if duplicates were found
+      if (studentIdsToAdd.length !== uniqueStudentIds.length) {
+        console.log(`Removed ${studentIdsToAdd.length - uniqueStudentIds.length} duplicate student(s) before adding`);
+      }
+
       // Call bulk add endpoint
       await axiosInstance.post(`/schedules/${scheduleId}/students:bulk-add`, {
-        userIds: studentIdsToAdd,
+        userIds: uniqueStudentIds,
       });
 
       // Close CSV preview modal
@@ -339,7 +376,7 @@ function ViewStudentsModal({
       Swal.fire({
         icon: 'success',
         title: 'Students Added',
-        text: `Successfully added ${studentIdsToAdd.length} student(s) to the schedule.`,
+        text: `Successfully added ${uniqueStudentIds.length} student(s) to the schedule.`,
         timer: 2000,
         showConfirmButton: false,
       });

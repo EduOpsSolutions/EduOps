@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { RiRobot2Line } from 'react-icons/ri';
 import { Tooltip } from 'flowbite-react';
 import axiosInstance from '../../utils/axios';
+import MarkdownRenderer from './MarkdownRenderer';
 
 /**
  * Floating AI Chat Widget (frontend-only stub)
@@ -28,6 +29,11 @@ function AiChatWidget({
   const scrollRef = useRef(null);
   const panelRef = useRef(null);
 
+  // Resizable state
+  const [panelSize, setPanelSize] = useState({ width: 384, height: 500 }); // Default: w-96, h-auto
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartPos = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -36,7 +42,7 @@ function AiChatWidget({
 
   // Close when clicking outside the panel
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isResizing) return;
     const handlePointerDown = (event) => {
       const panelEl = panelRef.current;
       if (!panelEl) return;
@@ -48,7 +54,55 @@ function AiChatWidget({
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown, true);
     };
-  }, [isOpen]);
+  }, [isOpen, isResizing]);
+
+  // Handle resize
+  const handleResizeStart = (e, direction) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: panelSize.width,
+      height: panelSize.height,
+      direction,
+    };
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e) => {
+      const { x, y, width, height, direction } = resizeStartPos.current;
+      const deltaX = x - e.clientX; // Reversed because panel is on the right
+      const deltaY = y - e.clientY; // Reversed because panel grows upward
+
+      let newWidth = width;
+      let newHeight = height;
+
+      if (direction.includes('left')) {
+        newWidth = Math.max(300, Math.min(800, width + deltaX));
+      }
+      if (direction.includes('top')) {
+        newHeight = Math.max(300, Math.min(window.innerHeight - 150, height + deltaY));
+      }
+
+      setPanelSize({ width: newWidth, height: newHeight });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const scheduleIndex = useMemo(() => {
     const byDay = {};
@@ -217,14 +271,41 @@ function AiChatWidget({
       {isOpen && (
         <div
           ref={panelRef}
-          className="fixed bottom-24 right-4 z-50 w-[92vw] max-w-sm bg-white rounded-lg border border-neutral-300 shadow-xl flex flex-col transition-all duration-300 ease-out transform opacity-100 translate-y-0"
+          className="fixed bottom-24 right-4 z-50 bg-white rounded-lg border-2 border-neutral-300 shadow-xl flex flex-col transition-opacity duration-300 ease-out"
+          style={{
+            width: `${panelSize.width}px`,
+            height: `${panelSize.height}px`,
+            maxWidth: '90vw',
+            maxHeight: 'calc(100vh - 150px)',
+          }}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
-          <div className="px-4 py-3 border-b bg-dark-red-2 text-white rounded-t-lg flex items-center justify-between">
-            <div className="font-semibold">Scheduling Assistant</div>
+          {/* Resize handles */}
+          <div
+            className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize hover:bg-dark-red-2/20 transition-colors"
+            onMouseDown={(e) => handleResizeStart(e, 'top-left')}
+            title="Resize"
+          >
+            <div className="absolute top-1 left-1 w-2 h-2 border-t-2 border-l-2 border-dark-red-2 opacity-50"></div>
+          </div>
+          <div
+            className="absolute top-0 left-0 right-0 h-2 cursor-n-resize hover:bg-dark-red-2/20 transition-colors"
+            onMouseDown={(e) => handleResizeStart(e, 'top')}
+            title="Resize height"
+          ></div>
+          <div
+            className="absolute top-0 bottom-0 left-0 w-2 cursor-w-resize hover:bg-dark-red-2/20 transition-colors"
+            onMouseDown={(e) => handleResizeStart(e, 'left')}
+            title="Resize width"
+          ></div>
+          <div className="px-4 py-3 border-b bg-dark-red-2 text-white rounded-t-lg flex items-center justify-between flex-shrink-0">
+            <div className="font-semibold flex items-center gap-2">
+              Scheduling Assistant
+              <span className="text-xs text-white/60">(drag corners to resize)</span>
+            </div>
             <button
               onClick={() => setIsOpen(false)}
               className="text-white/80 hover:text-white"
@@ -235,7 +316,7 @@ function AiChatWidget({
           </div>
           <div
             ref={scrollRef}
-            className="p-3 space-y-2 max-h-80 overflow-y-auto"
+            className="p-3 space-y-2 overflow-y-auto flex-1"
           >
             {messages.map((m, idx) => (
               <div
@@ -249,9 +330,15 @@ function AiChatWidget({
                     m.role === 'assistant'
                       ? 'bg-gray-100'
                       : 'bg-dark-red-2 text-white'
-                  } inline-block px-3 py-2 rounded-lg max-w-[85%] whitespace-pre-wrap`}
+                  } inline-block px-3 py-2 rounded-lg max-w-[85%] ${
+                    m.role === 'user' ? 'whitespace-pre-wrap' : ''
+                  }`}
                 >
-                  {m.text}
+                  {m.role === 'assistant' ? (
+                    <MarkdownRenderer content={m.text} />
+                  ) : (
+                    m.text
+                  )}
                 </div>
               </div>
             ))}
@@ -267,7 +354,7 @@ function AiChatWidget({
               </div>
             )}
           </div>
-          <div className="p-3 border-t flex items-center gap-2">
+          <div className="p-3 border-t flex items-center gap-2 flex-shrink-0">
             <input
               type="text"
               value={input}
