@@ -9,7 +9,6 @@ import Pagination from "../../components/common/Pagination";
 import Spinner from "../../components/common/Spinner";
 import ViewRequestDetailsModal from "../../components/modals/documents/ViewRequestDetailsModal";
 import { useManageDocumentsSearchStore, useManageDocumentsStore } from "../../stores/manageDocumentsStore";
-import { useDocumentRequestStore } from "../../stores/documentRequestStore";
 import useAuthStore from "../../stores/authStore";
 import documentApi from "../../utils/documentApi";
 
@@ -173,6 +172,7 @@ function Documents() {
             onItemsPerPageChange={searchStore.handleItemsPerPageChange}
             totalItems={searchStore.totalItems}
             itemName="documents"
+            itemsPerPageOptions={[5, 10, 25, 50]}
           />
         </div>
         {/* Modals */}

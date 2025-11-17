@@ -7,6 +7,7 @@ import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
 import useAuthStore from "../../stores/authStore";
 import Swal from "sweetalert2";
+import { getCookieItem } from "../../utils/jwt";
 
 function PaymentForm() {
   const navigate = useNavigate();
@@ -68,6 +69,49 @@ function PaymentForm() {
       }
     }
   }, [location.state, updateFormField]);
+
+    // State for enrollments (courses/batches)
+  const [enrollments, setEnrollments] = useState([]);
+
+  // Fetch enrollments for logged-in students
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (isAuthenticated && user?.role === 'student' && user?.id) {
+        try {
+          // Use the correct API base URL
+          const apiBase = process.env.REACT_APP_API_URL || '/api';
+          // Get token from localStorage or your auth store
+          const token = getCookieItem('token');
+          const res = await fetch(`${apiBase}/enrollment/${user.id}/enrollments`, {
+            headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
+              'Content-Type': 'application/json',
+            },
+          });
+          const data = await res.json();
+          setEnrollments(Array.isArray(data) ? data : []);
+        } catch (err) {
+          setEnrollments([]);
+        }
+      } else {
+        setEnrollments([]);
+      }
+    };
+    fetchEnrollments();
+  }, [isAuthenticated, user]);
+
+  // Handle course/batch selection
+  const handleCourseBatchChange = (e) => {
+    const value = e.target.value;
+    if (!value) {
+      updateFormField('courseId', null);
+      updateFormField('batchId', null);
+    } else {
+      const [courseId, batchId] = value.split('|');
+      updateFormField('courseId', courseId);
+      updateFormField('batchId', batchId);
+    }
+  };
 
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
@@ -151,7 +195,9 @@ function PaymentForm() {
         amount: paymentData.amount,
         description: description,
         feeType: paymentData.feeType,
-        userId: paymentData.userId
+        userId: paymentData.userId,
+        courseId: paymentData.courseId || null,
+        batchId: paymentData.batchId || null
       };
 
       Swal.fire({
@@ -324,6 +370,27 @@ function PaymentForm() {
                 className={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? "bg-gray-100" : ""}
               />
             </div>
+
+            {/* Course & Batch selection for logged-in students */}
+            {isAuthenticated && user?.role === 'student' && enrollments.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <SelectField
+                  name="courseBatch"
+                  id="courseBatch"
+                  label="Course & Batch*"
+                  required={true}
+                  options={[
+                    { value: '', label: 'Select course & batch' },
+                    ...enrollments.map(e => ({
+                      value: `${e.courseId}|${e.batchId}`,
+                      label: `${e.course} - ${e.batch}${e.year ? ` (${e.year})` : ''}`
+                    }))
+                  ]}
+                  value={formData.courseId && formData.batchId ? `${formData.courseId}|${formData.batchId}` : ''}
+                  onChange={handleCourseBatchChange}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="relative">

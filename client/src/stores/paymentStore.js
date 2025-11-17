@@ -181,6 +181,8 @@ const usePaymentStore = create((set, get) => ({
       phoneNumber: formData.phone_number || null,
       amount: parseFloat(formData.amount),
       feeType: formData.fee,
+      courseId: formData.courseId || null,
+      batchId: formData.batchId || null,
     };
   },
 
