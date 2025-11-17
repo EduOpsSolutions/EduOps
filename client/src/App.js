@@ -40,6 +40,7 @@ import Assessment from "./pages/student/Assessment";
 /* Teacher Pages */
 import TeacherLayout from "./components/layout/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
+import TeacherSchedule from "./pages/teacher/TeacherSchedule";
 import TeachingLoad from "./pages/teacher/TeachingLoad";
 import TeacherDocuments from "./pages/teacher/Documents";
 
@@ -124,6 +125,7 @@ function App() {
               <Route path="teacher" element={<TeacherLayout />}>
                 <Route index element={<TeacherHome />} />
                 <Route path="profile" element={<Profile role="teacher" />} />
+                <Route path="schedule" element={<TeacherSchedule />} />
                 <Route path="teachingLoad" element={<TeachingLoad />} />
                 <Route path="documents" element={<TeacherDocuments />} />
                 <Route path="legal">
