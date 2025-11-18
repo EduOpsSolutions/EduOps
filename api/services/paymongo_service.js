@@ -694,27 +694,38 @@ export const createPaymentIntent = async (paymentData) => {
     // Generate idempotency key to prevent duplicate payment creations
     const idempotencyKey = paymentData.idempotencyKey || uuidv4();
     
-    console.log("[PayMongo] Creating payment intent:", {
+    console.log("[PayMongo] CREATING PAYMENT INTENT:", {
       amount: requestBody.data.attributes.amount,
       description: requestBody.data.attributes.description,
       idempotencyKey: idempotencyKey,
+      fullIdempotencyKey: idempotencyKey, // Log full key
       hasProvidedKey: !!paymentData.idempotencyKey,
+      requestBodyHash: crypto.createHash('md5').update(JSON.stringify(requestBody)).digest('hex'),
     });
+    
+    const headers = {
+      ...createPayMongoAuthHeaders(),
+      'Idempotency-Key': idempotencyKey,
+    };
+    
+    console.log("[PayMongo]  REQUEST HEADERS:", {
+      hasAuth: !!headers.Authorization,
+      idempotencyKey: headers['Idempotency-Key'],
+      fullHeaders: headers,
+    });
+    
+    console.log("[PayMongo]  REQUEST BODY:", JSON.stringify(requestBody, null, 2));
     
     const response = await axios.post(
       `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_INTENTS}`,
       requestBody,
-      {
-        headers: {
-          ...createPayMongoAuthHeaders(),
-          'Idempotency-Key': idempotencyKey,
-        },
-      }
+      { headers }
     );
     
-    console.log("[PayMongo] Payment intent created:", {
+    console.log("[PayMongo]  PAYMENT INTENT CREATED:", {
       intentId: response.data?.data?.id,
       idempotencyKey: idempotencyKey,
+      fullResponse: JSON.stringify(response.data, null, 2),
     });
 
     return {
