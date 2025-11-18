@@ -134,7 +134,7 @@ function DocRequestsModal(props) {
                                                         {request.document?.documentName || 'Unknown Document'}
                                                     </td>
                                                     <td className="px-2 py-3">
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusStyle(request.status)}`}>
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusStyle(request.status)}`}>
                                                             {formatStatus(request.status)}
                                                         </span>
                                                     </td>
