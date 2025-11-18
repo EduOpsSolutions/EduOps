@@ -5,6 +5,7 @@ import useAuthStore from "../../../stores/authStore";
 import documentApi from "../../../utils/documentApi";
 import TransactionSelector from "./TransactionSelector";
 import Swal from "sweetalert2";
+import { copyToClipboard } from "../../../utils/clipboard";
 
 function ViewRequestDetailsModal() {
   const navigate = useNavigate();
@@ -402,20 +403,44 @@ function ViewRequestDetailsModal() {
 
   const handleCopySignature = async () => {
     const signature = validationData?.fileSignature || selectedRequest?.validationSignature;
-    if (signature) {
-      try {
-        await navigator.clipboard.writeText(signature);
-        setCopiedSignature(true);
-        setTimeout(() => setCopiedSignature(false), 2000);
-      } catch (error) {
-        console.error('Failed to copy signature:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'Failed to copy signature to clipboard',
-          icon: 'error',
-          confirmButtonColor: '#992525',
-        });
-      }
+    if (!signature || signature === 'undefined' || signature === 'null') {
+      Swal.fire({
+        title: 'Error',
+        text: 'No signature available to copy',
+        icon: 'error',
+        confirmButtonColor: '#992525',
+      });
+      return;
+    }
+    try {
+      await copyToClipboard(signature);
+      setCopiedSignature(true);
+      setTimeout(() => setCopiedSignature(false), 2000);
+
+      // Optional: Show success toast
+      Swal.fire({
+        title: 'Copied!',
+        text: 'Signature copied to clipboard',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true,
+      });
+    } catch (error) {
+      console.error('Failed to copy signature:', error);
+      Swal.fire({
+        title: 'Copy Failed',
+        html: `
+          <p>Could not copy automatically. Please copy manually:</p>
+          <div style="background: #f3f4f6; padding: 8px; margin-top: 8px; border-radius: 4px; font-family: monospace; word-break: break-all;">
+            ${signature}
+          </div>
+        `,
+        icon: 'warning',
+        confirmButtonColor: '#992525',
+        confirmButtonText: 'OK',
+      });
     }
   };
 
@@ -723,21 +748,23 @@ function ViewRequestDetailsModal() {
                   </div>
 
                   {/* File Signature Section */}
-                  {(validationData?.fileSignature || selectedRequest.validationSignature) && (
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                        <span className="text-xs font-semibold text-green-800 uppercase">Verified Document</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 bg-white p-2 rounded border border-green-200">
-                        <div className="flex-1">
-                          <p className="text-xs text-gray-600 mb-1">File Signature:</p>
-                          <p className="text-base font-mono font-bold text-gray-900 tracking-wider">
-                            {validationData?.fileSignature || selectedRequest.validationSignature}
-                          </p>
+                  {(() => {
+                    const signature = validationData?.fileSignature || selectedRequest.validationSignature;
+                    return signature && signature !== 'undefined' && signature !== 'null' ? (
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                          <span className="text-xs font-semibold text-green-800 uppercase">Verified Document</span>
                         </div>
+                        <div className="flex items-center justify-between gap-2 bg-white p-2 rounded border border-green-200">
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-600 mb-1">File Signature:</p>
+                            <p className="text-base font-mono font-bold text-gray-900 tracking-wider">
+                              {signature}
+                            </p>
+                          </div>
                         <button
                           type="button"
                           onClick={handleCopySignature}
@@ -762,7 +789,8 @@ function ViewRequestDetailsModal() {
                         Use this signature to verify document authenticity
                       </p>
                     </div>
-                  )}
+                    ) : null;
+                  })()}
 
                   {loadingValidation && (
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">

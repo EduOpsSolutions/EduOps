@@ -1,5 +1,6 @@
 import pkg from "@prisma/client";
 const { PrismaClient } = pkg;
+import { v4 as uuidv4 } from "uuid";
 import {
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
@@ -574,6 +575,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     paymentData;
 
   try {
+    // Log received courseId and batchId from frontend
+    console.log('[PaymentService] Received courseId:', paymentData.courseId, 'batchId:', paymentData.batchId);
     const customTransactionId = await generatePaymentId();
 
     // Fetch enrollment request data to get courseId and academicPeriodId
@@ -663,6 +666,37 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       }
     }
 
+    // Fallback: use courseId and academicPeriodId from paymentData if provided
+    let finalCourseId = paymentData.courseId || actualCourseId;
+    let finalAcademicPeriodId = paymentData.batchId || enrollmentData?.periodId || null;
+
+    // If still missing, try to fetch from latest enrollment request
+    if ((!finalCourseId || !finalAcademicPeriodId) && userId) {
+      const fallbackEnrollment = await prisma.enrollment_request.findFirst({
+        where: { studentId: userId },
+        orderBy: { createdAt: "desc" },
+        select: { coursesToEnroll: true, periodId: true },
+      });
+      if (fallbackEnrollment) {
+        if (!finalCourseId && fallbackEnrollment.coursesToEnroll) {
+          // Try to resolve courseId from name
+          const course = await prisma.course.findFirst({
+            where: { name: fallbackEnrollment.coursesToEnroll },
+            select: { id: true },
+          });
+          if (course) finalCourseId = course.id;
+        }
+        if (!finalAcademicPeriodId && fallbackEnrollment.periodId) {
+          finalAcademicPeriodId = fallbackEnrollment.periodId;
+        }
+      }
+    }
+
+    // Generate idempotency key for PayMongo requests
+    const idempotencyKey = uuidv4();
+    
+    // Log final values used for payment creation
+    console.log('[PaymentService] Final courseId for payment:', finalCourseId, 'Final academicPeriodId:', finalAcademicPeriodId);
     const payment = await prisma.payments.create({
       data: {
         transactionId: customTransactionId,
@@ -674,8 +708,9 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         remarks: description || `Payment for ${firstName} ${lastName}`,
         paymentEmail: email, // Store the email from payment form
         enrollmentRequestId: enrollmentData?.id || null,
-        courseId: actualCourseId,
-        academicPeriodId: enrollmentData?.periodId || null,
+        courseId: finalCourseId,
+        academicPeriodId: finalAcademicPeriodId,
+        idempotencyKey: idempotencyKey, // Store idempotency key
       },
     });
 

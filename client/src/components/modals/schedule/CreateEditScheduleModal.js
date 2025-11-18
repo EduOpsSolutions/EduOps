@@ -940,6 +940,7 @@ function CreateEditScheduleModal({
       </div>
 
       <ViewStudentsModal
+        key={`students-modal-${event?.id || 'new'}-${formData.courseId}`}
         isOpen={showStudentsModal}
         onClose={() => setShowStudentsModal(false)}
         courseId={formData.courseId}

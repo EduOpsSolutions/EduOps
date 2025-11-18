@@ -158,6 +158,7 @@ export default function EnrollmentFormFields({
                   { value: "verified", label: "2. Verified (Account Created)" },
                   { value: "payment_pending", label: "3. Payment Pending" },
                   { value: "approved", label: "4. Payment Verified" },
+                  { value: "completed", label: "5. Enrollment Completed" },
                   { value: "rejected", label: "Rejected" },
                 ];
                 

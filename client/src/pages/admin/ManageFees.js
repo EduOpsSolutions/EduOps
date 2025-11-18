@@ -32,33 +32,29 @@ function ManageFees() {
     showAddFeeModal,
     showDiscardModal,
     showSaveModal,
-    showDeleteModal,
-    feeToDelete,
     // Actions
     handleEditFees,
     handleAddFees,
     handleCloseAddFeeModal,
     handleAddFee,
     handleInputChange,
-    handleConfirm,
     handleConfirmSave,
     handleCancelSave,
-    handleDiscard,
     handleConfirmDiscard,
     handleCancelDiscard,
     handleFieldUndo,
     hasFieldChanged,
-    openDeleteModal,
-    closeDeleteModal,
-    confirmDeleteFee,
-    handleDeleteFee,
     handleCancelEdit,
     resetStore,
   } = useFeesStore();
 
   // Loading states for search and general fees
-  const [loadingSearch, setLoadingSearch] = React.useState(false);
-  const [loadingGeneralFees, setLoadingGeneralFees] = React.useState(false);
+  const [, setLoadingSearch] = React.useState(false);
+  const [, setLoadingGeneralFees] = React.useState(false);
+
+  // Dynamic options for search form
+  const [batchOptions, setBatchOptions] = React.useState([{ value: '', label: 'All Batches' }]);
+  const [yearOptions, setYearOptions] = React.useState([{ value: '', label: 'All Years' }]);
 
   useEffect(() => {
     async function fetchCourseBatches() {
@@ -80,12 +76,58 @@ function ManageFees() {
       initializeSearch();
       performSearch();
     }
+
+    async function fetchBatchesAndYears() {
+      try {
+        const token = getCookieItem('token');
+        const url = `${API_BASE_URL}/academic-periods`;
+        const res = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Batch options
+          const batchOpts = [
+            { value: '', label: 'All Batches' },
+            ...data.map(batch => ({ value: batch.batchName, label: batch.batchName }))
+          ];
+          setBatchOptions(batchOpts);
+          // Year options
+          const years = Array.from(new Set(
+            data
+              .map(batch => {
+                if (batch.startAt) {
+                  const d = new Date(batch.startAt);
+                  if (!isNaN(d)) return d.getFullYear();
+                }
+                return null;
+              })
+              .filter(Boolean)
+          )).sort((a, b) => b - a);
+          const yearOpts = [
+            { value: '', label: 'All Years' },
+            ...years.map(y => ({ value: String(y), label: String(y) }))
+          ];
+          setYearOptions(yearOpts);
+        }
+      } catch (err) {
+        console.error('Error fetching batches and years:', err);
+        setBatchOptions([{ value: '', label: 'All Batches' }]);
+        setYearOptions([{ value: '', label: 'All Years' }]);
+      }
+    }
+
     fetchCourseBatches();
+    fetchBatchesAndYears();
     return () => {
       resetStore();
       resetSearch();
     };
-  }, [initializeSearch, performSearch, resetStore, resetSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Search form config
   const searchFormConfig = {
@@ -101,23 +143,13 @@ function ManageFees() {
         name: "batch",
         label: "Batch",
         type: "select",
-        options: [
-          { value: "", label: "All Batches" },
-          { value: "Batch 1", label: "Batch 1" },
-          { value: "Batch 2", label: "Batch 2" },
-          { value: "Batch 3", label: "Batch 3" }
-        ]
+        options: batchOptions
       },
       {
         name: "year",
         label: "Year",
         type: "select",
-        options: [
-          { value: "", label: "All Years" },
-          { value: "2024", label: "2024" },
-          { value: "2023", label: "2023" },
-          { value: "2022", label: "2022" }
-        ]
+        options: yearOptions
       }
     ]
   };

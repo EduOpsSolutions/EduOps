@@ -201,6 +201,84 @@ export const getMySchedules = async (req, res) => {
 };
 
 /**
+ * Get schedules for the logged-in teacher
+ */
+export const getMyTeachingSchedules = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = await verifyJWT(token);
+    if (!decoded.payload.data.id) {
+      return res.status(401).json({ error: true, message: "Unauthorized" });
+    }
+
+    // Get the teacher's information
+    const teacher = await prisma.users.findUnique({
+      where: { id: decoded.payload.data.id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!teacher) {
+      return res.status(404).json({ error: true, message: "Teacher not found" });
+    }
+
+    const schedules = await ScheduleModel.getSchedulesByTeacher(
+      decoded.payload.data.id
+    );
+
+    // Get student counts for each schedule
+    const schedulesWithCounts = await Promise.all(
+      schedules.map(async (schedule) => {
+        const studentCount = await prisma.user_schedule.count({
+          where: {
+            scheduleId: schedule.id,
+            deletedAt: null,
+          },
+        });
+
+        return {
+          id: schedule.id,
+          courseId: schedule.course?.id || "",
+          courseName: schedule.course?.name || "",
+          academicPeriodId: schedule.period?.id || schedule.periodId,
+          academicPeriodName: schedule.period
+            ? `${schedule.period.batchName || ""}`
+            : "",
+          teacherId: decoded.payload.data.id,
+          teacherName: `${teacher.firstName} ${teacher.lastName}`,
+          location: schedule.location,
+          days: schedule.days,
+          time_start: schedule.time_start,
+          time_end: schedule.time_end,
+          periodStart: schedule.periodStart
+            ? schedule.periodStart.toISOString().split("T")[0]
+            : null,
+          periodEnd: schedule.periodEnd
+            ? schedule.periodEnd.toISOString().split("T")[0]
+            : null,
+          color: schedule.color || "#FFCF00",
+          notes: schedule.notes,
+          capacity: schedule.capacity,
+          studentCount: studentCount,
+          createdAt: schedule.createdAt,
+          updatedAt: schedule.updatedAt,
+        };
+      })
+    );
+
+    return res.json(schedulesWithCounts);
+  } catch (err) {
+    console.error("Get my teaching schedules error:", err);
+    return res
+      .status(500)
+      .json({ error: true, message: "Failed to get teaching schedules" });
+  }
+};
+
+/**
  * Get students enrolled in a schedule (read-only)
  * Admins/teachers can view any schedule's students.
  * Students can only view if they are enrolled in the schedule.
@@ -681,6 +759,18 @@ export const validateBulkStudents = async (req, res) => {
     const rejected = [];
     const conflicts = [];
 
+    // Fetch all currently enrolled students in this schedule (optimization)
+    const enrolledStudents = await prisma.user_schedule.findMany({
+      where: {
+        scheduleId,
+        deletedAt: null,
+      },
+      select: {
+        userId: true,
+      },
+    });
+    const enrolledUserIds = new Set(enrolledStudents.map((es) => es.userId));
+
     // Check each userId
     for (const userId of userIds) {
       const user = users.find((u) => u.userId === userId);
@@ -701,6 +791,17 @@ export const validateBulkStudents = async (req, res) => {
           name: `${user.firstName} ${user.lastName}`,
           email: user.email,
           reason: `Incompatible role: ${user.role.toLowerCase()}`,
+        });
+        continue;
+      }
+
+      // Check if already enrolled in this schedule
+      if (enrolledUserIds.has(user.id)) {
+        rejected.push({
+          userId,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          reason: "Already enrolled in this schedule",
         });
         continue;
       }
@@ -790,7 +891,7 @@ export const validateBulkStudents = async (req, res) => {
       rejected,
       conflicts,
       summary: {
-        total: userIds.length,
+        total: approved.length + conflicts.length, // Only count students that can be added
         approved: approved.length,
         rejected: rejected.length,
         conflicts: conflicts.length,
@@ -822,6 +923,14 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
       });
     }
 
+    // Remove duplicates from userIds array
+    const uniqueUserIds = [...new Set(userIds)];
+
+    // Log if duplicates were removed
+    if (uniqueUserIds.length !== userIds.length) {
+      console.log(`Removed ${userIds.length - uniqueUserIds.length} duplicate user ID(s) in bulk-add request`);
+    }
+
     // Ensure schedule exists
     const schedule = await prisma.schedule.findFirst({
       where: { id: scheduleId, deletedAt: null },
@@ -841,10 +950,10 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
     });
 
     const availableSlots = schedule.capacity - currentCount;
-    if (availableSlots < userIds.length) {
+    if (availableSlots < uniqueUserIds.length) {
       return res.status(400).json({
         error: true,
-        message: `Not enough capacity. Available: ${availableSlots}, Requested: ${userIds.length}`,
+        message: `Not enough capacity. Available: ${availableSlots}, Requested: ${uniqueUserIds.length}`,
       });
     }
 
@@ -852,7 +961,7 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
     const existing = await prisma.user_schedule.findMany({
       where: {
         scheduleId,
-        userId: { in: userIds },
+        userId: { in: uniqueUserIds },
       },
       select: { userId: true, deletedAt: true },
     });
@@ -861,7 +970,7 @@ export const bulkAddStudentsToSchedule = async (req, res) => {
     const toCreate = [];
     const toRestore = [];
 
-    for (const userId of userIds) {
+    for (const userId of uniqueUserIds) {
       const deletedAt = existingMap.get(userId);
       if (deletedAt === null) {
         // Already enrolled

@@ -7,6 +7,7 @@ import SelectField from "../../components/textFields/SelectField";
 import usePaymentStore from "../../stores/paymentStore";
 import useAuthStore from "../../stores/authStore";
 import Swal from "sweetalert2";
+import { getCookieItem } from "../../utils/jwt";
 
 function PaymentForm() {
   const navigate = useNavigate();
@@ -27,13 +28,13 @@ function PaymentForm() {
     preparePaymentData,
     showDialog,
     resetForm,
-    sendPaymentLinkEmail
+    sendPaymentLinkEmail,
   } = usePaymentStore();
 
   // Filtered fee options based on user role
   const getFilteredFeeOptions = () => {
-    if (isAuthenticated && user?.role === 'teacher') {
-      return feesOptions.filter(option => option.value === 'document_fee');
+    if (isAuthenticated && user?.role === "teacher") {
+      return feesOptions.filter((option) => option.value === "document_fee");
     }
     return feesOptions;
   };
@@ -42,47 +43,127 @@ function PaymentForm() {
   useEffect(() => {
     // Auto-fill authenticated user details
     if (isAuthenticated && user?.userId) {
-      updateFormField('student_id', user.userId);
+      updateFormField("student_id", user.userId);
 
-      if (user.role === 'teacher') {
+      if (user.role === "teacher") {
         validateAndFetchTeacherByID(user.userId);
-      } else if (user.role === 'student') {
+      } else if (user.role === "student") {
         validateAndFetchStudentByID(user.userId);
       }
 
       if (user?.email) {
-        updateFormField('email_address', user.email);
+        updateFormField("email_address", user.email);
       }
     }
-  }, [isAuthenticated, user, validateAndFetchStudentByID, validateAndFetchTeacherByID, updateFormField]);
+  }, [
+    isAuthenticated,
+    user,
+    validateAndFetchStudentByID,
+    validateAndFetchTeacherByID,
+    updateFormField,
+  ]);
 
   useEffect(() => {
     if (location.state?.documentFee) {
       const { feeType, amount } = location.state.documentFee;
       // Only auto-fill if it's explicitly a document fee
-      if (feeType === 'document_fee') {
-        updateFormField('fee', feeType);
+      if (feeType === "document_fee") {
+        updateFormField("fee", feeType);
         if (amount) {
-          updateFormField('amount', amount.toString());
+          updateFormField("amount", amount.toString());
         }
       }
     }
   }, [location.state, updateFormField]);
 
+  // State for enrollments (courses/batches)
+  const [enrollments, setEnrollments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
+
+  // Fetch enrollments for logged-in students
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (isAuthenticated && user?.role === "student" && user?.id) {
+        try {
+          // Use the correct API base URL
+          const apiBase = process.env.REACT_APP_API_URL || "/api";
+          // Get token from localStorage or your auth store
+          const token = getCookieItem("token");
+          const res = await fetch(
+            `${apiBase}/enrollment/${user.id}/enrollments`,
+            {
+              headers: {
+                Authorization: token ? `Bearer ${token}` : "",
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const data = await res.json();
+          setEnrollments(Array.isArray(data) ? data : []);
+        } catch (err) {
+          setEnrollments([]);
+        }
+      } else {
+        setEnrollments([]);
+      }
+    };
+    fetchEnrollments();
+  }, [isAuthenticated, user]);
+
+  // Fetch courses and batches for guest payments
+  useEffect(() => {
+    const fetchCoursesAndBatches = async () => {
+      if (!isAuthenticated) {
+        try {
+          const apiBase = process.env.REACT_APP_API_URL || "/api";
+
+          // Fetch courses
+          const coursesRes = await fetch(`${apiBase}/courses`);
+          const coursesData = await coursesRes.json();
+          setCourses(Array.isArray(coursesData) ? coursesData : []);
+
+          // Fetch academic periods (batches)
+          const batchesRes = await fetch(`${apiBase}/academic-periods`);
+          const batchesData = await batchesRes.json();
+          setBatches(Array.isArray(batchesData) ? batchesData : []);
+        } catch (err) {
+          console.error("Error fetching courses/batches:", err);
+          setCourses([]);
+          setBatches([]);
+        }
+      }
+    };
+    fetchCoursesAndBatches();
+  }, [isAuthenticated]);
+
+  // Handle course/batch selection
+  const handleCourseBatchChange = (e) => {
+    const value = e.target.value;
+    if (!value) {
+      updateFormField("courseId", null);
+      updateFormField("batchId", null);
+    } else {
+      const [courseId, batchId] = value.split("|");
+      updateFormField("courseId", courseId);
+      updateFormField("batchId", batchId);
+    }
+  };
+
   // Helper function to get proper fee type label
   const getFeeTypeLabel = (feeType) => {
     const feeTypeMap = {
-      'down_payment': 'Down Payment',
-      'tuition_fee': 'Tuition Fee',
-      'document_fee': 'Document Fee',
-      'book_fee': 'Book Fee',
+      down_payment: "Down Payment",
+      tuition_fee: "Tuition Fee",
+      document_fee: "Document Fee",
+      book_fee: "Book Fee",
     };
-    
+
     if (!feeType) {
-      return 'Payment';
+      return "Payment";
     }
-    
-    return feeTypeMap[feeType] || feeType.replace('_', ' ');
+
+    return feeTypeMap[feeType] || feeType.replace("_", " ");
   };
 
   const handleInputChange = (e) => {
@@ -101,7 +182,7 @@ function PaymentForm() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateRequiredFields()) {
       await showDialog({
         icon: "warning",
@@ -116,9 +197,8 @@ function PaymentForm() {
 
     const feeLabel = getFeeTypeLabel(formData.fee);
 
-
     const confirmResult = await Swal.fire({
-      title: 'Confirm Payment',
+      title: "Confirm Payment",
       html: `
         <div style="text-align: center;">
           <p style="margin-bottom: 15px; font-size: 1.1rem; color: #333;">Are you sure you want to pay <strong>₱${formData.amount}</strong> for <strong>${feeLabel}</strong>?</p>
@@ -127,17 +207,25 @@ function PaymentForm() {
           </p>
         </div>
       `,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Yes, I\'m sure',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#890E07',
-      cancelButtonColor: '#6B7280',
-      reverseButtons: true
+      confirmButtonText: "Yes, I'm sure",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#890E07",
+      cancelButtonColor: "#6B7280",
+      reverseButtons: true,
     });
 
+    // Log selected courseId and batchId
+    console.log(
+      "[PaymentForm] Selected courseId:",
+      formData.courseId,
+      ", batchId:",
+      formData.batchId
+    );
+
     if (!confirmResult.isConfirmed) {
-      return; 
+      return;
     }
 
     try {
@@ -151,23 +239,25 @@ function PaymentForm() {
         amount: paymentData.amount,
         description: description,
         feeType: paymentData.feeType,
-        userId: paymentData.userId
+        userId: paymentData.userId,
+        courseId: paymentData.courseId || null,
+        batchId: paymentData.batchId || null,
       };
 
       Swal.fire({
-        title: 'Processing...',
-        text: 'Sending payment link to your email...',
+        title: "Processing...",
+        text: "Sending payment link to your email...",
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
-        }
+        },
       });
 
       const result = await sendPaymentLinkEmail(emailData);
 
       if (result.success) {
         const successResult = await Swal.fire({
-          title: 'Email Sent Successfully!',
+          title: "Email Sent Successfully!",
           html: `
             <div style="text-align: center;">
               <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
@@ -181,22 +271,21 @@ function PaymentForm() {
               </p>
             </div>
           `,
-          icon: 'success',
+          icon: "success",
           showCancelButton: true,
           confirmButtonText: '<i class="fas fa-credit-card mr-2"></i>Pay Now',
           cancelButtonText: '<i class="fas fa-times mr-2"></i>Close',
-          confirmButtonColor: '#890E07',
-          cancelButtonColor: '#6B7280',
-          reverseButtons: true
+          confirmButtonColor: "#890E07",
+          cancelButtonColor: "#6B7280",
+          reverseButtons: true,
         });
 
         if (successResult.isConfirmed) {
           const paymentId = result?.data?.data?.paymentId;
           if (paymentId) {
             const checkoutUrl = `${window.location.origin}/payment?paymentId=${paymentId}`;
-            window.open(checkoutUrl, '_blank');
+            window.open(checkoutUrl, "_blank");
           } else {
-  
             const paymentData = preparePaymentData();
             const feeLabel = getFeeTypeLabel(paymentData.feeType);
             const description = `${feeLabel} - Payment for ${paymentData.firstName} ${paymentData.lastName}`;
@@ -210,29 +299,30 @@ function PaymentForm() {
                   lastName: paymentData.lastName,
                   email: paymentData.email,
                   phone: paymentData.phoneNumber,
-                  studentId: paymentData.studentId
-                }
-              }
+                  studentId: paymentData.studentId,
+                },
+              },
             });
           }
         }
-        
+
         resetForm();
       } else {
         await Swal.fire({
-          title: 'Error',
-          text: result.error || 'Failed to send payment link. Please try again.',
-          icon: 'error',
-          confirmButtonColor: '#890E07'
+          title: "Error",
+          text:
+            result.error || "Failed to send payment link. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#890E07",
         });
       }
     } catch (error) {
-      console.error('Error sending payment link:', error);
+      console.error("Error sending payment link:", error);
       await Swal.fire({
-        title: 'Error',
-        text: 'An unexpected error occurred. Please try again.',
-        icon: 'error',
-        confirmButtonColor: '#890E07'
+        title: "Error",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#890E07",
       });
     }
   };
@@ -256,20 +346,22 @@ function PaymentForm() {
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-3xl font-bold">Payment Form</h1>
             <p className="italic mt-2 font-semibold">
-              Fields marked with (*) are required. Please enter the correct student
-              information.
+              Fields marked with (*) are required. Please enter the correct
+              student information.
             </p>
           </div>
 
           <form onSubmit={onSubmit}>
             {/* Personal Information */}
-            {isAuthenticated && user?.userId && user?.role === 'student' && (
+            {isAuthenticated && user?.userId && user?.role === "student" && (
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <p className="text-sm text-gray-700">
                       <span className="font-semibold">Your ID:</span>{" "}
-                      <span className="font-mono text-blue-700">{user.userId}</span>
+                      <span className="font-mono text-blue-700">
+                        {user.userId}
+                      </span>
                       <button
                         type="button"
                         onClick={handleCopyId}
@@ -280,19 +372,24 @@ function PaymentForm() {
                     </p>
                   </div>
                   <p className="text-xs text-gray-600">
-                    <span className="font-semibold">Note:</span> Your details have been automatically filled. You can only process payments for yourself. For guest payments, you can share your ID to allow others to pay without logging in.
+                    <span className="font-semibold">Note:</span> Your details
+                    have been automatically filled. You can only process
+                    payments for yourself. For guest payments, you can share
+                    your ID to allow others to pay without logging in.
                   </p>
                 </div>
               </div>
             )}
 
-            {isAuthenticated && user?.role === 'teacher' && (
+            {isAuthenticated && user?.role === "teacher" && (
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <p className="text-sm text-gray-700">
                       <span className="font-semibold">Your ID:</span>{" "}
-                      <span className="font-mono text-blue-700">{user.userId}</span>
+                      <span className="font-mono text-blue-700">
+                        {user.userId}
+                      </span>
                       <button
                         type="button"
                         onClick={handleCopyId}
@@ -303,7 +400,10 @@ function PaymentForm() {
                     </p>
                   </div>
                   <p className="text-xs text-gray-600">
-                    <span className="font-semibold">Note:</span> Your details have been automatically filled. You can only process payments for yourself. For guest payments, you can share your ID to allow others to pay without logging in.
+                    <span className="font-semibold">Note:</span> Your details
+                    have been automatically filled. You can only process
+                    payments for yourself. For guest payments, you can share
+                    your ID to allow others to pay without logging in.
                   </p>
                 </div>
               </div>
@@ -313,17 +413,104 @@ function PaymentForm() {
               <LabelledInputField
                 name="student_id"
                 id="student_id"
-                label={isAuthenticated && user?.role === 'teacher' ? "Teacher ID*" : "Student ID*"}
+                label={
+                  isAuthenticated && user?.role === "teacher"
+                    ? "Teacher ID*"
+                    : "Student ID*"
+                }
                 type="text"
                 required={true}
-                placeholder={isAuthenticated && user?.role === 'teacher' ? "Teacher ID" : "Enter Student ID"}
+                placeholder={
+                  isAuthenticated && user?.role === "teacher"
+                    ? "Teacher ID"
+                    : "Enter Student ID"
+                }
                 value={formData.student_id || ""}
                 onChange={handleInputChange}
                 onBlur={handleStudentIdBlur}
-                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student')}
-                className={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') ? "bg-gray-100" : ""}
+                readOnly={
+                  isAuthenticated &&
+                  (user?.role === "teacher" || user?.role === "student")
+                }
+                className={
+                  isAuthenticated &&
+                  (user?.role === "teacher" || user?.role === "student")
+                    ? "bg-gray-100"
+                    : ""
+                }
               />
             </div>
+
+            {/* Course & Batch selection for logged-in students */}
+            {isAuthenticated &&
+              user?.role === "student" &&
+              enrollments.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <SelectField
+                    name="courseBatch"
+                    id="courseBatch"
+                    label="Course & Batch*"
+                    required={true}
+                    options={[
+                      { value: "", label: "Select course & batch" },
+                      ...enrollments.map((e) => ({
+                        value: `${e.courseId}|${e.batchId}`,
+                        label: `${e.course} - ${e.batch}${
+                          e.year ? ` (${e.year})` : ""
+                        }`,
+                      })),
+                    ]}
+                    value={
+                      formData.courseId && formData.batchId
+                        ? `${formData.courseId}|${formData.batchId}`
+                        : ""
+                    }
+                    onChange={handleCourseBatchChange}
+                  />
+                </div>
+              )}
+
+            {/* Course & Batch selection for guest payments */}
+            {!isAuthenticated && courses.length > 0 && batches.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <SelectField
+                  name="course"
+                  id="course"
+                  label="Course*"
+                  required={true}
+                  options={[
+                    { value: "", label: "Select course" },
+                    ...courses
+                      .filter((c) => !c.deletedAt)
+                      .map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                      })),
+                  ]}
+                  value={formData.courseId || ""}
+                  onChange={(e) => updateFormField("courseId", e.target.value)}
+                />
+                <SelectField
+                  name="batch"
+                  id="batch"
+                  label="Batch/Academic Period*"
+                  required={true}
+                  options={[
+                    { value: "", label: "Select batch" },
+                    ...batches
+                      .filter((b) => !b.deletedAt)
+                      .map((b) => ({
+                        value: b.id,
+                        label: `${b.batchName || b.name}${
+                          b.schoolYear ? ` (${b.schoolYear})` : ""
+                        }`,
+                      })),
+                  ]}
+                  value={formData.batchId || ""}
+                  onChange={(e) => updateFormField("batchId", e.target.value)}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="relative">
@@ -338,7 +525,9 @@ function PaymentForm() {
                   onChange={handleInputChange}
                   readOnly={true}
                   className={
-                    nameError ? "border-red-500 focus:border-red-500 bg-gray-100" : "bg-gray-100"
+                    nameError
+                      ? "border-red-500 focus:border-red-500 bg-gray-100"
+                      : "bg-gray-100"
                   }
                 />
                 {loading && !formData.first_name && (
@@ -378,7 +567,9 @@ function PaymentForm() {
                   onChange={handleInputChange}
                   readOnly={true}
                   className={
-                    nameError ? "border-red-500 focus:border-red-500 bg-gray-100" : "bg-gray-100"
+                    nameError
+                      ? "border-red-500 focus:border-red-500 bg-gray-100"
+                      : "bg-gray-100"
                   }
                 />
                 {loading && !formData.last_name && (
@@ -452,12 +643,22 @@ function PaymentForm() {
                 required={true}
                 placeholder="0.00"
                 min="1"
-                max="100000"
+                max="1000000"
                 step="0.01"
                 value={formData.amount}
                 onChange={handleInputChange}
-                readOnly={isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') && formData.fee === 'document_fee'}
-                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isAuthenticated && (user?.role === 'teacher' || user?.role === 'student') && formData.fee === 'document_fee' ? 'bg-gray-100' : ''}`}
+                readOnly={
+                  isAuthenticated &&
+                  user?.role === "student" &&
+                  formData.fee === "document_fee"
+                }
+                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                  isAuthenticated &&
+                  user?.role === "student" &&
+                  formData.fee === "document_fee"
+                    ? "bg-gray-100"
+                    : ""
+                }`}
               />
             </div>
 
