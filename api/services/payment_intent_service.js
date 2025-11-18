@@ -1,6 +1,5 @@
 import pkg from "@prisma/client";
 const { PrismaClient } = pkg;
-import { v4 as uuidv4 } from "uuid";
 import { createPaymentIntent as createPayMongoPaymentIntent } from "./paymongo_service.js";
 import { generatePaymentId } from "./payment_service.js";
 
@@ -69,7 +68,7 @@ export const checkExistingPaymentWithLock = async (paymentId) => {
     };
   }
 
-  // CRITICAL: If payment intent already exists, return cached (prevents duplicate API calls)
+  // If payment intent already exists, return cached (prevents duplicate API calls)
   if (existingPayment.paymentIntentId) {
     console.log("[PaymentIntent] Intent already exists, returning cached", { 
       paymentIntentId: existingPayment.paymentIntentId 
@@ -131,6 +130,82 @@ export const createPaymentIntentWithProtection = async (requestData, existingPay
   const { paymentId, amount } = requestData;
   const paymongoDescription = buildPaymentDescription(requestData);
 
+  //Before calling PayMongo, set a lock flag to prevent duplicates
+  if (paymentId && existingPayment) {
+    console.log("[PaymentIntent] Acquiring lock to prevent concurrent PayMongo calls");
+    
+    // Try to atomically set paymentIntentId to "CREATING" as a lock
+    const lockResult = await prisma.payments.updateMany({
+      where: {
+        id: paymentId,
+        status: "pending",
+        paymentIntentId: null,
+      },
+      data: {
+        paymentIntentId: "CREATING", // Temporary lock value
+      },
+    });
+
+    if (lockResult.count === 0) {
+      // Another request already locked this payment or it has an intent
+      console.warn("[PaymentIntent] Payment already locked, fetching existing intent");
+      
+      const currentPayment = await prisma.payments.findUnique({
+        where: { id: paymentId },
+        select: { paymentIntentId: true, amount: true, status: true },
+      });
+
+      if (currentPayment?.paymentIntentId && currentPayment.paymentIntentId !== "CREATING") {
+        console.log("[PaymentIntent] Returning existing intent from concurrent request");
+        return {
+          success: true,
+          data: {
+            data: {
+              id: currentPayment.paymentIntentId,
+              attributes: {
+                amount: Math.round(parseFloat(currentPayment.amount) * 100),
+                currency: "PHP",
+                status: "awaiting_payment_method",
+              },
+            },
+          },
+          raceDetected: true,
+        };
+      }
+      
+      // If still "CREATING", wait a moment and retry
+      if (currentPayment?.paymentIntentId === "CREATING") {
+        console.log("[PaymentIntent] Another request is creating intent, waiting...");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const retryPayment = await prisma.payments.findUnique({
+          where: { id: paymentId },
+          select: { paymentIntentId: true, amount: true },
+        });
+        
+        if (retryPayment?.paymentIntentId && retryPayment.paymentIntentId !== "CREATING") {
+          console.log("[PaymentIntent] Got intent after waiting");
+          return {
+            success: true,
+            data: {
+              data: {
+                id: retryPayment.paymentIntentId,
+                attributes: {
+                  amount: Math.round(parseFloat(retryPayment.amount) * 100),
+                  currency: "PHP",
+                  status: "awaiting_payment_method",
+                },
+              },
+            },
+            raceDetected: true,
+          };
+        }
+      }
+    } else {
+      console.log("[PaymentIntent] Lock acquired successfully");
+    }
+  }
+
   console.log("[PaymentIntent] Calling PayMongo API", {
     description: paymongoDescription,
     idempotencyKey: idempotencyKey ? idempotencyKey.substring(0, 8) + "..." : "WILL_GENERATE_NEW",
@@ -145,6 +220,20 @@ export const createPaymentIntentWithProtection = async (requestData, existingPay
 
   if (!result.success) {
     console.warn("[PaymentIntent] PayMongo API failed:", result.message || result.error);
+    
+    // Rollback lock
+    if (paymentId && existingPayment) {
+      await prisma.payments.updateMany({
+        where: {
+          id: paymentId,
+          paymentIntentId: "CREATING",
+        },
+        data: {
+          paymentIntentId: null,
+        },
+      });
+    }
+    
     return {
       success: false,
       error: result.message,
@@ -157,29 +246,51 @@ export const createPaymentIntentWithProtection = async (requestData, existingPay
 
   // Handle race condition detection if paymentId provided
   if (paymentId && existingPayment) {
-    const raceCheck = await detectAndHandleRaceCondition(
-      paymentId, 
-      paymentIntentId, 
-      amount
-    );
+    // Update payment record with real intent ID, replacing "CREATING" lock
+    const updateResult = await prisma.payments.updateMany({
+      where: {
+        id: paymentId,
+        paymentIntentId: "CREATING", // Only update if we hold the lock
+      },
+      data: {
+        paymentIntentId: paymentIntentId,
+        remarks: existingPayment.remarks || paymongoDescription,
+        feeType: existingPayment.feeType || requestData.feeType || requestData.purpose || "tuition_fee",
+      },
+    });
 
-    if (raceCheck.raceDetected) {
-      return {
-        success: true,
-        data: raceCheck.data,
-        raceDetected: true,
-      };
+    if (updateResult.count === 0) {
+      console.warn("[PaymentIntent] Could not update - lock was lost or already updated");
+    
+      const currentPayment = await prisma.payments.findUnique({
+        where: { id: paymentId },
+        select: { paymentIntentId: true, amount: true },
+      });
+
+      if (currentPayment?.paymentIntentId && currentPayment.paymentIntentId !== paymentIntentId && currentPayment.paymentIntentId !== "CREATING") {
+        console.warn("[PaymentIntent] RACE DETECTED: Different intent ID in database", {
+          ourIntentId: paymentIntentId,
+          theirIntentId: currentPayment.paymentIntentId,
+        });
+        
+        return {
+          success: true,
+          data: {
+            data: {
+              id: currentPayment.paymentIntentId,
+              attributes: {
+                amount: Math.round(parseFloat(currentPayment.amount) * 100),
+                currency: "PHP",
+                status: "awaiting_payment_method",
+              },
+            },
+          },
+          raceDetected: true,
+        };
+      }
+    } else {
+      console.log("[PaymentIntent] Successfully updated payment with real intent ID");
     }
-
-    // Update payment record atomically
-    await updatePaymentWithIntentAtomic(
-      paymentId,
-      paymentIntentId,
-      existingPayment,
-      paymongoDescription,
-      requestData.feeType,
-      requestData.purpose
-    );
   } else {
     // Create new payment record without paymentId
     await createPaymentRecordWithIntent(
