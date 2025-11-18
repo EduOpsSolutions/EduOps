@@ -1239,13 +1239,18 @@ const getDocumentSubmissionStatus = async (req, res) => {
       email: request.user?.email || request.email,
       phone: request.phone || "N/A",
       documentName: request.document?.documentName || "Unknown Document",
-      documentType: request.document?.price || "free",
+      documentType: request.document?.price ? "PAID" : "FREE",
       requestDate: request.createdAt,
-      status: request.status,
-      deliveryMode: request.mode || "N/A",
-      paymentStatus: request.paymentStatus || "N/A",
+      status: request.status
+        ? request.status.toUpperCase().trim().replace(/_/g, " ")
+        : "N/A",
+      deliveryMode:
+        request.mode?.toUpperCase().trim().replace(/_/g, " ") || "N/A",
+      paymentStatus: request.paymentStatus
+        ? request.paymentStatus.toUpperCase().trim().replace(/_/g, " ")
+        : "N/A",
       paymentAmount: request.paymentAmount ? Number(request.paymentAmount) : 0,
-      paymentMethod: request.paymentMethod || "N/A",
+      paymentMethod: request.paymentMethod?.toUpperCase().trim() || "N/A",
       purpose: request.purpose || "N/A",
       address: request.address || "N/A",
       city: request.city || "N/A",
@@ -1267,11 +1272,14 @@ const getDocumentSubmissionStatus = async (req, res) => {
 
     const paymentStats = {
       totalRequests: reportData.length,
-      paidRequests: reportData.filter((d) => d.paymentStatus === "paid").length,
-      pendingPayments: reportData.filter((d) => d.paymentStatus === "pending")
-        .length,
+      paidRequests: reportData.filter(
+        (d) => d.paymentStatus === "PAID" || d.paymentStatus === "VERIFIED"
+      ).length,
+      pendingPayments: reportData.filter(
+        (d) => d.paymentStatus?.toLowerCase() === "pending"
+      ).length,
       totalRevenue: reportData
-        .filter((d) => d.paymentStatus === "paid")
+        .filter((d) => d.paymentStatus === "PAID" || d.paymentStatus === "VERIFIED")
         .reduce((sum, d) => sum + d.paymentAmount, 0),
     };
 
