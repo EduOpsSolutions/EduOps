@@ -147,6 +147,8 @@ export default function Logs() {
           dateEnd: dateEnd || undefined,
           type: typeParam || undefined,
           moduleType: moduleFilter || undefined,
+          sortBy: 'createdAt',
+          sortOrder: 'DESC',
         },
       })
       .then((response) => {

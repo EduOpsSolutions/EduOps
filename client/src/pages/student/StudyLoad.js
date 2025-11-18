@@ -257,31 +257,76 @@ function StudyLoad() {
     };
 
     return (
-      <table className="w-full table-fixed">
-        <tbody>
+      <>
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3 mt-4">
           {results.map((ev) => (
-            <tr
+            <div
               key={ev.id}
-              className="border-b border-dark-red-2 border-b-opacity-50"
+              className="border border-dark-red-2 rounded-lg p-4 bg-white shadow-sm"
             >
-              <td className="py-3 text-center"> {ev.courseName || '—'} </td>
-              <td className="py-3 text-center">
-                <p>{ev.days || '—'}</p>
-                <p>
-                  {ev.time_start || '—'}
-                  {ev.time_end ? ` - ${ev.time_end}` : ''}
-                </p>
-              </td>
-              <td className="py-3 text-center"> {ev.teacherName || '—'} </td>
-              <td className="py-3 text-center">
-                {' '}
-                {calculateTotalHours(ev) ?? '—'}{' '}
-              </td>
-              <td className="py-3 text-center"> {ev.location || '—'} </td>
-            </tr>
+              <div className="mb-3 pb-3 border-b border-dark-red-2 border-opacity-30">
+                <div className="text-base font-semibold text-dark-red">
+                  {ev.courseName || '—'}
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Schedule:</span>
+                  <span className="font-medium text-right">
+                    <div>{ev.days || '—'}</div>
+                    <div>
+                      {ev.time_start || '—'}
+                      {ev.time_end ? ` - ${ev.time_end}` : ''}
+                    </div>
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Adviser:</span>
+                  <span className="font-medium">{ev.teacherName || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600"># of Hours:</span>
+                  <span className="font-semibold text-dark-red">
+                    {calculateTotalHours(ev) ?? '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Room:</span>
+                  <span className="font-medium">{ev.location || '—'}</span>
+                </div>
+              </div>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+
+        {/* Desktop Table View */}
+        <table className="hidden md:table w-full table-fixed">
+          <tbody>
+            {results.map((ev) => (
+              <tr
+                key={ev.id}
+                className="border-b border-dark-red-2 border-b-opacity-50"
+              >
+                <td className="py-3 text-center"> {ev.courseName || '—'} </td>
+                <td className="py-3 text-center">
+                  <p>{ev.days || '—'}</p>
+                  <p>
+                    {ev.time_start || '—'}
+                    {ev.time_end ? ` - ${ev.time_end}` : ''}
+                  </p>
+                </td>
+                <td className="py-3 text-center"> {ev.teacherName || '—'} </td>
+                <td className="py-3 text-center">
+                  {' '}
+                  {calculateTotalHours(ev) ?? '—'}{' '}
+                </td>
+                <td className="py-3 text-center"> {ev.location || '—'} </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
     );
   };
 
@@ -395,27 +440,59 @@ function StudyLoad() {
             <h1>Study Load</h1>
             <h2>Academic Schedule Report</h2>
           </div>
-          <div className="flex flex-row gap-7 items-center pb-4 border-b-2 border-dark-red-2 mb-4">
-            <div className="grow">
-              <p className="text-xl uppercase">
-                {user?.lastName
-                  ? `${user.lastName}, ${user.firstName}`
-                  : 'Your Study Load'}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Student ID: {user?.userId || user?.id || 'N/A'}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              {selectedPeriod && (
-                <p className="text-sm text-gray-600">
-                  {selectedPeriod.batchName}
+          <div className="pb-4 border-b-2 border-dark-red-2 mb-4">
+            <div className="flex flex-col md:flex-row md:gap-7 md:items-center">
+              <div className="grow">
+                <p className="text-xl uppercase">
+                  {user?.lastName
+                    ? `${user.lastName}, ${user.firstName}`
+                    : 'Your Study Load'}
                 </p>
-              )}
-              {results.length > 0 && selectedPeriod && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Student ID: {user?.userId || user?.id || 'N/A'}
+                </p>
+              </div>
+              <div className="hidden md:flex items-center gap-4">
+                {selectedPeriod && (
+                  <p className="text-sm text-gray-600">
+                    {selectedPeriod.batchName}
+                  </p>
+                )}
+                {results.length > 0 && selectedPeriod && (
+                  <button
+                    onClick={handleExportPdf}
+                    className="no-print flex items-center gap-2 bg-dark-red hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 shadow-md"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Export PDF
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* Mobile: Batch and Export button on separate row */}
+            {results.length > 0 && selectedPeriod && (
+              <div className="md:hidden mt-3 flex flex-col gap-2">
+                {selectedPeriod && (
+                  <p className="text-sm text-gray-600">
+                    {selectedPeriod.batchName}
+                  </p>
+                )}
                 <button
                   onClick={handleExportPdf}
-                  className="no-print flex items-center gap-2 bg-dark-red hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 shadow-md"
+                  className="no-print w-full flex items-center justify-center gap-2 bg-dark-red hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 shadow-md"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -433,10 +510,10 @@ function StudyLoad() {
                   </svg>
                   Export PDF
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-          <table className="w-full table-fixed">
+          <table className="hidden md:table w-full table-fixed">
             <thead>
               <tr className="border-b border-dark-red-2 border-opacity-50">
                 <th className="py-3 font-bold"> Course </th>
