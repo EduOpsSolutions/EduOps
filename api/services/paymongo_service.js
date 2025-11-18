@@ -296,10 +296,12 @@ export const processWebhookEvent = async (event) => {
         referenceNumber: failedReferenceNumber,
       };
 
-      console.log(`[PAYMENT_FAILED] Looking for payment with:`, {
+      console.log(`[PAYMENT_FAILED] Processing payment failure webhook:`, {
+        eventType,
         referenceNumber: failedReferenceNumber,
         paymentIntentId: failedPaymentIntentId,
         eventId: eventData.id,
+        fullEventData: JSON.stringify(eventData.attributes, null, 2),
       });
 
       if (failedPaymentIntentId) {
@@ -307,15 +309,19 @@ export const processWebhookEvent = async (event) => {
           where: { paymentIntentId: failedPaymentIntentId },
         });
         if (paymentRecord) {
-          console.log(`[PAYMENT_FAILED] Found by paymentIntentId: ${paymentRecord.transactionId}`);
+          console.log(`[PAYMENT_FAILED] Found by paymentIntentId: ${paymentRecord.transactionId} (Status: ${paymentRecord.status})`);
+        } else {
+          console.log(`[PAYMENT_FAILED] Not found by paymentIntentId: ${failedPaymentIntentId}`);
         }
       }
-      if (!paymentRecord) {
+      if (!paymentRecord && failedReferenceNumber) {
         paymentRecord = await prisma.payments.findFirst({
           where: { referenceNumber: failedReferenceNumber },
         });
         if (paymentRecord) {
-          console.log(`[PAYMENT_FAILED] Found by referenceNumber: ${paymentRecord.transactionId}`);
+          console.log(`[PAYMENT_FAILED] Found by referenceNumber: ${paymentRecord.transactionId} (Status: ${paymentRecord.status})`);
+        } else {
+          console.log(`[PAYMENT_FAILED] Not found by referenceNumber: ${failedReferenceNumber}`);
         }
       }
 
@@ -324,7 +330,9 @@ export const processWebhookEvent = async (event) => {
           where: { referenceNumber: eventData.id },
         });
         if (paymentRecord) {
-          console.log(`[PAYMENT_FAILED] Found by eventData.id: ${paymentRecord.transactionId}`);
+          console.log(`[PAYMENT_FAILED] Found by eventData.id: ${paymentRecord.transactionId} (Status: ${paymentRecord.status})`);
+        } else {
+          console.log(`[PAYMENT_FAILED] Not found by eventData.id: ${eventData.id}`);
         }
       }
 
@@ -469,12 +477,30 @@ export const processWebhookEvent = async (event) => {
       const currentStatus = paymentRecord.status;
       const newStatus = updateData.status;
       
+      console.log(`[Webhook] Attempting to update payment:`, {
+        transactionId: paymentRecord.transactionId,
+        paymentId: paymentRecord.id,
+        currentStatus,
+        newStatus,
+        eventType,
+      });
+      
       // Skip update if payment is already in final state
       if (currentStatus === "paid" && newStatus === "paid") {
         console.log(`[Webhook] Payment ${paymentRecord.transactionId} already paid, skipping duplicate webhook`);
         return {
           handled: true,
           message: "Payment already processed (duplicate webhook)",
+          paymentId: paymentRecord.id,
+        };
+      }
+      
+      // Skip update if payment is already failed and we're trying to fail it again
+      if (currentStatus === "failed" && newStatus === "failed") {
+        console.log(`[Webhook] Payment ${paymentRecord.transactionId} already failed, skipping duplicate webhook`);
+        return {
+          handled: true,
+          message: "Payment already marked as failed (duplicate webhook)",
           paymentId: paymentRecord.id,
         };
       }
@@ -508,6 +534,13 @@ export const processWebhookEvent = async (event) => {
           paymentId: paymentRecord.id,
         };
       }
+      
+      console.log(`[Webhook] Successfully updated payment ${paymentRecord.transactionId}:`, {
+        updateCount: updateResult.count,
+        oldStatus: currentStatus,
+        newStatus: newStatus,
+        updatedFields: Object.keys(updateData),
+      });
       
       // Fetch updated payment with user relation for email
       const updatedPayment = await prisma.payments.findUnique({

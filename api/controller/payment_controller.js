@@ -789,21 +789,64 @@ const checkPaymentStatus = async (req, res) => {
     const isRecentlyPaid = payment.status === "paid" && payment.paidAt &&
       (new Date() - new Date(payment.paidAt)) < 10 * 1000;
 
-    if (payment.status === "pending" && paymongoResult?.success) {
-      const paymongoStatus = paymongoResult.data?.data?.attributes?.status;
+    console.log("[CheckStatus] PAYMENT STATUS CHECK:", {
+      paymentId: payment.id,
+      transactionId: payment.transactionId,
+      currentDBStatus: payment.status,
+      hasPaymongoResult: !!paymongoResult?.success,
+    });
 
-      if (paymongoStatus === "succeeded") {
+    if (payment.status === "pending" && paymongoResult?.success) {
+      const intentData = paymongoResult.data?.data?.attributes;
+      const paymongoIntentStatus = intentData?.status;
+      
+      console.log("[CheckStatus] RAW INTENT DATA - Status:", paymongoIntentStatus, "| Payments count:", intentData?.payments?.length || 0);
+      
+      // Check actual payment status from payments array (more reliable than intent status)
+      let actualPaymentStatus = null;
+      if (intentData?.payments && intentData.payments.length > 0) {
+        const latestPayment = intentData.payments[0];
+        actualPaymentStatus = latestPayment.attributes?.status || latestPayment.data?.attributes?.status;
+        console.log("[CheckStatus] Actual payment status from payments array:", actualPaymentStatus);
+        console.log("[CheckStatus] Payment details:", {
+          id: latestPayment.id || latestPayment.data?.id,
+          status: actualPaymentStatus,
+          failed_code: latestPayment.attributes?.failed_code || latestPayment.data?.attributes?.failed_code,
+          failed_message: latestPayment.attributes?.failed_message || latestPayment.data?.attributes?.failed_message,
+        });
+      } else {
+        console.log("[CheckStatus] No payments in payments array yet");
+      }
+      
+      console.log("[CheckStatus] Intent status:", paymongoIntentStatus);
+      console.log("[CheckStatus] Payment status:", actualPaymentStatus);
+
+      // Check if payment succeeded
+      if (paymongoIntentStatus === "succeeded" || actualPaymentStatus === "paid") {
         console.log("[CheckStatus] Payment transitioning from pending to paid");
         try {
+          // Extract payment ID for reference number
+          let paymentReferenceNumber = payment.referenceNumber;
+          if (intentData?.payments && intentData.payments.length > 0) {
+            const paidPayment = intentData.payments[0];
+            const paymentId = paidPayment.id || paidPayment.data?.id;
+            if (paymentId) {
+              paymentReferenceNumber = paymentId;
+              console.log("[CheckStatus] Extracted reference number:", paymentId);
+            }
+          }
+          
           await prisma.payments.update({
             where: { id: payment.id },
             data: {
               status: "paid",
               paidAt: new Date(),
+              referenceNumber: paymentReferenceNumber,
             },
           });
           payment.status = "paid";
           payment.paidAt = new Date();
+          payment.referenceNumber = paymentReferenceNumber;
 
           // Send receipt email when payment status changes to paid
           if (payment.user && (payment.paymentEmail || payment.user.email)) {
@@ -858,6 +901,112 @@ const checkPaymentStatus = async (req, res) => {
           }
         } catch (updateError) {
           console.error("Failed to update payment status:", updateError);
+        }
+      }
+      // Check if payment failed
+      else if (actualPaymentStatus === "failed") {
+        console.log("[CheckStatus] Payment transitioning from pending to failed");
+        try {
+          const failedPayment = intentData.payments[0];
+          const failedCode = failedPayment.attributes?.failed_code || failedPayment.data?.attributes?.failed_code;
+          const failedMessage = failedPayment.attributes?.failed_message || failedPayment.data?.attributes?.failed_message;
+          const paymentId = failedPayment.id || failedPayment.data?.id;
+          
+          console.log("[CheckStatus] Failed details:", {
+            code: failedCode,
+            message: failedMessage,
+            paymentId: paymentId,
+          });
+          
+          await prisma.payments.update({
+            where: { id: payment.id },
+            data: {
+              status: "failed",
+              referenceNumber: paymentId || payment.referenceNumber,
+            },
+          });
+          payment.status = "failed";
+          
+          console.log("[CheckStatus] Payment status updated to failed in database");
+        } catch (updateError) {
+          console.error("[CheckStatus] Failed to update payment status to failed:", updateError);
+        }
+      }
+      // Check if payment was refunded
+      else if (actualPaymentStatus === "refunded") {
+        console.log("[CheckStatus] Payment transitioning from pending to refunded");
+        try {
+          const refundedPayment = intentData.payments[0];
+          const paymentId = refundedPayment.id || refundedPayment.data?.id;
+          const refunds = refundedPayment.attributes?.refunds || refundedPayment.data?.attributes?.refunds || [];
+          
+          console.log("[CheckStatus] Refund details:", {
+            paymentId: paymentId,
+            refundsCount: refunds.length,
+          });
+          
+          await prisma.payments.update({
+            where: { id: payment.id },
+            data: {
+              status: "refunded",
+              referenceNumber: paymentId || payment.referenceNumber,
+            },
+          });
+          payment.status = "refunded";
+          
+          console.log("[CheckStatus] Payment status updated to refunded in database");
+        } catch (updateError) {
+          console.error("[CheckStatus] Failed to update payment status to refunded:", updateError);
+        }
+      }
+    }
+    
+    // Check if payment is paid but needs refund status update
+    if (payment.status === "paid" && paymongoResult?.success) {
+      const intentData = paymongoResult.data?.data?.attributes;
+      
+      console.log("[CheckStatus] Checking paid payment for refund:", {
+        transactionId: payment.transactionId,
+        referenceNumber: payment.referenceNumber,
+        hasPayments: !!(intentData?.payments && intentData.payments.length > 0),
+      });
+      
+      if (intentData?.payments && intentData.payments.length > 0) {
+        const latestPayment = intentData.payments[0];
+        const actualPaymentStatus = latestPayment.attributes?.status || latestPayment.data?.attributes?.status;
+        const refunds = latestPayment.attributes?.refunds || latestPayment.data?.attributes?.refunds || [];
+        
+        console.log("[CheckStatus] Payment status check from intent:", {
+          actualPaymentStatus,
+          hasRefunds: refunds.length > 0,
+          refundsCount: refunds.length,
+          fullRefundsArray: JSON.stringify(refunds, null, 2),
+        });
+        
+        // Check both status and refunds array
+        if (actualPaymentStatus === "refunded" || refunds.length > 0) {
+          console.log("[CheckStatus] Paid payment transitioning to refunded");
+          try {
+            const refundedPayment = intentData.payments[0];
+            
+            console.log("[CheckStatus] Refund details for paid payment:", {
+              transactionId: payment.transactionId,
+              refundsCount: refunds.length,
+              paymentStatus: actualPaymentStatus,
+            });
+            
+            await prisma.payments.update({
+              where: { id: payment.id },
+              data: {
+                status: "refunded",
+              },
+            });
+            payment.status = "refunded";
+            
+            console.log("[CheckStatus] Paid payment status updated to refunded in database");
+          } catch (updateError) {
+            console.error("[CheckStatus] Failed to update paid payment to refunded:", updateError);
+          }
         }
       }
     } else if (isRecentlyPaid) {
