@@ -574,6 +574,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
     paymentData;
 
   try {
+    // Log received courseId and batchId from frontend
+    console.log('[PaymentService] Received courseId:', paymentData.courseId, 'batchId:', paymentData.batchId);
     const customTransactionId = await generatePaymentId();
 
     // Fetch enrollment request data to get courseId and academicPeriodId
@@ -690,6 +692,8 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       }
     }
 
+    // Log final values used for payment creation
+    console.log('[PaymentService] Final courseId for payment:', finalCourseId, 'Final academicPeriodId:', finalAcademicPeriodId);
     const payment = await prisma.payments.create({
       data: {
         transactionId: customTransactionId,
