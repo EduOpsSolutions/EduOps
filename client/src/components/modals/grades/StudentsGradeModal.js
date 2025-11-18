@@ -33,6 +33,8 @@ function StudentsGradeModal(props) {
   // File preview modal state
   const [showPreview, setShowPreview] = useState(false);
   const [previewFile, setPreviewFile] = useState({ url: null, title: '' });
+  // Use Zustand selector for localGrades to guarantee reactivity
+  const localGrades = useGradeStore(state => state.localGrades);
   const {
     students,
     gradesVisible,
@@ -53,6 +55,18 @@ function StudentsGradeModal(props) {
     hasPendingFile,
     pendingFiles,
   } = useGradeStore();
+
+  // Defensive: ensure localGrades is always an array
+  // Sync localGrades with students after backend refetch
+  useEffect(() => {
+    if (props.students_grade_modal && students && Array.isArray(students)) {
+      setLocalGrades(students.map(s => ({
+        studentId: s.user?.userId || s.userId, // use readable ID for UI/CSV
+        grade: s.grade === 'Pass' ? 'PASS' : s.grade === 'Fail' ? 'FAIL' : 'NOGRADE',
+        studentGradeId: s.studentGradeId
+      })));
+    }
+  }, [students, props.students_grade_modal]);
 
   const courseInfo = {
     courseName: props.course ? props.course.name : '',
@@ -187,9 +201,10 @@ function StudentsGradeModal(props) {
           },
         });
 
-        await saveGradeChanges();
+        // Save grades and get backend response
+        const saveResult = await saveGradeChanges();
 
-        // Immediately refresh students list after saving
+        // Refresh students list after saving; localGrades will sync via useEffect when students updates
         if (selectedSchedule && handleGradeStudents) {
           await handleGradeStudents(selectedSchedule);
         }
@@ -294,6 +309,7 @@ function StudentsGradeModal(props) {
                     teacherName={props.schedule?.teacherName}
                     hasPendingFile={hasPendingFile}
                     getPendingFile={getPendingFile}
+                    localGrades={localGrades}
                   />
                 </div>
               </div>

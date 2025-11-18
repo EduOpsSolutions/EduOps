@@ -16,12 +16,12 @@ function GradeStatusModalButton({ status, name, id, options, defaultValue, onCha
                 id={id}
                 className={`${getButtonStyle(currentValue)} px-2 py-1 rounded border text-xs sm:text-sm md:text-base text-center w-full max-w-[80px] sm:max-w-[90px] md:max-w-[100px] h-6 sm:h-7 md:h-8 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none transition-colors duration-200 appearance-none cursor-pointer`}
                 value={currentValue}
-                onChange={onChange}
+                onChange={e => onChange(e.target.value)}
             >
                 {options?.map((option, index) => {
                     let optionClass = 'bg-gray-200 text-gray-600';
-                    if (option.value === 'pass') optionClass = 'bg-green-100 text-green-800';
-                    if (option.value === 'fail') optionClass = 'bg-red-100 text-red-800';
+                    if (option.value === 'PASS') optionClass = 'bg-green-100 text-green-800';
+                    if (option.value === 'FAIL') optionClass = 'bg-red-100 text-red-800';
 
                     return (
                         <option key={index} value={option.value} className={optionClass}>
