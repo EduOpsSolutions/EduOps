@@ -78,6 +78,8 @@ function PaymentForm() {
 
   // State for enrollments (courses/batches)
   const [enrollments, setEnrollments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
 
   // Fetch enrollments for logged-in students
   useEffect(() => {
@@ -108,6 +110,32 @@ function PaymentForm() {
     };
     fetchEnrollments();
   }, [isAuthenticated, user]);
+
+  // Fetch courses and batches for guest payments
+  useEffect(() => {
+    const fetchCoursesAndBatches = async () => {
+      if (!isAuthenticated) {
+        try {
+          const apiBase = process.env.REACT_APP_API_URL || "/api";
+
+          // Fetch courses
+          const coursesRes = await fetch(`${apiBase}/courses`);
+          const coursesData = await coursesRes.json();
+          setCourses(Array.isArray(coursesData) ? coursesData : []);
+
+          // Fetch academic periods (batches)
+          const batchesRes = await fetch(`${apiBase}/academic-periods`);
+          const batchesData = await batchesRes.json();
+          setBatches(Array.isArray(batchesData) ? batchesData : []);
+        } catch (err) {
+          console.error("Error fetching courses/batches:", err);
+          setCourses([]);
+          setBatches([]);
+        }
+      }
+    };
+    fetchCoursesAndBatches();
+  }, [isAuthenticated]);
 
   // Handle course/batch selection
   const handleCourseBatchChange = (e) => {
@@ -441,6 +469,48 @@ function PaymentForm() {
                   />
                 </div>
               )}
+
+            {/* Course & Batch selection for guest payments */}
+            {!isAuthenticated && courses.length > 0 && batches.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <SelectField
+                  name="course"
+                  id="course"
+                  label="Course*"
+                  required={true}
+                  options={[
+                    { value: "", label: "Select course" },
+                    ...courses
+                      .filter((c) => !c.deletedAt)
+                      .map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                      })),
+                  ]}
+                  value={formData.courseId || ""}
+                  onChange={(e) => updateFormField("courseId", e.target.value)}
+                />
+                <SelectField
+                  name="batch"
+                  id="batch"
+                  label="Batch/Academic Period*"
+                  required={true}
+                  options={[
+                    { value: "", label: "Select batch" },
+                    ...batches
+                      .filter((b) => !b.deletedAt)
+                      .map((b) => ({
+                        value: b.id,
+                        label: `${b.batchName || b.name}${
+                          b.schoolYear ? ` (${b.schoolYear})` : ""
+                        }`,
+                      })),
+                  ]}
+                  value={formData.batchId || ""}
+                  onChange={(e) => updateFormField("batchId", e.target.value)}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="relative">

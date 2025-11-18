@@ -17,6 +17,7 @@ import {
 import useAuthStore from "../../stores/authStore";
 import axiosInstance from "../../utils/axios";
 import Swal from "sweetalert2";
+import MarkdownRenderer from "../../components/ai/MarkdownRenderer";
 
 function Reports() {
   const [selectedReport, setSelectedReport] = useState(null);
@@ -1802,7 +1803,11 @@ function Reports() {
                             : "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700"
                         }`}
                       >
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        {msg.role === "model" ? (
+                          <MarkdownRenderer content={msg.content} />
+                        ) : (
+                          <div className="whitespace-pre-wrap">{msg.content}</div>
+                        )}
                       </div>
                     </div>
                   ))

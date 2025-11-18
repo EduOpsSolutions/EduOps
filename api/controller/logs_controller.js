@@ -83,7 +83,7 @@ export const getLogs = async (req, res) => {
         },
       },
       orderBy: {
-        id: "asc",
+        createdAt: "desc",
       },
       skip,
       take,
