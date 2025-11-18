@@ -153,11 +153,11 @@ function Reports() {
         },
         {
           name: "courseIds",
-          label: "Courses (Multi-select)",
+          label: "Filter by Courses (Optional)",
           type: "multiselect",
           source: "courses",
           searchable: true,
-          required: true,
+          required: false,
         },
         {
           name: "studentEnrollmentStatus",
@@ -175,13 +175,14 @@ function Reports() {
           label: "Account Status",
           type: "select",
           options: [
-            { value: null, label: "All" },
+            { value: "", label: "All" },
             { value: "active", label: "Active" },
             { value: "disabled", label: "Disabled" },
             { value: "inactive", label: "Inactive" },
             { value: "suspended", label: "Suspended" },
           ],
-          required: true,
+          default: "",
+          required: false,
         },
       ],
     },
@@ -201,10 +202,8 @@ function Reports() {
           label: "Academic Period",
           type: "select",
           source: "academicPeriods",
+          required: true,
         },
-        { name: "status", label: "Status", type: "text" },
-        { name: "minBalance", label: "Min Balance", type: "number" },
-        { name: "maxBalance", label: "Max Balance", type: "number" },
       ],
     },
     {
@@ -284,15 +283,29 @@ function Reports() {
       endpoint: "transaction-history",
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: "startDate",
+          label: "Start Date",
+          type: "date",
+          required: true,
         },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
-        { name: "minAmount", label: "Min Amount", type: "number" },
-        { name: "maxAmount", label: "Max Amount", type: "number" },
+        {
+          name: "endDate",
+          label: "End Date",
+          type: "date",
+          required: true,
+        },
+        {
+          name: "minAmount",
+          label: "Min Amount (Optional)",
+          type: "number",
+          required: false,
+        },
+        {
+          name: "maxAmount",
+          label: "Max Amount (Optional)",
+          type: "number",
+          required: false,
+        },
       ],
     },
     {
@@ -323,26 +336,6 @@ function Reports() {
       ],
     },
     {
-      id: 7,
-      name: "Student Academic Progress",
-      description:
-        "Track student progress including completed units, GPA, and remaining requirements",
-      category: "Academic",
-      icon: <BsFileEarmarkText className="text-2xl" />,
-      color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "student-academic-progress",
-      parameters: [
-        { name: "studentId", label: "Student ID", type: "text" },
-        {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
-        },
-      ],
-    },
-    {
       id: 8,
       name: "Enrollment Period Analysis",
       description:
@@ -351,7 +344,15 @@ function Reports() {
       icon: <BsCalendar className="text-2xl" />,
       color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
       endpoint: "enrollment-period-analysis",
-      parameters: [{ name: "schoolYear", label: "School Year", type: "text" }],
+      parameters: [
+        {
+          name: "periodId",
+          label: "Academic Period",
+          type: "select",
+          source: "academicPeriods",
+          required: false,
+        },
+      ],
     },
     {
       id: 9,
@@ -575,14 +576,24 @@ function Reports() {
   const checkRequiredFields = (report) => {
     // Check all required fields first
     for (const param of report.parameters) {
-      if (param.required && !reportParams[param.name]) {
-        console.log(`${param.label} is required`);
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: `${param.label} is required`,
-        });
-        return; // Exit the function, don't generate report
+      if (param.required) {
+        const value = reportParams[param.name];
+        // Check if value is truly empty (handles undefined, null, "", and empty arrays)
+        const isEmpty =
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0);
+
+        if (isEmpty) {
+          console.log(`${param.label} is required`);
+          Swal.fire({
+            icon: "error",
+            title: "Required Field Missing",
+            text: `${param.label} is required. Please select a value.`,
+          });
+          return; // Exit the function, don't generate report
+        }
       }
     }
 
@@ -1552,7 +1563,10 @@ function Reports() {
                 selectedReport.parameters.length > 0 && (
                   <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-6">
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                      Report Parameters (Optional unless marked as Required)
+                      Report Parameters
+                      <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">
+                        (Fields marked with * are required)
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedReport.parameters.map((param) => (

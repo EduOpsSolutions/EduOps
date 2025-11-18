@@ -13,36 +13,16 @@ const getStudentEnrollmentReport = async (req, res) => {
         : [req.query.courseIds]
       : [];
 
-    let whereClause = {
-      role: "student",
+    // Build filters for schedule query
+    let scheduleWhereClause = {
       deletedAt: null,
     };
 
-    // Simple binary check: enrolled or not enrolled
-    if (studentEnrollmentStatus === "enrolled") {
-      // Student has at least one enrollment
-      whereClause.enrollments = {
-        some: {
-          deletedAt: null,
-          ...(periodId && { periodId: periodId }),
-        },
-      };
-    } else if (studentEnrollmentStatus === "not_enrolled") {
-      // Student has no enrollments
-      whereClause.enrollments = {
-        none: {
-          deletedAt: null,
-          ...(periodId && { periodId: periodId }),
-        },
-      };
-    }
+    if (periodId) scheduleWhereClause.periodId = periodId;
+    if (courseIds.length > 0) scheduleWhereClause.courseId = { in: courseIds };
 
     const schedules = await prisma.schedule.findMany({
-      where: {
-        ...(periodId && { periodId: periodId }),
-        ...(courseIds.length > 0 && { courseId: { in: courseIds } }),
-        deletedAt: null,
-      },
+      where: scheduleWhereClause,
       select: {
         id: true,
         course: {
@@ -60,16 +40,22 @@ const getStudentEnrollmentReport = async (req, res) => {
       },
     });
 
+    // Build user where clause for filtering students
+    let userWhereClause = {
+      role: "student",
+    };
+
+    // Apply account status filter (empty string or undefined means "All")
+    if (accountStatus && accountStatus !== "" && accountStatus !== "All") {
+      userWhereClause.status = accountStatus;
+    }
+
     const userSchedules = await prisma.user_schedule.findMany({
       where: {
         scheduleId: { in: schedules.map((schedule) => schedule.id) },
         deletedAt: null,
         user: {
-          deletedAt: null,
-          role: "student",
-          ...(accountStatus && accountStatus !== "All"
-            ? { status: accountStatus }
-            : {}),
+          is: userWhereClause,
         },
       },
       select: {
@@ -82,6 +68,14 @@ const getStudentEnrollmentReport = async (req, res) => {
             time_end: true,
             location: true,
             teacherId: true,
+            teacher: {
+              select: {
+                userId: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+              },
+            },
             course: {
               select: {
                 id: true,
@@ -108,10 +102,10 @@ const getStudentEnrollmentReport = async (req, res) => {
       JSON.stringify(userSchedules, null, 2)
     );
 
-    // Also get enrollment requests separately
+    // Also get enrollment requests separately (optional - for additional context)
     const enrollmentRequests = await prisma.enrollment_request.findMany({
       where: {
-        ...(periodId && { id: periodId }),
+        ...(periodId && { periodId: periodId }),
       },
       select: {
         id: true,
@@ -168,7 +162,14 @@ const getStudentEnrollmentReport = async (req, res) => {
           ),
           scheduleTimeEnd: convert24To12HourFormatLocale(us.schedule.time_end),
           scheduleLocation: us.schedule.location,
-          scheduleTeacherId: us.schedule.teacherId,
+          scheduleTeacher: us.schedule.teacher
+            ? `${us.schedule.teacher.firstName}${
+                us.schedule.teacher.middleName
+                  ? " " + us.schedule.teacher.middleName
+                  : ""
+              } ${us.schedule.teacher.lastName}`
+            : "TBA",
+          scheduleTeacherId: us.schedule.teacher?.userId || null,
         })),
     }));
 
@@ -198,20 +199,31 @@ const getStudentEnrollmentReport = async (req, res) => {
 // Report 2: Financial Assessment Summary
 const getFinancialAssessmentReport = async (req, res) => {
   try {
-    const { periodId, status, minBalance, maxBalance } = req.query;
+    const { periodId } = req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
+    if (!periodId) {
+      return res.status(400).json({
+        error: true,
+        message: "Academic Period is required",
+      });
+    }
 
-    if (periodId) whereClause.periodId = periodId;
-    if (status) whereClause.status = status;
-
-    const assessments = await prisma.assessment.findMany({
-      where: whereClause,
+    // Get all enrolled students for this period with their schedules
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: {
+        deletedAt: null,
+        schedule: {
+          periodId: periodId,
+          deletedAt: null,
+        },
+        user: {
+          role: "student",
+        },
+      },
       include: {
         user: {
           select: {
+            id: true,
             userId: true,
             firstName: true,
             middleName: true,
@@ -219,61 +231,121 @@ const getFinancialAssessmentReport = async (req, res) => {
             email: true,
           },
         },
-        academicPeriod: {
-          select: {
-            name: true,
-            schoolYear: true,
-          },
-        },
-        ledger: {
-          where: {
-            deletedAt: null,
-          },
-          select: {
-            paymentAmount: true,
-            balance: true,
+        schedule: {
+          include: {
+            course: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
+            period: {
+              select: {
+                id: true,
+                batchName: true,
+                startAt: true,
+              },
+            },
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
     });
 
-    let reportData = assessments.map((assessment) => {
-      const totalPaid = assessment.ledger.reduce(
-        (sum, l) => sum + (parseFloat(l.paymentAmount) || 0),
-        0
-      );
-      const currentBalance = assessment.ledger[0]?.balance || assessment.amount;
+    // Group by student and calculate financials
+    const studentFinancials = {};
 
-      return {
-        studentId: assessment.user?.userId,
-        fullName: `${assessment.user?.firstName}${
-          assessment.user?.middleName ? " " + assessment.user?.middleName : ""
-        } ${assessment.user?.lastName}`,
-        email: assessment.user?.email,
-        academicPeriod: assessment.academicPeriod?.name,
-        schoolYear: assessment.academicPeriod?.schoolYear,
-        totalAssessment: parseFloat(assessment.amount),
-        totalPaid: totalPaid,
-        balance: parseFloat(currentBalance),
-        status: assessment.status,
-        assessmentDate: assessment.createdAt,
-      };
-    });
+    for (const us of userSchedules) {
+      const studentId = us.user.id;
 
-    // Filter by balance range if provided
-    if (minBalance) {
-      reportData = reportData.filter(
-        (item) => item.balance >= parseFloat(minBalance)
-      );
+      if (!studentFinancials[studentId]) {
+        studentFinancials[studentId] = {
+          studentId: us.user.userId,
+          fullName: `${us.user.firstName}${
+            us.user.middleName ? " " + us.user.middleName : ""
+          } ${us.user.lastName}`,
+          email: us.user.email,
+          academicPeriod: us.schedule.period?.batchName,
+          academicYear: us.schedule.period?.startAt
+            ? new Date(us.schedule.period.startAt).getFullYear()
+            : null,
+          courses: [],
+          totalAssessment: 0,
+          totalPaid: 0,
+        };
+      }
+
+      // Get course fees
+      const fees = await prisma.fees.findMany({
+        where: {
+          courseId: us.schedule.courseId,
+          batchId: us.schedule.periodId,
+          isActive: true,
+        },
+      });
+
+      // Get student-specific fees
+      const studentFees = await prisma.student_fee.findMany({
+        where: {
+          studentId: studentId,
+          courseId: us.schedule.courseId,
+          batchId: us.schedule.periodId,
+          deletedAt: null,
+        },
+      });
+
+      // Get payments
+      const payments = await prisma.payments.findMany({
+        where: {
+          userId: studentId,
+          status: "paid",
+          courseId: us.schedule.courseId,
+          academicPeriodId: us.schedule.periodId,
+        },
+      });
+
+      // Get adjustments
+      const adjustments = await prisma.adjustments.findMany({
+        where: {
+          userId: studentId,
+        },
+      });
+
+      // Calculate course assessment
+      const courseBasePrice = Number(us.schedule.course?.price || 0);
+      const studentFeeTotal = studentFees.reduce((sum, sf) => {
+        if (sf.type === "fee") return sum + Number(sf.amount);
+        if (sf.type === "discount") return sum - Number(sf.amount);
+        return sum;
+      }, 0);
+
+      const courseAssessment =
+        fees.reduce((sum, f) => sum + Number(f.price), 0) +
+        courseBasePrice +
+        studentFeeTotal -
+        adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
+
+      const coursePaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      studentFinancials[studentId].courses.push({
+        courseName: us.schedule.course?.name,
+        assessment: courseAssessment,
+        paid: coursePaid,
+      });
+
+      studentFinancials[studentId].totalAssessment += courseAssessment;
+      studentFinancials[studentId].totalPaid += coursePaid;
     }
-    if (maxBalance) {
-      reportData = reportData.filter(
-        (item) => item.balance <= parseFloat(maxBalance)
-      );
-    }
+
+    // Calculate balances and payment status
+    const reportData = Object.values(studentFinancials).map((student) => ({
+      ...student,
+      balance: student.totalAssessment - student.totalPaid,
+      paymentStatus:
+        student.totalAssessment - student.totalPaid <= 0
+          ? "Fully Paid"
+          : "Has Balance",
+    }));
 
     const totalAssessments = reportData.reduce(
       (sum, item) => sum + item.totalAssessment,
@@ -294,8 +366,10 @@ const getFinancialAssessmentReport = async (req, res) => {
         totalAssessments,
         totalPaid,
         totalBalance,
+        fullyPaidCount: reportData.filter((item) => item.balance <= 0).length,
+        withBalanceCount: reportData.filter((item) => item.balance > 0).length,
       },
-      filters: { periodId, status, minBalance, maxBalance },
+      filters: { periodId },
       data: reportData,
     });
   } catch (error) {
@@ -535,22 +609,33 @@ const getCourseEnrollmentStatistics = async (req, res) => {
 // Report 5: Transaction History Report
 const getTransactionHistoryReport = async (req, res) => {
   try {
-    const { periodId, startDate, endDate, minAmount, maxAmount } = req.query;
+    const { startDate, endDate, minAmount, maxAmount } = req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
-
-    if (periodId) whereClause.periodId = periodId;
-
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
+    // Validate required date range
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: true,
+        message: "Start Date and End Date are required",
+      });
     }
 
-    const transactions = await prisma.ledger.findMany({
+    // Make end date inclusive of the full day (23:59:59.999)
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0);
+
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999);
+
+    let whereClause = {
+      paidAt: {
+        gte: startDateTime,
+        lte: endDateTime,
+      },
+      status: "paid", // Only show paid transactions
+    };
+
+    // Get all payments within the date range
+    const transactions = await prisma.payments.findMany({
       where: whereClause,
       include: {
         user: {
@@ -562,10 +647,15 @@ const getTransactionHistoryReport = async (req, res) => {
             email: true,
           },
         },
-        academicPeriod: {
+        course: {
           select: {
             name: true,
-            schoolYear: true,
+          },
+        },
+        academicPeriod: {
+          select: {
+            batchName: true,
+            startAt: true,
           },
         },
       },
@@ -575,38 +665,44 @@ const getTransactionHistoryReport = async (req, res) => {
     });
 
     let reportData = transactions.map((transaction) => ({
-      transactionId: transaction.id,
+      transactionId: transaction.transactionId,
+      paymentId: transaction.id,
       studentId: transaction.user?.userId,
       fullName: `${transaction.user?.firstName}${
         transaction.user?.middleName ? " " + transaction.user?.middleName : ""
       } ${transaction.user?.lastName}`,
       email: transaction.user?.email,
-      academicPeriod: transaction.academicPeriod?.name,
-      schoolYear: transaction.academicPeriod?.schoolYear,
-      paymentAmount: parseFloat(transaction.paymentAmount || 0),
-      previousBalance: parseFloat(transaction.previousBalance || 0),
-      balance: parseFloat(transaction.balance),
-      transactionDate: transaction.createdAt,
+      courseName: transaction.course?.name || "N/A",
+      academicPeriod: transaction.academicPeriod?.batchName || "N/A",
+      academicYear: transaction.academicPeriod?.startAt
+        ? new Date(transaction.academicPeriod.startAt).getFullYear()
+        : "N/A",
+      amount: parseFloat(transaction.amount),
+      currency: transaction.currency,
+      status: transaction.status,
       paymentMethod: transaction.paymentMethod || "N/A",
       referenceNumber: transaction.referenceNumber || "N/A",
+      transactionDate: transaction.createdAt,
+      paidAt: transaction.paidAt,
+      remarks: transaction.remarks || "",
     }));
 
     // Filter by amount range if provided
     if (minAmount) {
       reportData = reportData.filter(
-        (item) => item.paymentAmount >= parseFloat(minAmount)
+        (item) => item.amount >= parseFloat(minAmount)
       );
     }
     if (maxAmount) {
       reportData = reportData.filter(
-        (item) => item.paymentAmount <= parseFloat(maxAmount)
+        (item) => item.amount <= parseFloat(maxAmount)
       );
     }
 
-    const totalAmount = reportData.reduce(
-      (sum, item) => sum + item.paymentAmount,
-      0
-    );
+    const totalAmount = reportData.reduce((sum, item) => sum + item.amount, 0);
+    const paidTransactions = reportData.filter(
+      (item) => item.status === "paid"
+    ).length;
 
     res.json({
       error: false,
@@ -615,9 +711,17 @@ const getTransactionHistoryReport = async (req, res) => {
       totalRecords: reportData.length,
       summary: {
         totalTransactions: reportData.length,
+        paidTransactions: paidTransactions,
+        pendingTransactions: reportData.length - paidTransactions,
         totalAmount: totalAmount,
+        dateRange: `${new Date(startDate).toLocaleDateString()} - ${new Date(
+          endDate
+        ).toLocaleDateString()}`,
+        dateRangeFrom: startDate,
+        dateRangeTo: endDate,
+        note: "Report filtered by payment date (paidAt)",
       },
-      filters: { periodId, startDate, endDate, minAmount, maxAmount },
+      filters: { startDate, endDate, minAmount, maxAmount },
       data: reportData,
     });
   } catch (error) {
@@ -759,137 +863,29 @@ const getFacultyTeachingLoadReport = async (req, res) => {
   }
 };
 
-// Report 7: Student Academic Progress
-const getStudentAcademicProgressReport = async (req, res) => {
-  try {
-    const { studentId, periodId } = req.query;
-
-    let userWhereClause = {
-      role: "student",
-      deletedAt: null,
-    };
-
-    if (studentId) userWhereClause.userId = studentId;
-
-    const students = await prisma.users.findMany({
-      where: userWhereClause,
-      select: {
-        userId: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        email: true,
-        user_schedule: {
-          where: {
-            deletedAt: null,
-            ...(periodId && {
-              schedule: {
-                periodId: periodId,
-                deletedAt: null,
-              },
-            }),
-          },
-          include: {
-            schedule: {
-              include: {
-                course: {
-                  select: {
-                    courseCode: true,
-                    courseName: true,
-                    units: true,
-                    yearLevel: true,
-                  },
-                },
-                academicPeriod: {
-                  select: {
-                    name: true,
-                    schoolYear: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const reportData = students.map((student) => {
-      const completedCourses = student.user_schedule.filter(
-        (us) => us.grade && parseFloat(us.grade) <= 3.0
-      );
-      const totalUnits = completedCourses.reduce(
-        (sum, us) => sum + (us.schedule?.course?.units || 0),
-        0
-      );
-      const grades = completedCourses
-        .map((us) => parseFloat(us.grade))
-        .filter((g) => !isNaN(g));
-      const gpa =
-        grades.length > 0
-          ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-          : "N/A";
-
-      return {
-        studentId: student.userId,
-        fullName: `${student.firstName}${
-          student.middleName ? " " + student.middleName : ""
-        } ${student.lastName}`,
-        email: student.email,
-        totalCoursesEnrolled: student.user_schedule.length,
-        completedCourses: completedCourses.length,
-        totalUnitsCompleted: totalUnits,
-        gpa: gpa,
-        courses: student.user_schedule.map((us) => ({
-          courseCode: us.schedule?.course?.courseCode,
-          courseName: us.schedule?.course?.courseName,
-          units: us.schedule?.course?.units,
-          yearLevel: us.schedule?.course?.yearLevel,
-          academicPeriod: us.schedule?.academicPeriod?.name,
-          schoolYear: us.schedule?.academicPeriod?.schoolYear,
-          grade: us.grade || "In Progress",
-          remarks: us.remarks || "Ongoing",
-        })),
-      };
-    });
-
-    res.json({
-      error: false,
-      reportName: "Student Academic Progress Report",
-      generatedAt: new Date(),
-      totalRecords: reportData.length,
-      filters: { studentId, periodId },
-      data: reportData,
-    });
-  } catch (error) {
-    console.error("Error generating student academic progress report:", error);
-    res.status(500).json({
-      error: true,
-      message: "Error generating report",
-      details: error.message,
-    });
-  }
-};
-
 // Report 8: Enrollment Period Analysis
 const getEnrollmentPeriodAnalysis = async (req, res) => {
   try {
-    const { schoolYear } = req.query;
+    const { periodId } = req.query;
 
     let whereClause = {
       deletedAt: null,
     };
 
-    if (schoolYear) whereClause.schoolYear = schoolYear;
+    // If periodId is provided, filter by specific period
+    if (periodId) {
+      whereClause.id = periodId;
+    }
 
     const periods = await prisma.academic_period.findMany({
       where: whereClause,
       include: {
-        schedule: {
+        schedules: {
           where: {
             deletedAt: null,
           },
           include: {
-            user_schedule: {
+            userSchedules: {
               where: {
                 deletedAt: null,
               },
@@ -901,24 +897,36 @@ const getEnrollmentPeriodAnalysis = async (req, res) => {
         },
       },
       orderBy: {
-        createdAt: "desc",
+        startAt: "desc",
       },
     });
 
     const reportData = periods.map((period) => {
-      const totalSections = period.schedule.length;
-      const totalEnrollments = period.schedule.reduce(
-        (sum, s) => sum + s.user_schedule.length,
+      const totalSections = period.schedules.length;
+      const totalEnrollments = period.schedules.reduce(
+        (sum, s) => sum + s.userSchedules.length,
         0
       );
 
       return {
         periodId: period.id,
-        periodName: period.name,
-        schoolYear: period.schoolYear,
-        startDate: period.startDate,
-        endDate: period.endDate,
-        status: period.status,
+        batchName: period.batchName,
+        academicYear: period.startAt
+          ? new Date(period.startAt).getFullYear()
+          : "N/A",
+        startDate: period.startAt
+          ? new Date(period.startAt).toLocaleDateString()
+          : "N/A",
+        endDate: period.endAt
+          ? new Date(period.endAt).toLocaleDateString()
+          : "N/A",
+        enrollmentOpenAt: period.enrollmentOpenAt
+          ? new Date(period.enrollmentOpenAt).toLocaleDateString()
+          : "N/A",
+        enrollmentCloseAt: period.enrollmentCloseAt
+          ? new Date(period.enrollmentCloseAt).toLocaleDateString()
+          : "N/A",
+        isEnrollmentClosed: period.isEnrollmentClosed ? "Closed" : "Open",
         totalSections: totalSections,
         totalEnrollments: totalEnrollments,
         averageEnrollmentPerSection:
@@ -932,7 +940,18 @@ const getEnrollmentPeriodAnalysis = async (req, res) => {
       reportName: "Enrollment Period Analysis",
       generatedAt: new Date(),
       totalRecords: reportData.length,
-      filters: { schoolYear },
+      summary: {
+        totalPeriods: reportData.length,
+        totalEnrollmentsAcrossPeriods: reportData.reduce(
+          (sum, p) => sum + p.totalEnrollments,
+          0
+        ),
+        totalSectionsAcrossPeriods: reportData.reduce(
+          (sum, p) => sum + p.totalSections,
+          0
+        ),
+      },
+      filters: { periodId },
       data: reportData,
     });
   } catch (error) {
@@ -950,18 +969,33 @@ const getOutstandingBalanceReport = async (req, res) => {
   try {
     const { periodId, minBalance = 0.01 } = req.query;
 
-    let whereClause = {
+    // Build where clause for user_schedule
+    let scheduleWhere = {
       deletedAt: null,
     };
+    if (periodId) {
+      scheduleWhere.schedule = {
+        periodId: periodId,
+        deletedAt: null,
+      };
+    } else {
+      scheduleWhere.schedule = {
+        deletedAt: null,
+      };
+    }
 
-    if (periodId) whereClause.periodId = periodId;
-
-    // Get all ledgers and find the latest for each user
-    const ledgers = await prisma.ledger.findMany({
-      where: whereClause,
+    // Get all user_schedules for students
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: {
+        ...scheduleWhere,
+        user: {
+          role: "student",
+        },
+      },
       include: {
         user: {
           select: {
+            id: true,
             userId: true,
             firstName: true,
             middleName: true,
@@ -969,63 +1003,147 @@ const getOutstandingBalanceReport = async (req, res) => {
             email: true,
           },
         },
-        academicPeriod: {
-          select: {
-            name: true,
-            schoolYear: true,
+        schedule: {
+          include: {
+            course: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
+            period: {
+              select: {
+                id: true,
+                batchName: true,
+                startAt: true,
+              },
+            },
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
     });
 
-    // Group by user and get latest balance
-    const userBalances = {};
-    ledgers.forEach((ledger) => {
-      if (!userBalances[ledger.userId]) {
-        userBalances[ledger.userId] = {
-          studentId: ledger.user?.userId,
-          fullName: `${ledger.user?.firstName}${
-            ledger.user?.middleName ? " " + ledger.user?.middleName : ""
-          } ${ledger.user?.lastName}`,
-          email: ledger.user?.email,
-          academicPeriod: ledger.academicPeriod?.name,
-          schoolYear: ledger.academicPeriod?.schoolYear,
-          balance: parseFloat(ledger.balance),
-          lastPaymentDate: ledger.createdAt,
-          lastPaymentAmount: parseFloat(ledger.paymentAmount || 0),
-        };
+    // Group by student, course, and period to calculate balances
+    const studentBalances = new Map();
+
+    for (const us of userSchedules) {
+      if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period) {
+        continue;
       }
-    });
 
-    // Filter by minimum balance and sort by balance descending
-    let reportData = Object.values(userBalances)
-      .filter((item) => item.balance >= parseFloat(minBalance))
+      const studentId = us.user.id;
+      const courseId = us.schedule.course.id;
+      const batchId = us.schedule.period.id;
+
+      // Get fees for this course and batch
+      const fees = await prisma.fees.findMany({
+        where: {
+          courseId: courseId,
+          batchId: batchId,
+          isActive: true,
+        },
+      });
+
+      // Get student-specific fees
+      const studentFees = await prisma.student_fee.findMany({
+        where: {
+          studentId: studentId,
+          courseId: courseId,
+          batchId: batchId,
+          deletedAt: null,
+        },
+      });
+
+      // Get payments for this student, course, and batch
+      const payments = await prisma.payments.findMany({
+        where: {
+          userId: studentId,
+          status: "paid",
+          courseId: courseId,
+          academicPeriodId: batchId,
+        },
+        orderBy: {
+          paidAt: "desc",
+        },
+      });
+
+      // Get adjustments for this student
+      const adjustments = await prisma.adjustments.findMany({
+        where: {
+          userId: studentId,
+        },
+      });
+
+      // Calculate totals
+      const courseBasePrice = Number(us.schedule.course.price) || 0;
+      const feesTotal = fees.reduce((sum, f) => sum + Number(f.price), 0);
+      const studentFeeTotal = studentFees.reduce((sum, sf) => {
+        if (sf.type === "fee") return sum + Number(sf.amount);
+        if (sf.type === "discount") return sum - Number(sf.amount);
+        return sum;
+      }, 0);
+      const adjustmentsTotal = adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
+      const netAssessment = feesTotal + courseBasePrice + studentFeeTotal - adjustmentsTotal;
+      const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const balance = netAssessment - totalPayments;
+
+      // Only include if balance >= minBalance
+      if (balance >= parseFloat(minBalance)) {
+        const key = `${studentId}|${courseId}|${batchId}`;
+
+        // Calculate aging based on last payment
+        let daysSinceLastPayment = 0;
+        let lastPaymentDate = null;
+        let lastPaymentAmount = 0;
+
+        if (payments.length > 0) {
+          lastPaymentDate = payments[0].paidAt;
+          lastPaymentAmount = Number(payments[0].amount);
+          daysSinceLastPayment = Math.floor(
+            (new Date() - new Date(lastPaymentDate)) / (1000 * 60 * 60 * 24)
+          );
+        }
+
+        let agingCategory = "Current";
+        if (daysSinceLastPayment > 90) agingCategory = "90+ days";
+        else if (daysSinceLastPayment > 60) agingCategory = "60-90 days";
+        else if (daysSinceLastPayment > 30) agingCategory = "30-60 days";
+
+        studentBalances.set(key, {
+          studentId: us.user.userId,
+          fullName: `${us.user.firstName}${
+            us.user.middleName ? " " + us.user.middleName : ""
+          } ${us.user.lastName}`,
+          email: us.user.email,
+          course: us.schedule.course.name,
+          academicPeriod: us.schedule.period.batchName,
+          academicYear: us.schedule.period.startAt
+            ? new Date(us.schedule.period.startAt).getFullYear()
+            : null,
+          balance: balance,
+          netAssessment: netAssessment,
+          totalPayments: totalPayments,
+          lastPaymentDate: lastPaymentDate,
+          lastPaymentAmount: lastPaymentAmount,
+          daysSinceLastPayment: daysSinceLastPayment,
+          agingCategory: agingCategory,
+        });
+      }
+    }
+
+    // Convert to array and sort by balance descending
+    const reportData = Array.from(studentBalances.values())
       .sort((a, b) => b.balance - a.balance);
 
-    // Calculate aging
-    reportData = reportData.map((item) => {
-      const daysSinceLastPayment = Math.floor(
-        (new Date() - new Date(item.lastPaymentDate)) / (1000 * 60 * 60 * 24)
-      );
-      let agingCategory = "Current";
-      if (daysSinceLastPayment > 90) agingCategory = "90+ days";
-      else if (daysSinceLastPayment > 60) agingCategory = "60-90 days";
-      else if (daysSinceLastPayment > 30) agingCategory = "30-60 days";
-
-      return {
-        ...item,
-        daysSinceLastPayment,
-        agingCategory,
-      };
-    });
-
-    const totalOutstanding = reportData.reduce(
-      (sum, item) => sum + item.balance,
-      0
-    );
+    // Calculate summary statistics
+    const totalOutstanding = reportData.reduce((sum, item) => sum + item.balance, 0);
+    const agingSummary = {
+      current: reportData.filter(item => item.agingCategory === "Current").length,
+      "30-60 days": reportData.filter(item => item.agingCategory === "30-60 days").length,
+      "60-90 days": reportData.filter(item => item.agingCategory === "60-90 days").length,
+      "90+ days": reportData.filter(item => item.agingCategory === "90+ days").length,
+    };
 
     res.json({
       error: false,
@@ -1034,8 +1152,13 @@ const getOutstandingBalanceReport = async (req, res) => {
       totalRecords: reportData.length,
       summary: {
         totalOutstandingBalance: totalOutstanding,
+        agingBreakdown: agingSummary,
+        averageBalance: reportData.length > 0 ? totalOutstanding / reportData.length : 0,
       },
-      filters: { periodId, minBalance },
+      filters: {
+        periodId: periodId || "All Periods",
+        minBalance: parseFloat(minBalance),
+      },
       data: reportData,
     });
   } catch (error) {
@@ -1917,7 +2040,6 @@ export {
   getCourseEnrollmentStatistics,
   getTransactionHistoryReport,
   getFacultyTeachingLoadReport,
-  getStudentAcademicProgressReport,
   getEnrollmentPeriodAnalysis,
   getOutstandingBalanceReport,
   getDocumentSubmissionStatus,

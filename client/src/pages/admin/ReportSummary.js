@@ -458,11 +458,15 @@ function ReportSummary() {
                       .toUpperCase()
                       .trim()}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {typeof value === "object"
-                      ? JSON.stringify(value)
-                      : String(value)}
-                  </p>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {typeof value === "object" ? (
+                      <div className="text-sm font-normal mt-2">
+                        {renderCellValue(value, 0)}
+                      </div>
+                    ) : (
+                      String(value)
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
