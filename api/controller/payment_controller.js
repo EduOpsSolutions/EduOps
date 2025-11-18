@@ -402,6 +402,7 @@ const createPaymentIntent = async (req, res) => {
       feeType,
       paymentId,
     } = req.body;
+    console.log("[CreateIntent] ===== REQUEST START =====");
     console.log("[CreateIntent] incoming body:", {
       userId,
       amount,
@@ -410,6 +411,7 @@ const createPaymentIntent = async (req, res) => {
       purpose,
       hasDesc: !!description,
       hasRemarks: !!remarks,
+      timestamp: new Date().toISOString(),
     });
 
     if (!amount || amount <= 0) {
@@ -432,13 +434,94 @@ const createPaymentIntent = async (req, res) => {
     }
     if (!paymongoDescription) paymongoDescription = "Payment";
 
+    // Race condition protection with double-check pattern
+    let idempotencyKey = null;
+    let existingPayment = null;
+    
+    if (paymentId) {
+      // First check - get payment state
+      existingPayment = await prisma.payments.findUnique({
+        where: { id: paymentId },
+      });
+      
+      if (!existingPayment) {
+        return sendError(
+          res,
+          "Payment record not found for provided paymentId",
+          404
+        );
+      }
+      
+      // Check if payment is already processed
+      if (existingPayment.status !== "pending") {
+        console.warn(
+          "[CreateIntent] payment not pending, lock enforced",
+          { paymentId, status: existingPayment.status }
+        );
+        return sendError(
+          res,
+          "Payment link is locked or already processed",
+          409
+        );
+      }
+      
+      // If payment intent already exists, return it immediately
+      if (existingPayment.paymentIntentId) {
+        console.log(
+          "[CreateIntent] Payment intent already exists, returning cached",
+          { paymentIntentId: existingPayment.paymentIntentId }
+        );
+        return sendSuccess(
+          res,
+          {
+            data: {
+              id: existingPayment.paymentIntentId,
+              attributes: {
+                amount: Math.round(parseFloat(existingPayment.amount) * 100),
+                currency: existingPayment.currency || "PHP",
+                status: "awaiting_payment_method",
+              },
+            },
+          },
+          "Payment intent already exists for this payment"
+        );
+      }
+      
+      idempotencyKey = existingPayment.idempotencyKey;
+      
+      if (!idempotencyKey) {
+        console.error("[CreateIntent] No idempotency key found for payment!", { 
+          paymentId,
+          transactionId: existingPayment.transactionId,
+          createdAt: existingPayment.createdAt,
+        });
+        return sendError(
+          res,
+          "Payment configuration error - missing idempotency key",
+          500
+        );
+      }
+      
+      console.log("[CreateIntent]  Using idempotency key from database", {
+        paymentId,
+        idempotencyKey,
+        transactionId: existingPayment.transactionId,
+      });
+    } else {
+      console.warn("[CreateIntent]  No paymentId provided - will generate new key");
+    }
+    
     console.log(
       "[CreateIntent] calling PayMongo createPaymentIntent with description:",
-      paymongoDescription
+      paymongoDescription,
+      "| idempotencyKey:",
+      idempotencyKey || "WILL_GENERATE_NEW"
     );
+    
     const result = await createPayMongoPaymentIntent({
       ...req.body,
       description: paymongoDescription,
+      idempotencyKey: idempotencyKey, // Use stored idempotency key
     });
 
     if (result.success) {
@@ -451,62 +534,63 @@ const createPaymentIntent = async (req, res) => {
       if (paymentIntentId && userId && amount) {
         if (paymentId) {
           try {
-            const existing = await prisma.payments.findUnique({
+            // Re-fetch payment to see if another request updated it
+            const latestPayment = await prisma.payments.findUnique({
               where: { id: paymentId },
+              select: { paymentIntentId: true, status: true, transactionId: true },
             });
-            console.log("[CreateIntent] reuse check existing payment:", {
-              paymentId,
-              exists: !!existing,
-              status: existing?.status,
-              hasIntentId: !!existing?.paymentIntentId,
-            });
-            if (!existing) {
-              return sendError(
-                res,
-                "Payment record not found for provided paymentId",
-                404
-              );
-            }
-            if (existing.status !== "pending") {
-              console.warn(
-                "[CreateIntent] payment not pending, lock enforced",
-                { paymentId, status: existing.status }
-              );
-              return sendError(
-                res,
-                "Payment link is locked or already processed",
-                409
-              );
-            }
             
-            if (existing.paymentIntentId && existing.paymentIntentId !== paymentIntentId) {
-              console.warn(
-                "[CreateIntent] Payment already has a different intent ID, returning existing",
-                { 
-                  existingIntentId: existing.paymentIntentId, 
-                  newIntentId: paymentIntentId 
-                }
-              );
+            if (latestPayment?.paymentIntentId && latestPayment.paymentIntentId !== paymentIntentId) {
+              console.warn("[CreateIntent] ⚠️ RACE DETECTED: Another request created different intent", {
+                ourIntentId: paymentIntentId,
+                theirIntentId: latestPayment.paymentIntentId,
+                transactionId: latestPayment.transactionId,
+              });
+              // Return their intent ID to maintain consistency
               return sendSuccess(
                 res,
-                result.data,
-                "Payment intent already exists for this payment"
+                {
+                  data: {
+                    id: latestPayment.paymentIntentId,
+                    attributes: {
+                      amount: Math.round(parseFloat(amount) * 100),
+                      currency: "PHP",
+                      status: "awaiting_payment_method",
+                    },
+                  },
+                },
+                "Payment intent already created by concurrent request"
               );
             }
             
-            await prisma.payments.update({
-              where: { id: paymentId },
+            // Atomic update: only update if still pending AND no intent ID yet
+            const updateResult = await prisma.payments.updateMany({
+              where: { 
+                id: paymentId,
+                status: "pending",
+                paymentIntentId: null, //  Only update if no intent ID yet
+              },
               data: {
                 paymentIntentId: paymentIntentId,
-                remarks: existing.remarks || paymongoDescription,
+                remarks: existingPayment.remarks || paymongoDescription,
                 feeType:
-                  existing.feeType || feeType || purpose || "tuition_fee",
+                  existingPayment.feeType || feeType || purpose || "tuition_fee",
               },
             });
-            console.log("[CreateIntent] reused existing pending payment", {
-              paymentId,
-              paymentIntentId,
-            });
+            
+            if (updateResult.count === 0) {
+              // Another request already updated it
+              console.warn("[CreateIntent] payment already updated by another request", {
+                paymentId,
+                paymentIntentId,
+              });
+            } else {
+              console.log("[CreateIntent] Successfully updated payment with intent ID", {
+                paymentId,
+                paymentIntentId,
+                transactionId: existingPayment.transactionId,
+              });
+            }
           } catch (dbError) {
             console.error(
               "Failed to update existing payment record with intent:",
@@ -519,18 +603,22 @@ const createPaymentIntent = async (req, res) => {
             );
           }
         } else {
-          // Check if a payment already exists for this intent ID to prevent duplicates
+          // Check if a payment already exists for this intent ID OR idempotency key
           const existingPaymentWithIntent = await prisma.payments.findFirst({
             where: {
-              paymentIntentId: paymentIntentId,
-              status: "pending",
+              OR: [
+                { paymentIntentId: paymentIntentId },
+                { idempotencyKey: idempotencyKey },
+              ],
             },
           });
 
           if (existingPaymentWithIntent) {
-            console.log("[CreateIntent] payment with this intent already exists, reusing", {
+            console.log("[CreateIntent] payment with this intent/key already exists, reusing", {
               paymentId: existingPaymentWithIntent.id,
               transactionId: existingPaymentWithIntent.transactionId,
+              hasIntentId: !!existingPaymentWithIntent.paymentIntentId,
+              hasIdempotencyKey: !!existingPaymentWithIntent.idempotencyKey,
             });
             return sendSuccess(
               res,
@@ -560,6 +648,7 @@ const createPaymentIntent = async (req, res) => {
             }
           }
           try {
+            const newIdempotencyKey = idempotencyKey || result.data?.data?.attributes?.idempotency_key;
             await prisma.payments.create({
               data: {
                 transactionId: customTransactionId,
@@ -568,6 +657,7 @@ const createPaymentIntent = async (req, res) => {
                 status: "pending",
                 paymentMethod: "Online Payment",
                 paymentIntentId: paymentIntentId,
+                idempotencyKey: newIdempotencyKey,
                 feeType: feeType || purpose || "tuition_fee",
                 remarks: paymongoDescription,
               },
@@ -615,7 +705,36 @@ const attachPaymentMethod = async (req, res) => {
       hasPm: !!req.body?.payment_method_id,
       hasClient: !!req.body?.client_key,
     });
-    const result = await attachPayMongoPaymentMethod(req.body);
+    
+    // Race condition protection: Get idempotency key from payment record
+    const { payment_intent_id } = req.body;
+    let idempotencyKey = null;
+    
+    if (payment_intent_id) {
+      const payment = await prisma.payments.findFirst({
+        where: { paymentIntentId: payment_intent_id },
+        select: { idempotencyKey: true, status: true },
+      });
+      
+      if (payment) {
+        idempotencyKey = payment.idempotencyKey;
+        
+        // If payment is already processing or completed, prevent duplicate attachment
+        if (payment.status === "paid" || payment.status === "processing") {
+          console.log("[AttachMethod] Payment already processed, skipping attachment");
+          return sendSuccess(
+            res,
+            { data: { attributes: { status: payment.status } } },
+            "Payment already processed"
+          );
+        }
+      }
+    }
+    
+    const result = await attachPayMongoPaymentMethod({
+      ...req.body,
+      idempotencyKey: idempotencyKey,
+    });
     if (result.success) {
       const status =
         result.data?.data?.data?.attributes?.status ||

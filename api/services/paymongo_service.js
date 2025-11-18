@@ -1,5 +1,6 @@
 import axios from "axios";
 import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import pkg from "@prisma/client";
 const { PrismaClient } = pkg;
 import {
@@ -204,19 +205,30 @@ export const processWebhookEvent = async (event) => {
         status: "paid",
         paidAt: new Date(),
         paymentMethod: directPaymentMethod,
-        referenceNumber: paymentId,
+        referenceNumber: paymentId, // This is the pay_xxxxx reference number from PayMongo
       };
 
       if (paymentIntentIdFromWebhook) {
         updateData.paymentIntentId = paymentIntentIdFromWebhook;
       }
 
+      console.log(`[PAYMENT_PAID] Processing webhook:`, {
+        paymentId,
+        paymentIntentId: paymentIntentIdFromWebhook,
+        paymentMethod: directPaymentMethod,
+      });
+
+      // First try to find by payment intent ID 
       if (paymentIntentIdFromWebhook) {
         paymentRecord = await prisma.payments.findFirst({
           where: {
             paymentIntentId: paymentIntentIdFromWebhook,
           },
         });
+        
+        if (paymentRecord) {
+          console.log(`[PAYMENT_PAID] Found payment by intent ID: ${paymentRecord.transactionId}`);
+        }
       }
 
       if (!paymentRecord) {
@@ -453,9 +465,53 @@ export const processWebhookEvent = async (event) => {
 
   if (paymentRecord && Object.keys(updateData).length > 0) {
     try {
-      const updatedPayment = await prisma.payments.update({
-        where: { id: paymentRecord.id },
+      // Prevent duplicate webhook processing - only update if status allows
+      const currentStatus = paymentRecord.status;
+      const newStatus = updateData.status;
+      
+      // Skip update if payment is already in final state
+      if (currentStatus === "paid" && newStatus === "paid") {
+        console.log(`[Webhook] Payment ${paymentRecord.transactionId} already paid, skipping duplicate webhook`);
+        return {
+          handled: true,
+          message: "Payment already processed (duplicate webhook)",
+          paymentId: paymentRecord.id,
+        };
+      }
+      
+      // Don't overwrite existing reference number with null
+      if (!updateData.referenceNumber && paymentRecord.referenceNumber) {
+        delete updateData.referenceNumber;
+      }
+      
+      console.log(`[Webhook] Updating payment ${paymentRecord.transactionId}:`, {
+        currentStatus,
+        newStatus,
+        updateFields: Object.keys(updateData),
+        hasReferenceNumber: !!updateData.referenceNumber,
+      });
+      
+      // Use updateMany for atomic update with condition
+      const updateResult = await prisma.payments.updateMany({
+        where: { 
+          id: paymentRecord.id,
+          status: currentStatus, // Only update if status hasn't changed
+        },
         data: updateData,
+      });
+      
+      if (updateResult.count === 0) {
+        console.log(`[Webhook] Payment ${paymentRecord.transactionId} status changed by another process, skipping`);
+        return {
+          handled: true,
+          message: "Payment already updated by another process",
+          paymentId: paymentRecord.id,
+        };
+      }
+      
+      // Fetch updated payment with user relation for email
+      const updatedPayment = await prisma.payments.findUnique({
+        where: { id: paymentRecord.id },
         include: {
           user: true,
         },
@@ -635,13 +691,31 @@ export const createPaymentIntent = async (paymentData) => {
         payment_method_options;
     }
 
+    // Generate idempotency key to prevent duplicate payment creations
+    const idempotencyKey = paymentData.idempotencyKey || uuidv4();
+    
+    console.log("[PayMongo] Creating payment intent:", {
+      amount: requestBody.data.attributes.amount,
+      description: requestBody.data.attributes.description,
+      idempotencyKey: idempotencyKey,
+      hasProvidedKey: !!paymentData.idempotencyKey,
+    });
+    
     const response = await axios.post(
       `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_INTENTS}`,
       requestBody,
       {
-        headers: createPayMongoAuthHeaders(),
+        headers: {
+          ...createPayMongoAuthHeaders(),
+          'Idempotency-Key': idempotencyKey,
+        },
       }
     );
+    
+    console.log("[PayMongo] Payment intent created:", {
+      intentId: response.data?.data?.id,
+      idempotencyKey: idempotencyKey,
+    });
 
     return {
       success: true,
@@ -681,6 +755,9 @@ export const attachPaymentMethod = async (attachData) => {
   try {
     const { payment_intent_id, payment_method_id, return_url } = attachData;
 
+    // Generate idempotency key to prevent duplicate payment method attachments
+    const idempotencyKey = attachData.idempotencyKey || uuidv4();
+    
     const response = await axios.post(
       `${PAYMONGO_CONFIG.BASE_URL}${PAYMONGO_CONFIG.ENDPOINTS.PAYMENT_INTENTS}/${payment_intent_id}/attach`,
       {
@@ -692,7 +769,10 @@ export const attachPaymentMethod = async (attachData) => {
         },
       },
       {
-        headers: createPayMongoAuthHeaders(),
+        headers: {
+          ...createPayMongoAuthHeaders(),
+          'Idempotency-Key': idempotencyKey,
+        },
       }
     );
 
