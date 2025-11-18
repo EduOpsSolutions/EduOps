@@ -16,9 +16,6 @@ import {
   getEnrollmentRequestsLog,
   getFeeStructureReport,
   getUserAccountActivity,
-  getGraduatedStudentsReport,
-  getArchivedRecordsReport,
-  getProgramEnrollmentTrends,
 } from "../../controller/reports_controller.js";
 
 import { validateUserIsAdmin } from "../../middleware/authValidator.js";
@@ -151,33 +148,6 @@ router.get(
   verifyToken,
   validateUserIsAdmin,
   getUserAccountActivity
-);
-
-// Report 16: Graduated Students Report
-// Query params: schoolYear, program
-router.get(
-  "/graduated-students",
-  verifyToken,
-  validateUserIsAdmin,
-  getGraduatedStudentsReport
-);
-
-// Report 17: Archived Records Report
-// Query params: recordType, schoolYear
-router.get(
-  "/archived-records",
-  verifyToken,
-  validateUserIsAdmin,
-  getArchivedRecordsReport
-);
-
-// Report 18: Program Enrollment Trends
-// Query params: startYear, endYear
-router.get(
-  "/program-enrollment-trends",
-  verifyToken,
-  validateUserIsAdmin,
-  getProgramEnrollmentTrends
 );
 
 export { router };

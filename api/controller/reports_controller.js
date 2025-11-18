@@ -1028,7 +1028,12 @@ const getOutstandingBalanceReport = async (req, res) => {
     const studentBalances = new Map();
 
     for (const us of userSchedules) {
-      if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period) {
+      if (
+        !us.user ||
+        !us.schedule ||
+        !us.schedule.course ||
+        !us.schedule.period
+      ) {
         continue;
       }
 
@@ -1083,9 +1088,16 @@ const getOutstandingBalanceReport = async (req, res) => {
         if (sf.type === "discount") return sum - Number(sf.amount);
         return sum;
       }, 0);
-      const adjustmentsTotal = adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
-      const netAssessment = feesTotal + courseBasePrice + studentFeeTotal - adjustmentsTotal;
-      const totalPayments = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const adjustmentsTotal = adjustments.reduce(
+        (sum, a) => sum + Number(a.amount),
+        0
+      );
+      const netAssessment =
+        feesTotal + courseBasePrice + studentFeeTotal - adjustmentsTotal;
+      const totalPayments = payments.reduce(
+        (sum, p) => sum + Number(p.amount),
+        0
+      );
       const balance = netAssessment - totalPayments;
 
       // Only include if balance >= minBalance
@@ -1133,16 +1145,26 @@ const getOutstandingBalanceReport = async (req, res) => {
     }
 
     // Convert to array and sort by balance descending
-    const reportData = Array.from(studentBalances.values())
-      .sort((a, b) => b.balance - a.balance);
+    const reportData = Array.from(studentBalances.values()).sort(
+      (a, b) => b.balance - a.balance
+    );
 
     // Calculate summary statistics
-    const totalOutstanding = reportData.reduce((sum, item) => sum + item.balance, 0);
+    const totalOutstanding = reportData.reduce(
+      (sum, item) => sum + item.balance,
+      0
+    );
     const agingSummary = {
-      current: reportData.filter(item => item.agingCategory === "Current").length,
-      "30-60 days": reportData.filter(item => item.agingCategory === "30-60 days").length,
-      "60-90 days": reportData.filter(item => item.agingCategory === "60-90 days").length,
-      "90+ days": reportData.filter(item => item.agingCategory === "90+ days").length,
+      current: reportData.filter((item) => item.agingCategory === "Current")
+        .length,
+      "30-60 days": reportData.filter(
+        (item) => item.agingCategory === "30-60 days"
+      ).length,
+      "60-90 days": reportData.filter(
+        (item) => item.agingCategory === "60-90 days"
+      ).length,
+      "90+ days": reportData.filter((item) => item.agingCategory === "90+ days")
+        .length,
     };
 
     res.json({
@@ -1153,7 +1175,8 @@ const getOutstandingBalanceReport = async (req, res) => {
       summary: {
         totalOutstandingBalance: totalOutstanding,
         agingBreakdown: agingSummary,
-        averageBalance: reportData.length > 0 ? totalOutstanding / reportData.length : 0,
+        averageBalance:
+          reportData.length > 0 ? totalOutstanding / reportData.length : 0,
       },
       filters: {
         periodId: periodId || "All Periods",
@@ -1174,23 +1197,41 @@ const getOutstandingBalanceReport = async (req, res) => {
 // Report 10: Document Submission Status
 const getDocumentSubmissionStatus = async (req, res) => {
   try {
-    const { status, studentId } = req.query;
+    const { status, studentIds } = req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
+    let whereClause = {};
 
-    if (status) whereClause.status = status;
-    if (studentId)
-      whereClause.user = {
-        userId: studentId,
+    // Filter by status if provided
+    if (status && status !== "") {
+      whereClause.status = status;
+    }
+
+    // Filter by student IDs if provided (multi-select)
+    if (studentIds) {
+      const studentIdArray = Array.isArray(studentIds)
+        ? studentIds
+        : studentIds.split(",");
+
+      whereClause.userId = {
+        in: studentIdArray,
       };
+    }
 
-    const documents = await prisma.document.findMany({
+    // Get all document requests with related data
+    const documentRequests = await prisma.document_request.findMany({
       where: whereClause,
       include: {
+        document: {
+          select: {
+            id: true,
+            documentName: true,
+            price: true,
+            amount: true,
+          },
+        },
         user: {
           select: {
+            id: true,
             userId: true,
             firstName: true,
             middleName: true,
@@ -1204,24 +1245,56 @@ const getDocumentSubmissionStatus = async (req, res) => {
       },
     });
 
-    const reportData = documents.map((doc) => ({
-      documentId: doc.id,
-      studentId: doc.user?.userId,
-      fullName: `${doc.user?.firstName}${
-        doc.user?.middleName ? " " + doc.user?.middleName : ""
-      } ${doc.user?.lastName}`,
-      email: doc.user?.email,
-      documentType: doc.type,
-      documentName: doc.name,
-      status: doc.status,
-      submittedDate: doc.createdAt,
-      validatedDate: doc.validatedAt,
-      remarks: doc.remarks || "N/A",
+    // Map to report data
+    const reportData = documentRequests.map((request) => ({
+      requestId: request.id,
+      studentId: request.user?.userId || "N/A",
+      studentName: request.user
+        ? `${request.user.firstName}${
+            request.user.middleName ? " " + request.user.middleName : ""
+          } ${request.user.lastName}`
+        : `${request.firstName || ""} ${request.lastName || ""}`.trim(),
+      email: request.user?.email || request.email,
+      phone: request.phone || "N/A",
+      documentName: request.document?.documentName || "Unknown Document",
+      documentType: request.document?.price || "free",
+      requestDate: request.createdAt,
+      status: request.status,
+      deliveryMode: request.mode || "N/A",
+      paymentStatus: request.paymentStatus || "N/A",
+      paymentAmount: request.paymentAmount ? Number(request.paymentAmount) : 0,
+      paymentMethod: request.paymentMethod || "N/A",
+      purpose: request.purpose || "N/A",
+      address: request.address || "N/A",
+      city: request.city || "N/A",
+      fulfilledDate: request.updatedAt,
+      hasFulfilledDocument: request.fulfilledDocumentUrl ? "Yes" : "No",
+      remarks: request.remarks || "N/A",
     }));
 
-    // Count by status
+    // Calculate summary statistics
     const statusCounts = reportData.reduce((acc, doc) => {
       acc[doc.status] = (acc[doc.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const documentTypeCounts = reportData.reduce((acc, doc) => {
+      acc[doc.documentName] = (acc[doc.documentName] || 0) + 1;
+      return acc;
+    }, {});
+
+    const paymentStats = {
+      totalRequests: reportData.length,
+      paidRequests: reportData.filter((d) => d.paymentStatus === "paid").length,
+      pendingPayments: reportData.filter((d) => d.paymentStatus === "pending")
+        .length,
+      totalRevenue: reportData
+        .filter((d) => d.paymentStatus === "paid")
+        .reduce((sum, d) => sum + d.paymentAmount, 0),
+    };
+
+    const deliveryModeCounts = reportData.reduce((acc, doc) => {
+      acc[doc.deliveryMode] = (acc[doc.deliveryMode] || 0) + 1;
       return acc;
     }, {});
 
@@ -1232,8 +1305,14 @@ const getDocumentSubmissionStatus = async (req, res) => {
       totalRecords: reportData.length,
       summary: {
         statusBreakdown: statusCounts,
+        documentTypeBreakdown: documentTypeCounts,
+        paymentStatistics: paymentStats,
+        deliveryModeBreakdown: deliveryModeCounts,
       },
-      filters: { status, studentId },
+      filters: {
+        status: status || "All",
+        studentIds: studentIds || "All Students",
+      },
       data: reportData,
     });
   } catch (error) {
@@ -1249,42 +1328,49 @@ const getDocumentSubmissionStatus = async (req, res) => {
 // Report 11: Class Schedule Report
 const getClassScheduleReport = async (req, res) => {
   try {
-    const { periodId, courseId, days } = req.query;
+    const { periodId } = req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
+    if (!periodId) {
+      return res.status(400).json({
+        error: true,
+        message: "Academic Period is required",
+      });
+    }
 
-    if (periodId) whereClause.periodId = periodId;
-    if (courseId) whereClause.courseId = courseId;
-    if (days) whereClause.days = { contains: days };
-
+    // Get all schedules for the selected academic period
     const schedules = await prisma.schedule.findMany({
-      where: whereClause,
+      where: {
+        periodId: periodId,
+        deletedAt: null,
+      },
       include: {
         course: {
           select: {
-            courseCode: true,
-            courseName: true,
-            units: true,
-            yearLevel: true,
-          },
-        },
-        academicPeriod: {
-          select: {
+            id: true,
             name: true,
-            schoolYear: true,
+            description: true,
+            price: true,
           },
         },
-        teacherUser: {
+        period: {
           select: {
+            id: true,
+            batchName: true,
+            startAt: true,
+            endAt: true,
+          },
+        },
+        teacher: {
+          select: {
+            id: true,
             userId: true,
             firstName: true,
             middleName: true,
             lastName: true,
+            email: true,
           },
         },
-        user_schedule: {
+        userSchedules: {
           where: {
             deletedAt: null,
           },
@@ -1296,37 +1382,87 @@ const getClassScheduleReport = async (req, res) => {
       orderBy: [{ days: "asc" }, { time_start: "asc" }],
     });
 
+    // Map schedules to report data
     const reportData = schedules.map((schedule) => ({
       scheduleId: schedule.id,
-      courseCode: schedule.course?.courseCode,
-      courseName: schedule.course?.courseName,
-      section: schedule.section,
-      yearLevel: schedule.course?.yearLevel,
-      units: schedule.course?.units,
-      academicPeriod: schedule.academicPeriod?.name,
-      schoolYear: schedule.academicPeriod?.schoolYear,
-      instructor: schedule.teacherUser
-        ? `${schedule.teacherUser.firstName}${
-            schedule.teacherUser.middleName
-              ? " " + schedule.teacherUser.middleName
-              : ""
-          } ${schedule.teacherUser.lastName}`
+      courseName: schedule.course?.name || "N/A",
+      courseDescription: schedule.course?.description || "N/A",
+      coursePrice: schedule.course?.price ? Number(schedule.course.price) : 0,
+      academicPeriod: schedule.period?.batchName || "N/A",
+      academicYear: schedule.period?.startAt
+        ? new Date(schedule.period.startAt).getFullYear()
+        : null,
+      periodStart: schedule.periodStart,
+      periodEnd: schedule.periodEnd,
+      instructor: schedule.teacher
+        ? `${schedule.teacher.firstName}${
+            schedule.teacher.middleName ? " " + schedule.teacher.middleName : ""
+          } ${schedule.teacher.lastName}`
         : "TBA",
-      instructorId: schedule.teacherUser?.userId,
+      instructorId: schedule.teacher?.userId || "N/A",
+      instructorEmail: schedule.teacher?.email || "N/A",
       days: schedule.days,
-      timeStart: schedule.time_start,
-      timeEnd: schedule.time_end,
-      room: schedule.room || "TBA",
-      enrolledStudents: schedule.user_schedule.length,
-      capacity: schedule.capacity || "N/A",
+      timeStart: schedule.time_start || "N/A",
+      timeEnd: schedule.time_end || "N/A",
+      time: schedule.time || "N/A",
+      location: schedule.location || "TBA",
+      notes: schedule.notes || "N/A",
+      enrolledStudents: schedule.userSchedules?.length || 0,
+      capacity: schedule.capacity || 30,
+      availableSlots:
+        (schedule.capacity || 30) - (schedule.userSchedules?.length || 0),
     }));
+
+    // Calculate summary statistics
+    const totalSchedules = reportData.length;
+    const uniqueCourses = new Set(reportData.map((s) => s.courseName)).size;
+    const uniqueInstructors = new Set(
+      reportData.filter((s) => s.instructor !== "TBA").map((s) => s.instructor)
+    ).size;
+    const totalEnrolled = reportData.reduce(
+      (sum, s) => sum + s.enrolledStudents,
+      0
+    );
+    const totalCapacity = reportData.reduce((sum, s) => sum + s.capacity, 0);
+
+    // Group by course for course breakdown
+    const courseBreakdown = reportData.reduce((acc, schedule) => {
+      const courseName = schedule.courseName;
+      if (!acc[courseName]) {
+        acc[courseName] = {
+          schedules: 0,
+          enrolled: 0,
+          capacity: 0,
+        };
+      }
+      acc[courseName].schedules += 1;
+      acc[courseName].enrolled += schedule.enrolledStudents;
+      acc[courseName].capacity += schedule.capacity;
+      return acc;
+    }, {});
 
     res.json({
       error: false,
       reportName: "Class Schedule Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
-      filters: { periodId, courseId, days },
+      summary: {
+        totalSchedules,
+        uniqueCourses,
+        uniqueInstructors,
+        totalEnrolledStudents: totalEnrolled,
+        totalCapacity,
+        availableSlots: totalCapacity - totalEnrolled,
+        utilizationRate:
+          totalCapacity > 0
+            ? ((totalEnrolled / totalCapacity) * 100).toFixed(2) + "%"
+            : "0%",
+        courseBreakdown,
+      },
+      filters: {
+        periodId: periodId,
+        academicPeriod: schedules[0]?.period?.batchName || "N/A",
+      },
       data: reportData,
     });
   } catch (error) {
@@ -1342,96 +1478,199 @@ const getClassScheduleReport = async (req, res) => {
 // Report 12: Student Ledger Summary
 const getStudentLedgerSummary = async (req, res) => {
   try {
-    const { studentId, periodId } = req.query;
+    const { studentId } = req.query;
 
     if (!studentId) {
       return res.status(400).json({
         error: true,
-        message: "studentId is required for this report",
+        message: "Student is required for this report",
       });
     }
 
-    let whereClause = {
-      deletedAt: null,
-      user: {
-        userId: studentId,
-      },
-    };
-
-    if (periodId) whereClause.periodId = periodId;
-
-    const ledgers = await prisma.ledger.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            userId: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        academicPeriod: {
-          select: {
-            name: true,
-            schoolYear: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "asc",
+    // Get student information
+    const student = await prisma.users.findUnique({
+      where: { id: studentId },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
       },
     });
 
-    if (ledgers.length === 0) {
-      return res.json({
-        error: false,
-        reportName: "Student Ledger Summary",
-        generatedAt: new Date(),
-        message: "No ledger entries found for this student",
-        filters: { studentId, periodId },
-        data: [],
+    if (!student) {
+      return res.status(404).json({
+        error: true,
+        message: "Student not found",
       });
     }
 
-    const student = ledgers[0].user;
-    const totalPayments = ledgers.reduce(
-      (sum, l) => sum + parseFloat(l.paymentAmount || 0),
-      0
-    );
-    const currentBalance = parseFloat(ledgers[ledgers.length - 1].balance);
-
-    const reportData = {
-      studentId: student.userId,
-      fullName: `${student.firstName}${
-        student.middleName ? " " + student.middleName : ""
-      } ${student.lastName}`,
-      email: student.email,
-      summary: {
-        totalPayments,
-        currentBalance,
-        totalTransactions: ledgers.length,
+    // Get all user_schedules for this student (active only)
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: { userId: studentId, deletedAt: null },
+      include: {
+        schedule: {
+          include: {
+            course: true,
+            period: true,
+          },
+        },
       },
-      transactions: ledgers.map((ledger) => ({
-        transactionId: ledger.id,
-        date: ledger.createdAt,
-        academicPeriod: ledger.academicPeriod?.name,
-        schoolYear: ledger.academicPeriod?.schoolYear,
-        paymentAmount: parseFloat(ledger.paymentAmount || 0),
-        previousBalance: parseFloat(ledger.previousBalance || 0),
-        balance: parseFloat(ledger.balance),
-        paymentMethod: ledger.paymentMethod || "N/A",
-        referenceNumber: ledger.referenceNumber || "N/A",
-      })),
-    };
+    });
+
+    // Build ledger rows
+    let ledgerRows = [];
+
+    // For each schedule, get course fees and student fees
+    for (const us of userSchedules) {
+      if (!us.schedule || !us.schedule.course || !us.schedule.period) continue;
+      const course = us.schedule.course;
+      const batch = us.schedule.period;
+
+      // 1. Base course fee (debit)
+      if (course.price && Number(course.price) > 0) {
+        ledgerRows.push({
+          date: us.createdAt,
+          description: `Course Fee (${course.name})`,
+          debit: Number(course.price),
+          credit: 0,
+          type: "Course Fee",
+          remarks: "",
+          courseName: course.name,
+          academicPeriod: batch.batchName,
+          academicYear: batch.startAt
+            ? new Date(batch.startAt).getFullYear()
+            : null,
+        });
+      }
+
+      // 2. Other course fees (debits)
+      const courseFees = await prisma.fees.findMany({
+        where: {
+          courseId: course.id,
+          batchId: batch.id,
+          isActive: true,
+        },
+      });
+      courseFees.forEach((fee) => {
+        ledgerRows.push({
+          date: fee.createdAt,
+          description: fee.name,
+          debit: Number(fee.price),
+          credit: 0,
+          type: "Other Fee",
+          remarks: "",
+          courseName: course.name,
+          academicPeriod: batch.batchName,
+          academicYear: batch.startAt
+            ? new Date(batch.startAt).getFullYear()
+            : null,
+        });
+      });
+
+      // 3. Student fees/discounts
+      const studentFees = await prisma.student_fee.findMany({
+        where: {
+          studentId,
+          courseId: course.id,
+          batchId: batch.id,
+          deletedAt: null,
+        },
+      });
+      studentFees.forEach((sf) => {
+        if (sf.type === "fee") {
+          ledgerRows.push({
+            date: sf.createdAt,
+            description: sf.name,
+            debit: Number(sf.amount),
+            credit: 0,
+            type: "Additional Fee",
+            remarks: "",
+            courseName: course.name,
+            academicPeriod: batch.batchName,
+            academicYear: batch.startAt
+              ? new Date(batch.startAt).getFullYear()
+              : null,
+          });
+        } else if (sf.type === "discount") {
+          ledgerRows.push({
+            date: sf.createdAt,
+            description: sf.name,
+            debit: 0,
+            credit: Number(sf.amount),
+            type: "Discount",
+            remarks: "",
+            courseName: course.name,
+            academicPeriod: batch.batchName,
+            academicYear: batch.startAt
+              ? new Date(batch.startAt).getFullYear()
+              : null,
+          });
+        }
+      });
+    }
+
+    // 4. Payments (credits)
+    const payments = await prisma.payments.findMany({
+      where: {
+        userId: studentId,
+        status: "paid",
+      },
+    });
+    payments.forEach((payment) => {
+      ledgerRows.push({
+        date: payment.paidAt || payment.createdAt,
+        description: "Payment",
+        debit: 0,
+        credit: Number(payment.amount),
+        type: "Payment",
+        remarks: payment.remarks || "",
+        orNumber: payment.referenceNumber || "",
+        paymentMethod: payment.paymentMethod || "N/A",
+        courseName: "N/A",
+        academicPeriod: "N/A",
+        academicYear: null,
+      });
+    });
+
+    // 5. Sort by date ascending
+    ledgerRows.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // 6. Add running balance
+    let balance = 0;
+    ledgerRows = ledgerRows.map((row) => {
+      balance += (row.debit || 0) - (row.credit || 0);
+      return { ...row, balance };
+    });
+
+    // Calculate summary statistics
+    const totalDebits = ledgerRows.reduce((sum, row) => sum + row.debit, 0);
+    const totalCredits = ledgerRows.reduce((sum, row) => sum + row.credit, 0);
+    const currentBalance = balance;
 
     res.json({
       error: false,
       reportName: "Student Ledger Summary",
       generatedAt: new Date(),
-      filters: { studentId, periodId },
-      data: reportData,
+      totalRecords: ledgerRows.length,
+      summary: {
+        studentId: student.userId,
+        studentName: `${student.firstName}${
+          student.middleName ? " " + student.middleName : ""
+        } ${student.lastName}`,
+        email: student.email,
+        totalCharges: totalDebits,
+        totalPayments: totalCredits,
+        currentBalance: currentBalance,
+        totalTransactions: ledgerRows.length,
+      },
+      filters: {
+        studentId: student.userId,
+        studentName: `${student.firstName} ${student.lastName}`,
+      },
+      data: ledgerRows,
     });
   } catch (error) {
     console.error("Error generating student ledger summary:", error);
@@ -1504,51 +1743,97 @@ const getEnrollmentRequestsLog = async (req, res) => {
 // Report 14: Fee Structure Report
 const getFeeStructureReport = async (req, res) => {
   try {
-    const { periodId, feeType } = req.query;
+    const { periodId } = req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
+    if (!periodId) {
+      return res.status(400).json({
+        error: true,
+        message: "Academic Period is required",
+      });
+    }
 
-    if (periodId) whereClause.periodId = periodId;
-    if (feeType) whereClause.feeType = feeType;
-
-    const fees = await prisma.fee.findMany({
-      where: whereClause,
+    // Get all fees for the selected academic period
+    const fees = await prisma.fees.findMany({
+      where: {
+        batchId: periodId,
+        isActive: true,
+      },
       include: {
-        academicPeriod: {
+        course: {
           select: {
+            id: true,
             name: true,
-            schoolYear: true,
+            description: true,
+            price: true,
           },
         },
       },
-      orderBy: [{ feeType: "asc" }, { amount: "desc" }],
+      orderBy: [{ courseId: "asc" }, { type: "asc" }, { name: "asc" }],
     });
 
+    // Get academic period details
+    const academicPeriod = await prisma.academic_period.findUnique({
+      where: { id: periodId },
+      select: {
+        id: true,
+        batchName: true,
+        startAt: true,
+        endAt: true,
+      },
+    });
+
+    // Map fees to report data
     const reportData = fees.map((fee) => ({
       feeId: fee.id,
+      courseName: fee.course?.name || "N/A",
+      courseDescription: fee.course?.description || "N/A",
+      courseBasePrice: fee.course?.price ? Number(fee.course.price) : 0,
       feeName: fee.name,
-      feeType: fee.feeType,
-      amount: parseFloat(fee.amount),
-      yearLevel: fee.yearLevel || "All",
-      program: fee.program || "All",
-      academicPeriod: fee.academicPeriod?.name,
-      schoolYear: fee.academicPeriod?.schoolYear,
-      description: fee.description || "N/A",
-      isRequired: fee.isRequired || false,
+      feeType: fee.type,
+      feePrice: Number(fee.price),
+      dueDate: fee.dueDate,
+      isActive: fee.isActive,
+      createdAt: fee.createdAt,
     }));
+
+    // Group by course
+    const courseGroups = reportData.reduce((acc, fee) => {
+      if (!acc[fee.courseName]) {
+        acc[fee.courseName] = {
+          courseName: fee.courseName,
+          courseBasePrice: fee.courseBasePrice,
+          fees: [],
+          totalFees: 0,
+          feeCount: 0,
+        };
+      }
+      acc[fee.courseName].fees.push(fee);
+      acc[fee.courseName].totalFees += fee.feePrice;
+      acc[fee.courseName].feeCount += 1;
+      return acc;
+    }, {});
 
     // Group by fee type
     const feeTypeGroups = reportData.reduce((acc, fee) => {
       if (!acc[fee.feeType]) {
-        acc[fee.feeType] = [];
+        acc[fee.feeType] = {
+          type: fee.feeType,
+          count: 0,
+          totalAmount: 0,
+        };
       }
-      acc[fee.feeType].push(fee);
+      acc[fee.feeType].count += 1;
+      acc[fee.feeType].totalAmount += fee.feePrice;
       return acc;
     }, {});
 
-    const totalFees = reportData.reduce((sum, fee) => sum + fee.amount, 0);
+    // Calculate summary statistics
+    const totalFees = reportData.reduce((sum, fee) => sum + fee.feePrice, 0);
+    const totalCourses = Object.keys(courseGroups).length;
+    const totalBasePrices = Object.values(courseGroups).reduce(
+      (sum, course) => sum + course.courseBasePrice,
+      0
+    );
 
     res.json({
       error: false,
@@ -1556,17 +1841,27 @@ const getFeeStructureReport = async (req, res) => {
       generatedAt: new Date(),
       totalRecords: reportData.length,
       summary: {
-        totalFees,
-        feeTypeBreakdown: Object.keys(feeTypeGroups).map((type) => ({
-          type,
-          count: feeTypeGroups[type].length,
-          totalAmount: feeTypeGroups[type].reduce(
-            (sum, f) => sum + f.amount,
-            0
-          ),
+        academicPeriod: academicPeriod?.batchName || "N/A",
+        academicYear: academicPeriod?.startAt
+          ? new Date(academicPeriod.startAt).getFullYear()
+          : null,
+        totalCourses,
+        totalAdditionalFees: totalFees,
+        totalBasePrices: totalBasePrices,
+        grandTotal: totalFees + totalBasePrices,
+        feeTypeBreakdown: Object.values(feeTypeGroups),
+        courseBreakdown: Object.values(courseGroups).map((course) => ({
+          courseName: course.courseName,
+          basePrice: course.courseBasePrice,
+          additionalFees: course.totalFees,
+          totalPrice: course.courseBasePrice + course.totalFees,
+          feeCount: course.feeCount,
         })),
       },
-      filters: { periodId, feeType },
+      filters: {
+        periodId: periodId,
+        academicPeriod: academicPeriod?.batchName || "N/A",
+      },
       data: reportData,
     });
   } catch (error) {
@@ -1582,339 +1877,183 @@ const getFeeStructureReport = async (req, res) => {
 // Report 15: User Account Activity
 const getUserAccountActivity = async (req, res) => {
   try {
-    const { role, status, startDate, endDate } = req.query;
+    const { startDate, endDate, role, logType, moduleType, userIds } =
+      req.query;
 
-    let whereClause = {
-      deletedAt: null,
-    };
-
-    if (role) whereClause.role = role;
-    if (status) whereClause.status = status;
-
-    if (startDate && endDate) {
-      whereClause.updatedAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: true,
+        message: "Start Date and End Date are required",
+      });
     }
 
-    const users = await prisma.users.findMany({
-      where: whereClause,
-      select: {
-        userId: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
+    // Set up date range (inclusive of full end day)
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0);
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999);
+
+    // Build where clause for logs
+    let logsWhereClause = {
+      createdAt: {
+        gte: startDateTime,
+        lte: endDateTime,
+      },
+    };
+
+    // Filter by log type
+    if (logType && logType !== "") {
+      logsWhereClause.type = logType;
+    }
+
+    // Filter by module type
+    if (moduleType && moduleType !== "") {
+      logsWhereClause.moduleType = moduleType;
+    }
+
+    // Filter by specific users or role
+    if (userIds) {
+      const userIdArray = Array.isArray(userIds) ? userIds : userIds.split(",");
+      logsWhereClause.userId = {
+        in: userIdArray.map((id) => id.toString()),
+      };
+    } else if (role && role !== "") {
+      // If filtering by role but not specific users, get all users with that role first
+      const usersWithRole = await prisma.users.findMany({
+        where: {
+          role: role,
+          deletedAt: null,
+        },
+        select: { userId: true },
+      });
+
+      if (usersWithRole.length > 0) {
+        logsWhereClause.userId = {
+          in: usersWithRole.map((u) => u.userId),
+        };
+      }
+    }
+
+    // Get all logs matching the criteria
+    const logs = await prisma.logs.findMany({
+      where: logsWhereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            userId: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
       orderBy: {
-        updatedAt: "desc",
+        createdAt: "desc",
       },
     });
 
-    const reportData = users.map((user) => ({
-      userId: user.userId,
-      fullName: `${user.firstName}${
-        user.middleName ? " " + user.middleName : ""
-      } ${user.lastName}`,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      accountCreated: user.createdAt,
-      lastUpdated: user.updatedAt,
-      accountAge: Math.floor(
-        (new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24)
-      ),
+    // Map to report data
+    const reportData = logs.map((log) => ({
+      logId: log.id,
+      timestamp: log.createdAt,
+      userId: log.user?.userId || log.userId || "N/A",
+      userName: log.user
+        ? `${log.user.firstName}${
+            log.user.middleName ? " " + log.user.middleName : ""
+          } ${log.user.lastName}`
+        : "N/A",
+      userEmail: log.user?.email || "N/A",
+      userRole: log.user?.role || "N/A",
+      userStatus: log.user?.status || "N/A",
+      accountCreated: log.user?.createdAt || null,
+      accountLastUpdated: log.user?.updatedAt || null,
+      activityTitle: log.title,
+      activityContent: log.content || "N/A",
+      logType: log.type,
+      moduleType: log.moduleType,
+      requestBody: log.reqBody || "N/A",
     }));
 
-    // Count by role and status
-    const roleCounts = reportData.reduce((acc, user) => {
-      acc[user.role] = (acc[user.role] || 0) + 1;
+    // Calculate summary statistics
+    const totalLogs = reportData.length;
+    const uniqueUsers = new Set(
+      reportData.map((log) => log.userId).filter((id) => id !== "N/A")
+    ).size;
+
+    // Group by log type
+    const logTypeBreakdown = reportData.reduce((acc, log) => {
+      acc[log.logType] = (acc[log.logType] || 0) + 1;
       return acc;
     }, {});
 
-    const statusCounts = reportData.reduce((acc, user) => {
-      acc[user.status] = (acc[user.status] || 0) + 1;
+    // Group by module type
+    const moduleTypeBreakdown = reportData.reduce((acc, log) => {
+      acc[log.moduleType] = (acc[log.moduleType] || 0) + 1;
       return acc;
     }, {});
+
+    // Group by user role
+    const roleBreakdown = reportData.reduce((acc, log) => {
+      if (log.userRole !== "N/A") {
+        acc[log.userRole] = (acc[log.userRole] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    // Top active users
+    const userActivityCount = reportData.reduce((acc, log) => {
+      if (log.userId !== "N/A") {
+        if (!acc[log.userId]) {
+          acc[log.userId] = {
+            userId: log.userId,
+            userName: log.userName,
+            role: log.userRole,
+            activityCount: 0,
+          };
+        }
+        acc[log.userId].activityCount += 1;
+      }
+      return acc;
+    }, {});
+
+    const topActiveUsers = Object.values(userActivityCount)
+      .sort((a, b) => b.activityCount - a.activityCount)
+      .slice(0, 10);
 
     res.json({
       error: false,
       reportName: "User Account Activity Report",
       generatedAt: new Date(),
-      totalRecords: reportData.length,
+      totalRecords: totalLogs,
       summary: {
-        roleBreakdown: roleCounts,
-        statusBreakdown: statusCounts,
+        totalActivities: totalLogs,
+        uniqueUsers: uniqueUsers,
+        dateRange: `${new Date(startDate).toLocaleDateString()} - ${new Date(
+          endDate
+        ).toLocaleDateString()}`,
+        logTypeBreakdown,
+        moduleTypeBreakdown,
+        roleBreakdown,
+        topActiveUsers,
       },
-      filters: { role, status, startDate, endDate },
+      filters: {
+        startDate: startDate,
+        endDate: endDate,
+        role: role || "All Roles",
+        logType: logType || "All Types",
+        moduleType: moduleType || "All Modules",
+        userIds: userIds || "All Users",
+      },
       data: reportData,
     });
   } catch (error) {
     console.error("Error generating user account activity report:", error);
-    res.status(500).json({
-      error: true,
-      message: "Error generating report",
-      details: error.message,
-    });
-  }
-};
-
-// Report 16: Graduated Students Report
-const getGraduatedStudentsReport = async (req, res) => {
-  try {
-    const { schoolYear, program } = req.query;
-
-    // For now, we'll identify graduated students as those who have completed all courses
-    // This is a simplified approach - adjust based on your actual graduation logic
-    const students = await prisma.users.findMany({
-      where: {
-        role: "student",
-        status: "active",
-        deletedAt: null,
-      },
-      select: {
-        userId: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        email: true,
-        createdAt: true,
-        user_schedule: {
-          where: {
-            deletedAt: null,
-            grade: { not: null },
-          },
-          include: {
-            schedule: {
-              include: {
-                course: {
-                  select: {
-                    courseCode: true,
-                    courseName: true,
-                    units: true,
-                    yearLevel: true,
-                  },
-                },
-                academicPeriod: {
-                  select: {
-                    name: true,
-                    schoolYear: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Filter students who have completed courses (passed grades)
-    let reportData = students
-      .map((student) => {
-        const completedCourses = student.user_schedule.filter(
-          (us) => us.grade && parseFloat(us.grade) <= 3.0
-        );
-
-        if (completedCourses.length === 0) return null;
-
-        const totalUnits = completedCourses.reduce(
-          (sum, us) => sum + (us.schedule?.course?.units || 0),
-          0
-        );
-
-        const grades = completedCourses
-          .map((us) => parseFloat(us.grade))
-          .filter((g) => !isNaN(g));
-        const gpa =
-          grades.length > 0
-            ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(2)
-            : "N/A";
-
-        // Get latest academic period from completed courses
-        const latestCourse = completedCourses.sort(
-          (a, b) =>
-            new Date(b.schedule?.academicPeriod?.schoolYear) -
-            new Date(a.schedule?.academicPeriod?.schoolYear)
-        )[0];
-
-        return {
-          studentId: student.userId,
-          fullName: `${student.firstName}${
-            student.middleName ? " " + student.middleName : ""
-          } ${student.lastName}`,
-          email: student.email,
-          enrollmentDate: student.createdAt,
-          completedCourses: completedCourses.length,
-          totalUnits: totalUnits,
-          gpa: gpa,
-          latestAcademicPeriod: latestCourse?.schedule?.academicPeriod?.name,
-          latestSchoolYear: latestCourse?.schedule?.academicPeriod?.schoolYear,
-        };
-      })
-      .filter(Boolean);
-
-    // Filter by schoolYear and program if provided
-    if (schoolYear) {
-      reportData = reportData.filter(
-        (item) => item.latestSchoolYear === schoolYear
-      );
-    }
-
-    res.json({
-      error: false,
-      reportName: "Graduated Students Report",
-      generatedAt: new Date(),
-      totalRecords: reportData.length,
-      filters: { schoolYear, program },
-      data: reportData,
-    });
-  } catch (error) {
-    console.error("Error generating graduated students report:", error);
-    res.status(500).json({
-      error: true,
-      message: "Error generating report",
-      details: error.message,
-    });
-  }
-};
-
-// Report 17: Archived Records Report
-const getArchivedRecordsReport = async (req, res) => {
-  try {
-    const { recordType, schoolYear } = req.query;
-
-    const reportData = {
-      users: [],
-      courses: [],
-      schedules: [],
-      enrollments: [],
-    };
-
-    if (!recordType || recordType === "users") {
-      const archivedUsers = await prisma.users.findMany({
-        where: {
-          deletedAt: { not: null },
-        },
-        select: {
-          userId: true,
-          firstName: true,
-          middleName: true,
-          lastName: true,
-          email: true,
-          role: true,
-          status: true,
-          createdAt: true,
-          deletedAt: true,
-        },
-        orderBy: {
-          deletedAt: "desc",
-        },
-      });
-
-      reportData.users = archivedUsers.map((user) => ({
-        userId: user.userId,
-        fullName: `${user.firstName}${
-          user.middleName ? " " + user.middleName : ""
-        } ${user.lastName}`,
-        email: user.email,
-        role: user.role,
-        status: user.status,
-        createdAt: user.createdAt,
-        archivedAt: user.deletedAt,
-      }));
-    }
-
-    if (!recordType || recordType === "courses") {
-      const archivedCourses = await prisma.course.findMany({
-        where: {
-          deletedAt: { not: null },
-        },
-        select: {
-          courseCode: true,
-          courseName: true,
-          units: true,
-          yearLevel: true,
-          createdAt: true,
-          deletedAt: true,
-        },
-        orderBy: {
-          deletedAt: "desc",
-        },
-      });
-
-      reportData.courses = archivedCourses;
-    }
-
-    if (!recordType || recordType === "schedules") {
-      let whereClause = {
-        deletedAt: { not: null },
-      };
-
-      if (schoolYear) {
-        whereClause.academicPeriod = {
-          schoolYear: schoolYear,
-        };
-      }
-
-      const archivedSchedules = await prisma.schedule.findMany({
-        where: whereClause,
-        include: {
-          course: {
-            select: {
-              courseCode: true,
-              courseName: true,
-            },
-          },
-          academicPeriod: {
-            select: {
-              name: true,
-              schoolYear: true,
-            },
-          },
-        },
-        orderBy: {
-          deletedAt: "desc",
-        },
-      });
-
-      reportData.schedules = archivedSchedules.map((schedule) => ({
-        scheduleId: schedule.id,
-        courseCode: schedule.course?.courseCode,
-        courseName: schedule.course?.courseName,
-        section: schedule.section,
-        academicPeriod: schedule.academicPeriod?.name,
-        schoolYear: schedule.academicPeriod?.schoolYear,
-        archivedAt: schedule.deletedAt,
-      }));
-    }
-
-    const totalRecords =
-      reportData.users.length +
-      reportData.courses.length +
-      reportData.schedules.length +
-      reportData.enrollments.length;
-
-    res.json({
-      error: false,
-      reportName: "Archived Records Report",
-      generatedAt: new Date(),
-      totalRecords: totalRecords,
-      summary: {
-        archivedUsers: reportData.users.length,
-        archivedCourses: reportData.courses.length,
-        archivedSchedules: reportData.schedules.length,
-        archivedEnrollments: reportData.enrollments.length,
-      },
-      filters: { recordType, schoolYear },
-      data: reportData,
-    });
-  } catch (error) {
-    console.error("Error generating archived records report:", error);
     res.status(500).json({
       error: true,
       message: "Error generating report",
@@ -2048,7 +2187,4 @@ export {
   getEnrollmentRequestsLog,
   getFeeStructureReport,
   getUserAccountActivity,
-  getGraduatedStudentsReport,
-  getArchivedRecordsReport,
-  getProgramEnrollmentTrends,
 };
