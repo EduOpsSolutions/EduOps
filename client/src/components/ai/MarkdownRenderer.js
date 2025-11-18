@@ -52,24 +52,24 @@ function MarkdownRenderer({ content }) {
           .map((cell) => cell.trim())
       );
 
-      // Build table HTML
-      let tableHtml = '<div class="overflow-x-auto my-3"><table class="min-w-full border-collapse border border-gray-300 bg-white">';
+      // Build table HTML with dark mode support
+      let tableHtml = '<div class="overflow-x-auto my-3"><table class="min-w-full border-collapse border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">';
 
       // Header
-      tableHtml += '<thead class="bg-gray-700"><tr>';
+      tableHtml += '<thead class="bg-gray-700 dark:bg-gray-900"><tr>';
       headers.forEach((header, i) => {
         const align = alignments[i] || 'left';
-        tableHtml += `<th class="border border-gray-400 px-3 py-2 text-${align} font-semibold text-sm text-white">${header}</th>`;
+        tableHtml += `<th class="border border-gray-400 dark:border-gray-600 px-3 py-2 text-${align} font-semibold text-sm text-white dark:text-gray-200">${header}</th>`;
       });
       tableHtml += '</tr></thead>';
 
       // Body
-      tableHtml += '<tbody class="bg-white">';
+      tableHtml += '<tbody class="bg-white dark:bg-gray-800">';
       dataRows.forEach((row) => {
-        tableHtml += '<tr class="hover:bg-gray-50">';
+        tableHtml += '<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">';
         row.forEach((cell, i) => {
           const align = alignments[i] || 'left';
-          tableHtml += `<td class="border border-gray-300 px-3 py-2 text-${align} text-sm text-gray-800">${cell}</td>`;
+          tableHtml += `<td class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-${align} text-sm text-gray-800 dark:text-gray-200">${cell}</td>`;
         });
         tableHtml += '</tr>';
       });
@@ -81,7 +81,7 @@ function MarkdownRenderer({ content }) {
     // Inline code (`code`)
     html = html.replace(
       /`([^`]+)`/g,
-      '<code class="bg-gray-200 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>'
+      '<code class="bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>'
     );
 
     // Headers
