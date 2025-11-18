@@ -316,6 +316,7 @@ model payments {
   transactionId       String              @unique // Format (PAY-YYYYMMDD-XXXXX)
   paymentIntentId     String? // PayMongo payment intent ID (pi_xxxxx) for matching
   referenceNumber     String? // PayMongo reference ID (pay_xxxxx) 
+  idempotencyKey      String?             @unique // UUID for PayMongo idempotency
   feeId               String?
   enrollmentRequestId String?
   courseId            String?

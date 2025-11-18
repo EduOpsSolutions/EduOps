@@ -1,5 +1,6 @@
 import pkg from "@prisma/client";
 const { PrismaClient } = pkg;
+import { v4 as uuidv4 } from "uuid";
 import {
   PAYMENT_STATUS,
   PAYMENT_INCLUDES,
@@ -691,6 +692,9 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
       }
     }
 
+    // Generate idempotency key for PayMongo requests
+    const idempotencyKey = uuidv4();
+    
     // Log final values used for payment creation
     console.log('[PaymentService] Final courseId for payment:', finalCourseId, 'Final academicPeriodId:', finalAcademicPeriodId);
     const payment = await prisma.payments.create({
@@ -706,6 +710,7 @@ export const sendPaymentLinkViaEmail = async (paymentData) => {
         enrollmentRequestId: enrollmentData?.id || null,
         courseId: finalCourseId,
         academicPeriodId: finalAcademicPeriodId,
+        idempotencyKey: idempotencyKey, // Store idempotency key
       },
     });
 
