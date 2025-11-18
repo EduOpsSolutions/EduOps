@@ -385,33 +385,36 @@ const getFinancialAssessmentReport = async (req, res) => {
 // Report 3: Grade Distribution Report
 const getGradeDistributionReport = async (req, res) => {
   try {
-    const { periodId, courseId, gradeRange } = req.query;
+    const { periodId, Grade } = req.query;
+    // Handle courseIds as array (can be sent multiple times in query string)
+    const courseIds = req.query.courseIds
+      ? Array.isArray(req.query.courseIds)
+        ? req.query.courseIds
+        : [req.query.courseIds]
+      : [];
 
-    let whereClause = {
-      deletedAt: null,
-      grade: { not: null },
-    };
+    let whereClause = {};
 
     if (periodId) {
-      whereClause.schedule = {
-        periodId: periodId,
-        deletedAt: null,
-      };
+      whereClause.periodId = periodId;
     }
 
-    if (courseId) {
-      whereClause.schedule = {
-        ...whereClause.schedule,
-        courseId: courseId,
-      };
+    if (courseIds.length > 0) {
+      whereClause.courseId = { in: courseIds };
     }
 
-    const grades = await prisma.user_schedule.findMany({
+    // Filter by grade if specified (Pass, Fail, or all)
+    if (Grade && Grade !== "All" && Grade !== null && Grade !== "null") {
+      whereClause.grade = Grade;
+    }
+
+    const grades = await prisma.student_grade.findMany({
       where: whereClause,
       select: {
         grade: true,
-        remarks: true,
-        user: {
+        visibility: true,
+        createdAt: true,
+        student: {
           select: {
             userId: true,
             firstName: true,
@@ -419,69 +422,48 @@ const getGradeDistributionReport = async (req, res) => {
             lastName: true,
           },
         },
-        schedule: {
+        course: {
           select: {
-            course: {
-              select: {
-                courseCode: true,
-                courseName: true,
-                yearLevel: true,
-              },
-            },
-            academicPeriod: {
-              select: {
-                name: true,
-                schoolYear: true,
-              },
-            },
+            id: true,
+            name: true,
           },
         },
       },
     });
 
     // Calculate grade distribution
-    const gradeDistribution = {};
-    const gradeRanges = {
-      "1.0-1.5": { min: 1.0, max: 1.5, count: 0 },
-      "1.6-2.0": { min: 1.6, max: 2.0, count: 0 },
-      "2.1-2.5": { min: 2.1, max: 2.5, count: 0 },
-      "2.6-3.0": { min: 2.6, max: 3.0, count: 0 },
-      "3.1-5.0": { min: 3.1, max: 5.0, count: 0 },
+    const gradeDistribution = {
+      Pass: 0,
+      Fail: 0,
+      NoGrade: 0,
     };
 
     const reportData = grades.map((g) => {
-      const gradeValue = parseFloat(g.grade);
-
       // Count for distribution
-      for (const [range, { min, max }] of Object.entries(gradeRanges)) {
-        if (gradeValue >= min && gradeValue <= max) {
-          gradeRanges[range].count++;
-          break;
-        }
+      if (g.grade) {
+        gradeDistribution[g.grade]++;
       }
 
       return {
-        studentId: g.user?.userId,
-        fullName: `${g.user?.firstName}${
-          g.user?.middleName ? " " + g.user?.middleName : ""
-        } ${g.user?.lastName}`,
-        courseCode: g.schedule?.course?.courseCode,
-        courseName: g.schedule?.course?.courseName,
-        yearLevel: g.schedule?.course?.yearLevel,
-        academicPeriod: g.schedule?.academicPeriod?.name,
-        schoolYear: g.schedule?.academicPeriod?.schoolYear,
-        grade: gradeValue,
-        remarks: g.remarks,
+        studentId: g.student?.userId,
+        fullName: `${g.student?.firstName}${
+          g.student?.middleName ? " " + g.student?.middleName : ""
+        } ${g.student?.lastName}`,
+        courseId: g.course?.id,
+        courseName: g.course?.name,
+        grade: g.grade,
+        visibility: g.visibility,
+        createdAt: g.createdAt,
       };
     });
 
     res.json({
       error: false,
-      reportName: "Grade Distribution Report",
+      reportName: "Grades Summary Report",
       generatedAt: new Date(),
       totalRecords: reportData.length,
-      distribution: gradeRanges,
-      filters: { periodId, courseId, gradeRange },
+      distribution: gradeDistribution,
+      filters: { periodId, courseIds, Grade },
       data: reportData,
     });
   } catch (error) {
