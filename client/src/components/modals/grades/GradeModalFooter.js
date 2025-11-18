@@ -13,6 +13,7 @@ function GradeModalFooter({
   const csvFileInputRef = useRef(null);
 
   const handleCSVUpload = (file) => {
+  console.log('handleCSVUpload called with file:', file);
     if (!file) return;
 
     Swal.fire({
@@ -26,41 +27,40 @@ function GradeModalFooter({
 
     const reader = new FileReader();
     reader.onload = (event) => {
+  console.log('reader.onload triggered');
+  console.log('Raw CSV text:', event.target.result);
       try {
         const csvText = event.target.result;
         const rows = csvText.split('\n');
         const gradesData = [];
         const startRow = rows[0].includes('ID') || rows[0].includes('StudentId') ? 1 : 0;
 
+        const validGrades = ['PASS', 'FAIL', 'NOGRADE'];
         for (let i = startRow; i < rows.length; i++) {
           const row = rows[i].trim();
           if (!row) continue;
 
           const [studentId, grade] = row.split(',');
           if (studentId && grade) {
-            gradesData.push({
-              studentId: studentId.trim(),
-              grade: grade.trim().toUpperCase()
-            });
+            // Ensure studentId matches API response exactly
+            const cleanStudentId = studentId.trim().toUpperCase();
+            const gradeValue = grade.trim().toUpperCase();
+            if (validGrades.includes(gradeValue)) {
+              gradesData.push({
+                studentId: cleanStudentId,
+                grade: gradeValue
+              });
+            }
           }
         }
 
         if (gradesData.length > 0) {
-          setLocalGrades(prev => {
-            const updatedGrades = [...prev];
+          // Merge grades with previous if needed
+          // For now, just use the new grades from CSV
+          setLocalGrades(gradesData);
 
-            gradesData.forEach(({ studentId, grade }) => {
-              const existingIndex = updatedGrades.findIndex(item => item.studentId === studentId);
-
-              if (existingIndex >= 0) {
-                updatedGrades[existingIndex].grade = grade;
-              } else {
-                updatedGrades.push({ studentId, grade });
-              }
-            });
-
-            return updatedGrades;
-          });
+          // Log the parsed grades array for verification
+          console.log('Parsed gradesData:', gradesData);
 
           setChangesMade(true);
           Swal.fire({
@@ -101,7 +101,7 @@ function GradeModalFooter({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between -mt-4 w-full gap-1 sm:gap-2">
+    <div className="flex flex-col sm:flex-row items-center justify-between -mt-4 w-full gap-4 sm:gap-2">
       <div className="flex flex-col xs:flex-row sm:flex-row items-center w-full sm:w-auto gap-1 sm:gap-2">
         <div className="flex items-center">
           <label htmlFor="inline-checkbox" className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-300">

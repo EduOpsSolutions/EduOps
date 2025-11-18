@@ -9,8 +9,10 @@ function GradeStudentsTable({
   handleDocumentUpload,
   handleViewDocument,
   hasPendingFile,
-  getPendingFile
+  getPendingFile,
+  localGrades
 }) {
+  // Debug: print localGrades prop on every render
   // Use a ref to keep track of file inputs for each student
   const fileInputRefs = useRef({});
 
@@ -36,13 +38,13 @@ function GradeStudentsTable({
 
   return (
     <div className="overflow-x-auto">
-      <table class="table-fixed text-base text-left rtl:text-right text-black mx-auto w-full min-w-[600px]">
+  <table class="table-auto text-base text-left rtl:text-right text-black mx-auto w-full min-w-0">
         <thead class="text-base text-black text-center border-b-dark-red-2 border-b-2">
           <tr>
-            <th scope="col" className="p-2 font-normal w-[12%] sm:w-[15%] text-left"> ID </th>
-            <th scope="col" className="p-2 font-normal w-[20%] sm:w-[25%] text-left"> Name </th>
-            <th scope="col" className="p-2 font-normal w-[38%] sm:w-[35%]"> Document </th>
-            <th scope="col" className="p-2 font-normal w-[30%] sm:w-[25%]"> Status </th>
+            <th scope="col" className="p-2 font-normal min-w-0 text-left"> ID </th>
+            <th scope="col" className="p-2 font-normal min-w-0 text-left"> Name </th>
+            <th scope="col" className="p-2 font-normal min-w-0"> Document </th>
+            <th scope="col" className="p-2 font-normal min-w-0"> Status </th>
           </tr>
         </thead>
         <tbody className="text-center">
@@ -62,8 +64,8 @@ function GradeStudentsTable({
                 
                 return (
                 <tr key={uniqueStudentKey}>
-                  <td className="px-2 sm:px-3 py-3 sm:py-4 text-left font-medium text-base"> {student.user ? student.user.userId : student.userId || gradeId} </td>
-                  <td className="px-2 sm:px-3 py-3 sm:py-4 text-left font-medium text-base"> {student.user
+                  <td className="px-2 sm:px-3 py-3 sm:py-4 text-left font-medium text-base truncate max-w-[120px]" title={student.user ? student.user.userId : student.userId || gradeId}> {student.user ? student.user.userId : student.userId || gradeId} </td>
+                  <td className="px-2 sm:px-3 py-3 sm:py-4 text-left font-medium text-base truncate max-w-[140px]" title={student.user ? `${student.user.firstName || ''} ${student.user.middleName || ''} ${student.user.lastName || ''}`.trim() : ''}> {student.user
                     ? `${student.user.firstName || ''} ${student.user.middleName || ''} ${student.user.lastName || ''}`.trim()
                     : ''} </td>
                   <td className="px-1 sm:px-2 py-3 sm:py-4 text-center">
@@ -102,20 +104,37 @@ function GradeStudentsTable({
                   </td>
                   <td className="px-1 sm:px-2 py-3 sm:py-4 text-center">
                     {(() => {
-                      const grade = getStudentGrade(gradeId, student.user?.id || student.userId);
-                      let mappedGrade = 'ng';
-                      if (grade === 'Pass') mappedGrade = 'pass';
-                      else if (grade === 'Fail') mappedGrade = 'fail';
-                      else if (grade === 'NoGrade' || grade === null || grade === undefined) mappedGrade = 'ng';
-                      else if (grade === 'pass' || grade === 'fail' || grade === 'ng') mappedGrade = grade;
+                      // Match CSV studentId to student.user.userId for instant UI update
+                      let grade = null;
+                      if (localGrades && Array.isArray(localGrades)) {
+                        const localGrade = localGrades.find(item =>
+                          item.studentId === student.user?.userId || item.studentId === student.userId
+                        );
+                        if (localGrade) {
+                          // Map CSV values to UI values
+                          if (localGrade.grade === 'PASS') grade = 'pass';
+                          else if (localGrade.grade === 'FAIL') grade = 'fail';
+                          else if (localGrade.grade === 'NOGRADE') grade = 'ng';
+                          else grade = localGrade.grade.toLowerCase();
+                        }
+                      }
+                      // Fallback to getStudentGrade if not found in localGrades
+                      if (grade === null || grade === undefined) {
+                        grade = getStudentGrade(gradeId, student.user?.id || student.userId);
+                        // Map backend values to UI values
+                        if (grade === 'Pass') grade = 'pass';
+                        else if (grade === 'Fail') grade = 'fail';
+                        else if (grade === 'NoGrade' || grade === null || grade === undefined) grade = 'ng';
+                        else if (grade === 'pass' || grade === 'fail' || grade === 'ng') grade = grade;
+                      }
                       return (
                         <GradeStatusModalButton
                           name={`status-${gradeId}`}
                           id={`status-${gradeId}`}
-                          status={mappedGrade}
+                          status={grade}
                           options={gradeStatusOptions}
-                          defaultValue={mappedGrade}
-                          onChange={(e) => handleGradeChange(gradeId, e.target.value, student.user?.id || student.userId)}
+                          defaultValue={grade}
+                          onChange={value => handleGradeChange(gradeId, value, student.user?.id || student.userId)}
                         />
                       );
                     })()}

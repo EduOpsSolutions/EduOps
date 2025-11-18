@@ -9,8 +9,14 @@ import courseRequisiteController from '../../controller/course_requisite_control
 import express from 'express';
 const router = express.Router();
 
-router.get('/', 
+router.get('/',
     courseRequisiteController.listRequisites
+);
+
+router.get('/check-student',
+    verifyToken,
+    validateIsActiveUser,
+    courseRequisiteController.checkStudentRequisites
 );
 
 router.post('/', 

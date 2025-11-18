@@ -3,11 +3,12 @@ import {
   createEnrollmentRequest,
   getEnrollmentRequests,
   trackEnrollment,
+  trackEnrollmentByUserEmail,
   updateEnrollmentPaymentProof,
   updateEnrollmentStatus,
   updateEnrollment,
   checkEmailExists,
-  getStudentEnrollments
+  getStudentEnrollments,
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
 import { verifyToken } from "../../utils/verifyToken.js";
@@ -31,7 +32,15 @@ router.put(
 );
 
 // Public endpoint to check if email is already used in an enrollment request
-router.get('/check-email', checkEmailExists);
+router.get("/check-email", checkEmailExists);
+
+// Logged-in user route to track their enrollment
+router.get(
+  "/track/email/:email",
+  verifyToken,
+  validateIsActiveUser,
+  trackEnrollmentByUserEmail
+);
 
 // Admin routes
 router.get(
