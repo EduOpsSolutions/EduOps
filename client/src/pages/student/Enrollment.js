@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import UserNavbar from '../../components/navbars/UserNav';
-import useEnrollmentStore from '../../stores/enrollmentProgressStore';
-import EnrollmentProgressBar from '../../components/enrollment/ProgressBar';
-import Swal from 'sweetalert2';
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import UserNavbar from "../../components/navbars/UserNav";
+import useEnrollmentStore from "../../stores/enrollmentProgressStore";
+import useAuthStore from "../../stores/authStore";
+import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
+import Swal from "sweetalert2";
 
 function Enrollment() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function Enrollment() {
     isStepCompleted,
     isStepCurrent,
     fetchEnrollmentData,
+    fetchEnrollmentDataByUserId,
     setPaymentProof,
     uploadPaymentProof,
     fullName,
@@ -29,9 +31,22 @@ function Enrollment() {
     coursePrice,
   } = useEnrollmentStore();
 
+  const { user, isAuthenticated } = useAuthStore();
+
   useEffect(() => {
-    fetchEnrollmentData();
-  }, [fetchEnrollmentData]);
+    // If user is logged in and no enrollment data is present, try fetching by userId
+    if (isAuthenticated && user?.email && !enrollmentId) {
+      fetchEnrollmentDataByUserId(user.email);
+    } else {
+      fetchEnrollmentData();
+    }
+  }, [
+    fetchEnrollmentData,
+    fetchEnrollmentDataByUserId,
+    isAuthenticated,
+    user,
+    enrollmentId,
+  ]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
@@ -41,22 +56,22 @@ function Enrollment() {
     try {
       await uploadPaymentProof();
     } catch (error) {
-      console.error('Error uploading payment proof:', error);
+      console.error("Error uploading payment proof:", error);
     }
   };
 
   // Helper component for status indicators
   const StatusIndicator = ({ type, children }) => {
     const colors = {
-      uploading: 'bg-blue-50 border-blue-200 text-blue-800',
-      success: 'bg-green-50 border-green-200 text-green-800',
+      uploading: "bg-blue-50 border-blue-200 text-blue-800",
+      success: "bg-green-50 border-green-200 text-green-800",
     };
 
     return (
       <div className={`mt-2 p-2 rounded-md ${colors[type]}`}>
         <p className="text-sm flex items-center">
           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            {type === 'uploading' ? (
+            {type === "uploading" ? (
               <circle
                 className="opacity-25"
                 cx="12"
@@ -81,7 +96,7 @@ function Enrollment() {
 
   // Handle Pay Now - redirect to payment form to create PayMongo link
   const handlePayNow = () => {
-    navigate('/paymentForm');
+    navigate("/paymentForm");
   };
 
   // Copy Student ID to clipboard
@@ -89,18 +104,18 @@ function Enrollment() {
     try {
       await navigator.clipboard.writeText(studentId);
       Swal.fire({
-        icon: 'success',
-        title: 'Copied!',
-        text: 'Student ID copied to clipboard',
+        icon: "success",
+        title: "Copied!",
+        text: "Student ID copied to clipboard",
         timer: 1500,
         showConfirmButton: false,
       });
     } catch (err) {
-      console.error('Failed to copy:', err);
+      console.error("Failed to copy:", err);
       Swal.fire({
-        icon: 'error',
-        title: 'Copy Failed',
-        text: 'Please copy manually',
+        icon: "error",
+        title: "Copy Failed",
+        text: "Please copy manually",
         timer: 2000,
         showConfirmButton: false,
       });
@@ -127,7 +142,7 @@ function Enrollment() {
       hasPaymentProof &&
       !paymentProof &&
       !isUploadingPaymentProof &&
-      enrollmentStatus?.toLowerCase() !== 'rejected'
+      enrollmentStatus?.toLowerCase() !== "rejected"
     ) {
       return (
         <StatusIndicator type="success">
@@ -156,7 +171,7 @@ function Enrollment() {
   if (!enrollmentId) {
     return (
       <>
-        <UserNavbar role="public" />
+        <UserNavbar role={isAuthenticated && user ? user.role : "public"} />
         <div className="bg_custom bg-white-yellow-tone">
           <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
             <div className="w-full max-w-7xl bg-white shadow-lg border border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
@@ -199,7 +214,7 @@ function Enrollment() {
 
   return (
     <>
-      <UserNavbar role="public" />
+      <UserNavbar role={isAuthenticated && user ? user.role : "public"} />
       <div className="bg_custom bg-white-yellow-tone">
         <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
           <div className="w-full max-w-7xl bg-white shadow-lg border border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
@@ -263,36 +278,36 @@ function Enrollment() {
                   <span className="text-gray-600 font-medium">Status:</span>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      enrollmentStatus?.toLowerCase() === 'pending'
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : enrollmentStatus?.toLowerCase() === 'verified'
-                        ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                        : enrollmentStatus?.toLowerCase() === 'payment_pending'
-                        ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                        : enrollmentStatus?.toLowerCase() === 'approved'
-                        ? 'bg-violet-50 text-violet-700 border border-violet-200'
-                        : enrollmentStatus?.toLowerCase() === 'completed'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : enrollmentStatus?.toLowerCase() === 'rejected'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : 'bg-slate-50 text-slate-700 border border-slate-200'
+                      enrollmentStatus?.toLowerCase() === "pending"
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : enrollmentStatus?.toLowerCase() === "verified"
+                        ? "bg-sky-50 text-sky-700 border border-sky-200"
+                        : enrollmentStatus?.toLowerCase() === "payment_pending"
+                        ? "bg-orange-50 text-orange-700 border border-orange-200"
+                        : enrollmentStatus?.toLowerCase() === "approved"
+                        ? "bg-violet-50 text-violet-700 border border-violet-200"
+                        : enrollmentStatus?.toLowerCase() === "completed"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : enrollmentStatus?.toLowerCase() === "rejected"
+                        ? "bg-rose-50 text-rose-700 border border-rose-200"
+                        : "bg-slate-50 text-slate-700 border border-slate-200"
                     }`}
                   >
-                    {enrollmentStatus?.toLowerCase() === 'rejected'
+                    {enrollmentStatus?.toLowerCase() === "rejected"
                       ? currentStep === 3
-                        ? 'PAYMENT REJECTED'
-                        : 'FORM REJECTED'
-                      : enrollmentStatus?.replace(/_/g, ' ').toUpperCase()}
+                        ? "PAYMENT REJECTED"
+                        : "FORM REJECTED"
+                      : enrollmentStatus?.replace(/_/g, " ").toUpperCase()}
                   </span>
                 </div>
                 {createdAt && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 font-medium">Applied:</span>
                     <span className="text-gray-800">
-                      {new Date(createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
+                      {new Date(createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
                       })}
                     </span>
                   </div>
@@ -334,14 +349,14 @@ function Enrollment() {
                       <label
                         className={`inline-block text-sm border py-1 px-3 rounded text-center whitespace-nowrap transition-colors ${
                           isUploadingPaymentProof
-                            ? 'border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'border-dark-red bg-german-red text-white hover:bg-dark-red cursor-pointer'
+                            ? "border-gray-300 bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "border-dark-red bg-german-red text-white hover:bg-dark-red cursor-pointer"
                         }`}
                         htmlFor="paymentProof"
                       >
                         {isUploadingPaymentProof
-                          ? 'Uploading...'
-                          : 'Choose File'}
+                          ? "Uploading..."
+                          : "Choose File"}
                       </label>
                       <input
                         className="hidden"
@@ -355,10 +370,10 @@ function Enrollment() {
                       />
                       <div className="text-sm text-black bg-white py-1 px-3 rounded border border-gray-300 truncate flex-1">
                         {isUploadingPaymentProof
-                          ? 'Uploading file...'
+                          ? "Uploading file..."
                           : paymentProof
                           ? paymentProof.name
-                          : 'No file chosen'}
+                          : "No file chosen"}
                       </div>
                     </div>
                   </div>
@@ -410,7 +425,7 @@ function Enrollment() {
                         </svg>
                         <span>Student ID:&nbsp;</span>
                         <strong className="mr-2">
-                          {studentId || 'Pending...'}
+                          {studentId || "Pending..."}
                         </strong>
                         {studentId && (
                           <button
@@ -490,7 +505,7 @@ function Enrollment() {
                   onClick={handlePayNow}
                   className="px-8 py-3 bg-gradient-to-r from-german-red to-dark-red hover:from-dark-red hover:to-german-red text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl inline-flex items-center justify-center space-x-3"
                 >
-                  <span>{coursePrice ? `Pay Now` : 'Proceed to Payment'}</span>
+                  <span>{coursePrice ? `Pay Now` : "Proceed to Payment"}</span>
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -521,11 +536,11 @@ function Enrollment() {
             {/* Contact Information Footer */}
             <div className="mt-8 text-sm text-gray-600 pt-4 text-center">
               <p>
-                For enrollment concerns please contact:{' '}
+                For enrollment concerns please contact:{" "}
                 <span className="font-medium">(+63) 97239232223</span>
               </p>
               <p>
-                Email:{' '}
+                Email:{" "}
                 <span className="font-medium">
                   info@sprachinstitut-cebu.inc
                 </span>

@@ -16,7 +16,7 @@ export const useEnrollmentPeriodSearchStore = createSearchStore({
       // AND logic: all non-empty fields must match
       if (searchParams.batch && !(period.batchName || '').toLowerCase().includes(searchParams.batch.toLowerCase())) return false;
       if (searchParams.year && !(period.year || '').toString().includes(searchParams.year.toString())) return false;
-      if (searchParams.batchStatus && (period.status || '').toLowerCase() !== searchParams.batchStatus.toLowerCase()) return false;
+      if (searchParams.batchStatus && (period.batchStatus || '').toLowerCase() !== searchParams.batchStatus.toLowerCase()) return false;
       if (searchParams.enrollmentStatus && (period.enrollmentStatus || '').toLowerCase() !== searchParams.enrollmentStatus.toLowerCase()) return false;
       return true;
     });
@@ -59,21 +59,38 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
             periodStatus = 'Ended';
           }
 
-          // Determine enrollment status (database status field)
-          const enrollmentOpen =
-            period.status === 'ongoing' || period.status === 'upcoming';
+          // Determine enrollment status based on enrollment dates
+          const enrollmentOpenDate = period.enrollmentOpenAt ? new Date(period.enrollmentOpenAt) : null;
+          const enrollmentCloseDate = period.enrollmentCloseAt ? new Date(period.enrollmentCloseAt) : null;
+
+          let enrollmentStatus;
+          if (periodStatus === 'Ended') {
+            enrollmentStatus = 'Ended';
+          } else if (enrollmentOpenDate && enrollmentCloseDate) {
+            if (now < enrollmentOpenDate) {
+              enrollmentStatus = 'Upcoming';
+            } else if (now >= enrollmentOpenDate && now <= enrollmentCloseDate) {
+              enrollmentStatus = 'Open';
+            } else {
+              enrollmentStatus = 'Closed';
+            }
+          } else if (period.isEnrollmentClosed) {
+            enrollmentStatus = 'Closed';
+          } else {
+            enrollmentStatus = 'Open';
+          }
 
           // Display status combines both period and enrollment info
           let displayStatus;
           if (periodStatus === 'Ended') {
             displayStatus = 'Ended';
           } else if (periodStatus === 'Ongoing') {
-            displayStatus = enrollmentOpen
+            displayStatus = enrollmentStatus === 'Open'
               ? 'Ongoing'
               : 'Ongoing (Enrollment Closed)';
           } else {
             // Upcoming
-            displayStatus = enrollmentOpen
+            displayStatus = enrollmentStatus === 'Open'
               ? 'Upcoming'
               : 'Upcoming (Enrollment Closed)';
           }
@@ -86,8 +103,8 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
             startAt: period.startAt,
             endAt: period.endAt,
             status: displayStatus,
-            periodStatus: periodStatus, // The actual period status
-            enrollmentOpen: enrollmentOpen, // Whether enrollment is open
+            batchStatus: periodStatus, // The actual period status (Ongoing/Ended/Upcoming)
+            enrollmentStatus: enrollmentStatus, // The enrollment status (Open/Closed/Upcoming/Ended)
             year: new Date(period.startAt).getFullYear().toString(),
             createdAt: period.createdAt,
           };

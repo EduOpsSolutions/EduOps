@@ -102,9 +102,112 @@ export const deleteRequisite = async (req, res) => {
   }
 };
 
+// Check if a student has met the prerequisites/corequisites for courses
+export const checkStudentRequisites = async (req, res) => {
+  const { studentId, courseIds } = req.query;
+
+  try {
+    if (!studentId || !courseIds) {
+      return res.status(400).json({
+        error: "Missing studentId or courseIds query parameters.",
+      });
+    }
+
+    const ids = courseIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.status(400).json({ error: "No valid courseIds provided." });
+    }
+
+    // Fetch all requisites for the requested courses
+    const requisites = await prisma.course_requisite.findMany({
+      where: {
+        courseId: { in: ids },
+        deletedAt: null,
+      },
+      include: {
+        requisiteCourse: true,
+      },
+    });
+
+    // Fetch all student grades with Pass status
+    const passedCourses = await prisma.student_grade.findMany({
+      where: {
+        studentId: studentId,
+        grade: "Pass",
+      },
+      select: {
+        courseId: true,
+      },
+    });
+
+    const passedCourseIds = new Set(passedCourses.map((g) => g.courseId));
+
+    // Build result for each course
+    const result = ids.map((courseId) => {
+      const courseRequisites = requisites.filter((r) => r.courseId === courseId);
+
+      if (courseRequisites.length === 0) {
+        // No requisites = eligible
+        return {
+          courseId,
+          eligible: true,
+          missingPrerequisites: [],
+          missingCorequisites: [],
+        };
+      }
+
+      const prerequisites = courseRequisites.filter(
+        (r) => r.type === "prerequisite"
+      );
+      const corequisites = courseRequisites.filter(
+        (r) => r.type === "corequisite"
+      );
+
+      const missingPrerequisites = prerequisites
+        .filter((r) => !passedCourseIds.has(r.requisiteCourseId))
+        .map((r) => ({
+          id: r.requisiteCourse.id,
+          name: r.requisiteCourse.name,
+          type: "prerequisite",
+          ruleName: r.ruleName,
+        }));
+
+      const missingCorequisites = corequisites
+        .filter((r) => !passedCourseIds.has(r.requisiteCourseId))
+        .map((r) => ({
+          id: r.requisiteCourse.id,
+          name: r.requisiteCourse.name,
+          type: "corequisite",
+          ruleName: r.ruleName,
+        }));
+
+      // Student is eligible only if they have passed all prerequisites
+      // Corequisites can be taken at the same time, so they don't block enrollment
+      const eligible = missingPrerequisites.length === 0;
+
+      return {
+        courseId,
+        eligible,
+        missingPrerequisites,
+        missingCorequisites,
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error checking student requisites:", error);
+    res.status(500).json({ error: "Failed to check student requisites." });
+  }
+};
+
 export default {
   listRequisites,
   createRequisite,
   updateRequisite,
   deleteRequisite,
+  checkStudentRequisites,
 };

@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
-import ThinRedButton from '../buttons/ThinRedButton';
-import CreateEditScheduleModal from '../modals/schedule/CreateEditScheduleModal';
-import axiosInstance from '../../utils/axios';
-import { useEnrollmentPeriodStore } from '../../stores/enrollmentPeriodStore';
+import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import ThinRedButton from "../buttons/ThinRedButton";
+import CreateEditScheduleModal from "../modals/schedule/CreateEditScheduleModal";
+import axiosInstance from "../../utils/axios";
+import { useEnrollmentPeriodStore } from "../../stores/enrollmentPeriodStore";
 
 //Table after clicking a result from enrollment period
 function PeriodDetailsTable({
@@ -28,7 +28,7 @@ function PeriodDetailsTable({
       setIsLoadingTeachers(true);
       try {
         const resp = await axiosInstance.get(
-          '/users?role=teacher&status=active'
+          "/users?role=teacher&status=active"
         );
         setTeachers(resp.data?.data || resp.data || []);
       } catch (e) {
@@ -41,7 +41,7 @@ function PeriodDetailsTable({
     const fetchCourses = async () => {
       setIsLoadingCourses(true);
       try {
-        const resp = await axiosInstance.get('/courses');
+        const resp = await axiosInstance.get("/courses");
         setCourses(Array.isArray(resp.data) ? resp.data : []);
       } catch (e) {
         setCourses([]);
@@ -53,7 +53,7 @@ function PeriodDetailsTable({
     const fetchPeriods = async () => {
       setIsLoadingAcademicPeriods(true);
       try {
-        const resp = await axiosInstance.get('/academic-periods');
+        const resp = await axiosInstance.get("/academic-periods");
         const visible = (resp.data || [])
           .filter((p) => p && !p.deletedAt)
           .sort((a, b) => new Date(b.startAt) - new Date(a.startAt));
@@ -72,40 +72,40 @@ function PeriodDetailsTable({
 
   const handleOpenManage = (s) => {
     const toYmd = (val) => {
-      if (!val) return '';
-      if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val))
+      if (!val) return "";
+      if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val))
         return val;
       const d = new Date(val);
-      if (Number.isNaN(d.getTime())) return '';
-      return d.toISOString().split('T')[0];
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toISOString().split("T")[0];
     };
     const toHm = (val) => {
-      if (!val) return '';
-      if (typeof val === 'string' && /^\d{2}:\d{2}$/.test(val)) return val;
-      if (typeof val === 'string' && /^\d{2}:\d{2}:\d{2}/.test(val))
+      if (!val) return "";
+      if (typeof val === "string" && /^\d{2}:\d{2}$/.test(val)) return val;
+      if (typeof val === "string" && /^\d{2}:\d{2}:\d{2}/.test(val))
         return val.slice(0, 5);
       return String(val).slice(0, 5);
     };
     const event = {
       id: s.id,
-      courseId: s.course?.id || '',
-      courseName: s.course?.name || '',
-      academicPeriodId: selectedPeriod?.id || '',
-      academicPeriodName: `${selectedPeriod?.periodName || ''}${
-        selectedPeriod?.batchName ? ` - ${selectedPeriod.batchName}` : ''
+      courseId: s.course?.id || "",
+      courseName: s.course?.name || "",
+      academicPeriodId: selectedPeriod?.id || "",
+      academicPeriodName: `${selectedPeriod?.periodName || ""}${
+        selectedPeriod?.batchName ? ` - ${selectedPeriod.batchName}` : ""
       }`,
-      teacherId: s.teacher?.id || '',
+      teacherId: s.teacher?.id || "",
       teacherName: s.teacher
         ? `${s.teacher.firstName} ${s.teacher.lastName}`
-        : '',
-      location: s.location || '',
+        : "",
+      location: s.location || "",
       time_start: toHm(s.time_start),
       time_end: toHm(s.time_end),
-      days: s.days || '',
+      days: s.days || "",
       periodStart: toYmd(s.periodStart),
       periodEnd: toYmd(s.periodEnd),
-      notes: s.notes || '',
-      color: s.color || '#FFCF00',
+      notes: s.notes || "",
+      color: s.color || "#FFCF00",
     };
     setSelectedEvent(event);
     setShowScheduleModal(true);
@@ -121,7 +121,7 @@ function PeriodDetailsTable({
       if (selectedEvent?.id) {
         await axiosInstance.put(`/schedules/${selectedEvent.id}`, eventData);
       } else {
-        await axiosInstance.post('/schedules', eventData);
+        await axiosInstance.post("/schedules", eventData);
       }
       const { fetchPeriodCourses } = useEnrollmentPeriodStore.getState();
       await fetchPeriodCourses();
@@ -164,10 +164,62 @@ function PeriodDetailsTable({
       </div>
 
       <div className="mt-4">
-        <p className="text-lg sm:text-xl uppercase text-center mb-4">
-        {selectedPeriod.batchName} (
-          {new Date(selectedPeriod.startAt).getFullYear()})
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+          <p className="text-lg sm:text-xl uppercase text-center sm:text-left flex-grow">
+            {selectedPeriod.batchName} (
+            {new Date(selectedPeriod.startAt).getFullYear()})
+          </p>
+
+          {/* Show End Enrollment button only if enrollment is open */}
+          {selectedPeriod.enrollmentStatus === "Open" && (
+            <button
+              className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-2 px-4 text-sm font-semibold whitespace-nowrap"
+              onClick={async () => {
+                const result = await Swal.fire({
+                  title: "End Enrollment?",
+                  html: `Are you sure you want to end enrollment for <strong>${selectedPeriod.batchName}</strong>?<br><br>This will:<br>• Set enrollment status to Closed<br>• Set enrollment close date to now<br>• Prevent new enrollment requests`,
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonText: "Yes, end enrollment",
+                  cancelButtonText: "Cancel",
+                  confirmButtonColor: "#ff0000",
+                  cancelButtonColor: "#6b7280",
+                  reverseButtons: true,
+                });
+                if (result.isConfirmed) {
+                  const { endEnrollment, fetchPeriods, handleBackToResults } =
+                    useEnrollmentPeriodStore.getState();
+                  const response = await endEnrollment(selectedPeriod.id);
+                  if (response.success) {
+                    await Swal.fire({
+                      title: "Enrollment Ended!",
+                      text: "The enrollment period has been closed successfully.",
+                      icon: "success",
+                      confirmButtonColor: "#ff0000",
+                      timer: 2000,
+                      showConfirmButton: false,
+                    });
+                    await fetchPeriods();
+                    // Go back to results to show updated enrollment status
+                    handleBackToResults();
+                  } else {
+                    await Swal.fire({
+                      title: "Error!",
+                      text:
+                        response.error ||
+                        "Failed to end enrollment. Please try again.",
+                      icon: "error",
+                      confirmButtonColor: "#ff0000",
+                    });
+                  }
+                }
+              }}
+              aria-label="End enrollment"
+            >
+              End Enrollment
+            </button>
+          )}
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full table-auto">
@@ -213,10 +265,10 @@ function PeriodDetailsTable({
                                 <div className="text-gray-500">
                                   {s.teacher?.firstName && s.teacher?.lastName
                                     ? `${s.teacher.firstName} ${s.teacher.lastName}`
-                                    : ''}
+                                    : ""}
                                   {s.location
-                                    ? (s.teacher ? ' • ' : '') + s.location
-                                    : ''}
+                                    ? (s.teacher ? " • " : "") + s.location
+                                    : ""}
                                 </div>
                               </div>
                               <button
@@ -242,25 +294,25 @@ function PeriodDetailsTable({
                         className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
                         onClick={async () => {
                           const result = await Swal.fire({
-                            title: 'Delete Course?',
-                            text: 'Are you sure you want to remove this course from the period?',
-                            icon: 'warning',
+                            title: "Delete Course?",
+                            text: "Are you sure you want to remove this course from the period?",
+                            icon: "warning",
                             showCancelButton: true,
-                            confirmButtonText: 'Yes, delete',
-                            cancelButtonText: 'Cancel',
-                            confirmButtonColor: '#992525',
-                            cancelButtonColor: '#6b7280',
-                            reverseButtons: true
+                            confirmButtonText: "Yes, delete",
+                            cancelButtonText: "Cancel",
+                            confirmButtonColor: "#992525",
+                            cancelButtonColor: "#6b7280",
+                            reverseButtons: true,
                           });
                           if (result.isConfirmed) {
                             await onDeleteCourse(course.id);
                             await Swal.fire({
-                              title: 'Deleted!',
-                              text: 'The course has been removed from the period.',
-                              icon: 'success',
-                              confirmButtonColor: '#890E07',
+                              title: "Deleted!",
+                              text: "The course has been removed from the period.",
+                              icon: "success",
+                              confirmButtonColor: "#890E07",
                               timer: 2000,
-                              showConfirmButton: false
+                              showConfirmButton: false,
                             });
                           }
                         }}

@@ -40,6 +40,7 @@ model users {
   teacherSchedules    schedule[]            @relation("TeacherSchedules")
   studentSchedules    user_schedule[]       @relation("StudentSchedules")
   enrollments         student_enrollment[]  @relation("StudentEnrollments")
+  enrollmentRequests  enrollment_request[]  @relation("UserEnrollmentRequests")
   payments            payments[]
   adjustments         adjustments[]
   documentRequests    document_request[]    @relation("UserDocumentRequests")
@@ -55,6 +56,7 @@ model enrollment_request {
   enrollmentId     String   @unique
   enrollmentStatus String   @default("pending")
   studentId        String?  @map("student_id")
+  userId           String?
   firstName        String
   middleName       String?
   lastName         String
@@ -81,6 +83,7 @@ model enrollment_request {
   periodId         String?
 
   period   academic_period? @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  user     users?           @relation("UserEnrollmentRequests", fields: [userId], references: [id], onDelete: SetNull)
   // Relations
   payments payments[]
 }

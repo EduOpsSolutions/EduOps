@@ -154,9 +154,13 @@ export const getActiveAcademicPeriod = async (req, res) => {
 
 export const endEnrollment = async (req, res) => {
   try {
+    const now = new Date();
     const academicPeriod = await prisma.academic_period.update({
       where: { id: req.params.id },
-      data: { isEnrollmentClosed: true },
+      data: {
+        isEnrollmentClosed: true,
+        enrollmentCloseAt: now
+      },
     });
     res.json({
       message: "Enrollment ended successfully",
