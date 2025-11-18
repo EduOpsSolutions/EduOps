@@ -399,7 +399,9 @@ export const createDocumentRequest = async (req, res) => {
     // --- Infer courseId and batchId (academicPeriodId) if not provided ---
     let courseId = req.body.courseId;
     let batchId = req.body.batchId;
-    if (!courseId || !batchId) {
+
+    // Only try to infer courseId/batchId for students, not teachers
+    if (userRole === "student" && (!courseId || !batchId)) {
       let enrollmentRequest = await prisma.enrollment_request.findFirst({
         where: {
           studentId: studentId,
@@ -468,8 +470,10 @@ export const createDocumentRequest = async (req, res) => {
     const documentFeeAmount = documentTemplate?.amount || 0;
     const documentFeeName = documentTemplate?.documentName || "Document Fee";
 
-    if (documentFeeAmount > 0) {
-      // Ensure required fields are present
+    // Only create fee records for students
+    // Teachers will use standard fees applied directly without student_fee records
+    if (documentFeeAmount > 0 && userRole === "student") {
+      // Ensure required fields are present for students
       if (!courseId || !batchId) {
         throw new Error(
           "Unable to determine courseId or batchId for student fee."
@@ -486,6 +490,9 @@ export const createDocumentRequest = async (req, res) => {
         },
       });
     }
+
+    // Note: For teachers, the document fee is tracked in the document_request
+    // and will be handled through the payment system when they pay
 
     res.status(201).json({
       error: false,

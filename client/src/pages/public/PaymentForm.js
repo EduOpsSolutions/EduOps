@@ -649,12 +649,12 @@ function PaymentForm() {
                 onChange={handleInputChange}
                 readOnly={
                   isAuthenticated &&
-                  (user?.role === "teacher" || user?.role === "student") &&
+                  user?.role === "student" &&
                   formData.fee === "document_fee"
                 }
                 className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                   isAuthenticated &&
-                  (user?.role === "teacher" || user?.role === "student") &&
+                  user?.role === "student" &&
                   formData.fee === "document_fee"
                     ? "bg-gray-100"
                     : ""
