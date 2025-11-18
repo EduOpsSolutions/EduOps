@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaLock } from 'react-icons/fa';
 import { cn } from '../../utils/cn';
 
 const LabelledInputField = ({
@@ -32,7 +33,7 @@ const LabelledInputField = ({
         name={name}
         id={id}
         className={cn(
-          disabled && 'bg-gray-200',
+          disabled && 'bg-gray-100 cursor-not-allowed',
           'block py-2.5 px-2 w-full text-sm pl-2 text-gray-900 bg-transparent border-2 border-b-2 bg-white border-gray-300 rounded-md appearance-none dark:text-white dark:border-gray-600 dark:focus:border-dark-red focus:outline-none focus:ring-0 focus:border-dark-red peer',
           className
         )}
@@ -45,6 +46,11 @@ const LabelledInputField = ({
         maxLength={maxLength}
         {...rest}
       />
+      {disabled && (
+        <div className="absolute right-3 top-9 text-gray-500">
+          <FaLock size={14} />
+        </div>
+      )}
     </div>
   );
 };
