@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  BsFileEarmarkText,
   BsFileEarmarkBarGraph,
   BsFileEarmarkSpreadsheet,
   BsEye,
@@ -32,6 +31,9 @@ function Reports() {
   const [teachers, setTeachers] = useState([]);
   const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
   const [isTeachersDropdownOpen, setIsTeachersDropdownOpen] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
+  const [isStudentsDropdownOpen, setIsStudentsDropdownOpen] = useState(false);
   const [academicPeriodSearchTerm, setAcademicPeriodSearchTerm] = useState("");
   const [isAcademicPeriodsDropdownOpen, setIsAcademicPeriodsDropdownOpen] =
     useState(false);
@@ -107,6 +109,32 @@ function Reports() {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      const token = getToken();
+      const response = await axiosInstance.get(`/users/role/student`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = response.data;
+      console.log("Students fetched:", data);
+      console.log("Type of data:", Array.isArray(data), typeof data);
+
+      // Handle both array response and object with data property
+      if (Array.isArray(data)) {
+        setStudents(data);
+      } else if (data && !data.error && data.data) {
+        setStudents(data.data);
+      } else if (data && !data.error) {
+        setStudents([data]);
+      } else {
+        setStudents([]);
+      }
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      setStudents([]);
+    }
+  };
+
   const fetchCourses = async () => {
     try {
       const token = getToken();
@@ -153,11 +181,11 @@ function Reports() {
         },
         {
           name: "courseIds",
-          label: "Courses (Multi-select)",
+          label: "Filter by Courses (Optional)",
           type: "multiselect",
           source: "courses",
           searchable: true,
-          required: true,
+          required: false,
         },
         {
           name: "studentEnrollmentStatus",
@@ -175,13 +203,14 @@ function Reports() {
           label: "Account Status",
           type: "select",
           options: [
-            { value: null, label: "All" },
+            { value: "", label: "All" },
             { value: "active", label: "Active" },
             { value: "disabled", label: "Disabled" },
             { value: "inactive", label: "Inactive" },
             { value: "suspended", label: "Suspended" },
           ],
-          required: true,
+          default: "",
+          required: false,
         },
       ],
     },
@@ -201,10 +230,8 @@ function Reports() {
           label: "Academic Period",
           type: "select",
           source: "academicPeriods",
+          required: true,
         },
-        { name: "status", label: "Status", type: "text" },
-        { name: "minBalance", label: "Min Balance", type: "number" },
-        { name: "maxBalance", label: "Max Balance", type: "number" },
       ],
     },
     {
@@ -284,15 +311,29 @@ function Reports() {
       endpoint: "transaction-history",
       parameters: [
         {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
+          name: "startDate",
+          label: "Start Date",
+          type: "date",
+          required: true,
         },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
-        { name: "minAmount", label: "Min Amount", type: "number" },
-        { name: "maxAmount", label: "Max Amount", type: "number" },
+        {
+          name: "endDate",
+          label: "End Date",
+          type: "date",
+          required: true,
+        },
+        {
+          name: "minAmount",
+          label: "Min Amount (Optional)",
+          type: "number",
+          required: false,
+        },
+        {
+          name: "maxAmount",
+          label: "Max Amount (Optional)",
+          type: "number",
+          required: false,
+        },
       ],
     },
     {
@@ -323,26 +364,6 @@ function Reports() {
       ],
     },
     {
-      id: 7,
-      name: "Student Academic Progress",
-      description:
-        "Track student progress including completed units, GPA, and remaining requirements",
-      category: "Academic",
-      icon: <BsFileEarmarkText className="text-2xl" />,
-      color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "student-academic-progress",
-      parameters: [
-        { name: "studentId", label: "Student ID", type: "text" },
-        {
-          name: "periodId",
-          label: "Academic Period",
-          type: "select",
-          source: "academicPeriods",
-        },
-      ],
-    },
-    {
       id: 8,
       name: "Enrollment Period Analysis",
       description:
@@ -351,7 +372,15 @@ function Reports() {
       icon: <BsCalendar className="text-2xl" />,
       color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
       endpoint: "enrollment-period-analysis",
-      parameters: [{ name: "schoolYear", label: "School Year", type: "text" }],
+      parameters: [
+        {
+          name: "periodId",
+          label: "Academic Period",
+          type: "select",
+          source: "academicPeriods",
+          required: false,
+        },
+      ],
     },
     {
       id: 9,
@@ -381,14 +410,35 @@ function Reports() {
       id: 10,
       name: "Document Submission Status",
       description:
-        "Track status of required document submissions and pending validations",
+        "Track status of document requests and their fulfillment status",
       category: "Documents",
       icon: <BsFileEarmarkPdf className="text-2xl" />,
       color: "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300",
       endpoint: "document-submission-status",
       parameters: [
-        { name: "status", label: "Status", type: "text" },
-        { name: "studentId", label: "Student ID", type: "text" },
+        {
+          name: "status",
+          label: "Request Status",
+          type: "select",
+          options: [
+            { value: "", label: "All" },
+            { value: "in_process", label: "In Process" },
+            { value: "in_transit", label: "In Transit" },
+            { value: "delivered", label: "Delivered" },
+            { value: "failed", label: "Failed" },
+            { value: "fulfilled", label: "Fulfilled" },
+          ],
+          default: "",
+          required: false,
+        },
+        {
+          name: "studentIds",
+          label: "Students (Multi-select)",
+          type: "multiselect",
+          source: "students",
+          searchable: true,
+          required: false,
+        },
       ],
     },
     {
@@ -407,9 +457,8 @@ function Reports() {
           label: "Academic Period",
           type: "select",
           source: "academicPeriods",
+          required: true,
         },
-        { name: "courseId", label: "Course ID", type: "text" },
-        { name: "days", label: "Days", type: "text" },
       ],
     },
     {
@@ -425,15 +474,10 @@ function Reports() {
       parameters: [
         {
           name: "studentId",
-          label: "Student ID (Required)",
-          type: "text",
-          required: true,
-        },
-        {
-          name: "periodId",
-          label: "Academic Period",
+          label: "Student",
           type: "select",
-          source: "academicPeriods",
+          source: "students",
+          required: true,
         },
       ],
     },
@@ -460,7 +504,7 @@ function Reports() {
     {
       id: 14,
       name: "Fee Structure Report",
-      description: "Breakdown of all fees by program, year level, and fee type",
+      description: "Breakdown of all fees by course and fee type",
       category: "Financial",
       icon: <BsFileEarmarkBarGraph className="text-2xl" />,
       color:
@@ -472,8 +516,8 @@ function Reports() {
           label: "Academic Period",
           type: "select",
           source: "academicPeriods",
+          required: true,
         },
-        { name: "feeType", label: "Fee Type", type: "text" },
       ],
     },
     {
@@ -487,67 +531,74 @@ function Reports() {
       endpoint: "user-account-activity",
       parameters: [
         {
+          name: "startDate",
+          label: "Start Date",
+          type: "date",
+          required: true,
+        },
+        {
+          name: "endDate",
+          label: "End Date",
+          type: "date",
+          required: true,
+        },
+        {
           name: "role",
-          label: "Role",
+          label: "User Role",
           type: "select",
-          options: ["student", "teacher", "admin"],
+          options: [
+            { value: "", label: "All Roles" },
+            { value: "student", label: "Student" },
+            { value: "teacher", label: "Teacher" },
+            { value: "admin", label: "Admin" },
+          ],
+          default: "",
+          required: false,
         },
         {
-          name: "status",
-          label: "Status",
+          name: "logType",
+          label: "Log Type",
           type: "select",
-          options: ["active", "inactive", "disabled"],
+          options: [
+            { value: "", label: "All Types" },
+            { value: "user_activity", label: "User Activity" },
+            { value: "system_activity", label: "System Activity" },
+            { value: "api_response", label: "API Response" },
+            { value: "error_log", label: "Error Log" },
+            { value: "security_log", label: "Security Log" },
+            { value: "other", label: "Other" },
+          ],
+          default: "",
+          required: false,
         },
-        { name: "startDate", label: "Start Date", type: "date" },
-        { name: "endDate", label: "End Date", type: "date" },
-      ],
-    },
-    {
-      id: 16,
-      name: "Graduated Students Report",
-      description:
-        "List of students who have completed all requirements and graduation dates",
-      category: "Academic",
-      icon: <BsFileEarmarkText className="text-2xl" />,
-      color:
-        "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-      endpoint: "graduated-students",
-      parameters: [
-        { name: "schoolYear", label: "School Year", type: "text" },
-        { name: "program", label: "Program", type: "text" },
-      ],
-    },
-    {
-      id: 17,
-      name: "Archived Records Report",
-      description:
-        "Summary of archived student and course records by academic year",
-      category: "System",
-      icon: <BsFileEarmarkPdf className="text-2xl" />,
-      color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
-      endpoint: "archived-records",
-      parameters: [
         {
-          name: "recordType",
-          label: "Record Type",
+          name: "moduleType",
+          label: "Module",
           type: "select",
-          options: ["users", "courses", "schedules"],
+          options: [
+            { value: "", label: "All Modules" },
+            { value: "AUTH", label: "Authentication" },
+            { value: "ENROLLMENTS", label: "Enrollments" },
+            { value: "SCHEDULES", label: "Schedules" },
+            { value: "GRADING", label: "Grading" },
+            { value: "DOCUMENTS", label: "Documents" },
+            { value: "PAYMENTS", label: "Payments" },
+            { value: "REPORTS", label: "Reports" },
+            { value: "CONTENTS", label: "Contents" },
+            { value: "SYSTEM", label: "System" },
+            { value: "UNCATEGORIZED", label: "Uncategorized" },
+          ],
+          default: "",
+          required: false,
         },
-        { name: "schoolYear", label: "School Year", type: "text" },
-      ],
-    },
-    {
-      id: 18,
-      name: "Program Enrollment Trends",
-      description:
-        "Analysis of enrollment trends across different academic programs over time",
-      category: "Enrollment",
-      icon: <BsGraphUp className="text-2xl" />,
-      color: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-      endpoint: "program-enrollment-trends",
-      parameters: [
-        { name: "startYear", label: "Start Year", type: "text" },
-        { name: "endYear", label: "End Year", type: "text" },
+        {
+          name: "userIds",
+          label: "Specific Users (Multi-select)",
+          type: "multiselect",
+          source: "students",
+          searchable: true,
+          required: false,
+        },
       ],
     },
   ];
@@ -575,14 +626,24 @@ function Reports() {
   const checkRequiredFields = (report) => {
     // Check all required fields first
     for (const param of report.parameters) {
-      if (param.required && !reportParams[param.name]) {
-        console.log(`${param.label} is required`);
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: `${param.label} is required`,
-        });
-        return; // Exit the function, don't generate report
+      if (param.required) {
+        const value = reportParams[param.name];
+        // Check if value is truly empty (handles undefined, null, "", and empty arrays)
+        const isEmpty =
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0);
+
+        if (isEmpty) {
+          console.log(`${param.label} is required`);
+          Swal.fire({
+            icon: "error",
+            title: "Required Field Missing",
+            text: `${param.label} is required. Please select a value.`,
+          });
+          return; // Exit the function, don't generate report
+        }
       }
     }
 
@@ -714,6 +775,121 @@ function Reports() {
           icon: "error",
           title: "Error",
           text: data.message || "Failed to generate AI report",
+        });
+      } else if (data.action === "db_query_executed" && data.queryResult) {
+        // AI requested database query - hide technical details and show clean loading state
+
+        // Only add the user's question and AI's explanation (not the query results)
+        const cleanHistory = [
+          ...aiHistory,
+          { role: "user", content: aiPrompt },
+          { role: "model", content: data.text || "Let me retrieve that data for you..." },
+        ];
+
+        setAiHistory(cleanHistory);
+        setAiPrompt("");
+
+        // Keep loading state active
+        setAiLoading(true);
+
+        // Automatically send follow-up request to AI with the query results (hidden from user)
+        try {
+          const token = getToken();
+
+          // Prepare query results as context for AI (not shown to user)
+          const queryDataMessage = `Query Results (${data.queryResult.rowCount} records from ${data.queryResult.template}):\n${JSON.stringify(data.queryResult.data, null, 2)}`;
+
+          const internalHistory = [
+            ...cleanHistory,
+            { role: "user", content: queryDataMessage },
+          ];
+
+          const followUpResponse = await axiosInstance.post(
+            "/ai/generate-report",
+            {
+              prompt: "Please analyze the query results I just provided and answer my original question.",
+              history: internalHistory,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const followUpData = followUpResponse.data;
+
+          if (followUpData.action === "generate_report_table" && followUpData.reportData) {
+            // AI generated a report table after processing data
+            setShowAIModal(false);
+            navigate("/admin/report-summary", {
+              state: {
+                reportData: {
+                  error: false,
+                  reportName: followUpData.reportData.reportName,
+                  generatedAt: followUpData.reportData.generatedAt,
+                  totalRecords: followUpData.reportData.data?.length || 0,
+                  summary: followUpData.reportData.summary,
+                  data: followUpData.reportData.data,
+                  columns: followUpData.reportData.columns,
+                },
+                selectedReport: {
+                  id: "ai-generated",
+                  name: followUpData.reportData.reportName,
+                  description: followUpData.text || "AI-generated custom report",
+                  category: "AI Generated",
+                  color:
+                    "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
+                },
+                isAIGenerated: true,
+              },
+            });
+          } else {
+            // Add AI's final response to visible history
+            setAiHistory([
+              ...cleanHistory,
+              { role: "model", content: followUpData.text },
+            ]);
+          }
+        } catch (error) {
+          console.error("Error in follow-up request:", error);
+
+          // Show user-friendly error message
+          Swal.fire({
+            icon: "error",
+            title: "Processing Error",
+            text: "I encountered an error while analyzing the data. Please try asking your question again.",
+            confirmButtonColor: "#9333ea",
+          });
+
+          setAiHistory([
+            ...cleanHistory,
+            {
+              role: "model",
+              content: "I'm sorry, I encountered an error while processing the data. Could you please try asking your question again?",
+            },
+          ]);
+        } finally {
+          setAiLoading(false);
+        }
+      } else if (data.action === "db_query_failed") {
+        // Query failed - show user-friendly error
+        setAiHistory([
+          ...aiHistory,
+          { role: "user", content: aiPrompt },
+          {
+            role: "model",
+            content: "I'm sorry, I couldn't retrieve the data you requested. This might be due to invalid parameters or a database issue. Could you try rephrasing your question?"
+          },
+        ]);
+        setAiPrompt("");
+
+        Swal.fire({
+          icon: "warning",
+          title: "Data Retrieval Failed",
+          text: data.error || "Failed to retrieve data from database. Please try a different query.",
+          confirmButtonColor: "#9333ea",
         });
       } else if (data.action === "generate_report_table" && data.reportData) {
         // AI generated a report table - navigate to report summary
@@ -1051,6 +1227,149 @@ function Reports() {
         );
       }
 
+      if (param.source === "students") {
+        const selectedStudents = reportParams[param.name] || [];
+
+        const filteredStudents = students.filter((student) =>
+          `${student.firstName} ${student.lastName} ${student.userId}`
+            .toLowerCase()
+            .includes(studentSearchTerm.toLowerCase())
+        );
+
+        const toggleStudent = (studentId) => {
+          const newSelected = selectedStudents.includes(studentId)
+            ? selectedStudents.filter((id) => id !== studentId)
+            : [...selectedStudents, studentId];
+          handleParamChange(param.name, newSelected);
+        };
+
+        return (
+          <div className="relative">
+            {/* Dropdown button */}
+            <button
+              type="button"
+              onClick={() => setIsStudentsDropdownOpen(!isStudentsDropdownOpen)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red text-left flex items-center justify-between"
+            >
+              <span className="truncate">
+                {selectedStudents.length > 0
+                  ? `${selectedStudents.length} student(s) selected`
+                  : "Select students..."}
+              </span>
+              <svg
+                className={`w-5 h-5 transition-transform ${
+                  isStudentsDropdownOpen ? "transform rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Selected students display as tags */}
+            {selectedStudents.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {selectedStudents.map((studentId) => {
+                  const student = students.find((s) => s.id === studentId);
+                  return (
+                    <span
+                      key={studentId}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-dark-red text-white text-xs rounded-full"
+                    >
+                      {student?.firstName} {student?.lastName}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStudent(studentId);
+                        }}
+                        className="hover:text-gray-300"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Dropdown panel */}
+            {isStudentsDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+                {/* Search input */}
+                <div className="p-2 border-b border-gray-300 dark:border-gray-600">
+                  <input
+                    type="text"
+                    placeholder="Search students..."
+                    value={studentSearchTerm}
+                    onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red text-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+
+                {/* Student list */}
+                <div className="max-h-60 overflow-y-auto">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student) => (
+                      <label
+                        key={student.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStudents.includes(student.id)}
+                          onChange={() => toggleStudent(student.id)}
+                          className="rounded text-dark-red focus:ring-dark-red"
+                        />
+                        <span className="text-sm text-gray-900 dark:text-gray-100">
+                          [{student.userId}] - {student.firstName}{" "}
+                          {student.lastName}
+                        </span>
+                      </label>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                      No students found
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-2 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {selectedStudents.length} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsStudentsDropdownOpen(false)}
+                    className="px-3 py-1 text-xs bg-dark-red text-white rounded hover:bg-dark-red-2"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Click outside to close */}
+            {isStudentsDropdownOpen && (
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsStudentsDropdownOpen(false)}
+              />
+            )}
+          </div>
+        );
+      }
+
       if (param.source === "academicPeriods") {
         const selectedPeriods = reportParams[param.name] || [];
 
@@ -1223,18 +1542,46 @@ function Reports() {
             </select>
           </>
         );
+      } else if (param.source === "students") {
+        return (
+          <>
+            <select
+              value={
+                reportParams[param.name] !== undefined
+                  ? reportParams[param.name]
+                  : param.default || ""
+              }
+              onChange={(e) => handleParamChange(param.name, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red"
+            >
+              <option value="">Select {param.label}</option>
+              {students.map((student) => (
+                <option key={student.id} value={student.id}>
+                  [{student.userId}] {student.firstName} {student.lastName}
+                </option>
+              ))}
+            </select>
+          </>
+        );
       } else if (param.options) {
+        // Check if options already include an empty value option (like "All")
+        const hasEmptyOption = param.options.some(
+          (opt) => opt.value === "" || opt.value === null
+        );
+
         return (
           <select
             value={
               reportParams[param.name] !== undefined
                 ? reportParams[param.name]
-                : param.default || ""
+                : param.default !== undefined
+                ? param.default
+                : ""
             }
             onChange={(e) => handleParamChange(param.name, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-dark-red"
           >
-            <option value="">Select {param.label}</option>
+            {!hasEmptyOption && <option value="">Select {param.label}</option>}
             {param.options.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -1265,6 +1612,7 @@ function Reports() {
     fetchAcademicPeriods();
     fetchCourses();
     fetchTeachers();
+    fetchStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1428,11 +1776,16 @@ function Reports() {
                       Ask questions like:
                     </p>
                     <ul className="text-sm text-gray-400 dark:text-gray-500 mt-2 space-y-1">
-                      <li>"How many students are enrolled this period?"</li>
-                      <li>"What are the most popular courses?"</li>
-                      <li>"Generate a course enrollment statistics table"</li>
-                      <li>"Create a report showing enrollment by period"</li>
+                      <li>"Show me all active students"</li>
+                      <li>"Create a financial summary report"</li>
+                      <li>"Which schedules are almost full?"</li>
+                      <li>"Show me payment data"</li>
+                      <li>"Generate enrollment statistics"</li>
+                      <li>"Who has outstanding balances?"</li>
                     </ul>
+                    <p className="text-xs text-gray-500 dark:text-gray-600 mt-3">
+                      💡 Tip: The AI can ask for clarifications if it needs more details!
+                    </p>
                   </div>
                 ) : (
                   aiHistory.map((msg, idx) => (
@@ -1552,7 +1905,10 @@ function Reports() {
                 selectedReport.parameters.length > 0 && (
                   <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-6">
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-                      Report Parameters (Optional unless marked as Required)
+                      Report Parameters
+                      <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">
+                        (Fields marked with * are required)
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedReport.parameters.map((param) => (
