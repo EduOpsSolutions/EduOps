@@ -169,9 +169,9 @@ function ReportSummary() {
 
       switch (columnType) {
         case "currency":
-          return new Intl.NumberFormat("en-US", {
+          return new Intl.NumberFormat("en-PH", {
             style: "currency",
-            currency: "USD",
+            currency: "PHP",
           }).format(value);
         case "percentage":
           // If already formatted with %, return as is, otherwise format

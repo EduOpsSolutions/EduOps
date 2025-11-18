@@ -7,6 +7,7 @@ import {
   logSystemActivity,
 } from "../utils/logger.js";
 import { MODULE_TYPES } from "../constants/module_types.js";
+import { getDbData, getAvailableTemplates } from "../utils/dbQueryTemplates.js";
 
 const prisma = new PrismaClient();
 
@@ -261,14 +262,20 @@ export const generateAIReport = async (req, res) => {
     // Fetch safe database context
     const dbContext = await getSafeReportContext();
 
+    // Get available query templates
+    const availableTemplates = getAvailableTemplates();
+
     const systemInstruction = `You are an AI assistant that helps analyze educational data and generate custom reports.
 
-Available Data:
+Available Data Sources:
 - Academic Periods: Information about enrollment periods and batches
 - Courses: Available courses with pricing and capacity
 - Schedules: Class schedules with time, location, teacher, and enrollment counts
 - Enrollment Statistics: Enrollment counts by period and status
 - User Statistics: User counts by role (student, teacher, admin) and status
+- Payments: Payment records and transaction history
+- Fees: Course fees and fee structures
+- Document Requests: Student document request statuses
 
 IMPORTANT SECURITY RULES:
 - You have access to aggregated and non-sensitive data only
@@ -276,10 +283,81 @@ IMPORTANT SECURITY RULES:
 - You can analyze trends, create summaries, and answer questions about the data
 - You can perform calculations and generate insights
 
-Current Database Context:
+DATABASE QUERY CAPABILITIES:
+You have TWO ways to access data:
+
+1. **EXISTING REPORT ENDPOINTS** (Preferred for standard reports):
+   Use these for common reports that are already implemented:
+   - student-enrollment: Student enrollment list with courses and status
+   - financial-assessment: Assessment fees, payments, and balances
+   - grade-distribution: Pass/fail statistics by course
+   - course-enrollment-stats: Enrollment counts and capacity by course
+   - transaction-history: Payment transaction records
+   - faculty-teaching-load: Teaching schedules by faculty
+   - enrollment-period-analysis: Enrollment period statistics
+   - outstanding-balance: Students with unpaid balances
+   - document-submission-status: Document request statuses
+   - class-schedule: Complete class schedules
+   - student-ledger-summary: Individual student financial ledger
+   - enrollment-requests-log: Enrollment request history
+   - fee-structure: Fee breakdown by course
+   - user-account-activity: System activity logs
+
+   To use existing reports, include them in your GENERATE_REPORT_TABLE response.
+
+2. **CUSTOM DATABASE QUERIES** (For specific data needs):
+   Use this when you need specific data not available in existing reports:
+
+   DB_QUERY_REQUEST
+   {
+     "templateName": "templateName",
+     "parameters": { "param1": "value1" }
+   }
+
+   Available Query Templates:
+   ${JSON.stringify(availableTemplates, null, 2)}
+
+DECISION GUIDE:
+- If user asks for a standard report (enrollments, financials, schedules): Suggest using existing report endpoint
+- If user needs specific filtered data or aggregations: Use DB_QUERY_REQUEST
+- If user wants a custom analysis: Use DB_QUERY_REQUEST, then GENERATE_REPORT_TABLE
+
+ASKING CLARIFYING QUESTIONS:
+When you need more information to provide an accurate response, ASK THE USER clarifying questions instead of making assumptions:
+
+Examples of when to ask questions:
+- User asks for "payment report" → Ask: "Which academic period? All payments or just paid ones? Any specific date range?"
+- User asks for "student list" → Ask: "Which academic period? Only active students or all statuses?"
+- User asks for "schedule report" → Ask: "Which academic period? Any specific courses or teachers?"
+- User asks for data with unclear scope → Ask for clarification before querying
+
+IMPORTANT GUIDELINES:
+1. **Ask specific questions** - Include options when possible (e.g., "Would you like to see: A) Current period only, B) All periods, C) Specific period?")
+2. **Explain why you're asking** - Help users understand what information you need
+3. **Suggest defaults** - Offer reasonable default options (e.g., "I can show the current period by default")
+4. **Don't assume** - If a parameter is ambiguous, ask instead of guessing
+5. **Be concise** - Keep questions brief and focused
+
+Example conversation flow:
+User: "Show me payments"
+AI: "I can generate a payment report for you. To make it most useful:
+     - Which academic period? (I see 'Batch 046' is current)
+     - Payment status? (All / Paid only / Pending only)
+     - Any specific date range?
+
+     Or I can show all paid payments for the current period - would that work?"
+
+User: "Current period, paid only"
+AI: [Uses DB_QUERY_REQUEST with those parameters]
+
+IMPORTANT: When you need fresh or specific data not in the current context, use DB_QUERY_REQUEST. The system will execute the query and provide results in the next message. You can then use that data to answer the user's question or generate a report.
+
+Current Database Context (Summary):
 ${JSON.stringify(dbContext, null, 2)}
 
-When the user asks for a report or analysis, analyze the provided data and present insights in a clear, well-formatted way. You can:
+When the user asks for a report or analysis, you can:
+- Use the current context data for quick answers
+- Request additional data using DB_QUERY_REQUEST when needed
 - Count students, courses, enrollments
 - Calculate averages, percentages, trends
 - Compare data across periods
@@ -356,16 +434,143 @@ If the user asks for data you don't have access to, politely explain the limitat
     const result = await model.generateContent({ contents });
     const responseText = result?.response?.text?.() || "";
 
-    // Check if AI wants to generate a report table
-    const reportTableMatch = responseText.match(
-      /GENERATE_REPORT_TABLE[\s\n]*(\{[\s\S]*?\})(?=\n|$)/
-    );
+    // Log for debugging
+    console.log("=== AI Response ===");
+    console.log("Contains DB_QUERY_REQUEST:", responseText.includes("DB_QUERY_REQUEST"));
+    console.log("Contains GENERATE_REPORT_TABLE:", responseText.includes("GENERATE_REPORT_TABLE"));
+    console.log("Response preview:", responseText.substring(0, 200));
 
-    if (reportTableMatch) {
+    // Check if AI wants to query the database using simple string search
+    if (responseText.includes("DB_QUERY_REQUEST")) {
+      console.log("🔍 Detected DB_QUERY_REQUEST - parsing...");
       try {
-        const reportData = JSON.parse(reportTableMatch[1]);
+        // Extract JSON between the first { and last } after DB_QUERY_REQUEST
+        const startMarker = "DB_QUERY_REQUEST";
+        const startIndex = responseText.indexOf(startMarker);
+        const afterMarker = responseText.substring(startIndex + startMarker.length);
+
+        // Find the first opening brace
+        const jsonStart = afterMarker.indexOf("{");
+        if (jsonStart === -1) {
+          console.log("❌ No JSON found after DB_QUERY_REQUEST");
+          console.log("After marker:", afterMarker.substring(0, 100));
+          throw new Error("No JSON found after DB_QUERY_REQUEST");
+        }
+
+        // Find the matching closing brace
+        let braceCount = 0;
+        let jsonEnd = -1;
+        for (let i = jsonStart; i < afterMarker.length; i++) {
+          if (afterMarker[i] === "{") braceCount++;
+          if (afterMarker[i] === "}") {
+            braceCount--;
+            if (braceCount === 0) {
+              jsonEnd = i;
+              break;
+            }
+          }
+        }
+
+        if (jsonEnd === -1) throw new Error("No matching closing brace found");
+
+        // Extract and parse the JSON
+        const jsonString = afterMarker.substring(jsonStart, jsonEnd + 1);
+        console.log("📝 Extracted JSON:", jsonString);
+
+        const queryRequest = JSON.parse(jsonString);
+        const { templateName, parameters } = queryRequest;
+
+        console.log(`✅ Parsed request - Template: ${templateName}, Params:`, parameters);
+
+        // Execute the database query
+        console.log("🔄 Executing database query...");
+        const queryResult = await getDbData(templateName, parameters);
+        console.log(`✅ Query result - Success: ${queryResult.success}, Rows: ${queryResult.rowCount}`);
+
+        if (queryResult.success) {
+          // Extract the explanation text (everything before DB_QUERY_REQUEST)
+          let explanationText = responseText
+            .substring(0, startIndex)
+            .trim();
+
+          // Remove any trailing code block markers (```) from the explanation
+          explanationText = explanationText.replace(/```\s*$/, "").trim();
+
+          console.log("📄 Explanation text:", explanationText);
+
+          // Return the query result so the AI can process it in the next turn
+          const responseData = {
+            text: explanationText || `Retrieving data using template: ${queryResult.template}`,
+            action: "db_query_executed",
+            queryResult: {
+              template: queryResult.template,
+              parameters: queryResult.parameters,
+              rowCount: queryResult.rowCount,
+              data: queryResult.data,
+            },
+            dataContext: {
+              academicPeriodsCount: dbContext.academicPeriods?.length || 0,
+              coursesCount: dbContext.courses?.length || 0,
+              schedulesCount: dbContext.schedules?.length || 0,
+            },
+          };
+
+          console.log("📤 Returning response with action:", responseData.action);
+          console.log("📤 Response text preview:", responseData.text.substring(0, 100));
+
+          return res.json(responseData);
+        } else {
+          // Query failed
+          return res.json({
+            text: `Failed to retrieve data: ${queryResult.error}`,
+            action: "db_query_failed",
+            error: queryResult.error,
+          });
+        }
+      } catch (parseError) {
+        console.error("❌ Failed to parse DB query request:", parseError);
+        console.error("Error details:", parseError.message);
+        // Fall through to normal processing
+      }
+    } else {
+      console.log("ℹ️  No DB_QUERY_REQUEST detected in response");
+    }
+
+    // Check if AI wants to generate a report table using simple string search
+    if (responseText.includes("GENERATE_REPORT_TABLE")) {
+      try {
+        // Extract JSON between the first { and last } after GENERATE_REPORT_TABLE
+        const startMarker = "GENERATE_REPORT_TABLE";
+        const startIndex = responseText.indexOf(startMarker);
+        const afterMarker = responseText.substring(startIndex + startMarker.length);
+
+        // Find the first opening brace
+        const jsonStart = afterMarker.indexOf("{");
+        if (jsonStart === -1) throw new Error("No JSON found after GENERATE_REPORT_TABLE");
+
+        // Find the matching closing brace
+        let braceCount = 0;
+        let jsonEnd = -1;
+        for (let i = jsonStart; i < afterMarker.length; i++) {
+          if (afterMarker[i] === "{") braceCount++;
+          if (afterMarker[i] === "}") {
+            braceCount--;
+            if (braceCount === 0) {
+              jsonEnd = i;
+              break;
+            }
+          }
+        }
+
+        if (jsonEnd === -1) throw new Error("No matching closing brace found");
+
+        // Extract and parse the JSON
+        const jsonString = afterMarker.substring(jsonStart, jsonEnd + 1);
+        const reportData = JSON.parse(jsonString);
+
+        // Extract the explanation text (everything before GENERATE_REPORT_TABLE)
         const cleanText = responseText
-          .replace(/GENERATE_REPORT_TABLE\s*\{[\s\S]*?\}/, "")
+          .substring(0, startIndex)
           .trim();
 
         return res.json({

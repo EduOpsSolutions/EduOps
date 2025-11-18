@@ -776,6 +776,121 @@ function Reports() {
           title: "Error",
           text: data.message || "Failed to generate AI report",
         });
+      } else if (data.action === "db_query_executed" && data.queryResult) {
+        // AI requested database query - hide technical details and show clean loading state
+
+        // Only add the user's question and AI's explanation (not the query results)
+        const cleanHistory = [
+          ...aiHistory,
+          { role: "user", content: aiPrompt },
+          { role: "model", content: data.text || "Let me retrieve that data for you..." },
+        ];
+
+        setAiHistory(cleanHistory);
+        setAiPrompt("");
+
+        // Keep loading state active
+        setAiLoading(true);
+
+        // Automatically send follow-up request to AI with the query results (hidden from user)
+        try {
+          const token = getToken();
+
+          // Prepare query results as context for AI (not shown to user)
+          const queryDataMessage = `Query Results (${data.queryResult.rowCount} records from ${data.queryResult.template}):\n${JSON.stringify(data.queryResult.data, null, 2)}`;
+
+          const internalHistory = [
+            ...cleanHistory,
+            { role: "user", content: queryDataMessage },
+          ];
+
+          const followUpResponse = await axiosInstance.post(
+            "/ai/generate-report",
+            {
+              prompt: "Please analyze the query results I just provided and answer my original question.",
+              history: internalHistory,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const followUpData = followUpResponse.data;
+
+          if (followUpData.action === "generate_report_table" && followUpData.reportData) {
+            // AI generated a report table after processing data
+            setShowAIModal(false);
+            navigate("/admin/report-summary", {
+              state: {
+                reportData: {
+                  error: false,
+                  reportName: followUpData.reportData.reportName,
+                  generatedAt: followUpData.reportData.generatedAt,
+                  totalRecords: followUpData.reportData.data?.length || 0,
+                  summary: followUpData.reportData.summary,
+                  data: followUpData.reportData.data,
+                  columns: followUpData.reportData.columns,
+                },
+                selectedReport: {
+                  id: "ai-generated",
+                  name: followUpData.reportData.reportName,
+                  description: followUpData.text || "AI-generated custom report",
+                  category: "AI Generated",
+                  color:
+                    "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
+                },
+                isAIGenerated: true,
+              },
+            });
+          } else {
+            // Add AI's final response to visible history
+            setAiHistory([
+              ...cleanHistory,
+              { role: "model", content: followUpData.text },
+            ]);
+          }
+        } catch (error) {
+          console.error("Error in follow-up request:", error);
+
+          // Show user-friendly error message
+          Swal.fire({
+            icon: "error",
+            title: "Processing Error",
+            text: "I encountered an error while analyzing the data. Please try asking your question again.",
+            confirmButtonColor: "#9333ea",
+          });
+
+          setAiHistory([
+            ...cleanHistory,
+            {
+              role: "model",
+              content: "I'm sorry, I encountered an error while processing the data. Could you please try asking your question again?",
+            },
+          ]);
+        } finally {
+          setAiLoading(false);
+        }
+      } else if (data.action === "db_query_failed") {
+        // Query failed - show user-friendly error
+        setAiHistory([
+          ...aiHistory,
+          { role: "user", content: aiPrompt },
+          {
+            role: "model",
+            content: "I'm sorry, I couldn't retrieve the data you requested. This might be due to invalid parameters or a database issue. Could you try rephrasing your question?"
+          },
+        ]);
+        setAiPrompt("");
+
+        Swal.fire({
+          icon: "warning",
+          title: "Data Retrieval Failed",
+          text: data.error || "Failed to retrieve data from database. Please try a different query.",
+          confirmButtonColor: "#9333ea",
+        });
       } else if (data.action === "generate_report_table" && data.reportData) {
         // AI generated a report table - navigate to report summary
         setShowAIModal(false);
@@ -1661,11 +1776,16 @@ function Reports() {
                       Ask questions like:
                     </p>
                     <ul className="text-sm text-gray-400 dark:text-gray-500 mt-2 space-y-1">
-                      <li>"How many students are enrolled this period?"</li>
-                      <li>"What are the most popular courses?"</li>
-                      <li>"Generate a course enrollment statistics table"</li>
-                      <li>"Create a report showing enrollment by period"</li>
+                      <li>"Show me all active students"</li>
+                      <li>"Create a financial summary report"</li>
+                      <li>"Which schedules are almost full?"</li>
+                      <li>"Show me payment data"</li>
+                      <li>"Generate enrollment statistics"</li>
+                      <li>"Who has outstanding balances?"</li>
                     </ul>
+                    <p className="text-xs text-gray-500 dark:text-gray-600 mt-3">
+                      💡 Tip: The AI can ask for clarifications if it needs more details!
+                    </p>
                   </div>
                 ) : (
                   aiHistory.map((msg, idx) => (
