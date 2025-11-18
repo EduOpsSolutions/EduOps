@@ -188,6 +188,9 @@ function PaymentForm() {
       reverseButtons: true,
     });
 
+    // Log selected courseId and batchId
+    console.log('[PaymentForm] Selected courseId:', formData.courseId, ', batchId:', formData.batchId);
+
     if (!confirmResult.isConfirmed) {
       return;
     }
@@ -224,6 +227,8 @@ function PaymentForm() {
           title: "Email Sent Successfully!",
           html: `
             <div style="text-align: center;">
+          // Log payload sent to backend
+          console.log('[PaymentForm] Payment payload sent to backend:', emailData);
               <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
                 <p style="margin: 0; color: #155724; font-weight: 500;">
                   <i class="fas fa-envelope mr-2"></i>
