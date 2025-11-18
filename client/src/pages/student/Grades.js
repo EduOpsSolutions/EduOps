@@ -56,23 +56,21 @@ function Grades() {
         });
 
         // Map all courses with student grades (if any)
-        const mapped = sortedCourses
-          .filter(course => gradesMap[course.id])
-          .map(course => {
-          const grade = gradesMap[course.id];
-          return {
-            id: grade?.id || course.id,
-            courseName: course.name,
-            status: grade 
-              ? (grade.grade === "Pass" ? "PASS" : grade.grade === "Fail" ? "FAIL" : "NO GRADE")
-              : "NO GRADE",
-            completedDate: grade?.updatedAt || null,
-            courseId: course.id,
-            studentId: studentId,
-            batchId: grade?.periodId,
-            files: grade?.files || [],
-          };
-        });
+        const mapped = sortedCourses.map(course => {
+        const grade = gradesMap[course.id];
+        return {
+          id: grade?.id || course.id,
+          courseName: course.name,
+          status: grade
+            ? (grade.grade === "Pass" ? "PASS" : grade.grade === "Fail" ? "FAIL" : "NO GRADE")
+            : "NO GRADE",
+          completedDate: grade?.updatedAt || null,
+          courseId: course.id,
+          studentId: studentId,
+          batchId: grade?.periodId || null,
+          files: grade?.files || [],
+        };
+      });
 
         setGradesData(mapped);
       } catch (err) {
