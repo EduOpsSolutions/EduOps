@@ -37,7 +37,46 @@ const Pagination = ({
 
   return (
     <div className={cn('flex flex-col gap-4 mt-6', className)}>
-      <div className="flex items-center justify-between w-full">
+      {/* Mobile Layout: Stacked */}
+      <div className="flex md:hidden flex-col gap-3 w-full">
+        {showItemsPerPageSelector && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Items per page</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+              className="border border-dark-red-2 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red"
+            >
+              {itemsPerPageOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="flex justify-center">
+          <FlowbitePagination
+            currentPage={currentPage}
+            totalPages={Math.max(1, totalPages)}
+            onPageChange={onPageChange}
+            showIcons
+            previousLabel="Previous"
+            nextLabel="Next"
+            theme={customPaginationTheme}
+            className="flex items-center"
+          />
+        </div>
+        <div className="flex justify-center">
+          <span className="text-sm text-gray-600">
+            {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalItems)} of{' '}
+            {totalItems} {itemName}
+          </span>
+        </div>
+      </div>
+
+      {/* Desktop Layout: Single Row */}
+      <div className="hidden md:flex items-center justify-between w-full">
         {showItemsPerPageSelector && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Items per page</span>
