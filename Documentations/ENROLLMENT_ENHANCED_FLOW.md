@@ -519,8 +519,8 @@ its counterparts"
 
 ## 9. Optional Next Step:
 
-No explicit next step requested. The bidirectional co-requisite removal feature has been fully implemented.  
-The pending task is for the user to test the completion email functionality with the debugging logs now in  
+No explicit next step requested. The bidirectional co-requisite removal feature has been fully implemented.
+The pending task is for the user to test the completion email functionality with the debugging logs now in
 place to identify why completion emails aren't being received.
 
 If the user wants to continue, the next logical step would be to await their feedback on testing the
@@ -533,3 +533,173 @@ completion email and check the console logs to see if the status value is being 
 > ⎿ Referenced file api\controller\enrollment_controller.js
 > ⎿ Referenced file client\src\components\modals\enrollment\EnrollmentDetailsModal.js
 > ⎿ Read client\src\components\textFields\MultiSelectField.js (289 lines)
+
+---
+
+## 10. Enrollment Form Prefill Investigation (2025-11-19)
+
+### Issue Reported:
+
+User reported that some data appears to be missing in the enrollment form prefill, possibly due to identifier mismatches. Additionally, there was no visual indicator for locked (disabled) fields.
+
+### Investigation Summary:
+
+#### 1. **Missing Prefilled Fields Analysis**
+
+**Fields Currently Prefilled** (for logged-in users):
+
+- First Name (client/src/pages/public/SignUp.js:769-774)
+- Middle Name (client/src/pages/public/SignUp.js:781-786)
+- Last Name (client/src/pages/public/SignUp.js:795-800)
+- Birth Date (client/src/pages/public/SignUp.js:833-842)
+- Contact Number (client/src/pages/public/SignUp.js:316-322, 881-882) - prefilled but NOT locked
+- Preferred Email (client/src/pages/public/SignUp.js:909-913)
+
+**Fields NOT Prefilled** (and why this is expected):
+
+- Mother's Maiden Name
+- Father's Full Name
+- Guardian's Full Name
+- Parent/Guardian Contact Numbers
+- Extension
+- Honorific
+- Sex
+- Civil Status
+- Address
+- Referred By
+- Alternate Contact Number
+- Alternate Email
+
+**Root Cause**: These fields are NOT stored in the `users` table (api/prisma/schema.prisma:15-51). The `users` table only contains:
+
+- Basic info: firstName, middleName, lastName
+- Birth date: birthmonth, birthdate, birthyear
+- Contact: phoneNumber, email
+
+Parent/guardian information and enrollment-specific fields only exist in the `enrollment_request` table and are collected during the enrollment process. This is **correct behavior** - users wouldn't have this information in their profile unless they've enrolled before.
+
+**Database Schema Evidence**:
+
+```prisma
+model users {
+  id               String    @id @default(cuid())
+  firstName        String
+  middleName       String?
+  lastName         String
+  birthmonth       Int
+  birthdate        Int
+  birthyear        Int
+  phoneNumber      String?
+  email            String    @unique
+  // ... other fields but NO parent/guardian info
+}
+
+model enrollment_request {
+  id               String   @id @default(cuid())
+  firstName        String
+  lastName         String
+  birthDate        DateTime
+  civilStatus      String
+  address          String
+  motherName       String?
+  motherContact    String?
+  fatherName       String?
+  fatherContact    String?
+  guardianName     String?
+  guardianContact  String?
+  // ... enrollment-specific fields
+}
+```
+
+#### 2. **Lock Icon Implementation**
+
+**Problem**: The enrollment form shows a blue info banner (client/src/pages/public/SignUp.js:742-744) stating:
+
+> "Some fields have been pre-filled with your account information. Fields marked with a lock cannot be edited."
+
+However, there was **no visual lock icon** displayed on disabled fields.
+
+**Solution**: Enhanced both input field components to display a lock icon for disabled fields:
+
+**Files Modified**:
+
+1. **client/src/components/textFields/NotLabelledInputField.js**:
+
+   - Added `FaLock` icon import from 'react-icons/fa'
+   - Added support for `value`, `disabled`, and `onChange` props (previously not supported)
+   - Added conditional rendering of lock icon when `disabled={true}`
+   - Added disabled styling: `bg-gray-100 cursor-not-allowed`
+   - Lock icon positioned absolutely at `right-3 top-3`
+
+2. **client/src/components/textFields/LabelledInputField.js**:
+   - Added `FaLock` icon import from 'react-icons/fa'
+   - Added conditional rendering of lock icon when `disabled={true}`
+   - Improved disabled styling: changed from `bg-gray-200` to `bg-gray-100` for consistency
+   - Lock icon positioned absolutely at `right-3 top-9` (adjusted for label spacing)
+
+**Code Changes**:
+
+```javascript
+// NotLabelledInputField.js
+import { FaLock } from "react-icons/fa";
+
+const NotLabelledInputField = ({
+  name,
+  id,
+  label,
+  type = "text",
+  required = true,
+  value,
+  disabled = false,
+  onChange, // NEW: Added these props
+}) => {
+  return (
+    <div className="relative z-0 w-full mb-5 group">
+      <input
+        // ... other props
+        value={value}
+        disabled={disabled}
+        onChange={onChange}
+        className={`... ${disabled ? "bg-gray-100 cursor-not-allowed" : ""}`}
+      />
+      <label htmlFor={id} className="...">
+        {label}
+      </label>
+      {disabled && ( // NEW: Lock icon
+        <div className="absolute right-3 top-3 text-gray-500">
+          <FaLock size={14} />
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+**Visual Result**: Now when fields are disabled (locked), users will see:
+
+- A light gray background (`bg-gray-100`)
+- A cursor-not-allowed pointer
+- A small lock icon (🔒) on the right side of the field
+
+**Fields That Display Lock Icons** (for logged-in users):
+
+- First name ✓
+- Middle name ✓
+- Last name ✓
+- Birth date ✓
+- Preferred email address ✓
+
+### Conclusion:
+
+1. **No identifier mismatch found** - The "missing" data is intentionally not prefilled because it doesn't exist in the user profile. Only basic account information is stored in the `users` table.
+
+2. **Lock icons successfully added** - Both input field components now display visual lock indicators for disabled fields, matching the info banner's description.
+
+3. **No code issues found** - The prefill logic in SignUp.js correctly pulls all available data from the user profile and properly disables fields that shouldn't be edited.
+
+### Testing Recommendations:
+
+- Test login and verify lock icons appear on prefilled fields
+- Verify disabled fields cannot be edited
+- Confirm non-locked fields (like contact number) can still be modified
+- Ensure the gray background and lock icon provide clear visual feedback
