@@ -119,7 +119,7 @@ const MultiSelectField = ({
   };
 
   const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    option.label?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const selectedOptions = options.filter((option) =>
@@ -127,7 +127,7 @@ const MultiSelectField = ({
   );
 
   return (
-    <div className="relative z-[100] mb-5 group">
+    <div className="relative mb-5 group">
       {label && (
         <label
           htmlFor={id}
@@ -208,7 +208,7 @@ const MultiSelectField = ({
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute z-[200] w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
             {/* Search Input */}
             <div className="p-2 border-b border-gray-200">
               <input
