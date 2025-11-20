@@ -493,6 +493,10 @@ const getEnrollmentRequests = async (req, res) => {
     limit = 10,
     search,
     order = "desc",
+    courseIds,
+    academicPeriodId,
+    dateFrom,
+    dateTo,
   } = req.query;
 
   // Parse pagination parameters as integers
@@ -503,6 +507,7 @@ const getEnrollmentRequests = async (req, res) => {
   const whereClause = {
     ...(id && { id: id }),
     ...(status && { enrollmentStatus: status }),
+    ...(academicPeriodId && { periodId: academicPeriodId }),
     ...(search && {
       OR: [
         { enrollmentId: { contains: search } },
@@ -514,11 +519,68 @@ const getEnrollmentRequests = async (req, res) => {
     }),
   };
 
+  // Add date range filter
+  if (dateFrom || dateTo) {
+    whereClause.createdAt = {};
+    if (dateFrom) {
+      whereClause.createdAt.gte = new Date(dateFrom);
+    }
+    if (dateTo) {
+      // Set to end of day for dateTo
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      whereClause.createdAt.lte = endOfDay;
+    }
+  }
+
+  // Handle courseIds filter - need to fetch courses first to get names
+  let courseNamesFilter = null;
+  if (courseIds) {
+    const courseIdArray = courseIds.split(',').filter(id => id.trim());
+    if (courseIdArray.length > 0) {
+      try {
+        // Fetch course names from course table
+        const courses = await prisma.course.findMany({
+          where: {
+            id: { in: courseIdArray }
+          },
+          select: {
+            name: true
+          }
+        });
+
+        // Create OR conditions for each course name
+        if (courses.length > 0) {
+          courseNamesFilter = {
+            OR: courses.map(course => ({
+              coursesToEnroll: { contains: course.name }
+            }))
+          };
+        }
+      } catch (error) {
+        console.error('Error fetching course names:', error);
+      }
+    }
+  }
+
+  // Merge courseNamesFilter into whereClause
+  if (courseNamesFilter) {
+    Object.assign(whereClause, courseNamesFilter);
+  }
+
   const enrollmentRequests = await prisma.enrollment_request.findMany({
     where: whereClause,
     skip: (pageNum - 1) * limitNum,
     take: limitNum,
     orderBy: { createdAt: order },
+    include: {
+      period: {
+        select: {
+          id: true,
+          batchName: true,
+        }
+      }
+    }
   });
 
   const new_data = await Promise.all(

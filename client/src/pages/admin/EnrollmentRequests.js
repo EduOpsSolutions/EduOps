@@ -1,23 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import SearchField from '../../components/textFields/SearchField';
-import ThinRedButton from '../../components/buttons/ThinRedButton';
-import Pagination from '../../components/common/Pagination';
-import axiosInstance from '../../utils/axios.js';
-import EnrollmentDetailsModal from '../../components/modals/enrollment/EnrollmentDetailsModal';
-import { getCookieItem } from '../../utils/jwt';
-import { useEnrollmentPeriodStore } from '../../stores/enrollmentPeriodStore';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect } from "react";
+import SearchField from "../../components/textFields/SearchField";
+import ThinRedButton from "../../components/buttons/ThinRedButton";
+import Pagination from "../../components/common/Pagination";
+import axiosInstance from "../../utils/axios.js";
+import EnrollmentDetailsModal from "../../components/modals/enrollment/EnrollmentDetailsModal";
+import MultiSelectField from "../../components/textFields/MultiSelectField";
+import { getCookieItem } from "../../utils/jwt";
+import { useEnrollmentPeriodStore } from "../../stores/enrollmentPeriodStore";
+import Swal from "sweetalert2";
 function EnrollmentRequests() {
   const [enrollmentRequests, setEnrollmentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedEnrollmentRequest, setSelectedEnrollmentRequest] =
     useState(null);
   const [showEnrollmentDetailsModal, setShowEnrollmentDetailsModal] =
     useState(false);
   const [activePeriods, setActivePeriods] = useState([]);
   const [currentPeriodInfo, setCurrentPeriodInfo] = useState(null);
+
+  // Filter state
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selectedAcademicPeriod, setSelectedAcademicPeriod] = useState("");
+  const [selectedCourses, setSelectedCourses] = useState([]);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [allAcademicPeriods, setAllAcademicPeriods] = useState([]);
+  const [availableCourses, setAvailableCourses] = useState([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,23 +46,48 @@ function EnrollmentRequests() {
   };
 
   const { endEnrollment } = useEnrollmentPeriodStore();
+
+  useEffect(() => {
+    fetchActivePeriods();
+    fetchCourses();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     fetchEnrollmentRequests();
-    fetchActivePeriods();
-  }, [currentPage, itemsPerPage]);// eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    currentPage,
+    itemsPerPage,
+    selectedAcademicPeriod,
+    selectedCourses,
+    selectedStatus,
+    dateFrom,
+    dateTo,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEnrollmentRequests = async () => {
     try {
       setLoading(true);
-      setError('');
-      const response = await axiosInstance.get('/enrollment/requests', {
-        params: {
-          search: searchTerm,
-          page: currentPage,
-          limit: itemsPerPage,
-        },
+      setError("");
+
+      const params = {
+        search: searchTerm,
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+
+      // Add filters only if they have values
+      if (selectedAcademicPeriod)
+        params.academicPeriodId = selectedAcademicPeriod;
+      if (selectedCourses && selectedCourses.length > 0)
+        params.courseIds = selectedCourses.join(',');
+      if (selectedStatus) params.status = selectedStatus;
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+
+      const response = await axiosInstance.get("/enrollment/requests", {
+        params,
         headers: {
-          Authorization: `Bearer ${getCookieItem('token')}`,
+          Authorization: `Bearer ${getCookieItem("token")}`,
         },
       });
       if (!response.data.error) {
@@ -61,19 +96,19 @@ function EnrollmentRequests() {
         setTotalPages(response.data.totalPages);
       } else {
         setError(
-          'Error fetching enrollment requests: ' + response.data.message
+          "Error fetching enrollment requests: " + response.data.message
         );
       }
     } catch (error) {
-      console.error('Error fetching enrollment requests:', error);
-      setError('Failed to load enrollment requests. Please try again.');
+      console.error("Error fetching enrollment requests:", error);
+      setError("Failed to load enrollment requests. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const clearError = () => {
-    setError('');
+    setError("");
   };
 
   const handleSearch = () => {
@@ -85,39 +120,144 @@ function EnrollmentRequests() {
     setSearchTerm(e.target.value);
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDateFrom("");
+    setDateTo("");
+    setSelectedAcademicPeriod("");
+    setSelectedCourses([]);
+    setSelectedStatus("");
+    setCurrentPage(1);
+  };
+
+  const handleDownloadCSV = () => {
+    if (!enrollmentRequests || enrollmentRequests.length === 0) {
+      Swal.fire({
+        title: "No Data",
+        text: "There are no enrollment requests to download.",
+        icon: "info",
+        confirmButtonColor: "#890E07",
+      });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      "Enrollment ID",
+      "First Name",
+      "Last Name",
+      "Birth Date",
+      "Civil Status",
+      "Address",
+      "Contact Number",
+      "Alt Contact Number",
+      "Preferred Email",
+      "Alt Email",
+      "Courses to Enroll",
+      "Academic Period",
+      "Enrollment Status",
+      "Created At",
+      "Referred By",
+      "Mother Name",
+      "Mother Contact",
+      "Father Name",
+      "Father Contact",
+      "Guardian Name",
+      "Guardian Contact",
+    ];
+
+    // Convert data to CSV format
+    const csvData = enrollmentRequests.map((request) => [
+      request.enrollmentId || "",
+      request.firstName || "",
+      request.lastName || "",
+      request.birthDate
+        ? new Date(request.birthDate).toLocaleDateString()
+        : "",
+      request.civilStatus || "",
+      request.address || "",
+      request.contactNumber || "",
+      request.altContactNumber || "",
+      request.preferredEmail || "",
+      request.altEmail || "",
+      request.coursesToEnroll || "",
+      request.period?.batchName ||
+        allAcademicPeriods.find((p) => p.id === request.periodId)?.batchName ||
+        "",
+      request.enrollmentStatus || "",
+      request.createdAt
+        ? new Date(request.createdAt).toLocaleString()
+        : "",
+      request.referredBy || "",
+      request.motherName || "",
+      request.motherContact || "",
+      request.fatherName || "",
+      request.fatherContact || "",
+      request.guardianName || "",
+      request.guardianContact || "",
+    ]);
+
+    // Combine headers and data
+    const csvContent = [
+      headers.join(","),
+      ...csvData.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+
+    // Generate filename with current date
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `enrollment_requests_${timestamp}.csv`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const fetchActivePeriods = async () => {
     try {
-      const response = await axiosInstance.get('/academic-periods');
+      const response = await axiosInstance.get("/academic-periods");
       const now = new Date();
-      
+
       // Only periods with enrollmentStatus 'open' and not closed
-      const openPeriods = response.data.filter(period => {
+      const openPeriods = response.data.filter((period) => {
         return (
-          (period.enrollmentStatus && period.enrollmentStatus.toLowerCase() === 'open') &&
+          period.enrollmentStatus &&
+          period.enrollmentStatus.toLowerCase() === "open" &&
           !period.isEnrollmentClosed
         );
       });
       setActivePeriods(openPeriods);
 
-      // All periods for info display
+      // All periods for info display and filter dropdown
       const allPeriods = response.data
-        .filter(period => !period.deletedAt)
-        .map(period => {
+        .filter((period) => !period.deletedAt)
+        .map((period) => {
           const startDate = new Date(period.startAt);
           const endDate = new Date(period.endAt);
           let status;
-          if (period.status === 'ended') {
-            status = 'Ended';
+          if (period.status === "ended") {
+            status = "Ended";
           } else if (now < startDate) {
-            status = 'Upcoming';
+            status = "Upcoming";
           } else if (now >= startDate && now <= endDate) {
-            status = 'Ongoing';
+            status = "Ongoing";
           } else {
-            status = 'Ended';
+            status = "Ended";
           }
           return { ...period, calculatedStatus: status };
         })
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setAllAcademicPeriods(allPeriods);
 
       // Set the next available open period as current info
       if (openPeriods.length > 0) {
@@ -129,26 +269,57 @@ function EnrollmentRequests() {
         setCurrentPeriodInfo(null);
       }
     } catch (error) {
-      console.error('Error fetching active periods:', error);
+      console.error("Error fetching active periods:", error);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const response = await axiosInstance.get("/courses", {
+        headers: {
+          Authorization: `Bearer ${getCookieItem("token")}`,
+        },
+      });
+
+      // Handle different response formats
+      let courses = [];
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          courses = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          courses = response.data.data;
+        } else if (response.data.courses && Array.isArray(response.data.courses)) {
+          courses = response.data.courses;
+        }
+      }
+
+      console.log('Fetched courses:', courses);
+      setAvailableCourses(courses);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
     }
   };
 
   const handleEndEnrollment = async () => {
     try {
-      const response = await axiosInstance.get('/academic-periods');
-      const ongoingPeriods = response.data.filter(period => {
+      const response = await axiosInstance.get("/academic-periods");
+      const ongoingPeriods = response.data.filter((period) => {
         const now = new Date();
         const enrollmentOpen = new Date(period.enrollmentOpenAt);
         const enrollmentClose = new Date(period.enrollmentCloseAt);
-        return !period.isEnrollmentClosed && now >= enrollmentOpen && now <= enrollmentClose;
+        return (
+          !period.isEnrollmentClosed &&
+          now >= enrollmentOpen &&
+          now <= enrollmentClose
+        );
       });
 
       if (ongoingPeriods.length === 0) {
         await Swal.fire({
-          title: 'No Active Enrollment',
-          text: 'There is no ongoing enrollment period to end.',
-          icon: 'info',
-          confirmButtonColor: '#890E07'
+          title: "No Active Enrollment",
+          text: "There is no ongoing enrollment period to end.",
+          icon: "info",
+          confirmButtonColor: "#890E07",
         });
         return;
       }
@@ -156,49 +327,50 @@ function EnrollmentRequests() {
       const selectedPeriod = ongoingPeriods[0];
 
       const result = await Swal.fire({
-        title: 'End Enrollment Period?',
+        title: "End Enrollment Period?",
         html: `
           <p>Are you sure you want to end enrollment for:</p>
           <p><strong>${selectedPeriod.batchName}</strong></p>
           <p style="font-size: 0.875rem; color: #6B7280; margin-top: 0.5rem;">This action will prevent new enrollees.</p>
         `,
-        icon: 'warning',
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: '#890E07',
-        cancelButtonColor: '#6B7280',
-        confirmButtonText: 'Yes, end enrollment',
-        cancelButtonText: 'Cancel',
-        reverseButtons: true
+        confirmButtonColor: "#890E07",
+        cancelButtonColor: "#6B7280",
+        confirmButtonText: "Yes, end enrollment",
+        cancelButtonText: "Cancel",
+        reverseButtons: true,
       });
 
       if (!result.isConfirmed) return;
 
       const endResult = await endEnrollment(selectedPeriod.id);
-      
+
       if (endResult.success) {
         await Swal.fire({
-          title: 'Enrollment Ended',
+          title: "Enrollment Ended",
           text: `Enrollment for ${selectedPeriod.batchName} has been successfully ended.`,
-          icon: 'success',
-          confirmButtonColor: '#890E07'
+          icon: "success",
+          confirmButtonColor: "#890E07",
         });
-        
+
         await fetchActivePeriods();
       } else {
         await Swal.fire({
-          title: 'Error',
-          text: endResult.error || 'Failed to end enrollment. Please try again.',
-          icon: 'error',
-          confirmButtonColor: '#890E07'
+          title: "Error",
+          text:
+            endResult.error || "Failed to end enrollment. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#890E07",
         });
       }
     } catch (error) {
-      console.error('Error ending enrollment:', error);
+      console.error("Error ending enrollment:", error);
       await Swal.fire({
-        title: 'Error',
-        text: 'Failed to end enrollment. Please try again.',
-        icon: 'error',
-        confirmButtonColor: '#890E07'
+        title: "Error",
+        text: "Failed to end enrollment. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#890E07",
       });
     }
   };
@@ -213,8 +385,8 @@ function EnrollmentRequests() {
           setSelectedEnrollmentRequest(null);
         }}
         handleSave={(updatedData) => {
-          setEnrollmentRequests(prev => 
-            prev.map(request => 
+          setEnrollmentRequests((prev) =>
+            prev.map((request) =>
               request.id === updatedData.id ? updatedData : request
             )
           );
@@ -236,20 +408,24 @@ function EnrollmentRequests() {
           {/* Current Enrollment Period Info */}
           {currentPeriodInfo && (
             <div className="mb-6 md:mb-8">
-              <div className={`p-4 rounded-lg border-2 ${(() => {
-                switch ((currentPeriodInfo.enrollmentStatus || '').toLowerCase()) {
-                  case 'open':
-                    return 'bg-green-50 border-green-200';
-                  case 'closed':
-                    return 'bg-red-50 border-red-200';
-                  case 'upcoming':
-                    return 'bg-blue-50 border-blue-200';
-                  case 'ended':
-                    return 'bg-gray-50 border-gray-200';
-                  default:
-                    return 'bg-gray-50 border-gray-200';
-                }
-              })()}`}>
+              <div
+                className={`p-4 rounded-lg border-2 ${(() => {
+                  switch (
+                    (currentPeriodInfo.enrollmentStatus || "").toLowerCase()
+                  ) {
+                    case "open":
+                      return "bg-green-50 border-green-200";
+                    case "closed":
+                      return "bg-red-50 border-red-200";
+                    case "upcoming":
+                      return "bg-blue-50 border-blue-200";
+                    case "ended":
+                      return "bg-gray-50 border-gray-200";
+                    default:
+                      return "bg-gray-50 border-gray-200";
+                  }
+                })()}`}
+              >
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div className="text-center sm:text-left">
                     <h2 className="text-lg md:text-xl font-semibold text-gray-800">
@@ -259,31 +435,45 @@ function EnrollmentRequests() {
                       <strong>{currentPeriodInfo.batchName}</strong>
                     </p>
                     <p className="text-xs md:text-sm text-gray-500">
-                      {new Date(currentPeriodInfo.enrollmentOpenAt).toLocaleDateString()} - {new Date(currentPeriodInfo.enrollmentCloseAt).toLocaleDateString()}
+                      {new Date(
+                        currentPeriodInfo.enrollmentOpenAt
+                      ).toLocaleDateString()}{" "}
+                      -{" "}
+                      {new Date(
+                        currentPeriodInfo.enrollmentCloseAt
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="text-center">
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${(() => {
-                        switch ((currentPeriodInfo.enrollmentStatus || '').toLowerCase()) {
-                          case 'open':
-                            return 'bg-green-100 text-green-800 border border-green-200';
-                          case 'closed':
-                            return 'bg-red-100 text-red-800 border border-red-200';
-                          case 'upcoming':
-                            return 'bg-blue-100 text-blue-800 border border-blue-200';
-                          case 'ended':
-                            return 'bg-gray-100 text-gray-800 border border-gray-200';
+                        switch (
+                          (
+                            currentPeriodInfo.enrollmentStatus || ""
+                          ).toLowerCase()
+                        ) {
+                          case "open":
+                            return "bg-green-100 text-green-800 border border-green-200";
+                          case "closed":
+                            return "bg-red-100 text-red-800 border border-red-200";
+                          case "upcoming":
+                            return "bg-blue-100 text-blue-800 border border-blue-200";
+                          case "ended":
+                            return "bg-gray-100 text-gray-800 border border-gray-200";
                           default:
-                            return 'bg-gray-100 text-gray-800 border border-gray-200';
+                            return "bg-gray-100 text-gray-800 border border-gray-200";
                         }
                       })()}`}
                     >
                       {currentPeriodInfo.enrollmentStatus
-                        ? currentPeriodInfo.enrollmentStatus.charAt(0).toUpperCase() + currentPeriodInfo.enrollmentStatus.slice(1)
-                        : 'N/A'}
+                        ? currentPeriodInfo.enrollmentStatus
+                            .charAt(0)
+                            .toUpperCase() +
+                          currentPeriodInfo.enrollmentStatus.slice(1)
+                        : "N/A"}
                     </span>
-                    {(currentPeriodInfo.enrollmentStatus === 'closed' || currentPeriodInfo.enrollmentStatus === 'ended') && (
+                    {(currentPeriodInfo.enrollmentStatus === "closed" ||
+                      currentPeriodInfo.enrollmentStatus === "ended") && (
                       <p className="text-xs text-red-600 mt-1">
                         No new enrollments accepted
                       </p>
@@ -295,31 +485,43 @@ function EnrollmentRequests() {
           )}
 
           {/* No Active Periods Warning */}
-          {currentPeriodInfo && activePeriods.length === 0 &&
+          {currentPeriodInfo &&
+            activePeriods.length === 0 &&
             ((currentPeriodInfo.enrollmentStatus &&
-              (currentPeriodInfo.enrollmentStatus.toLowerCase() === 'ended' ||
-               currentPeriodInfo.enrollmentStatus.toLowerCase() === 'closed')) ||
+              (currentPeriodInfo.enrollmentStatus.toLowerCase() === "ended" ||
+                currentPeriodInfo.enrollmentStatus.toLowerCase() ===
+                  "closed")) ||
               currentPeriodInfo.isEnrollmentClosed) && (
-            <div className="mb-6 md:mb-8">
-              <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      No Active Enrollment Period
-                    </h3>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      There is currently no ongoing enrollment period. No new enrollment requests will be accepted until a new period begins.
-                    </p>
+              <div className="mb-6 md:mb-8">
+                <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-shrink-0">
+                      <svg
+                        className="w-5 h-5 text-yellow-600"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-yellow-800">
+                        No Active Enrollment Period
+                      </h3>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        There is currently no ongoing enrollment period. No new
+                        enrollment requests will be accepted until a new period
+                        begins.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Error Display */}
           {error && (
@@ -336,40 +538,200 @@ function EnrollmentRequests() {
             </div>
           )}
 
+          {/* Filters Section */}
           <div className="mb-6 md:mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-              {/* Search Field */}
-              <div className="order-1 sm:order-1">
-                <SearchField
-                  name="searchTerm"
-                  placeholder="Search User"
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  onClick={handleSearch}
-                  className="w-full sm:w-80"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSearch();
-                    }
-                  }}
-                />
+            <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Filters
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Search Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Search Name/Email
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter name or email"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch();
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red focus:border-transparent text-sm"
+                  />
+                </div>
+
+                {/* Academic Period Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Academic Period
+                  </label>
+                  <select
+                    value={selectedAcademicPeriod}
+                    onChange={(e) => {
+                      setSelectedAcademicPeriod(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red focus:border-transparent text-sm"
+                  >
+                    <option value="">Any Academic Period</option>
+                    {allAcademicPeriods.map((period) => (
+                      <option key={period.id} value={period.id}>
+                        {period.batchName} ({period.calculatedStatus})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Course Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Courses
+                  </label>
+                  <MultiSelectField
+                    name="selectedCourses"
+                    options={availableCourses
+                      .filter((course) => course.name && course.id)
+                      .map((course) => ({
+                        label: course.name || "Unnamed Course",
+                        value: course.id,
+                      }))}
+                    value={selectedCourses}
+                    onChange={(e) => {
+                      setSelectedCourses(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Any Course"
+                    searchPlaceholder="Search courses..."
+                  />
+                </div>
+
+                {/* Date From */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date From
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      const newDateFrom = e.target.value;
+                      setDateFrom(newDateFrom);
+                      // Clear dateTo if it becomes invalid (before dateFrom)
+                      if (dateTo && newDateFrom && dateTo < newDateFrom) {
+                        setDateTo("");
+                      }
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red focus:border-transparent text-sm"
+                  />
+                </div>
+
+                {/* Date To */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date To
+                  </label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => {
+                      setDateTo(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red focus:border-transparent text-sm"
+                  />
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red focus:border-transparent text-sm"
+                  >
+                    <option value="">Any Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="verified">Verified</option>
+                    <option value="payment_pending">Payment Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="completed">Completed</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="flex justify-start w-full sm:w-auto order-2 sm:order-2">
+              {/* Filter Actions */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleSearch}
+                  className="px-4 py-2 bg-dark-red text-white rounded-md hover:bg-red-800 transition-colors text-sm font-medium"
+                >
+                  Apply Filters
+                </button>
+                <button
+                  onClick={handleClearFilters}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
+            {/* End Enrollment Button Section */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleDownloadCSV}
+                disabled={loading || enrollmentRequests.length === 0}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                title="Download CSV"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Download CSV
+              </button>
+
+              <div>
                 {activePeriods.length === 1 &&
-                  !activePeriods[0].isEnrollmentClosed &&
-                  new Date(activePeriods[0].enrollmentOpenAt) <= new Date() &&
-                  new Date(activePeriods[0].enrollmentCloseAt) >= new Date() ? (
+                !activePeriods[0].isEnrollmentClosed &&
+                new Date(activePeriods[0].enrollmentOpenAt) <= new Date() &&
+                new Date(activePeriods[0].enrollmentCloseAt) >= new Date() ? (
                   <ThinRedButton onClick={handleEndEnrollment}>
                     End Enrollment
                   </ThinRedButton>
                 ) : (
                   <div className="text-sm text-gray-500 py-2 px-4 bg-gray-100 rounded-lg">
                     {currentPeriodInfo?.enrollmentStatus &&
-                      (currentPeriodInfo.enrollmentStatus.toLowerCase() === 'ended' ||
-                        currentPeriodInfo.enrollmentStatus.toLowerCase() === 'closed')
-                      ? 'Enrollment Already Ended'
-                      : 'No Active Enrollment Period'}
+                    (currentPeriodInfo.enrollmentStatus.toLowerCase() ===
+                      "ended" ||
+                      currentPeriodInfo.enrollmentStatus.toLowerCase() ===
+                        "closed")
+                      ? "Enrollment Already Ended"
+                      : "No Active Enrollment Period"}
                   </div>
                 )}
               </div>
@@ -401,7 +763,11 @@ function EnrollmentRequests() {
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Courses
                           </th>
-                          
+
+                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                            Enrollment Period
+                          </th>
+
                           <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                             Phone
                           </th>
@@ -442,85 +808,115 @@ function EnrollmentRequests() {
                                 className="truncate max-w-24 sm:max-w-32 md:max-w-none"
                                 title={request.name}
                               >
-                                {request.firstName} {request.lastName} 
+                                {request.firstName} {request.lastName}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.coursesToEnroll || 'N/A'}
+                                title={request.coursesToEnroll || "N/A"}
                               >
-                                {request.coursesToEnroll || 'N/A'}
+                                {request.coursesToEnroll || "N/A"}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.contactNumber || 'N/A'}
+                                title={
+                                  request.period?.batchName ||
+                                  allAcademicPeriods.find(
+                                    (p) => p.id === request.periodId
+                                  )?.batchName ||
+                                  "N/A"
+                                }
                               >
-                                {request.contactNumber || 'N/A'}
+                                {request.period?.batchName ||
+                                  allAcademicPeriods.find(
+                                    (p) => p.id === request.periodId
+                                  )?.batchName ||
+                                  "N/A"}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.preferredEmail || 'N/A'}
+                                title={request.contactNumber || "N/A"}
                               >
-                                {request.preferredEmail || 'N/A'}
+                                {request.contactNumber || "N/A"}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.date || 'N/A'}
+                                title={request.preferredEmail || "N/A"}
+                              >
+                                {request.preferredEmail || "N/A"}
+                              </div>
+                            </td>
+                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                              <div
+                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                title={request.date || "N/A"}
                               >
                                 {new Date(request.createdAt).toLocaleDateString(
-                                  'en-US',
+                                  "en-US",
                                   {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
                                     hour12: true,
                                   }
-                                ) || 'N/A'}
+                                ) || "N/A"}
                               </div>
                             </td>
                             <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                               <div
                                 className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.enrollmentStatus || 'N/A'}
+                                title={request.enrollmentStatus || "N/A"}
                               >
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs sm:text-sm md:text-base font-medium border max-w-[90vw] sm:max-w-[180px] truncate whitespace-normal text-center
-                                    ${request.enrollmentStatus?.toLowerCase() === "pending"
-                                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                                      : request.enrollmentStatus?.toLowerCase() === "verified"
-                                      ? "bg-sky-50 text-sky-700 border-sky-200"
-                                      : request.enrollmentStatus?.toLowerCase() === "payment_pending"
-                                      ? "bg-orange-50 text-orange-700 border-orange-200"
-                                      : request.enrollmentStatus?.toLowerCase() === "approved"
-                                      ? "bg-violet-50 text-violet-700 border-violet-200"
-                                      : request.enrollmentStatus?.toLowerCase() === "completed"
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                      : request.enrollmentStatus?.toLowerCase() === "rejected"
-                                      ? "bg-rose-50 text-rose-700 border-rose-200"
-                                      : "bg-slate-50 text-slate-700 border-slate-200"
-                                  }`}
-                                  title={request.enrollmentStatus || 'N/A'}
+                                    ${
+                                      request.enrollmentStatus?.toLowerCase() ===
+                                      "pending"
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : request.enrollmentStatus?.toLowerCase() ===
+                                          "verified"
+                                        ? "bg-sky-50 text-sky-700 border-sky-200"
+                                        : request.enrollmentStatus?.toLowerCase() ===
+                                          "payment_pending"
+                                        ? "bg-orange-50 text-orange-700 border-orange-200"
+                                        : request.enrollmentStatus?.toLowerCase() ===
+                                          "approved"
+                                        ? "bg-violet-50 text-violet-700 border-violet-200"
+                                        : request.enrollmentStatus?.toLowerCase() ===
+                                          "completed"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : request.enrollmentStatus?.toLowerCase() ===
+                                          "rejected"
+                                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                                        : "bg-slate-50 text-slate-700 border-slate-200"
+                                    }`}
+                                  title={request.enrollmentStatus || "N/A"}
                                 >
                                   {request.enrollmentStatus
-                                    ? request.enrollmentStatus.toLowerCase() === "rejected"
+                                    ? request.enrollmentStatus.toLowerCase() ===
+                                      "rejected"
                                       ? request.currentStep === 3
                                         ? "Payment Rejected"
                                         : "Form Rejected"
                                       : request.enrollmentStatus
-                                          .replace(/_/g, ' ')
-                                          .split(' ')
-                                          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                                          .join(' ')
-                                    : 'N/A'}
+                                          .replace(/_/g, " ")
+                                          .split(" ")
+                                          .map(
+                                            (word) =>
+                                              word.charAt(0).toUpperCase() +
+                                              word.slice(1).toLowerCase()
+                                          )
+                                          .join(" ")
+                                    : "N/A"}
                                 </span>
                               </div>
                             </td>
