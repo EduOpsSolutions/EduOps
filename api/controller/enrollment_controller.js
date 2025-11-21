@@ -61,6 +61,9 @@ const createEnrollmentRequest = async (req, res) => {
       userId,
     } = req.body;
 
+    // Debug: Log the userId being received
+    console.log("Enrollment request - userId received:", userId, "type:", typeof userId);
+
     // Check for duplicate enrollment if userId is provided
     if (userId) {
       // Resolve current open enrollment period first
@@ -133,6 +136,64 @@ const createEnrollmentRequest = async (req, res) => {
 
     const enrollmentId = await generateEnrollmentId();
 
+    // If userId is not provided, check if the preferredEmail matches an existing user
+    let resolvedUserId = userId;
+    let resolvedStudentId = null;
+    if (!resolvedUserId && preferredEmail) {
+      const existingUser = await prisma.users.findFirst({
+        where: {
+          email: preferredEmail,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          userId: true, // The human-readable student ID (e.g., "STU-2024-001")
+        },
+      });
+
+      if (existingUser) {
+        resolvedUserId = existingUser.id;
+        resolvedStudentId = existingUser.userId; // Set the readable student ID
+
+        // Check for duplicate enrollment for this user in the current period
+        const now = new Date();
+        const currentPeriod = await prisma.academic_period.findFirst({
+          where: {
+            deletedAt: null,
+            isEnrollmentClosed: false,
+            enrollmentOpenAt: { lte: now },
+            enrollmentCloseAt: { gte: now },
+          },
+          orderBy: { enrollmentOpenAt: "desc" },
+        });
+
+        const existingEnrollment = await prisma.enrollment_request.findFirst({
+          where: {
+            userId: resolvedUserId,
+            periodId: currentPeriod?.id || null,
+            enrollmentStatus: {
+              in: [
+                "pending",
+                "verified",
+                "payment_pending",
+                "approved",
+                "completed",
+              ],
+            },
+          },
+        });
+
+        if (existingEnrollment) {
+          return res.status(400).json({
+            error: true,
+            message:
+              "You already have an active enrollment request for this period. Please check your enrollment status or login to your account.",
+            enrollmentId: existingEnrollment.enrollmentId,
+          });
+        }
+      }
+    }
+
     // Resolve current open enrollment period
     const now = new Date();
     const currentPeriod = await prisma.academic_period.findFirst({
@@ -168,8 +229,10 @@ const createEnrollmentRequest = async (req, res) => {
         coursesToEnroll,
         validIdPath,
         idPhotoPath,
-        // Attach userId if provided (for logged-in users)
-        ...(userId && { userId }),
+        // Attach userId if provided or resolved from email lookup
+        ...(resolvedUserId && { userId: resolvedUserId }),
+        // Attach studentId (readable ID like "STU-2024-001") if resolved from email lookup
+        ...(resolvedStudentId && { studentId: resolvedStudentId }),
         // Attach current period if available
         ...(currentPeriod && { periodId: currentPeriod.id }),
       },
