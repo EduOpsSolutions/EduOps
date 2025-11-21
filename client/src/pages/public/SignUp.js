@@ -471,6 +471,23 @@ function SignUp() {
       // Add userId if user is logged in
       if (isLoggedIn && userProfile && userProfile.id) {
         enrollmentData.userId = userProfile.id;
+
+        // Add pre-filled fields from user profile (disabled fields are not included in FormData)
+        enrollmentData.firstName = userProfile.firstName;
+        enrollmentData.lastName = userProfile.lastName;
+        enrollmentData.preferredEmail = userProfile.email;
+
+        // Format birthDate from userProfile
+        if (userProfile.birthyear && userProfile.birthmonth && userProfile.birthdate) {
+          enrollmentData.birthDate = `${userProfile.birthyear}-${String(
+            userProfile.birthmonth
+          ).padStart(2, "0")}-${String(userProfile.birthdate).padStart(2, "0")}`;
+        }
+
+        // Add middleName if present
+        if (userProfile.middleName) {
+          enrollmentData.middleName = userProfile.middleName;
+        }
       }
 
       // Get selected course details (name and price) based on course IDs
