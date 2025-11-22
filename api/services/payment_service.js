@@ -487,14 +487,15 @@ export const bulkSyncPendingPayments = async () => {
 export const cleanupOrphanedPayments = async () => {
   console.log("Starting orphaned payments cleanup...");
 
-  // Find pending payments older than 24 hours
+  //const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000); // For testing: expire pending payments older than 2 minutes
+
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const pendingPayments = await prisma.payments.findMany({
     where: {
       status: PAYMENT_STATUS.PENDING,
-      referenceNumber: { not: null },
       createdAt: { lt: oneDayAgo },
+      //createdAt: { lt: twoMinutesAgo }, // For testing: expire pending payments older than 2 minutes
     },
     take: 50,
   });
@@ -508,22 +509,22 @@ export const cleanupOrphanedPayments = async () => {
         `Checking orphaned payment ${payment.id} with reference: ${payment.referenceNumber}`
       );
 
-      // Mark old pending payments as failed
-      console.log(
-        `Marking old pending payment ${payment.id} as failed (PIPM flow)`
-      );
+	  // Mark old pending payments as failed (expired)
+	  console.log(
+	    `Marking old pending payment ${payment.id} as failed (expired)`
+	  );
 
       await prisma.payments.update({
         where: { id: payment.id },
         data: {
-          status: "failed",
+          status: "expired",
         },
       });
 
       updatedCount++;
       results.push({
         paymentId: payment.id,
-        action: "marked_as_failed",
+        action: "marked_as_expired",
         reason: "Payment expired",
       });
     } catch (error) {
