@@ -361,7 +361,7 @@ const updatePaymentStatus = async (payment, intentData, finalPaymentMethod) => {
             const paymentId = paidPayment.id || paidPayment.data?.id;
             if (paymentId) {
                 paymentReferenceNumber = paymentId;
-                console.log("[CheckStatus] 📝 Extracted reference number:", paymentId);
+                console.log("[CheckStatus] Extracted reference number:", paymentId);
             }
         }
 
@@ -436,7 +436,7 @@ const updatePaymentStatus = async (payment, intentData, finalPaymentMethod) => {
  * Check if paid payment needs refund status update
  */
 const checkPaidPaymentForRefund = async (payment, intentData) => {
-    console.log("[CheckStatus] 🔵 Checking paid payment for refund:", {
+    console.log("[CheckStatus] Checking paid payment for refund:", {
         transactionId: payment.transactionId,
         referenceNumber: payment.referenceNumber,
         hasPayments: !!(intentData?.payments && intentData.payments.length > 0),

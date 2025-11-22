@@ -3,6 +3,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import indexRouter from './routes/v1/index_routes.js';
+import './cron.js';
 
 const app = express();
 
