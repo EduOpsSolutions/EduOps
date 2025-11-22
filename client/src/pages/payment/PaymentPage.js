@@ -60,7 +60,7 @@ const PaymentPage = () => {
         const resp = await axiosInstance.get(`/payments/${paymentId}/status`);
         const payment = resp?.data?.data;
         if (payment) {
-          if (['paid', 'cancelled', 'refunded', 'failed'].includes(payment.status)) {
+          if (['paid', 'cancelled', 'refunded', 'failed', 'expired'].includes(payment.status)) {
             setIsLocked(true);
           }
           setPaymentData((prev) => ({ ...prev, status: payment.status }));
@@ -292,10 +292,12 @@ const PaymentPage = () => {
       <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8">
         <div className="w-full max-w-5xl bg-white border-2 border-dark-red rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden shadow-lg">
           {isLocked && (
-            <div className={`mb-4 p-4 rounded border ${paymentData.status === 'failed' ? 'border-red-300 bg-red-50 text-red-800' : 'border-green-300 bg-green-50 text-green-800'}`}>
+            <div className={`mb-4 p-4 rounded border ${['failed', 'expired'].includes(paymentData.status) ? 'border-red-300 bg-red-50 text-red-800' : 'border-green-300 bg-green-50 text-green-800'}`}>
               {paymentData.status === 'failed'
                 ? 'This payment has failed. Please request a new one. Payment form is locked.'
-                : 'This payment has already been completed. Payment form is locked.'}
+                : paymentData.status === 'expired'
+                  ? 'This payment link has expired. Please request a new one. Payment form is locked.'
+                  : 'This payment has already been completed. Payment form is locked.'}
             </div>
           )}
           {/* Header */}
