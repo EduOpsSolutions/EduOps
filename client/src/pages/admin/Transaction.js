@@ -83,28 +83,147 @@ function Transaction() {
           </div>
 
           <div className="mb-6 md:mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
-              {/* Search Field */}
-              <div>
-                <SearchField
-                  name="searchTerm"
-                  placeholder="Search Student ID, Name, or Fee Type"
-                  value={searchStore.searchParams.searchTerm || ""}
-                  onChange={(e) => {
-                    searchStore.handleInputChange(e);
-                    handleSearch();
-                  }}
-                  onClick={handleSearch}
-                  className="w-full sm:w-80"
-                />
+            <div className="flex flex-col gap-4 mb-4">
+              {/* First Row: Search Field and Add Button */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                {/* Search Field */}
+                <div className="w-full sm:w-auto">
+                  <SearchField
+                    name="searchTerm"
+                    placeholder="Search Student ID, Name, or Fee Type"
+                    value={searchStore.searchParams.searchTerm || ""}
+                    onChange={(e) => {
+                      searchStore.handleInputChange(e);
+                      handleSearch();
+                    }}
+                    onClick={handleSearch}
+                    className="w-full sm:w-80"
+                  />
+                </div>
+
+                {/* Add Transaction Button */}
+                <div className="flex gap-2">
+                  <ThinRedButton onClick={openAddTransactionModal}>
+                    Add Transaction
+                  </ThinRedButton>
+                </div>
               </div>
 
-              {/* Add Transaction Button */}
-              <div className="flex gap-2">
-                <ThinRedButton onClick={openAddTransactionModal}>
-                  Add Transaction
-                </ThinRedButton>
+              {/* Second Row: Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {/* Date From */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date From</label>
+                  <input
+                    type="date"
+                    name="dateFrom"
+                    value={searchStore.searchParams.dateFrom || ""}
+                    onChange={(e) => {
+                      searchStore.handleInputChange(e);
+                      fetchTransactions();
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red"
+                  />
+                </div>
+
+                {/* Date To */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date To</label>
+                  <input
+                    type="date"
+                    name="dateTo"
+                    value={searchStore.searchParams.dateTo || ""}
+                    onChange={(e) => {
+                      searchStore.handleInputChange(e);
+                      fetchTransactions();
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red"
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <select
+                    name="status"
+                    value={searchStore.searchParams.status || ""}
+                    onChange={(e) => {
+                      searchStore.handleInputChange(e);
+                      fetchTransactions();
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red"
+                  >
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="failed">Failed</option>
+                    <option value="expired">Expired</option>
+                    <option value="refunded">Refunded</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Payment Method</label>
+                  <select
+                    name="paymentMethod"
+                    value={searchStore.searchParams.paymentMethod || ""}
+                    onChange={(e) => {
+                      searchStore.handleInputChange(e);
+                      fetchTransactions();
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red"
+                  >
+                    <option value="">All Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Maya">Maya</option>
+                    <option value="Card">Card</option>
+                    <option value="Online Payment">Online Payment</option>
+                  </select>
+                </div>
+
+                {/* Fee Type */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Fee Type</label>
+                  <select
+                    name="feeType"
+                    value={searchStore.searchParams.feeType || ""}
+                    onChange={(e) => {
+                      searchStore.handleInputChange(e);
+                      fetchTransactions();
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red"
+                  >
+                    <option value="">All Fee Types</option>
+                    <option value="down_payment">Down Payment (DP)</option>
+                    <option value="tuition_fee">Tuition Fee (TF)</option>
+                    <option value="book_fee">Book Fee (BF)</option>
+                    <option value="document_fee">Document Fee (DF)</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Clear Filters Button */}
+              {(searchStore.searchParams.dateFrom ||
+                searchStore.searchParams.dateTo ||
+                searchStore.searchParams.status ||
+                searchStore.searchParams.paymentMethod ||
+                searchStore.searchParams.feeType) && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      searchStore.resetSearch();
+                      fetchTransactions();
+                    }}
+                    className="text-sm text-dark-red hover:underline"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

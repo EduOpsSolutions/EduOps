@@ -12,7 +12,7 @@ import { createLog, logSecurityEvent, LogTypes } from "../utils/logger.js";
 import { MODULE_TYPES } from "../constants/module_types.js";
 import { sendEmailChangeNotification } from "../services/userChangeEmailService.js";
 import { generateStandardizedUserId } from "../utils/userIdGenerator.js";
-import { sendAccountCreationEmail } from "../utils/mailer.js";
+import { sendAccountCreationEmail, sendEmail } from "../utils/mailer.js";
 
 // Generate default password: lastname(no whitespaces) + first 2 letters of firstname + yearofbirth
 const generateDefaultPassword = (lastName, firstName, birthYear) => {
@@ -700,11 +700,110 @@ const createStudentAccount = async (req, res) => {
     }
 
     // Link the created user to the specific enrollment request using enrollmentId
+    // and automatically set status to "verified" since account has been created
     if (req.body.enrollmentId) {
-      await prisma.enrollment_request.update({
+      const updatedEnrollment = await prisma.enrollment_request.update({
         where: { enrollmentId: req.body.enrollmentId },
-        data: { studentId: user.userId },
+        data: {
+          studentId: user.userId,
+          userId: user.id,
+          enrollmentStatus: "verified",
+        },
       });
+
+      // Send enrollment verification email
+      try {
+        const studentName = `${updatedEnrollment.firstName} ${updatedEnrollment.lastName}`;
+        const studentEmail = updatedEnrollment.preferredEmail || updatedEnrollment.altEmail;
+
+        // Fetch the academic period details if available
+        let periodInfo = "";
+        let periodName = "";
+        if (updatedEnrollment.periodId) {
+          const period = await prisma.academic_period.findUnique({
+            where: { id: updatedEnrollment.periodId },
+          });
+          if (period) {
+            periodName = period.batchName || period.periodName;
+            periodInfo = `<p style="font-size: 1rem; color: #333; line-height: 1.6;">
+              <strong>Academic Period:</strong> ${periodName}
+            </p>`;
+          }
+        }
+
+        if (studentEmail) {
+          const subject = "Enrollment Verified - Sprach Institut";
+          const html = `
+            <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
+              <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden;">
+                <div style="background: #890E07; color: #fff; padding: 24px 32px;">
+                  <h1 style="margin: 0; font-size: 2rem;">Enrollment Verified!</h1>
+                </div>
+                <div style="padding: 32px;">
+                  <h2 style="color: #890E07; margin-top: 0;">Congratulations ${studentName}!</h2>
+                  <p style="font-size: 1.1rem; color: #333; line-height: 1.6;">
+                    Your enrollment has been successfully verified by our admissions team.
+                  </p>
+                  <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                      <strong>✓ Enrollment ID:</strong> ${updatedEnrollment.enrollmentId}
+                    </p>
+                    <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                      <strong>✓ Courses:</strong> ${updatedEnrollment.coursesToEnroll}
+                    </p>
+                    ${periodInfo}
+                  </div>
+                  <h3 style="color: #890E07; margin-top: 32px;">Next Steps:</h3>
+                  <ol style="font-size: 1rem; color: #333; line-height: 1.8; padding-left: 20px;">
+                    <li>Proceed with the payment for your enrollment</li>
+                    <li>Your course schedules will be arranged by the administration team</li>
+                    <li>You will receive further notifications regarding your class schedule</li>
+                  </ol>
+                  <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; margin: 24px 0;">
+                    <p style="margin: 0; font-size: 0.95rem; color: #856404;">
+                      <strong>📧 Note:</strong> This email was sent to the address you provided during enrollment. Please check your spam folder if you don't see our emails.
+                    </p>
+                  </div>
+                  <hr style="margin: 32px 0; border: none; border-top: 1px solid #eee;">
+                  <p style="color: #555; font-size: 0.9rem;">
+                    If you have any questions, please contact our admissions office.
+                  </p>
+                </div>
+                <div style="background: #f1f1f1; color: #888; text-align: center; padding: 16px 0; font-size: 0.9rem;">
+                  &copy; ${new Date().getFullYear()} Sprach Institut. All rights reserved.
+                </div>
+              </div>
+            </div>
+          `;
+
+          const text = `
+Congratulations ${studentName}!
+
+Your enrollment has been successfully verified by our admissions team.
+
+Enrollment Details:
+- Enrollment ID: ${updatedEnrollment.enrollmentId}
+- Courses: ${updatedEnrollment.coursesToEnroll}
+${periodName ? `- Academic Period: ${periodName}` : ""}
+
+Next Steps:
+1. Proceed with the payment for your enrollment
+2. Your course schedules will be arranged by the administration team
+3. You will receive further notifications regarding your class schedule
+
+If you have any questions, please contact our admissions office.
+
+---
+This email was sent to the address you provided during enrollment.
+          `;
+
+          await sendEmail(studentEmail, subject, text, html);
+          console.log(`[createStudentAccount] Verification email sent to ${studentEmail}`);
+        }
+      } catch (emailError) {
+        console.error("[createStudentAccount] Failed to send verification email:", emailError);
+        // Don't fail the request if email fails
+      }
     }
 
     await createLog({

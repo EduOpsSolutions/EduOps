@@ -1,10 +1,14 @@
 import Joi from 'joi';
 
-// Validation Schemas 
+// Validation Schemas
 const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).max(100).default(10).optional(),
-    status: Joi.string().valid('pending', 'paid', 'failed', 'expired', 'cancelled').optional(),
+    status: Joi.string().valid('pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded').optional(),
+    paymentMethod: Joi.string().optional(),
+    feeType: Joi.string().optional(),
+    dateFrom: Joi.string().isoDate().optional(),
+    dateTo: Joi.string().isoDate().optional(),
     search: Joi.string().optional(),
     searchTerm: Joi.string().optional()
 });

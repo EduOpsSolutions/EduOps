@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Bg_image from "../../assets/images/Bg7.jpg";
 import SmallButton from "../../components/buttons/SmallButton";
@@ -146,7 +146,10 @@ function SignUp() {
                 const eligibility = eligibilityMap[opt.value];
 
                 // Add all co-requisites for auto-selection
-                if (requisites?.corequisites && requisites.corequisites.length > 0) {
+                if (
+                  requisites?.corequisites &&
+                  requisites.corequisites.length > 0
+                ) {
                   opt.corequisites = requisites.corequisites.map((c) => c.id);
                 }
 
@@ -157,7 +160,10 @@ function SignUp() {
                     .map((p) => p.name)
                     .join(", ");
                   opt.helperText = `Prerequisites not met: ${missingNames}`;
-                } else if (requisites?.corequisites && requisites.corequisites.length > 0) {
+                } else if (
+                  requisites?.corequisites &&
+                  requisites.corequisites.length > 0
+                ) {
                   // Show co-requisites info (but don't disable)
                   const coReqNames = requisites.corequisites
                     .map((c) => c.name)
@@ -172,13 +178,19 @@ function SignUp() {
             // For guests: disable courses with prerequisites or co-requisites
             courseOptions.forEach((opt) => {
               const requisites = requisitesMap[opt.value];
-              if (requisites?.prerequisites && requisites.prerequisites.length > 0) {
+              if (
+                requisites?.prerequisites &&
+                requisites.prerequisites.length > 0
+              ) {
                 opt.disabled = true;
                 const prereqNames = requisites.prerequisites
                   .map((p) => p.name)
                   .join(", ");
                 opt.helperText = `Requires: ${prereqNames} (Login to check eligibility)`;
-              } else if (requisites?.corequisites && requisites.corequisites.length > 0) {
+              } else if (
+                requisites?.corequisites &&
+                requisites.corequisites.length > 0
+              ) {
                 opt.disabled = true;
                 const coReqNames = requisites.corequisites
                   .map((c) => c.name)
@@ -330,6 +342,11 @@ function SignUp() {
       ...prev,
       [name]: numericValue,
     }));
+
+    // Trigger live validation only for main contact number and alt contact number
+    if (name === "contactNumber" || name === "altContactNumber") {
+      handlePhoneValidation(numericValue);
+    }
   };
 
   const handleFileChange = async (event, setFile) => {
@@ -385,6 +402,10 @@ function SignUp() {
 
   const [emailError, setEmailError] = useState("");
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const emailDebounceRef = useRef(null);
+  const phoneDebounceRef = useRef(null);
 
   // Email format validator (simple regex)
   const isValidEmailFormat = (email) => {
@@ -392,9 +413,17 @@ function SignUp() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  // Phone format validator
+  const isValidPhoneFormat = (phone) => {
+    // Check if phone is 11-15 digits
+    return phone && phone.length >= 11 && phone.length <= 15;
+  };
+
   // Async email validator using new public endpoint, only if format is valid
   const validateEmailUnique = async (email) => {
     setEmailError("");
+    if (!email) return;
+
     if (!isValidEmailFormat(email)) {
       setEmailError("Please enter a valid email address.");
       return;
@@ -417,6 +446,77 @@ function SignUp() {
       setCheckingEmail(false);
     }
   };
+
+  // Async phone validator using new public endpoint
+  const validatePhoneUnique = async (phone) => {
+    setPhoneError("");
+    if (!phone) return;
+
+    if (!isValidPhoneFormat(phone)) {
+      setPhoneError("Phone number must be 11-15 digits.");
+      return;
+    }
+    setCheckingPhone(true);
+    try {
+      const res = await axiosInstance.get(`/enrollment/check-phone`, {
+        params: { phone },
+      });
+      if (res.data && res.data.exists) {
+        setPhoneError(
+          "This phone number is already registered. Please use a different number."
+        );
+      } else {
+        setPhoneError("");
+      }
+    } catch (e) {
+      setPhoneError("Could not validate phone number. Try again later.");
+    } finally {
+      setCheckingPhone(false);
+    }
+  };
+
+  // Debounced email validation - triggers as user types
+  const handleEmailChange = (e) => {
+    const email = e.target.value;
+    setEmailError("");
+
+    // Clear existing timeout
+    if (emailDebounceRef.current) {
+      clearTimeout(emailDebounceRef.current);
+    }
+
+    // Set new timeout for validation
+    emailDebounceRef.current = setTimeout(() => {
+      validateEmailUnique(email);
+    }, 800); // Wait 800ms after user stops typing
+  };
+
+  // Debounced phone validation - triggers as user types
+  const handlePhoneValidation = (phone) => {
+    setPhoneError("");
+
+    // Clear existing timeout
+    if (phoneDebounceRef.current) {
+      clearTimeout(phoneDebounceRef.current);
+    }
+
+    // Set new timeout for validation
+    phoneDebounceRef.current = setTimeout(() => {
+      validatePhoneUnique(phone);
+    }, 800); // Wait 800ms after user stops typing
+  };
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (emailDebounceRef.current) {
+        clearTimeout(emailDebounceRef.current);
+      }
+      if (phoneDebounceRef.current) {
+        clearTimeout(phoneDebounceRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -478,10 +578,17 @@ function SignUp() {
         enrollmentData.preferredEmail = userProfile.email;
 
         // Format birthDate from userProfile
-        if (userProfile.birthyear && userProfile.birthmonth && userProfile.birthdate) {
+        if (
+          userProfile.birthyear &&
+          userProfile.birthmonth &&
+          userProfile.birthdate
+        ) {
           enrollmentData.birthDate = `${userProfile.birthyear}-${String(
             userProfile.birthmonth
-          ).padStart(2, "0")}-${String(userProfile.birthdate).padStart(2, "0")}`;
+          ).padStart(2, "0")}-${String(userProfile.birthdate).padStart(
+            2,
+            "0"
+          )}`;
         }
 
         // Add middleName if present
@@ -888,18 +995,50 @@ function SignUp() {
                     </div>
                   </div>
                   <div className="grid md:grid-cols-2 md:gap-6">
-                    <LabelledInputField
-                      name="contactNumber"
-                      id="contact_number"
-                      label="Contact Number*"
-                      type="tel"
-                      required={true}
-                      placeholder="09xxxxxxxxx"
-                      value={contactNumbers.contactNumber}
-                      onChange={handleContactNumberChange}
-                      minLength="11"
-                      maxLength="15"
-                    />
+                    <div className="flex flex-col">
+                      <LabelledInputField
+                        name="contactNumber"
+                        id="contact_number"
+                        label="Contact Number*"
+                        type="tel"
+                        required={true}
+                        placeholder="09xxxxxxxxx"
+                        value={contactNumbers.contactNumber}
+                        onChange={handleContactNumberChange}
+                        minLength="11"
+                        maxLength="15"
+                        error={phoneError}
+                      />
+                      {checkingPhone && (
+                        <div className="text-blue-600 text-sm mt-1 mb-2 flex items-center">
+                          <svg
+                            className="animate-spin h-4 w-4 mr-2"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          Checking phone availability...
+                        </div>
+                      )}
+                      {phoneError && (
+                        <div className="text-red-600 text-sm mt-1 mb-2">
+                          {phoneError}
+                        </div>
+                      )}
+                    </div>
                     <LabelledInputField
                       name="altContactNumber"
                       id="alt_contact_number"
@@ -928,15 +1067,37 @@ function SignUp() {
                             : undefined
                         }
                         disabled={isLoggedIn && userProfile}
-                        onBlur={(e) =>
-                          !isLoggedIn && validateEmailUnique(e.target.value)
-                        }
                         onChange={(e) => {
-                          handleContactNumberChange(e);
-                          setEmailError("");
+                          if (!isLoggedIn) {
+                            handleEmailChange(e);
+                          }
                         }}
                         error={emailError}
                       />
+                      {checkingEmail && (
+                        <div className="text-blue-600 text-sm mt-1 mb-2 flex items-center">
+                          <svg
+                            className="animate-spin h-4 w-4 mr-2"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          Checking email availability...
+                        </div>
+                      )}
                       {emailError && (
                         <div className="text-red-600 text-sm mt-1 mb-2">
                           {emailError}
@@ -1019,21 +1180,33 @@ function SignUp() {
                     />
                   </div>
 
-                  <div className="grid md:grid-cols-3 md:gap-6">
+                  <div className="grid md:grid-cols-3 md:gap-6 mb-4">
                     <div>
                       <MultiSelectField
                         name="coursesToEnroll"
                         id="courses_to_enroll"
-                        label="Select Course(s) to Enroll*"
+                        label="Select Course(s) to Enroll"
                         required={true}
                         value={selectedCourses}
                         onChange={(e) => setSelectedCourses(e.target.value)}
                         options={
                           coursesLoading
-                            ? [{ value: "", label: "Loading courses...", disabled: true }]
+                            ? [
+                                {
+                                  value: "",
+                                  label: "Loading courses...",
+                                  disabled: true,
+                                },
+                              ]
                             : courseOptions.length > 0
                             ? courseOptions
-                            : [{ value: "", label: "No courses available", disabled: true }]
+                            : [
+                                {
+                                  value: "",
+                                  label: "No courses available",
+                                  disabled: true,
+                                },
+                              ]
                         }
                         disabled={coursesLoading}
                         placeholder="Search and select courses..."
@@ -1042,12 +1215,17 @@ function SignUp() {
                       {selectedCourses.length > 0 && (
                         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <p className="text-sm font-semibold text-blue-800 mb-1">
-                            {selectedCourses.length} course{selectedCourses.length > 1 ? 's' : ''} selected
+                            {selectedCourses.length} course
+                            {selectedCourses.length > 1 ? "s" : ""} selected
                           </p>
                           <p className="text-xs text-blue-600">
-                            Total Price: ₱{coursesData
+                            Total Price: ₱
+                            {coursesData
                               .filter((c) => selectedCourses.includes(c.id))
-                              .reduce((sum, c) => sum + parseFloat(c.price || 0), 0)
+                              .reduce(
+                                (sum, c) => sum + parseFloat(c.price || 0),
+                                0
+                              )
                               .toLocaleString()}
                           </p>
                         </div>
@@ -1087,7 +1265,9 @@ function SignUp() {
                       validIdUploading ||
                       idPhotoUploading ||
                       !!emailError ||
+                      !!phoneError ||
                       checkingEmail ||
+                      checkingPhone ||
                       !validId ||
                       !idPhoto ||
                       typeof validId !== "string" ||
@@ -1098,6 +1278,8 @@ function SignUp() {
                       ? "Submitting..."
                       : validIdUploading || idPhotoUploading
                       ? "Uploading..."
+                      : checkingEmail || checkingPhone
+                      ? "Validating..."
                       : !validId || !idPhoto
                       ? "Please upload required files"
                       : "Proceed"}

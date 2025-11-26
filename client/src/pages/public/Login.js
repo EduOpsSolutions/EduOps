@@ -1,20 +1,20 @@
 //import Cookies from 'js-cookie';
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Bg_image from '../../assets/images/GermanyBg.png';
-import Left_section_image from '../../assets/images/PhpGermanFlag.jpg';
-import Logo from '../../assets/images/SprachinsLogo.png';
-import PrimaryButton from '../../components/buttons/PrimaryButton';
-import SecondaryButton from '../../components/buttons/SecondaryButton';
-import DevLoginModal from '../../components/modals/common/DevLoginModal';
-import ForgetPasswordModal from '../../components/modals/common/ForgetPasswordModal';
-import PasswordResetModal from '../../components/modals/common/PasswordResetModal';
-import ForcedPasswordChangeModal from '../../components/modals/common/ForcedPasswordChangeModal';
-import TrackEnrollmentModal from '../../components/modals/enrollment/TrackEnrollmentModal';
-import Swal from 'sweetalert2';
-import { BsEye, BsEyeSlash } from 'react-icons/bs';
-import useAuthStore from '../../stores/authStore';
-import Spinner from '../../components/common/Spinner';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Bg_image from "../../assets/images/GermanyBg.png";
+import Left_section_image from "../../assets/images/PhpGermanFlag.jpg";
+import Logo from "../../assets/images/SprachinsLogo.png";
+import PrimaryButton from "../../components/buttons/PrimaryButton";
+import SecondaryButton from "../../components/buttons/SecondaryButton";
+import DevLoginModal from "../../components/modals/common/DevLoginModal";
+import ForgetPasswordModal from "../../components/modals/common/ForgetPasswordModal";
+import PasswordResetModal from "../../components/modals/common/PasswordResetModal";
+import ForcedPasswordChangeModal from "../../components/modals/common/ForcedPasswordChangeModal";
+import TrackEnrollmentModal from "../../components/modals/enrollment/TrackEnrollmentModal";
+import Swal from "sweetalert2";
+import { BsEye, BsEyeSlash } from "react-icons/bs";
+import useAuthStore from "../../stores/authStore";
+import Spinner from "../../components/common/Spinner";
 
 function Login() {
   const { login, isLoading, getUser } = useAuthStore();
@@ -27,19 +27,55 @@ function Login() {
 
   const navigate = useNavigate();
 
+  // Client-side validation function
+  const validateForm = () => {
+    const newErrors = { email: "", password: "" };
+    let isValid = true;
+
+    // Email validation
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else {
+      // Basic email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = "Please enter a valid email address";
+        isValid = false;
+      }
+    }
+
+    // Password validation
+    if (!password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleLogin = async () => {
+    // Validate form before sending to backend
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       const result = await login(email, password);
-      console.log('Login result:', result);
+      console.log("Login result:", result);
 
       if (result.success) {
         // Check if user needs to change password
         if (result.changePassword) {
           Swal.fire({
-            icon: 'warning',
-            title: 'Password Change Required',
-            text: 'You must change your password before proceeding.',
-            confirmButtonColor: '#992525',
+            icon: "warning",
+            title: "Password Change Required",
+            text: "You must change your password before proceeding.",
+            confirmButtonColor: "#992525",
             allowOutsideClick: false,
             allowEscapeKey: false,
           }).then(() => {
@@ -49,24 +85,24 @@ function Login() {
         }
 
         const userRole = getUser().role;
-        if (userRole === 'student') {
-          navigate('/student');
-        } else if (userRole === 'admin') {
-          navigate('/admin');
-        } else if (userRole === 'teacher') {
-          navigate('/teacher');
+        if (userRole === "student") {
+          navigate("/student");
+        } else if (userRole === "admin") {
+          navigate("/admin");
+        } else if (userRole === "teacher") {
+          navigate("/teacher");
         } else {
-          navigate('/');
+          navigate("/");
         }
       }
     } catch (error) {
       Swal.fire({
-        icon: 'error',
-        title: 'Login Failed',
-        text: error.message || 'A client-side error occurred.',
-        confirmButtonColor: '#992525',
+        icon: "error",
+        title: "Login Failed",
+        text: error.message || "A client-side error occurred.",
+        confirmButtonColor: "#992525",
         customClass: {
-          confirmButton: 'bg-german-red hover:bg-dark-red-2 text-white',
+          confirmButton: "bg-german-red hover:bg-dark-red-2 text-white",
         },
       });
     }
@@ -74,15 +110,24 @@ function Login() {
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
+    // Clear password error when user starts typing
+    if (errors.password) {
+      setErrors((prev) => ({ ...prev, password: "" }));
+    }
   };
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
+    // Clear email error when user starts typing
+    if (errors.email) {
+      setErrors((prev) => ({ ...prev, email: "" }));
+    }
   };
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({ email: "", password: "" });
 
   return (
     // Backgroung image and overlay
@@ -90,9 +135,9 @@ function Login() {
       className="flex justify-center items-center bg-white-yellow-tone"
       style={{
         backgroundImage: `url(${Bg_image})`,
-        backgroundSize: '135%',
-        backgroundPosition: '20% 70%',
-        minHeight: '100vh',
+        backgroundSize: "135%",
+        backgroundPosition: "20% 70%",
+        minHeight: "100vh",
       }}
     >
       <div className="absolute inset-0 bg-white-yellow-tone opacity-75"></div>
@@ -106,9 +151,9 @@ function Login() {
               className="absolute inset-0 w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage: `url(${Left_section_image})`,
-                backgroundSize: '115%',
-                backgroundPosition: '100% 40%',
-                clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0% 100%)',
+                backgroundSize: "115%",
+                backgroundPosition: "100% 40%",
+                clipPath: "polygon(0 0, 100% 0, 80% 100%, 0% 100%)",
               }}
             ></div>
 
@@ -126,7 +171,7 @@ function Login() {
             {/* Login form */}
             <form className="flex flex-col items-center w-2/3 mt-2">
               {/* Email text field */}
-              <div className="relative mb-3 mt-3 w-full">
+              <div className="relative mb-1 mt-3 w-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="currentColor"
@@ -143,16 +188,24 @@ function Login() {
                   type="text"
                   id="email"
                   name="email"
-                  className="border border-black pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
+                  className={`border ${
+                    errors.email ? "border-red-500" : "border-black"
+                  } pl-10 pr-4 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full`}
                   placeholder="Email"
                   onChange={handleEmailChange}
+                  value={email}
                 />
               </div>
+              {errors.email && (
+                <p className="text-white text-xs mb-2 w-full text-left">
+                  {errors.email}
+                </p>
+              )}
 
               {/* Password text field */}
               {/* Note: There is bug where if you click out of the textbox after typing your password,
         the password eye button thingy disappears*/}
-              <div className="relative w-full bg-white">
+              <div className="relative w-full bg-white mb-1">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -166,14 +219,17 @@ function Login() {
                   />
                 </svg>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
-                  className="border border-black pl-10 pr-10 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full"
+                  className={`border ${
+                    errors.password ? "border-red-500" : "border-black"
+                  } pl-10 pr-10 py-1 h-10 focus:outline-none bg-white-yellow-tone w-full`}
                   placeholder="Password"
                   onChange={handlePasswordChange}
+                  value={password}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       handleLogin();
                     }
                   }}
@@ -189,6 +245,11 @@ function Login() {
                   {showPassword ? <BsEye /> : <BsEyeSlash />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-white text-xs mb-2 w-full text-left">
+                  {errors.password}
+                </p>
+              )}
 
               {/* need to change hover color */}
               <div className="self-end">
@@ -223,14 +284,14 @@ function Login() {
                 onPasswordChanged={() => {
                   // Navigate to appropriate page after password change
                   const userRole = getUser().role;
-                  if (userRole === 'student') {
-                    navigate('/student');
-                  } else if (userRole === 'admin') {
-                    navigate('/admin');
-                  } else if (userRole === 'teacher') {
-                    navigate('/teacher');
+                  if (userRole === "student") {
+                    navigate("/student");
+                  } else if (userRole === "admin") {
+                    navigate("/admin");
+                  } else if (userRole === "teacher") {
+                    navigate("/teacher");
                   } else {
-                    navigate('/');
+                    navigate("/");
                   }
                 }}
               />
@@ -248,7 +309,7 @@ function Login() {
                 {isLoading ? (
                   <Spinner size="md" color="text-white" className="p-8 py-2" />
                 ) : (
-                  'Login'
+                  "Login"
                 )}
               </PrimaryButton>
 
@@ -265,7 +326,7 @@ function Login() {
                 <p className="text-white-yellow-tone text-xs font-sans -mb-3 px-2">
                   New Student?
                 </p>
-                <SecondaryButton onClick={() => navigate('/sign-up')}>
+                <SecondaryButton onClick={() => navigate("/sign-up")}>
                   Enroll Now
                 </SecondaryButton>
               </div>
@@ -288,7 +349,7 @@ function Login() {
             {/* Pay as Guest Option */}
             <div className="flex items-center justify-center mt-4">
               <button
-                onClick={() => navigate('/paymentForm')}
+                onClick={() => navigate("/paymentForm")}
                 className="text-black text-lg font-sans py-2 px-4 bg-yellow-300  hover:bg-yellow-400 font-bold transition-colors duration-200"
               >
                 Pay as Guest
@@ -298,15 +359,15 @@ function Login() {
             {/* Terms and Privacy Policy Section*/}
             <div className="w-80">
               <p className="text-sm mt-2 text-white-yellow-tone text-center">
-                By using this service, you understood and agree to our{' '}
+                By using this service, you understood and agree to our{" "}
                 <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
-                  <button onClick={() => navigate('../legal/terms')}>
+                  <button onClick={() => navigate("../legal/terms")}>
                     Terms
                   </button>
                 </span>
-                {' and '}
+                {" and "}
                 <span className="cursor-pointer text-german-yellow hover:text-bright-red underline">
-                  <button onClick={() => navigate('../legal/privacy-policy')}>
+                  <button onClick={() => navigate("../legal/privacy-policy")}>
                     Privacy Policy
                   </button>
                 </span>
