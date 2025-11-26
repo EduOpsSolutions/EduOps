@@ -5,15 +5,20 @@ import axiosInstance from '../utils/axios';
 const useTransactionSearchStore = createSearchStore({
   initialData: [],
   defaultSearchParams: {
-    searchTerm: ""
+    searchTerm: "",
+    status: "",
+    paymentMethod: "",
+    feeType: "",
+    dateFrom: "",
+    dateTo: ""
   },
   searchableFields: ["firstName", "lastName", "userId", "studentId", "feeType"],
   exactMatchFields: [],
   initialItemsPerPage: 10,
   filterFunction: (data, params) => {
     if (!params.searchTerm) return data;
-    
-    return data.filter(transaction => 
+
+    return data.filter(transaction =>
       transaction.firstName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
       transaction.lastName?.toLowerCase().includes(params.searchTerm.toLowerCase()) ||
       transaction.userId?.toString().includes(params.searchTerm) ||
@@ -36,19 +41,29 @@ const useTransactionStore = create((set, get) => ({
   fetchTransactions: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await axiosInstance.get("/payments/admin/allTransactions?limit=100");
-      const transactions = response.data.data?.payments || [];
-      
-      set({ transactions, loading: false });
-      
+
+      // Build query parameters from search store
       const searchStore = useTransactionSearchStore.getState();
+      const params = new URLSearchParams({ limit: '100' });
+
+      if (searchStore.searchParams.status) params.append('status', searchStore.searchParams.status);
+      if (searchStore.searchParams.paymentMethod) params.append('paymentMethod', searchStore.searchParams.paymentMethod);
+      if (searchStore.searchParams.feeType) params.append('feeType', searchStore.searchParams.feeType);
+      if (searchStore.searchParams.dateFrom) params.append('dateFrom', searchStore.searchParams.dateFrom);
+      if (searchStore.searchParams.dateTo) params.append('dateTo', searchStore.searchParams.dateTo);
+      if (searchStore.searchParams.searchTerm) params.append('searchTerm', searchStore.searchParams.searchTerm);
+
+      const response = await axiosInstance.get(`/payments/admin/allTransactions?${params.toString()}`);
+      const transactions = response.data.data?.payments || [];
+
+      set({ transactions, loading: false });
       searchStore.setData(transactions);
-      
+
     } catch (error) {
       console.error("Failed to fetch transactions: ", error);
-      set({ 
-        error: error.response?.data?.message || "Failed to fetch transactions", 
-        loading: false 
+      set({
+        error: error.response?.data?.message || "Failed to fetch transactions",
+        loading: false
       });
     }
   },
@@ -56,14 +71,25 @@ const useTransactionStore = create((set, get) => ({
   // Auto-refresh function for webhook updates
   refreshTransactions: async () => {
     try {
-      const response = await axiosInstance.get("/payments/admin/allTransactions?limit=100");
-      const transactions = response.data.data?.payments || [];
-      
-      set({ transactions });
-      
+      // Build query parameters from search store
       const searchStore = useTransactionSearchStore.getState();
-      searchStore.setData(transactions);
-      
+      const params = new URLSearchParams({ limit: '100' });
+
+      if (searchStore.searchParams.status) params.append('status', searchStore.searchParams.status);
+      if (searchStore.searchParams.paymentMethod) params.append('paymentMethod', searchStore.searchParams.paymentMethod);
+      if (searchStore.searchParams.feeType) params.append('feeType', searchStore.searchParams.feeType);
+      if (searchStore.searchParams.dateFrom) params.append('dateFrom', searchStore.searchParams.dateFrom);
+      if (searchStore.searchParams.dateTo) params.append('dateTo', searchStore.searchParams.dateTo);
+      if (searchStore.searchParams.searchTerm) params.append('searchTerm', searchStore.searchParams.searchTerm);
+
+      const response = await axiosInstance.get(`/payments/admin/allTransactions?${params.toString()}`);
+      const transactions = response.data.data?.payments || [];
+
+      set({ transactions });
+
+      const searchStore2 = useTransactionSearchStore.getState();
+      searchStore2.setData(transactions);
+
     } catch (error) {
       console.error("Failed to refresh transactions: ", error);
     }

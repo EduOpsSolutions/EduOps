@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useRef } from "react";
 import ModalTextField from "../../form/ModalTextField";
 import ModalSelectField from "../../form/ModalSelectField";
 import PrimaryButton from "../../buttons/PrimaryButton";
-import { FaEye } from "react-icons/fa";
+import { FaEye, FaUpload } from "react-icons/fa";
 
 export default function EnrollmentFormFields({
   formData,
@@ -11,7 +11,16 @@ export default function EnrollmentFormFields({
   onInputChange,
   onPreviewFile,
   onPreviewPaymentProof,
+  onUploadValidId,
+  onUploadIdPhoto,
+  onUploadPaymentProof,
+  uploadingValidId,
+  uploadingIdPhoto,
+  uploadingPaymentProof,
 }) {
+  const validIdInputRef = useRef(null);
+  const idPhotoInputRef = useRef(null);
+  const paymentProofInputRef = useRef(null);
   // Helper function to format date
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -28,9 +37,7 @@ export default function EnrollmentFormFields({
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       {/* Edit Information Form */}
       <div className="xl:col-span-2">
-        <h3 className="text-lg font-semibold mb-4">
-          Personal Information
-        </h3>
+        <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ModalTextField
@@ -110,9 +117,7 @@ export default function EnrollmentFormFields({
               value={
                 formData?.birthDate &&
                 !isNaN(new Date(formData.birthDate).getTime())
-                  ? new Date(formData.birthDate)
-                      .toISOString()
-                      .split("T")[0]
+                  ? new Date(formData.birthDate).toISOString().split("T")[0]
                   : ""
               }
               onChange={onInputChange}
@@ -133,26 +138,43 @@ export default function EnrollmentFormFields({
               label="Enrollment Status"
               name="enrollmentStatus"
               value={(() => {
-                let statusValue = (formData?.enrollmentStatus || originalData?.enrollmentStatus || originalData?.status || "pending").toLowerCase();
-                
+                let statusValue = (
+                  formData?.enrollmentStatus ||
+                  originalData?.enrollmentStatus ||
+                  originalData?.status ||
+                  "pending"
+                ).toLowerCase();
+
                 return statusValue;
               })()}
               onChange={onInputChange}
               options={(() => {
                 // Use original data for validation to prevent UI issues when validation fails
-                let currentStatus = (originalData?.enrollmentStatus || originalData?.status || "pending").toLowerCase();
-                
+                let currentStatus = (
+                  originalData?.enrollmentStatus ||
+                  originalData?.status ||
+                  "pending"
+                ).toLowerCase();
+
                 // If current status is rejected, treat it as pending for validation purposes
                 // This allows any forward movement or another rejection
                 if (currentStatus === "rejected") {
-                  const hasPaymentProof = formData?.paymentProofPath || originalData?.paymentProofPath;
+                  const hasPaymentProof =
+                    formData?.paymentProofPath ||
+                    originalData?.paymentProofPath;
                   // Determine what step they were at when rejected
-                  currentStatus = hasPaymentProof ? "payment_pending" : "pending";
+                  currentStatus = hasPaymentProof
+                    ? "payment_pending"
+                    : "pending";
                 }
-                
+
                 // Check for account existence in multiple ways
-                const hasAccount = !!(formData?.userId || formData?.studentId || emailExists);
-                
+                const hasAccount = !!(
+                  formData?.userId ||
+                  formData?.studentId ||
+                  emailExists
+                );
+
                 const statusOptions = [
                   { value: "pending", label: "1. Pending Admin Review" },
                   { value: "verified", label: "2. Verified (Account Created)" },
@@ -161,43 +183,49 @@ export default function EnrollmentFormFields({
                   { value: "completed", label: "5. Enrollment Completed" },
                   { value: "rejected", label: "Rejected" },
                 ];
-                
+
                 // Define step progression order
-                const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
+                const statusOrder = [
+                  "pending",
+                  "verified",
+                  "payment_pending",
+                  "approved",
+                  "completed",
+                ];
                 const currentIndex = statusOrder.indexOf(currentStatus);
-                
-                return statusOptions.map(option => {
+
+                return statusOptions.map((option) => {
                   const optionIndex = statusOrder.indexOf(option.value);
                   let disabled = false;
                   let colorClass = "";
-                  
+
                   // Rejected should always be available at any step
                   if (option.value === "rejected") {
                     return {
                       ...option,
                       disabled: false,
                       label: option.label,
-                      className: ""
+                      className: "",
                     };
                   }
-                  
+
                   // Check if trying to advance to step 2 onwards without account
                   if (optionIndex >= 1 && !hasAccount) {
                     disabled = true;
                     colorClass = "text-gray-400";
                   }
-                  
+
                   // Check if trying to skip steps forward
                   if (optionIndex > currentIndex + 1) {
                     disabled = true;
                     colorClass = "text-gray-400";
                   }
-                  
+
                   return {
                     ...option,
                     disabled,
                     label: option.label,
-                    className: colorClass
+                    className: colorClass,
                   };
                 });
               })()}
@@ -241,14 +269,51 @@ export default function EnrollmentFormFields({
               required
             />
           </div>
+
+          {/* Admin Remarks Section */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-4 text-dark-red">
+              Admin Remarks
+            </h3>
+            <div className="bg-gray-50 rounded p-4 border border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Remarks for Student
+                {formData?.enrollmentStatus?.toLowerCase() === "rejected" && (
+                  <span className="text-red-600 ml-1">
+                    * Required for rejected status
+                  </span>
+                )}
+              </label>
+              <textarea
+                name="remarks"
+                value={formData?.remarks || ""}
+                onChange={onInputChange}
+                placeholder={
+                  formData?.enrollmentStatus?.toLowerCase() === "rejected"
+                    ? "Enter reason for rejection (required)"
+                    : "Enter optional remarks for the student"
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red focus:border-transparent text-sm resize-y min-h-[100px]"
+                rows="4"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                These remarks will be visible to the student on their enrollment
+                tracking page.
+                {formData?.enrollmentStatus?.toLowerCase() !== "rejected" && (
+                  <span className="font-medium">
+                    {" "}
+                    Optional for all statuses except rejected.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Account Information */}
       <div className="xl:col-span-1">
-        <h3 className="text-lg font-semibold mb-4">
-          Enrollment Information
-        </h3>
+        <h3 className="text-lg font-semibold mb-4">Enrollment Information</h3>
         <div className="space-y-3">
           <div className="bg-gray-50 rounded p-3 border border-gray-200">
             <label className="text-sm font-medium text-gray-600">
@@ -259,17 +324,13 @@ export default function EnrollmentFormFields({
             </p>
           </div>
           <div className="bg-gray-50 rounded p-3 border border-gray-200">
-            <label className="text-sm font-medium text-gray-600">
-              Created
-            </label>
+            <label className="text-sm font-medium text-gray-600">Created</label>
             <p className="text-xs sm:text-sm break-words">
               {formatDate(formData?.createdAt)}
             </p>
           </div>
           <div className="bg-gray-50 rounded p-3 border border-gray-200">
-            <label className="text-sm font-medium text-gray-600">
-              Updated
-            </label>
+            <label className="text-sm font-medium text-gray-600">Updated</label>
             <p className="text-xs sm:text-sm break-words">
               {formatDate(formData?.updatedAt)}
             </p>
@@ -286,49 +347,182 @@ export default function EnrollmentFormFields({
           )}
 
           <div className="bg-gray-50 rounded p-3 border border-gray-200">
-            <label className="text-sm font-medium text-gray-600">
+            <label className="text-sm font-medium text-gray-600 mb-3 block">
               Documents
             </label>
-            <div className="flex flex-row space-x-4 items-center my-2">
-              <PrimaryButton
-                className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
+
+            {/* Valid ID */}
+            <div className="flex items-center gap-3 mb-3">
+              <button
+                type="button"
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md bg-dark-red-2 hover:bg-dark-red-5 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 onClick={() =>
-                  onPreviewFile(
-                    formData?.validIdPath,
-                    "Valid ID Preview"
-                  )
+                  onPreviewFile(formData?.validIdPath, "Valid ID Preview")
                 }
                 disabled={!formData?.validIdPath}
+                title="View Valid ID"
               >
-                <FaEye />
-              </PrimaryButton>
-              <p>Valid ID</p>
+                <FaEye className="w-4 h-4" />
+              </button>
+
+              <input
+                ref={validIdInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                onChange={onUploadValidId}
+                className="hidden"
+                disabled={uploadingValidId}
+              />
+              <button
+                type="button"
+                onClick={() => validIdInputRef.current?.click()}
+                disabled={uploadingValidId}
+                className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md transition-colors ${
+                  uploadingValidId
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-dark-red-2 hover:bg-dark-red-5"
+                } text-white disabled:opacity-50`}
+                title="Upload Valid ID"
+              >
+                {uploadingValidId ? (
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                ) : (
+                  <FaUpload className="w-4 h-4" />
+                )}
+              </button>
+
+              <span className="text-sm text-gray-700 leading-10">Valid ID</span>
             </div>
 
-            <div className="flex flex-row space-x-4 items-center my-2">
-              <PrimaryButton
-                className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
+            {/* ID Photo */}
+            <div className="flex items-center gap-3 mb-3">
+              <button
+                type="button"
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md bg-dark-red-2 hover:bg-dark-red-5 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 onClick={() =>
-                  onPreviewFile(
-                    formData?.idPhotoPath,
-                    "ID Photo Preview"
-                  )
+                  onPreviewFile(formData?.idPhotoPath, "ID Photo Preview")
                 }
                 disabled={!formData?.idPhotoPath}
+                title="View ID Photo"
               >
-                <FaEye />
-              </PrimaryButton>
-              <p>ID Photo</p>
+                <FaEye className="w-4 h-4" />
+              </button>
+
+              <input
+                ref={idPhotoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onUploadIdPhoto}
+                className="hidden"
+                disabled={uploadingIdPhoto}
+              />
+              <button
+                type="button"
+                onClick={() => idPhotoInputRef.current?.click()}
+                disabled={uploadingIdPhoto}
+                className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md transition-colors ${
+                  uploadingIdPhoto
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-dark-red-2 hover:bg-dark-red-5"
+                } text-white disabled:opacity-50`}
+                title="Upload ID Photo"
+              >
+                {uploadingIdPhoto ? (
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                ) : (
+                  <FaUpload className="w-4 h-4" />
+                )}
+              </button>
+
+              <span className="text-sm text-gray-700 leading-10">ID Photo</span>
             </div>
 
-            <div className="flex flex-row space-x-4 items-center my-2">
-              <PrimaryButton
-                className="w-fit py-5 px-5 flex items-center rounded-md cursor-pointer justify-center"
+            {/* Proof of Payment */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md bg-dark-red-2 hover:bg-dark-red-5 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 onClick={onPreviewPaymentProof}
+                disabled={!formData?.paymentProofPath}
+                title="View Payment Proof"
               >
-                <FaEye />
-              </PrimaryButton>
-              <p>Proof of Payment</p>
+                <FaEye className="w-4 h-4" />
+              </button>
+
+              <input
+                ref={paymentProofInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                onChange={onUploadPaymentProof}
+                className="hidden"
+                disabled={uploadingPaymentProof}
+              />
+              <button
+                type="button"
+                onClick={() => paymentProofInputRef.current?.click()}
+                disabled={uploadingPaymentProof}
+                className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md transition-colors ${
+                  uploadingPaymentProof
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-dark-red-2 hover:bg-dark-red-5"
+                } text-white disabled:opacity-50`}
+                title="Upload Payment Proof"
+              >
+                {uploadingPaymentProof ? (
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 74 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                ) : (
+                  <FaUpload className="w-4 h-4" />
+                )}
+              </button>
+
+              <span className="text-sm text-gray-700 leading-10">
+                Proof of Payment
+              </span>
             </div>
           </div>
         </div>

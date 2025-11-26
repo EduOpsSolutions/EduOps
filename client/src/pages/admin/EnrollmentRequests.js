@@ -79,7 +79,7 @@ function EnrollmentRequests() {
       if (selectedAcademicPeriod)
         params.academicPeriodId = selectedAcademicPeriod;
       if (selectedCourses && selectedCourses.length > 0)
-        params.courseIds = selectedCourses.join(',');
+        params.courseIds = selectedCourses.join(",");
       if (selectedStatus) params.status = selectedStatus;
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
@@ -171,9 +171,7 @@ function EnrollmentRequests() {
       request.enrollmentId || "",
       request.firstName || "",
       request.lastName || "",
-      request.birthDate
-        ? new Date(request.birthDate).toLocaleDateString()
-        : "",
+      request.birthDate ? new Date(request.birthDate).toLocaleDateString() : "",
       request.civilStatus || "",
       request.address || "",
       request.contactNumber || "",
@@ -185,9 +183,7 @@ function EnrollmentRequests() {
         allAcademicPeriods.find((p) => p.id === request.periodId)?.batchName ||
         "",
       request.enrollmentStatus || "",
-      request.createdAt
-        ? new Date(request.createdAt).toLocaleString()
-        : "",
+      request.createdAt ? new Date(request.createdAt).toLocaleString() : "",
       request.referredBy || "",
       request.motherName || "",
       request.motherContact || "",
@@ -288,12 +284,15 @@ function EnrollmentRequests() {
           courses = response.data;
         } else if (response.data.data && Array.isArray(response.data.data)) {
           courses = response.data.data;
-        } else if (response.data.courses && Array.isArray(response.data.courses)) {
+        } else if (
+          response.data.courses &&
+          Array.isArray(response.data.courses)
+        ) {
           courses = response.data.courses;
         }
       }
 
-      console.log('Fetched courses:', courses);
+      console.log("Fetched courses:", courses);
       setAvailableCourses(courses);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -749,40 +748,62 @@ function EnrollmentRequests() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto -mx-2 sm:mx-0">
+                <div className="overflow-x-auto -mx-2 sm:mx-0 shadow-sm">
                   <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full">
+                    <table
+                      className="min-w-full table-fixed"
+                      style={{ width: "1400px" }}
+                    >
                       <thead>
                         <tr className="border-b-2 border-gray-300">
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "100px" }}
+                          >
                             ID
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "150px" }}
+                          >
                             Name
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "200px" }}
+                          >
                             Courses
                           </th>
-
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "150px" }}
+                          >
                             Enrollment Period
                           </th>
-
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "130px" }}
+                          >
                             Phone
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "200px" }}
+                          >
                             Email
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "180px" }}
+                          >
                             Date
                           </th>
-                          <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
+                          <th
+                            className="text-left py-2 px-2 font-semibold border-t-2 border-b-2 border-red-900 text-sm"
+                            style={{ width: "140px" }}
+                          >
                             Status
                           </th>
-                          {/* <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                            Actions
-                          </th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -795,33 +816,44 @@ function EnrollmentRequests() {
                               setShowEnrollmentDetailsModal(true);
                             }}
                           >
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.id}
+                                className="truncate"
+                                title={request.enrollmentId}
                               >
                                 {request.enrollmentId}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-24 sm:max-w-32 md:max-w-none"
-                                title={request.name}
+                                className="truncate"
+                                title={`${request.firstName} ${request.lastName}`}
                               >
                                 {request.firstName} {request.lastName}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                className="text-sm leading-tight"
                                 title={request.coursesToEnroll || "N/A"}
                               >
-                                {request.coursesToEnroll || "N/A"}
+                                {request.coursesToEnroll
+                                  ? request.coursesToEnroll
+                                      .split(",")
+                                      .map((course, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="whitespace-nowrap overflow-hidden text-ellipsis"
+                                        >
+                                          {course.trim()}
+                                        </div>
+                                      ))
+                                  : "N/A"}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                className="truncate"
                                 title={
                                   request.period?.batchName ||
                                   allAcademicPeriods.find(
@@ -837,47 +869,52 @@ function EnrollmentRequests() {
                                   "N/A"}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                className="truncate"
                                 title={request.contactNumber || "N/A"}
                               >
                                 {request.contactNumber || "N/A"}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
+                                className="truncate"
                                 title={request.preferredEmail || "N/A"}
                               >
                                 {request.preferredEmail || "N/A"}
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
                               <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.date || "N/A"}
+                                className="text-sm"
+                                title={new Date(
+                                  request.createdAt
+                                ).toLocaleString()}
                               >
                                 {new Date(request.createdAt).toLocaleDateString(
                                   "en-US",
                                   {
-                                    year: "numeric",
-                                    month: "long",
+                                    month: "short",
                                     day: "numeric",
+                                    year: "numeric",
+                                  }
+                                )}
+                                <div className="text-sm ">
+                                  {new Date(
+                                    request.createdAt
+                                  ).toLocaleTimeString("en-US", {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                     hour12: true,
-                                  }
-                                ) || "N/A"}
+                                  })}
+                                </div>
                               </div>
                             </td>
-                            <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
-                              <div
-                                className="truncate max-w-20 sm:max-w-24 md:max-w-none"
-                                title={request.enrollmentStatus || "N/A"}
-                              >
+                            <td className="py-2 px-2 border-t border-b border-red-900 text-sm">
+                              <div title={request.enrollmentStatus || "N/A"}>
                                 <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs sm:text-sm md:text-base font-medium border max-w-[90vw] sm:max-w-[180px] truncate whitespace-normal text-center
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium border truncate max-w-full
                                     ${
                                       request.enrollmentStatus?.toLowerCase() ===
                                       "pending"
@@ -926,7 +963,7 @@ function EnrollmentRequests() {
                           <tr>
                             <td
                               colSpan="8"
-                              className="text-center py-6 md:py-8 text-gray-500 border-t border-b border-red-900 text-sm md:text-base"
+                              className="text-center py-6 text-gray-500 border-t border-b border-red-900 text-sm"
                             >
                               No enrollment requests found
                             </td>

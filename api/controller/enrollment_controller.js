@@ -62,7 +62,12 @@ const createEnrollmentRequest = async (req, res) => {
     } = req.body;
 
     // Debug: Log the userId being received
-    console.log("Enrollment request - userId received:", userId, "type:", typeof userId);
+    console.log(
+      "Enrollment request - userId received:",
+      userId,
+      "type:",
+      typeof userId
+    );
 
     // Check for duplicate enrollment if userId is provided
     if (userId) {
@@ -599,29 +604,29 @@ const getEnrollmentRequests = async (req, res) => {
   // Handle courseIds filter - need to fetch courses first to get names
   let courseNamesFilter = null;
   if (courseIds) {
-    const courseIdArray = courseIds.split(',').filter(id => id.trim());
+    const courseIdArray = courseIds.split(",").filter((id) => id.trim());
     if (courseIdArray.length > 0) {
       try {
         // Fetch course names from course table
         const courses = await prisma.course.findMany({
           where: {
-            id: { in: courseIdArray }
+            id: { in: courseIdArray },
           },
           select: {
-            name: true
-          }
+            name: true,
+          },
         });
 
         // Create OR conditions for each course name
         if (courses.length > 0) {
           courseNamesFilter = {
-            OR: courses.map(course => ({
-              coursesToEnroll: { contains: course.name }
-            }))
+            OR: courses.map((course) => ({
+              coursesToEnroll: { contains: course.name },
+            })),
           };
         }
       } catch (error) {
-        console.error('Error fetching course names:', error);
+        console.error("Error fetching course names:", error);
       }
     }
   }
@@ -641,9 +646,9 @@ const getEnrollmentRequests = async (req, res) => {
         select: {
           id: true,
           batchName: true,
-        }
-      }
-    }
+        },
+      },
+    },
   });
 
   const new_data = await Promise.all(
@@ -817,6 +822,7 @@ const trackEnrollment = async (req, res) => {
         currentStep,
         completedSteps,
         remarkMsg,
+        adminRemarks: enrollmentRequest.remarks || null,
         fullName: `${enrollmentRequest.firstName} ${
           enrollmentRequest.middleName || ""
         } ${enrollmentRequest.lastName}`.trim(),
@@ -827,6 +833,7 @@ const trackEnrollment = async (req, res) => {
         courseName: course?.name || enrollmentRequest.coursesToEnroll,
         paymentProofPath: enrollmentRequest.paymentProofPath,
         studentId: enrollmentRequest.studentId,
+        remarks: enrollmentRequest.remarks || null,
       },
     });
   } catch (error) {
@@ -885,7 +892,9 @@ const updateEnrollmentStatus = async (req, res) => {
   const { enrollmentId } = req.params;
   const { enrollmentStatus } = req.body;
 
-  console.log(`[updateEnrollmentStatus] Updating ${enrollmentId} to status: "${enrollmentStatus}"`);
+  console.log(
+    `[updateEnrollmentStatus] Updating ${enrollmentId} to status: "${enrollmentStatus}"`
+  );
 
   try {
     const updated = await prisma.enrollment_request.update({
@@ -912,7 +921,11 @@ const updateEnrollmentStatus = async (req, res) => {
     }
 
     // Send email notification when enrollment is verified
-    if (enrollmentStatus && enrollmentStatus.toLowerCase() === "verified" && studentEmail) {
+    if (
+      enrollmentStatus &&
+      enrollmentStatus.toLowerCase() === "verified" &&
+      studentEmail
+    ) {
       const subject = "Enrollment Verified - Sprach Institut";
       const html = `
         <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
@@ -965,7 +978,7 @@ Your enrollment has been successfully verified by our admissions team.
 Enrollment Details:
 - Enrollment ID: ${updated.enrollmentId}
 - Courses: ${updated.coursesToEnroll}
-${periodName ? `- Academic Period: ${periodName}` : ''}
+${periodName ? `- Academic Period: ${periodName}` : ""}
 
 Next Steps:
 1. Proceed with the payment for your enrollment
@@ -988,8 +1001,14 @@ This email was sent to the address you provided during enrollment.
     }
 
     // Send email notification when enrollment is completed
-    if (enrollmentStatus && enrollmentStatus.toLowerCase() === "completed" && studentEmail) {
-      console.log(`[updateEnrollmentStatus] Sending completion email to ${studentEmail}`);
+    if (
+      enrollmentStatus &&
+      enrollmentStatus.toLowerCase() === "completed" &&
+      studentEmail
+    ) {
+      console.log(
+        `[updateEnrollmentStatus] Sending completion email to ${studentEmail}`
+      );
       const subject = "Enrollment Completed - Sprach Institut";
       const html = `
         <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
@@ -1007,7 +1026,9 @@ This email was sent to the address you provided during enrollment.
                   <strong>✓ Enrollment ID:</strong> ${updated.enrollmentId}
                 </p>
                 <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
-                  <strong>✓ Enrolled Courses:</strong> ${updated.coursesToEnroll}
+                  <strong>✓ Enrolled Courses:</strong> ${
+                    updated.coursesToEnroll
+                  }
                 </p>
                 ${periodInfo}
                 <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
@@ -1051,7 +1072,7 @@ We are pleased to inform you that your enrollment has been successfully complete
 Enrollment Details:
 - Enrollment ID: ${updated.enrollmentId}
 - Enrolled Courses: ${updated.coursesToEnroll}
-${periodName ? `- Academic Period: ${periodName}` : ''}
+${periodName ? `- Academic Period: ${periodName}` : ""}
 - Status: Enrollment Completed
 
 What Happens Next?
@@ -1121,6 +1142,30 @@ const checkEmailExists = async (req, res) => {
   }
 };
 
+// Public: Check if phone number exists in enrollment requests
+// Only checks student's own contact numbers, not parent/guardian numbers (those can be shared)
+const checkPhoneExists = async (req, res) => {
+  const { phone } = req.query;
+  if (!phone) {
+    return res
+      .status(400)
+      .json({ exists: false, error: "Missing phone parameter" });
+  }
+  try {
+    const found = await prisma.enrollment_request.findFirst({
+      where: {
+        OR: [
+          { contactNumber: phone },
+          { altContactNumber: phone },
+        ],
+      },
+    });
+    res.json({ exists: !!found });
+  } catch (e) {
+    res.status(500).json({ exists: false, error: "Failed to check phone" });
+  }
+};
+
 // Helper function to update enrollment progress based on status
 const trackEnrollmentProgress = async (enrollmentRequest) => {
   const { enrollmentStatus } = enrollmentRequest;
@@ -1159,7 +1204,8 @@ const trackEnrollmentProgress = async (enrollmentRequest) => {
     case "completed":
       currentStep = 5;
       completedSteps = [1, 2, 3, 4];
-      remarkMsg = "Congratulations! Your enrollment is complete. A confirmation email has been sent to your registered email address. Our administration team will process your study load soon.";
+      remarkMsg =
+        "Congratulations! Your enrollment is complete. A confirmation email has been sent to your registered email address. Our administration team will process your study load soon.";
       break;
     case "rejected":
       // Determine where to go back based on what was previously verified
@@ -1217,6 +1263,7 @@ const updateEnrollment = async (req, res) => {
     idPhotoPath,
     paymentProofPath,
     enrollmentStatus,
+    remarks,
   } = req.body;
 
   // Build update data object only with provided fields
@@ -1246,6 +1293,7 @@ const updateEnrollment = async (req, res) => {
   if (idPhotoPath !== undefined) updateData.idPhotoPath = idPhotoPath;
   if (paymentProofPath !== undefined)
     updateData.paymentProofPath = paymentProofPath;
+  if (remarks !== undefined) updateData.remarks = remarks;
   if (enrollmentStatus !== undefined) {
     updateData.enrollmentStatus = enrollmentStatus;
 
@@ -1397,7 +1445,8 @@ const trackEnrollmentByUserEmail = async (req, res) => {
 
     if (!enrollmentRequest) {
       return res.status(404).json({
-        message: "No enrollment request found for this email in the current period",
+        message:
+          "No enrollment request found for this email in the current period",
         error: true,
       });
     }
@@ -1486,6 +1535,7 @@ const trackEnrollmentByUserEmail = async (req, res) => {
         currentStep,
         completedSteps,
         remarkMsg,
+        adminRemarks: enrollmentRequest.remarks || null,
         fullName: `${enrollmentRequest.firstName} ${
           enrollmentRequest.middleName || ""
         } ${enrollmentRequest.lastName}`.trim(),
@@ -1516,5 +1566,6 @@ export {
   updateEnrollmentStatus,
   updateEnrollment,
   checkEmailExists,
+  checkPhoneExists,
   getStudentEnrollments,
 };

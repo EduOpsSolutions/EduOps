@@ -6,13 +6,14 @@ import CommonModal from "../common/CommonModal";
 import { trackEnrollment } from "../../../utils/enrollmentApi";
 import useEnrollmentStore from "../../../stores/enrollmentProgressStore";
 import EnrollmentFormFields from "./EnrollmentFormFields";
+import { uploadFile } from "../../../utils/files";
 
 export default function EnrollmentDetailsModal({
   data,
   show,
   handleClose,
   handleSave,
-  onEnrollmentUpdate = null, 
+  onEnrollmentUpdate = null,
 }) {
   const [formData, setFormData] = useState(data);
   const [originalData, setOriginalData] = useState(data);
@@ -26,6 +27,9 @@ export default function EnrollmentDetailsModal({
   const { setEnrollmentData } = useEnrollmentStore();
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [uploadingValidId, setUploadingValidId] = useState(false);
+  const [uploadingIdPhoto, setUploadingIdPhoto] = useState(false);
+  const [uploadingPaymentProof, setUploadingPaymentProof] = useState(false);
 
   // Set form data only when modal is opened or new data is passed
   useEffect(() => {
@@ -84,7 +88,7 @@ export default function EnrollmentDetailsModal({
     };
   }, [show]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value } = e.target;
 
     // Validate enrollment status changes before updating form data
@@ -92,26 +96,126 @@ export default function EnrollmentDetailsModal({
       const currentStatus = formData?.enrollmentStatus || "pending";
       const newStatus = value;
 
+      // Show popup for any status change to allow remarks
+      if (currentStatus.toLowerCase() !== newStatus.toLowerCase()) {
+        const isRejected = newStatus.toLowerCase() === "rejected";
+        const result = await Swal.fire({
+          title: isRejected
+            ? "Reject Enrollment?"
+            : "Update Enrollment Status?",
+          html: `
+            <div style="text-align: left; padding: 0 10px;">
+              <p style="margin-bottom: 16px; color: #374151; font-size: 14px; line-height: 1.5;">
+                ${
+                  isRejected
+                    ? "Please provide a reason for rejecting this enrollment request. This will be visible to the student."
+                    : "You can optionally add remarks about this status change. Leave empty to proceed without remarks."
+                }
+              </p>
+              <textarea
+                id="status-remarks"
+                placeholder="${
+                  isRejected
+                    ? "Enter reason for rejection (required)"
+                    : "Enter optional remarks for the student"
+                }"
+                style="
+                  width: 100%;
+                  min-height: 120px;
+                  padding: 12px;
+                  border: 1px solid #d1d5db;
+                  border-radius: 6px;
+                  font-size: 14px;
+                  font-family: inherit;
+                  resize: vertical;
+                  outline: none;
+                  box-sizing: border-box;
+                "
+                onfocus="this.style.borderColor='#992525'; this.style.boxShadow='0 0 0 3px rgba(153, 37, 37, 0.1)';"
+                onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+              >${formData?.remarks || ""}</textarea>
+            </div>
+          `,
+          icon: isRejected ? "warning" : "question",
+          showCancelButton: true,
+          confirmButtonText: isRejected ? "Yes, reject" : "Yes, update status",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#992525",
+          cancelButtonColor: "#6b7280",
+          reverseButtons: true,
+          customClass: {
+            popup: "swal2-custom-popup",
+            htmlContainer: "swal2-custom-html",
+          },
+          preConfirm: () => {
+            const remarks = document.getElementById("status-remarks").value;
+            // Only require remarks for rejected status
+            if (isRejected && (!remarks || remarks.trim() === "")) {
+              Swal.showValidationMessage(
+                "Remarks are required when rejecting an enrollment"
+              );
+              return false;
+            }
+            return remarks.trim() || null;
+          },
+        });
+
+        if (result.isConfirmed) {
+          // Update both status and remarks
+          const updatedData = {
+            ...formData,
+            enrollmentStatus: newStatus,
+            remarks: result.value || formData?.remarks || null,
+          };
+          setFormData(updatedData);
+
+          // Check if there are changes
+          const hasFormChanges =
+            JSON.stringify(updatedData) !== JSON.stringify(originalData);
+          setHasChanges(hasFormChanges);
+        }
+        return;
+      }
+
       // Define step progression order
-      const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
+      const statusOrder = [
+        "pending",
+        "verified",
+        "payment_pending",
+        "approved",
+        "completed",
+      ];
       const currentIndex = statusOrder.indexOf(currentStatus.toLowerCase());
       const newIndex = statusOrder.indexOf(newStatus.toLowerCase());
 
-      const hasAccountForThisEnrollment = !!(formData?.userId || formData?.studentId || originalData?.userId || originalData?.studentId || emailExists);
+      const hasAccountForThisEnrollment = !!(
+        formData?.userId ||
+        formData?.studentId ||
+        originalData?.userId ||
+        originalData?.studentId ||
+        emailExists
+      );
 
       // Allow changes from rejected or completed status (admin override)
       // Also allow moving backwards in the workflow
-      const isMovingBackwards = newIndex < currentIndex && currentIndex !== -1 && newIndex !== -1;
-      const isFromSpecialStatus = currentStatus.toLowerCase() === "rejected" || currentStatus.toLowerCase() === "completed";
+      const isMovingBackwards =
+        newIndex < currentIndex && currentIndex !== -1 && newIndex !== -1;
+      const isFromSpecialStatus =
+        currentStatus.toLowerCase() === "rejected" ||
+        currentStatus.toLowerCase() === "completed";
 
       // Skip validation if moving backwards or from a special status
       if (!isMovingBackwards && !isFromSpecialStatus) {
-        if (newIndex >= 1 && !hasAccountForThisEnrollment && newStatus !== "rejected") {
+        if (
+          newIndex >= 1 &&
+          !hasAccountForThisEnrollment &&
+          newStatus !== "rejected"
+        ) {
           Swal.fire({
             title: "Account Required",
             text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
             icon: "warning",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
           });
           return;
         }
@@ -125,13 +229,13 @@ export default function EnrollmentDetailsModal({
             title: "Cannot Skip Steps",
             text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
             icon: "warning",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
           });
           return;
         }
       }
     }
-    
+
     if (name === "status" && value === "deleted") {
       setFormData({
         ...formData,
@@ -141,10 +245,11 @@ export default function EnrollmentDetailsModal({
     } else {
       setFormData({ ...formData, [name]: value });
     }
-    
+
     // Check if there are changes
     const newData = { ...formData, [name]: value };
-    const hasFormChanges = JSON.stringify(newData) !== JSON.stringify(originalData);
+    const hasFormChanges =
+      JSON.stringify(newData) !== JSON.stringify(originalData);
     setHasChanges(hasFormChanges);
   };
 
@@ -158,7 +263,7 @@ export default function EnrollmentDetailsModal({
       cancelButtonText: "Cancel",
       confirmButtonColor: "#992525",
       cancelButtonColor: "#6b7280",
-      reverseButtons: true
+      reverseButtons: true,
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
@@ -181,51 +286,61 @@ export default function EnrollmentDetailsModal({
               },
             }
           );
-          
-          const updatedUserId = response.data.userId || response.data.data?.userId;
-          const updatedStudentId = response.data.studentId || response.data.data?.studentId;
-          
-          setFormData(prev => ({ 
-            ...prev, 
+
+          const updatedUserId =
+            response.data.userId || response.data.data?.userId;
+          const updatedStudentId =
+            response.data.studentId || response.data.data?.studentId;
+
+          setFormData((prev) => ({
+            ...prev,
             userId: updatedUserId,
-            studentId: updatedStudentId
+            studentId: updatedStudentId,
           }));
-          
-          setOriginalData(prev => ({ 
-            ...prev, 
+
+          setOriginalData((prev) => ({
+            ...prev,
             userId: updatedUserId,
-            studentId: updatedStudentId
+            studentId: updatedStudentId,
           }));
-          
+
           // Update email exists state immediately
           setEmailExists(true);
-          
+
           if (onEnrollmentUpdate) {
             onEnrollmentUpdate();
           }
-          
+
           try {
-            const enrollmentResponse = await trackEnrollment(formData.enrollmentId, formData.preferredEmail);
+            const enrollmentResponse = await trackEnrollment(
+              formData.enrollmentId,
+              formData.preferredEmail
+            );
             if (!enrollmentResponse.error) {
               setEnrollmentData(enrollmentResponse.data);
             }
           } catch (refreshError) {
-            console.error('Failed to refresh enrollment data:', refreshError);
+            console.error("Failed to refresh enrollment data:", refreshError);
           }
-          
+
           Swal.fire({
             title: "Account Created Successfully!",
-            text: "Student account has been created successfully.",
+            text: "Student account has been created successfully. The page will reload to show the updated information.",
             icon: "success",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
+          }).then(() => {
+            // Reload the page after user clicks OK
+            window.location.reload();
           });
         } catch (error) {
           console.error(error);
           Swal.fire({
             title: "Account Creation Failed",
-            text: error.response?.data?.message || "Failed to create account. Please try again.",
+            text:
+              error.response?.data?.message ||
+              "Failed to create account. Please try again.",
             icon: "error",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
           });
         } finally {
           setIsCreatingAccount(false);
@@ -276,26 +391,26 @@ export default function EnrollmentDetailsModal({
 
   const handleVerifyPayment = async () => {
     const result = await Swal.fire({
-      title: 'Verify Payment?',
-      text: 'Are you sure you want to verify this payment and approve the enrollment?',
-      icon: 'question',
+      title: "Verify Payment?",
+      text: "Are you sure you want to verify this payment and approve the enrollment?",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Yes, verify payment',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
+      confirmButtonText: "Yes, verify payment",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
       reverseButtons: true,
       customClass: {
-        container: 'swal-z-index-fix'
-      }
+        container: "swal-z-index-fix",
+      },
     });
 
     if (!result.isConfirmed) return;
 
     setIsVerifyingPayment(true);
     try {
-      const updatedFormData = { ...formData, enrollmentStatus: 'approved' };
-      
+      const updatedFormData = { ...formData, enrollmentStatus: "approved" };
+
       await axiosInstance.put(
         `/enrollment/enroll/${formData.enrollmentId}`,
         updatedFormData,
@@ -305,46 +420,50 @@ export default function EnrollmentDetailsModal({
           },
         }
       );
-      
+
       // Update local form data
       setFormData(updatedFormData);
-      
+
       if (onEnrollmentUpdate) {
         onEnrollmentUpdate();
       }
-      
+
       try {
-        const enrollmentResponse = await trackEnrollment(formData.enrollmentId, formData.preferredEmail);
+        const enrollmentResponse = await trackEnrollment(
+          formData.enrollmentId,
+          formData.preferredEmail
+        );
         if (!enrollmentResponse.error) {
           setEnrollmentData(enrollmentResponse.data);
         }
       } catch (refreshError) {
-        console.error('Failed to refresh enrollment data:', refreshError);
+        console.error("Failed to refresh enrollment data:", refreshError);
       }
-      
+
       setShowPreview(false);
       setPreviewFile({ url: null, title: "" });
-      
+
       Swal.fire({
-        title: 'Payment Verified!',
-        text: 'Payment has been verified and enrollment status updated to Approved.',
-        icon: 'success',
-        confirmButtonColor: '#992525',
+        title: "Payment Verified!",
+        text: "Payment has been verified and enrollment status updated to Approved.",
+        icon: "success",
+        confirmButtonColor: "#992525",
         customClass: {
-          container: 'swal-z-index-fix'
-        }
+          container: "swal-z-index-fix",
+        },
       });
-      
     } catch (error) {
       console.error("Error verifying payment:", error);
       Swal.fire({
-        title: 'Verification Failed',
-        text: error.response?.data?.message || 'Failed to verify payment. Please try again.',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Verification Failed",
+        text:
+          error.response?.data?.message ||
+          "Failed to verify payment. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#992525",
         customClass: {
-          container: 'swal-z-index-fix'
-        }
+          container: "swal-z-index-fix",
+        },
       });
     } finally {
       setIsVerifyingPayment(false);
@@ -365,6 +484,126 @@ export default function EnrollmentDetailsModal({
     handlePreviewFile(formData.paymentProofPath, "Proof of Payment Preview");
   };
 
+  // Handle file upload for valid ID
+  const handleValidIdUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadingValidId(true);
+    try {
+      const result = await uploadFile(file, "proof-ids");
+      if (result.error) {
+        throw new Error("Failed to upload valid ID");
+      }
+
+      // Update form data with new file URL
+      const updatedFormData = {
+        ...formData,
+        validIdPath: result.data.downloadURL,
+      };
+      setFormData(updatedFormData);
+      setHasChanges(true);
+
+      Swal.fire({
+        title: "Success!",
+        text: "Valid ID uploaded successfully. Don't forget to save changes.",
+        icon: "success",
+        confirmButtonColor: "#992525",
+      });
+    } catch (error) {
+      console.error("Error uploading valid ID:", error);
+      Swal.fire({
+        title: "Upload Failed",
+        text: "Failed to upload valid ID. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#992525",
+      });
+    } finally {
+      setUploadingValidId(false);
+      event.target.value = ""; // Reset file input
+    }
+  };
+
+  // Handle file upload for ID photo
+  const handleIdPhotoUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadingIdPhoto(true);
+    try {
+      const result = await uploadFile(file, "enrollment");
+      if (result.error) {
+        throw new Error("Failed to upload ID photo");
+      }
+
+      // Update form data with new file URL
+      const updatedFormData = {
+        ...formData,
+        idPhotoPath: result.data.downloadURL,
+      };
+      setFormData(updatedFormData);
+      setHasChanges(true);
+
+      Swal.fire({
+        title: "Success!",
+        text: "ID Photo uploaded successfully. Don't forget to save changes.",
+        icon: "success",
+        confirmButtonColor: "#992525",
+      });
+    } catch (error) {
+      console.error("Error uploading ID photo:", error);
+      Swal.fire({
+        title: "Upload Failed",
+        text: "Failed to upload ID photo. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#992525",
+      });
+    } finally {
+      setUploadingIdPhoto(false);
+      event.target.value = ""; // Reset file input
+    }
+  };
+
+  // Handle file upload for payment proof
+  const handlePaymentProofUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadingPaymentProof(true);
+    try {
+      const result = await uploadFile(file, "payment-proof");
+      if (result.error) {
+        throw new Error("Failed to upload payment proof");
+      }
+
+      // Update form data with new file URL
+      const updatedFormData = {
+        ...formData,
+        paymentProofPath: result.data.downloadURL,
+      };
+      setFormData(updatedFormData);
+      setHasChanges(true);
+
+      Swal.fire({
+        title: "Success!",
+        text: "Payment proof uploaded successfully. Don't forget to save changes.",
+        icon: "success",
+        confirmButtonColor: "#992525",
+      });
+    } catch (error) {
+      console.error("Error uploading payment proof:", error);
+      Swal.fire({
+        title: "Upload Failed",
+        text: "Failed to upload payment proof. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#992525",
+      });
+    } finally {
+      setUploadingPaymentProof(false);
+      event.target.value = ""; // Reset file input
+    }
+  };
+
   const handleCloseModal = async () => {
     if (!hasChanges) {
       handleClose();
@@ -372,15 +611,15 @@ export default function EnrollmentDetailsModal({
     }
 
     const result = await Swal.fire({
-      title: 'Discard Changes?',
-      text: 'You have unsaved changes. Do you want to discard them?',
-      icon: 'warning',
+      title: "Discard Changes?",
+      text: "You have unsaved changes. Do you want to discard them?",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'Yes, discard',
-      cancelButtonText: 'No, keep editing',
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
-      reverseButtons: true
+      confirmButtonText: "Yes, discard",
+      cancelButtonText: "No, keep editing",
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
+      reverseButtons: true,
     });
 
     if (result.isConfirmed) {
@@ -389,13 +628,26 @@ export default function EnrollmentDetailsModal({
   };
 
   const handleFormSave = async () => {
-    
     if (!hasChanges) {
       Swal.fire({
-        title: 'No Changes',
-        text: 'No changes have been made to save.',
-        icon: 'info',
-        confirmButtonColor: '#992525'
+        title: "No Changes",
+        text: "No changes have been made to save.",
+        icon: "info",
+        confirmButtonColor: "#992525",
+      });
+      return;
+    }
+
+    // Validate that remarks are provided ONLY when status is rejected
+    if (
+      formData?.enrollmentStatus?.toLowerCase() === "rejected" &&
+      (!formData?.remarks || formData.remarks.trim() === "")
+    ) {
+      Swal.fire({
+        title: "Remarks Required",
+        text: "Please provide remarks when rejecting an enrollment. This will help the student understand why their enrollment was rejected.",
+        icon: "warning",
+        confirmButtonColor: "#992525",
       });
       return;
     }
@@ -405,12 +657,27 @@ export default function EnrollmentDetailsModal({
     const newStatus = formData?.enrollmentStatus;
 
     if (newStatus && newStatus !== "rejected") {
-      const statusOrder = ["pending", "verified", "payment_pending", "approved", "completed"];
+      const statusOrder = [
+        "pending",
+        "verified",
+        "payment_pending",
+        "approved",
+        "completed",
+      ];
       const currentIndex = statusOrder.indexOf(currentStatus.toLowerCase());
       const newIndex = statusOrder.indexOf(newStatus.toLowerCase());
-      const hasAccountForThisEnrollment = !!(formData?.userId || formData?.studentId || originalData?.userId || originalData?.studentId || emailExists);
-      const isMovingBackwards = newIndex < currentIndex && currentIndex !== -1 && newIndex !== -1;
-      const isFromSpecialStatus = currentStatus.toLowerCase() === "rejected" || currentStatus.toLowerCase() === "completed";
+      const hasAccountForThisEnrollment = !!(
+        formData?.userId ||
+        formData?.studentId ||
+        originalData?.userId ||
+        originalData?.studentId ||
+        emailExists
+      );
+      const isMovingBackwards =
+        newIndex < currentIndex && currentIndex !== -1 && newIndex !== -1;
+      const isFromSpecialStatus =
+        currentStatus.toLowerCase() === "rejected" ||
+        currentStatus.toLowerCase() === "completed";
 
       // Skip validation if moving backwards or from a special status
       if (!isMovingBackwards && !isFromSpecialStatus) {
@@ -419,7 +686,7 @@ export default function EnrollmentDetailsModal({
             title: "Account Required",
             text: "Cannot set status to 'Verified' without creating an account first. Please use the 'Create Account' button before verifying the enrollment.",
             icon: "warning",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
           });
           return;
         }
@@ -433,7 +700,7 @@ export default function EnrollmentDetailsModal({
             title: "Cannot Skip Steps",
             text: `You must complete steps sequentially. Current step: ${currentStep}. Next available step: ${nextStep}. Cannot jump to step ${targetStep}.`,
             icon: "warning",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
           });
           return;
         }
@@ -443,7 +710,7 @@ export default function EnrollmentDetailsModal({
             title: "Account Required",
             text: "Cannot advance to this status without creating an account first. Please create an account using the 'Create Account' button.",
             icon: "warning",
-            confirmButtonColor: "#992525"
+            confirmButtonColor: "#992525",
           });
           return;
         }
@@ -451,15 +718,15 @@ export default function EnrollmentDetailsModal({
     }
 
     const result = await Swal.fire({
-      title: 'Save Changes?',
-      text: 'Are you sure you want to save the changes made to this enrollment?',
-      icon: 'question',
+      title: "Save Changes?",
+      text: "Are you sure you want to save the changes made to this enrollment?",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Yes, save changes',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
-      reverseButtons: true
+      confirmButtonText: "Yes, save changes",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
+      reverseButtons: true,
     });
 
     if (!result.isConfirmed) return;
@@ -476,43 +743,48 @@ export default function EnrollmentDetailsModal({
           },
         }
       );
-      
+
       // Fetch the updated enrollment data to get the latest status
-      const updatedResponse = await axiosInstance.post('/enrollment/track', {
-        enrollmentId: formData.enrollmentId
-      }, {
-        headers: {
-          Authorization: `Bearer ${getCookieItem("token")}`,
+      const updatedResponse = await axiosInstance.post(
+        "/enrollment/track",
+        {
+          enrollmentId: formData.enrollmentId,
         },
-      });
-      
-      // Use the updated data from the API response
-      const updatedEnrollmentData = updatedResponse.data?.data || updatedResponse.data;
-      
-        await handleSave(updatedEnrollmentData);
-        
-        if (onEnrollmentUpdate) {
-          onEnrollmentUpdate();
+        {
+          headers: {
+            Authorization: `Bearer ${getCookieItem("token")}`,
+          },
         }
-        
-        // Show success message
-        Swal.fire({
-          title: 'Changes Saved!',
-          text: 'Enrollment details have been updated successfully.',
-          icon: 'success',
-          confirmButtonColor: '#992525'
-        });
-        
-        // Reset change tracking
-        setOriginalData(formData);
-        setHasChanges(false);
+      );
+
+      // Use the updated data from the API response
+      const updatedEnrollmentData =
+        updatedResponse.data?.data || updatedResponse.data;
+
+      await handleSave(updatedEnrollmentData);
+
+      if (onEnrollmentUpdate) {
+        onEnrollmentUpdate();
+      }
+
+      // Show success message
+      Swal.fire({
+        title: "Changes Saved!",
+        text: "Enrollment details have been updated successfully.",
+        icon: "success",
+        confirmButtonColor: "#992525",
+      });
+
+      // Reset change tracking
+      setOriginalData(formData);
+      setHasChanges(false);
     } catch (error) {
       console.error("Error saving form data:", error);
       Swal.fire({
-        title: 'Save Failed',
-        text: 'Failed to save changes. Please try again.',
-        icon: 'error',
-        confirmButtonColor: '#992525'
+        title: "Save Failed",
+        text: "Failed to save changes. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
     } finally {
       setLoading(false);
@@ -592,8 +864,11 @@ export default function EnrollmentDetailsModal({
                       ? formData?.paymentProofPath
                         ? "Payment Rejected"
                         : "Form Rejected"
-                      : formData?.enrollmentStatus?.charAt(0).toUpperCase() +
-                        formData?.enrollmentStatus?.slice(1)}
+                      : formData?.enrollmentStatus
+                          ?.charAt(0)
+                          .toUpperCase()
+                          .replace("_", " ") +
+                        formData?.enrollmentStatus?.slice(1).replace("_", " ")}
                   </span>
                 </div>
               </div>
@@ -602,7 +877,9 @@ export default function EnrollmentDetailsModal({
                 <button
                   type="button"
                   onClick={handleCreateAccount}
-                  disabled={emailExists || emailCheckLoading || isCreatingAccount}
+                  disabled={
+                    emailExists || emailCheckLoading || isCreatingAccount
+                  }
                   className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-4 py-2 rounded border border-dark-red-2 ease-in duration-150 text-sm sm:text-base flex items-center justify-center ${
                     emailExists || isCreatingAccount
                       ? "opacity-50 cursor-not-allowed"
@@ -650,6 +927,12 @@ export default function EnrollmentDetailsModal({
             onInputChange={handleInputChange}
             onPreviewFile={handlePreviewFile}
             onPreviewPaymentProof={handlePreviewPaymentProof}
+            onUploadValidId={handleValidIdUpload}
+            onUploadIdPhoto={handleIdPhotoUpload}
+            onUploadPaymentProof={handlePaymentProofUpload}
+            uploadingValidId={uploadingValidId}
+            uploadingIdPhoto={uploadingIdPhoto}
+            uploadingPaymentProof={uploadingPaymentProof}
           />
         </div>
 
@@ -658,9 +941,9 @@ export default function EnrollmentDetailsModal({
             onClick={handleFormSave}
             disabled={loading || !hasChanges}
             className={`px-8 py-2 rounded font-semibold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
-              hasChanges 
-                ? 'bg-dark-red-2 hover:bg-dark-red-5 text-white' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              hasChanges
+                ? "bg-dark-red-2 hover:bg-dark-red-5 text-white"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
             {loading ? (
@@ -668,8 +951,10 @@ export default function EnrollmentDetailsModal({
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 <span>Saving...</span>
               </div>
+            ) : hasChanges ? (
+              "Save Changes"
             ) : (
-              hasChanges ? "Save Changes" : "No Changes"
+              "No Changes"
             )}
           </button>
         </div>
