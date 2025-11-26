@@ -5,6 +5,7 @@ import useEnrollmentStore from "../../stores/enrollmentProgressStore";
 import useAuthStore from "../../stores/authStore";
 import EnrollmentProgressBar from "../../components/enrollment/ProgressBar";
 import Swal from "sweetalert2";
+import { copyToClipboard as copyToClipboardUtil } from "../../utils/clipboard";
 
 function Enrollment() {
   const navigate = useNavigate();
@@ -103,7 +104,7 @@ function Enrollment() {
   // Copy Student ID to clipboard
   const copyToClipboard = async (studentId) => {
     try {
-      await navigator.clipboard.writeText(studentId);
+      await copyToClipboardUtil(studentId);
       Swal.fire({
         icon: "success",
         title: "Copied!",
@@ -116,7 +117,7 @@ function Enrollment() {
       Swal.fire({
         icon: "error",
         title: "Copy Failed",
-        text: "Please copy manually",
+        text: err.message || "Please copy manually",
         timer: 2000,
         showConfirmButton: false,
       });
