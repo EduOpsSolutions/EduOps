@@ -92,11 +92,15 @@ const refreshPaymentStatus = async (req, res) => {
 /* Get all transactions for admin management */
 const getAllPaymentTransactions = async (req, res) => {
   try {
-    const { page, limit, status, searchTerm } = req.query;
+    const { page, limit, status, paymentMethod, feeType, dateFrom, dateTo, searchTerm } = req.query;
     const result = await getAllTransactions({
       page,
       limit,
       status,
+      paymentMethod,
+      feeType,
+      dateFrom,
+      dateTo,
       searchTerm,
     });
     return sendSuccess(res, result);

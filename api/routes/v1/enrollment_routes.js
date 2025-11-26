@@ -8,6 +8,7 @@ import {
   updateEnrollmentStatus,
   updateEnrollment,
   checkEmailExists,
+  checkPhoneExists,
   getStudentEnrollments,
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
@@ -33,6 +34,9 @@ router.put(
 
 // Public endpoint to check if email is already used in an enrollment request
 router.get("/check-email", checkEmailExists);
+
+// Public endpoint to check if phone number is already used in an enrollment request
+router.get("/check-phone", checkPhoneExists);
 
 // Logged-in user route to track their enrollment
 router.get(

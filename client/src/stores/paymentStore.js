@@ -18,6 +18,7 @@ const usePaymentStore = create((set, get) => ({
   loading: false,
   phoneError: '',
   nameError: '',
+  amountError: '',
   studentData: null,
   feesOptions: [
     { value: 'down_payment', label: 'Down Payment' },
@@ -30,9 +31,13 @@ const usePaymentStore = create((set, get) => ({
     set((state) => ({
       formData: { ...state.formData, [name]: value },
     }));
-    
+
     if (name === 'first_name' || name === 'last_name' || name === 'student_id') {
       set({ nameError: '' });
+    }
+
+    if (name === 'amount' || name === 'fee') {
+      set({ amountError: '' });
     }
   },
 
@@ -40,7 +45,8 @@ const usePaymentStore = create((set, get) => ({
     set((state) => ({
       formData: { ...state.formData, ...data },
       nameError: '',
-      phoneError: ''
+      phoneError: '',
+      amountError: ''
     }));
   },
 
@@ -149,6 +155,7 @@ const usePaymentStore = create((set, get) => ({
       formData: { ...initialFormData },
       phoneError: '',
       nameError: '',
+      amountError: '',
       studentData: null,
     });
   },
@@ -166,6 +173,18 @@ const usePaymentStore = create((set, get) => ({
       return false;
     }
     set({ phoneError: '' });
+    return true;
+  },
+
+  validateDownPaymentAmount: () => {
+    const { formData } = get();
+    const amount = parseFloat(formData.amount);
+
+    if (formData.fee === 'down_payment' && amount < 3000) {
+      set({ amountError: 'Down payment must be at least ₱3,000' });
+      return false;
+    }
+    set({ amountError: '' });
     return true;
   },
 
@@ -206,6 +225,17 @@ const usePaymentStore = create((set, get) => ({
 
     // Validate phone number
     if (!store.validatePhoneNumber()) return;
+
+    // Validate downpayment amount
+    if (!store.validateDownPaymentAmount()) {
+      await store.showDialog({
+        icon: "warning",
+        title: "Invalid Payment Amount",
+        text: "Down payment must be at least ₱3,000",
+        confirmButtonColor: "#992525",
+      });
+      return;
+    }
 
     // Show confirmation
     const result = await store.showDialog({
