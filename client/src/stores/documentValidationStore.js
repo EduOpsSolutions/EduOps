@@ -24,10 +24,8 @@ export const useDocumentValidationSearchStore = createSearchStore({
 });
 
 export const useDocumentValidationStore = create((set, get) => ({
-  selectedDocument: null,
   loading: false,
   error: '',
-  isViewerModalOpen: false,
   isValidateModalOpen: false,
   validateResult: null,
   validateSignature: '',
@@ -183,17 +181,10 @@ export const useDocumentValidationStore = create((set, get) => ({
   },
 
   handleViewFile: (document) => {
-    set({
-      selectedDocument: document,
-      isViewerModalOpen: true
-    });
-  },
-
-  handleCloseViewer: () => {
-    set({
-      isViewerModalOpen: false,
-      selectedDocument: null
-    });
+    // Open file directly in new tab
+    if (document.filePath) {
+      window.open(document.filePath, '_blank', 'noopener,noreferrer');
+    }
   },
 
   handleOpenValidateModal: () => {
@@ -305,10 +296,8 @@ export const useDocumentValidationStore = create((set, get) => ({
   },
 
   resetStore: () => set({
-    selectedDocument: null,
     loading: false,
     error: '',
-    isViewerModalOpen: false,
     isValidateModalOpen: false,
     validateResult: null,
     validateSignature: ''
