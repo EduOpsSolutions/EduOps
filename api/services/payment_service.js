@@ -116,15 +116,36 @@ const transformPaymentForFrontend = (payment, _options) => {
  * @param {Object} filters
  * @param {string} [filters.userId]
  * @param {string} [filters.status]
+ * @param {string} [filters.paymentMethod]
+ * @param {string} [filters.feeType]
+ * @param {string} [filters.dateFrom]
+ * @param {string} [filters.dateTo]
  * @param {string} [filters.searchTerm]
  * @returns {Object} Prisma where clause
  */
 const buildPaymentWhereClause = (filters = {}) => {
-  const { userId, status, searchTerm } = filters;
+  const { userId, status, paymentMethod, feeType, dateFrom, dateTo, searchTerm } = filters;
   const where = {};
 
   if (userId) where.userId = userId;
   if (status) where.status = status;
+  if (paymentMethod) where.paymentMethod = paymentMethod;
+  if (feeType) where.feeType = feeType;
+
+  // Date range filter
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      where.createdAt.gte = fromDate;
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      where.createdAt.lte = toDate;
+    }
+  }
 
   if (searchTerm && String(searchTerm).trim().length > 0) {
     where.OR = [
@@ -355,9 +376,16 @@ export const getPaymentsByUser = async (userId, options = {}) => {
  * @returns {Promise<Object>} Paginated transactions
  */
 export const getAllTransactions = async (options = {}) => {
-  const { page = 1, limit = 10, status, searchTerm } = options;
+  const { page = 1, limit = 10, status, paymentMethod, feeType, dateFrom, dateTo, searchTerm } = options;
 
-  const whereClause = buildPaymentWhereClause({ status, searchTerm });
+  const whereClause = buildPaymentWhereClause({
+    status,
+    paymentMethod,
+    feeType,
+    dateFrom,
+    dateTo,
+    searchTerm
+  });
 
   const [payments, total] = await Promise.all([
     prisma.payments.findMany({
@@ -487,14 +515,15 @@ export const bulkSyncPendingPayments = async () => {
 export const cleanupOrphanedPayments = async () => {
   console.log("Starting orphaned payments cleanup...");
 
-  // Find pending payments older than 24 hours
+  //const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000); // For testing: expire pending payments older than 2 minutes
+
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const pendingPayments = await prisma.payments.findMany({
     where: {
       status: PAYMENT_STATUS.PENDING,
-      referenceNumber: { not: null },
       createdAt: { lt: oneDayAgo },
+      //createdAt: { lt: twoMinutesAgo }, // For testing: expire pending payments older than 2 minutes
     },
     take: 50,
   });
@@ -508,22 +537,22 @@ export const cleanupOrphanedPayments = async () => {
         `Checking orphaned payment ${payment.id} with reference: ${payment.referenceNumber}`
       );
 
-      // Mark old pending payments as failed
-      console.log(
-        `Marking old pending payment ${payment.id} as failed (PIPM flow)`
-      );
+	  // Mark old pending payments as failed (expired)
+	  console.log(
+	    `Marking old pending payment ${payment.id} as failed (expired)`
+	  );
 
       await prisma.payments.update({
         where: { id: payment.id },
         data: {
-          status: "failed",
+          status: "expired",
         },
       });
 
       updatedCount++;
       results.push({
         paymentId: payment.id,
-        action: "marked_as_failed",
+        action: "marked_as_expired",
         reason: "Payment expired",
       });
     } catch (error) {

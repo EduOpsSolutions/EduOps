@@ -58,7 +58,57 @@ const createEnrollmentRequest = async (req, res) => {
       coursesToEnroll,
       validIdPath,
       idPhotoPath,
+      userId,
     } = req.body;
+
+    // Debug: Log the userId being received
+    console.log(
+      "Enrollment request - userId received:",
+      userId,
+      "type:",
+      typeof userId
+    );
+
+    // Check for duplicate enrollment if userId is provided
+    if (userId) {
+      // Resolve current open enrollment period first
+      const now = new Date();
+      const currentPeriod = await prisma.academic_period.findFirst({
+        where: {
+          deletedAt: null,
+          isEnrollmentClosed: false,
+          enrollmentOpenAt: { lte: now },
+          enrollmentCloseAt: { gte: now },
+        },
+        orderBy: { enrollmentOpenAt: "desc" },
+      });
+
+      // Check for existing pending or active enrollment for this user in the current period
+      const existingEnrollment = await prisma.enrollment_request.findFirst({
+        where: {
+          userId: userId,
+          periodId: currentPeriod?.id || null,
+          enrollmentStatus: {
+            in: [
+              "pending",
+              "verified",
+              "payment_pending",
+              "approved",
+              "completed",
+            ],
+          },
+        },
+      });
+
+      if (existingEnrollment) {
+        return res.status(400).json({
+          error: true,
+          message:
+            "You already have an active enrollment request for this period. Please check your enrollment status.",
+          enrollmentId: existingEnrollment.enrollmentId,
+        });
+      }
+    }
 
     // Calculate age from birthDate
     const userBirthDate = new Date(birthDate);
@@ -90,6 +140,64 @@ const createEnrollmentRequest = async (req, res) => {
     }
 
     const enrollmentId = await generateEnrollmentId();
+
+    // If userId is not provided, check if the preferredEmail matches an existing user
+    let resolvedUserId = userId;
+    let resolvedStudentId = null;
+    if (!resolvedUserId && preferredEmail) {
+      const existingUser = await prisma.users.findFirst({
+        where: {
+          email: preferredEmail,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          userId: true, // The human-readable student ID (e.g., "STU-2024-001")
+        },
+      });
+
+      if (existingUser) {
+        resolvedUserId = existingUser.id;
+        resolvedStudentId = existingUser.userId; // Set the readable student ID
+
+        // Check for duplicate enrollment for this user in the current period
+        const now = new Date();
+        const currentPeriod = await prisma.academic_period.findFirst({
+          where: {
+            deletedAt: null,
+            isEnrollmentClosed: false,
+            enrollmentOpenAt: { lte: now },
+            enrollmentCloseAt: { gte: now },
+          },
+          orderBy: { enrollmentOpenAt: "desc" },
+        });
+
+        const existingEnrollment = await prisma.enrollment_request.findFirst({
+          where: {
+            userId: resolvedUserId,
+            periodId: currentPeriod?.id || null,
+            enrollmentStatus: {
+              in: [
+                "pending",
+                "verified",
+                "payment_pending",
+                "approved",
+                "completed",
+              ],
+            },
+          },
+        });
+
+        if (existingEnrollment) {
+          return res.status(400).json({
+            error: true,
+            message:
+              "You already have an active enrollment request for this period. Please check your enrollment status or login to your account.",
+            enrollmentId: existingEnrollment.enrollmentId,
+          });
+        }
+      }
+    }
 
     // Resolve current open enrollment period
     const now = new Date();
@@ -126,6 +234,10 @@ const createEnrollmentRequest = async (req, res) => {
         coursesToEnroll,
         validIdPath,
         idPhotoPath,
+        // Attach userId if provided or resolved from email lookup
+        ...(resolvedUserId && { userId: resolvedUserId }),
+        // Attach studentId (readable ID like "STU-2024-001") if resolved from email lookup
+        ...(resolvedStudentId && { studentId: resolvedStudentId }),
         // Attach current period if available
         ...(currentPeriod && { periodId: currentPeriod.id }),
       },
@@ -449,6 +561,10 @@ const getEnrollmentRequests = async (req, res) => {
     limit = 10,
     search,
     order = "desc",
+    courseIds,
+    academicPeriodId,
+    dateFrom,
+    dateTo,
   } = req.query;
 
   // Parse pagination parameters as integers
@@ -459,6 +575,7 @@ const getEnrollmentRequests = async (req, res) => {
   const whereClause = {
     ...(id && { id: id }),
     ...(status && { enrollmentStatus: status }),
+    ...(academicPeriodId && { periodId: academicPeriodId }),
     ...(search && {
       OR: [
         { enrollmentId: { contains: search } },
@@ -470,11 +587,68 @@ const getEnrollmentRequests = async (req, res) => {
     }),
   };
 
+  // Add date range filter
+  if (dateFrom || dateTo) {
+    whereClause.createdAt = {};
+    if (dateFrom) {
+      whereClause.createdAt.gte = new Date(dateFrom);
+    }
+    if (dateTo) {
+      // Set to end of day for dateTo
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      whereClause.createdAt.lte = endOfDay;
+    }
+  }
+
+  // Handle courseIds filter - need to fetch courses first to get names
+  let courseNamesFilter = null;
+  if (courseIds) {
+    const courseIdArray = courseIds.split(",").filter((id) => id.trim());
+    if (courseIdArray.length > 0) {
+      try {
+        // Fetch course names from course table
+        const courses = await prisma.course.findMany({
+          where: {
+            id: { in: courseIdArray },
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        // Create OR conditions for each course name
+        if (courses.length > 0) {
+          courseNamesFilter = {
+            OR: courses.map((course) => ({
+              coursesToEnroll: { contains: course.name },
+            })),
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching course names:", error);
+      }
+    }
+  }
+
+  // Merge courseNamesFilter into whereClause
+  if (courseNamesFilter) {
+    Object.assign(whereClause, courseNamesFilter);
+  }
+
   const enrollmentRequests = await prisma.enrollment_request.findMany({
     where: whereClause,
     skip: (pageNum - 1) * limitNum,
     take: limitNum,
     orderBy: { createdAt: order },
+    include: {
+      period: {
+        select: {
+          id: true,
+          batchName: true,
+        },
+      },
+    },
   });
 
   const new_data = await Promise.all(
@@ -585,7 +759,8 @@ const trackEnrollment = async (req, res) => {
     const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : "";
 
     // Normalize status to lowercase for consistent comparison
-    const normalizedStatus = enrollmentRequest.enrollmentStatus?.toLowerCase() || "pending";
+    const normalizedStatus =
+      enrollmentRequest.enrollmentStatus?.toLowerCase() || "pending";
 
     switch (normalizedStatus) {
       case "pending":
@@ -647,6 +822,7 @@ const trackEnrollment = async (req, res) => {
         currentStep,
         completedSteps,
         remarkMsg,
+        adminRemarks: enrollmentRequest.remarks || null,
         fullName: `${enrollmentRequest.firstName} ${
           enrollmentRequest.middleName || ""
         } ${enrollmentRequest.lastName}`.trim(),
@@ -657,6 +833,7 @@ const trackEnrollment = async (req, res) => {
         courseName: course?.name || enrollmentRequest.coursesToEnroll,
         paymentProofPath: enrollmentRequest.paymentProofPath,
         studentId: enrollmentRequest.studentId,
+        remarks: enrollmentRequest.remarks || null,
       },
     });
   } catch (error) {
@@ -715,11 +892,215 @@ const updateEnrollmentStatus = async (req, res) => {
   const { enrollmentId } = req.params;
   const { enrollmentStatus } = req.body;
 
+  console.log(
+    `[updateEnrollmentStatus] Updating ${enrollmentId} to status: "${enrollmentStatus}"`
+  );
+
   try {
     const updated = await prisma.enrollment_request.update({
       where: { enrollmentId },
       data: { enrollmentStatus },
     });
+
+    const studentEmail = updated.preferredEmail || updated.altEmail;
+    const studentName = `${updated.firstName} ${updated.lastName}`;
+
+    // Fetch the academic period details (used in both emails)
+    let periodInfo = "";
+    let periodName = "";
+    if (updated.periodId) {
+      const period = await prisma.academic_period.findUnique({
+        where: { id: updated.periodId },
+      });
+      if (period) {
+        periodName = period.batchName || period.periodName;
+        periodInfo = `<p style="font-size: 1rem; color: #333; line-height: 1.6;">
+          <strong>Academic Period:</strong> ${periodName}
+        </p>`;
+      }
+    }
+
+    // Send email notification when enrollment is verified
+    if (
+      enrollmentStatus &&
+      enrollmentStatus.toLowerCase() === "verified" &&
+      studentEmail
+    ) {
+      const subject = "Enrollment Verified - Sprach Institut";
+      const html = `
+        <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
+          <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden;">
+            <div style="background: #890E07; color: #fff; padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 2rem;">Enrollment Verified!</h1>
+            </div>
+            <div style="padding: 32px;">
+              <h2 style="color: #890E07; margin-top: 0;">Congratulations ${studentName}!</h2>
+              <p style="font-size: 1.1rem; color: #333; line-height: 1.6;">
+                Your enrollment has been successfully verified by our admissions team.
+              </p>
+              <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 16px; margin: 24px 0;">
+                <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                  <strong>✓ Enrollment ID:</strong> ${updated.enrollmentId}
+                </p>
+                <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                  <strong>✓ Courses:</strong> ${updated.coursesToEnroll}
+                </p>
+                ${periodInfo}
+              </div>
+              <h3 style="color: #890E07; margin-top: 32px;">Next Steps:</h3>
+              <ol style="font-size: 1rem; color: #333; line-height: 1.8; padding-left: 20px;">
+                <li>Proceed with the payment for your enrollment</li>
+                <li>Your course schedules will be arranged by the administration team</li>
+                <li>You will receive further notifications regarding your class schedule</li>
+              </ol>
+              <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0; font-size: 0.95rem; color: #856404;">
+                  <strong>📧 Note:</strong> This email was sent to the address you provided during enrollment. Please check your spam folder if you don't see our emails.
+                </p>
+              </div>
+              <hr style="margin: 32px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #555; font-size: 0.9rem;">
+                If you have any questions, please contact our admissions office.
+              </p>
+            </div>
+            <div style="background: #f1f1f1; color: #888; text-align: center; padding: 16px 0; font-size: 0.9rem;">
+              &copy; ${new Date().getFullYear()} Sprach Institut. All rights reserved.
+            </div>
+          </div>
+        </div>
+      `;
+
+      const text = `
+Congratulations ${studentName}!
+
+Your enrollment has been successfully verified by our admissions team.
+
+Enrollment Details:
+- Enrollment ID: ${updated.enrollmentId}
+- Courses: ${updated.coursesToEnroll}
+${periodName ? `- Academic Period: ${periodName}` : ""}
+
+Next Steps:
+1. Proceed with the payment for your enrollment
+2. Your course schedules will be arranged by the administration team
+3. You will receive further notifications regarding your class schedule
+
+If you have any questions, please contact our admissions office.
+
+---
+This email was sent to the address you provided during enrollment.
+      `;
+
+      try {
+        await sendEmail(studentEmail, subject, text, html);
+        console.log(`Verification email sent to ${studentEmail}`);
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
+    // Send email notification when enrollment is completed
+    if (
+      enrollmentStatus &&
+      enrollmentStatus.toLowerCase() === "completed" &&
+      studentEmail
+    ) {
+      console.log(
+        `[updateEnrollmentStatus] Sending completion email to ${studentEmail}`
+      );
+      const subject = "Enrollment Completed - Sprach Institut";
+      const html = `
+        <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
+          <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden;">
+            <div style="background: #890E07; color: #fff; padding: 24px 32px;">
+              <h1 style="margin: 0; font-size: 2rem;">Enrollment Completed!</h1>
+            </div>
+            <div style="padding: 32px;">
+              <h2 style="color: #890E07; margin-top: 0;">Welcome to Sprach Institut, ${studentName}!</h2>
+              <p style="font-size: 1.1rem; color: #333; line-height: 1.6;">
+                We are pleased to inform you that your enrollment has been successfully completed. Welcome to our academic community!
+              </p>
+              <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 16px; margin: 24px 0;">
+                <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                  <strong>✓ Enrollment ID:</strong> ${updated.enrollmentId}
+                </p>
+                <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                  <strong>✓ Enrolled Courses:</strong> ${
+                    updated.coursesToEnroll
+                  }
+                </p>
+                ${periodInfo}
+                <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
+                  <strong>✓ Status:</strong> Enrollment Completed
+                </p>
+              </div>
+              <h3 style="color: #890E07; margin-top: 32px;">What Happens Next?</h3>
+              <div style="background: #e7f3ff; border-left: 4px solid #2196F3; padding: 16px; margin: 24px 0;">
+                <p style="margin: 8px 0; font-size: 1rem; color: #0d47a1; line-height: 1.6;">
+                  Our administration team will process your study load and prepare your class schedule. You can expect to receive your schedule details soon.
+                </p>
+              </div>
+              <ul style="font-size: 1rem; color: #333; line-height: 1.8; padding-left: 20px;">
+                <li>Your study load is currently being processed by our academic team</li>
+                <li>You will receive your class schedule via email once it's finalized</li>
+                <li>Your student account has been activated and is ready to use</li>
+                <li>Please check your student portal for updates and announcements</li>
+              </ul>
+              <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0; font-size: 0.95rem; color: #856404;">
+                  <strong>📧 Important:</strong> Please keep this email for your records. This confirmation was sent to ${studentEmail}. If you have any questions or concerns, please don't hesitate to contact our admissions office.
+                </p>
+              </div>
+              <hr style="margin: 32px 0; border: none; border-top: 1px solid #eee;">
+              <p style="color: #555; font-size: 0.9rem;">
+                We look forward to having you in our classes. If you need assistance, our admissions office is here to help.
+              </p>
+            </div>
+            <div style="background: #f1f1f1; color: #888; text-align: center; padding: 16px 0; font-size: 0.9rem;">
+              &copy; ${new Date().getFullYear()} Sprach Institut. All rights reserved.
+            </div>
+          </div>
+        </div>
+      `;
+
+      const text = `
+Welcome to Sprach Institut, ${studentName}!
+
+We are pleased to inform you that your enrollment has been successfully completed. Welcome to our academic community!
+
+Enrollment Details:
+- Enrollment ID: ${updated.enrollmentId}
+- Enrolled Courses: ${updated.coursesToEnroll}
+${periodName ? `- Academic Period: ${periodName}` : ""}
+- Status: Enrollment Completed
+
+What Happens Next?
+
+Our administration team will process your study load and prepare your class schedule. You can expect to receive your schedule details soon.
+
+• Your study load is currently being processed by our academic team
+• You will receive your class schedule via email once it's finalized
+• Your student account has been activated and is ready to use
+• Please check your student portal for updates and announcements
+
+IMPORTANT: Please keep this email for your records. This confirmation was sent to ${studentEmail}. If you have any questions or concerns, please don't hesitate to contact our admissions office.
+
+---
+
+We look forward to having you in our classes. If you need assistance, our admissions office is here to help.
+
+Sprach Institut
+      `;
+
+      try {
+        await sendEmail(studentEmail, subject, text, html);
+        console.log(`Completion email sent to ${studentEmail}`);
+      } catch (emailError) {
+        console.error("Failed to send completion email:", emailError);
+        // Don't fail the request if email fails
+      }
+    }
 
     res.status(200).json({
       message: "Enrollment status updated successfully",
@@ -761,6 +1142,30 @@ const checkEmailExists = async (req, res) => {
   }
 };
 
+// Public: Check if phone number exists in enrollment requests
+// Only checks student's own contact numbers, not parent/guardian numbers (those can be shared)
+const checkPhoneExists = async (req, res) => {
+  const { phone } = req.query;
+  if (!phone) {
+    return res
+      .status(400)
+      .json({ exists: false, error: "Missing phone parameter" });
+  }
+  try {
+    const found = await prisma.enrollment_request.findFirst({
+      where: {
+        OR: [
+          { contactNumber: phone },
+          { altContactNumber: phone },
+        ],
+      },
+    });
+    res.json({ exists: !!found });
+  } catch (e) {
+    res.status(500).json({ exists: false, error: "Failed to check phone" });
+  }
+};
+
 // Helper function to update enrollment progress based on status
 const trackEnrollmentProgress = async (enrollmentRequest) => {
   const { enrollmentStatus } = enrollmentRequest;
@@ -782,7 +1187,7 @@ const trackEnrollmentProgress = async (enrollmentRequest) => {
       currentStep = 2;
       completedSteps = [1];
       remarkMsg =
-        "Your enrollment form has been verified. Please proceed with payment.";
+        "Your enrollment form has been verified. A confirmation email has been sent to your registered email address. Please proceed with payment.";
       break;
     case "payment_pending":
       currentStep = 3;
@@ -799,7 +1204,8 @@ const trackEnrollmentProgress = async (enrollmentRequest) => {
     case "completed":
       currentStep = 5;
       completedSteps = [1, 2, 3, 4];
-      remarkMsg = "Congratulations! Your enrollment is complete.";
+      remarkMsg =
+        "Congratulations! Your enrollment is complete. A confirmation email has been sent to your registered email address. Our administration team will process your study load soon.";
       break;
     case "rejected":
       // Determine where to go back based on what was previously verified
@@ -857,6 +1263,7 @@ const updateEnrollment = async (req, res) => {
     idPhotoPath,
     paymentProofPath,
     enrollmentStatus,
+    remarks,
   } = req.body;
 
   // Build update data object only with provided fields
@@ -886,6 +1293,7 @@ const updateEnrollment = async (req, res) => {
   if (idPhotoPath !== undefined) updateData.idPhotoPath = idPhotoPath;
   if (paymentProofPath !== undefined)
     updateData.paymentProofPath = paymentProofPath;
+  if (remarks !== undefined) updateData.remarks = remarks;
   if (enrollmentStatus !== undefined) {
     updateData.enrollmentStatus = enrollmentStatus;
 
@@ -1002,13 +1410,162 @@ const getStudentEnrollments = async (req, res) => {
   }
 };
 
+// Track enrollment by userId - for logged-in users
+const trackEnrollmentByUserEmail = async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+        error: true,
+      });
+    }
+
+    // Get the current open enrollment period
+    const now = new Date();
+    const currentPeriod = await prisma.academic_period.findFirst({
+      where: {
+        deletedAt: null,
+        isEnrollmentClosed: false,
+        enrollmentOpenAt: { lte: now },
+        enrollmentCloseAt: { gte: now },
+      },
+      orderBy: { enrollmentOpenAt: "desc" },
+    });
+
+    // Get the most recent enrollment for this user in the current period
+    const enrollmentRequest = await prisma.enrollment_request.findFirst({
+      where: {
+        preferredEmail: email,
+        periodId: currentPeriod?.id || null,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!enrollmentRequest) {
+      return res.status(404).json({
+        message:
+          "No enrollment request found for this email in the current period",
+        error: true,
+      });
+    }
+
+    const course = await prisma.course.findFirst({
+      where: {
+        name: enrollmentRequest.coursesToEnroll,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+      },
+    });
+
+    // Map enrollment status to progress steps
+    let currentStep = 1;
+    let completedSteps = [];
+    let remarkMsg =
+      "Your enrollment form has been submitted and is pending verification by an administrator.";
+
+    const coursePrice = course ? parseFloat(course.price) : null;
+    const priceText = coursePrice ? ` Course fee: ₱${coursePrice}.` : "";
+
+    // Normalize status to lowercase for consistent comparison
+    const normalizedStatus =
+      enrollmentRequest.enrollmentStatus?.toLowerCase() || "pending";
+
+    switch (normalizedStatus) {
+      case "pending":
+        currentStep = 2;
+        completedSteps = [1];
+        remarkMsg = `Your enrollment form has been submitted and is pending verification by an administrator.`;
+        break;
+      case "verified":
+        currentStep = 3;
+        completedSteps = [1, 2];
+        remarkMsg = `Your form has been verified. Please pay the Downpayment Fee: ₱3000 or full amount${priceText}`;
+        break;
+      case "payment_pending":
+        currentStep = 4;
+        completedSteps = [1, 2, 3];
+        remarkMsg = `Your payment is being verified. This may take 1-2 business days.`;
+        break;
+      case "approved":
+        currentStep = 5;
+        completedSteps = [1, 2, 3, 4];
+        remarkMsg = `Congratulations! Your enrollment has been approved.`;
+        break;
+      case "completed":
+        currentStep = 5;
+        completedSteps = [1, 2, 3, 4, 5];
+        remarkMsg = `Congratulations! Your payment has been verified and your enrollment is now complete.`;
+        break;
+      case "rejected":
+        const hasPaymentProof =
+          enrollmentRequest.paymentProofPath &&
+          enrollmentRequest.paymentProofPath.trim() !== "";
+
+        if (hasPaymentProof) {
+          currentStep = 3;
+          completedSteps = [1, 2];
+          remarkMsg =
+            "Your payment has been rejected. Please upload a new payment proof.";
+        } else {
+          currentStep = 1;
+          completedSteps = [];
+          remarkMsg =
+            "Your enrollment form has been rejected. Please contact the admissions office for guidance on how to proceed.";
+        }
+        break;
+      default:
+        currentStep = 2;
+        completedSteps = [1];
+        remarkMsg =
+          "Your enrollment form has been submitted and is pending verification by an administrator.";
+    }
+
+    // Return enrollment tracking data
+    res.status(200).json({
+      message: "Enrollment found successfully",
+      error: false,
+      data: {
+        enrollmentId: enrollmentRequest.enrollmentId,
+        status: enrollmentRequest.enrollmentStatus,
+        currentStep,
+        completedSteps,
+        remarkMsg,
+        adminRemarks: enrollmentRequest.remarks || null,
+        fullName: `${enrollmentRequest.firstName} ${
+          enrollmentRequest.middleName || ""
+        } ${enrollmentRequest.lastName}`.trim(),
+        email: enrollmentRequest.preferredEmail,
+        createdAt: enrollmentRequest.createdAt,
+        coursesToEnroll: enrollmentRequest.coursesToEnroll,
+        coursePrice: coursePrice,
+        courseName: course?.name || enrollmentRequest.coursesToEnroll,
+        paymentProofPath: enrollmentRequest.paymentProofPath,
+        studentId: enrollmentRequest.studentId,
+      },
+    });
+  } catch (error) {
+    console.error("Error tracking enrollment by email:", error);
+    res.status(500).json({
+      message: "An error occurred while tracking your enrollment",
+      error: true,
+    });
+  }
+};
+
 export {
   createEnrollmentRequest,
   getEnrollmentRequests,
   trackEnrollment,
+  trackEnrollmentByUserEmail,
   updateEnrollmentPaymentProof,
   updateEnrollmentStatus,
   updateEnrollment,
   checkEmailExists,
+  checkPhoneExists,
   getStudentEnrollments,
 };

@@ -19,12 +19,14 @@ function PaymentForm() {
     loading,
     phoneError,
     nameError,
+    amountError,
     feesOptions,
     updateFormField,
     validateAndFetchStudentByID,
     validateAndFetchTeacherByID,
     validateRequiredFields,
     validatePhoneNumber,
+    validateDownPaymentAmount,
     preparePaymentData,
     showDialog,
     resetForm,
@@ -194,6 +196,16 @@ function PaymentForm() {
     }
 
     if (!validatePhoneNumber()) return;
+
+    if (!validateDownPaymentAmount()) {
+      await showDialog({
+        icon: "warning",
+        title: "Invalid Payment Amount",
+        text: "Down payment must be at least ₱3,000",
+        confirmButtonColor: "#992525",
+      });
+      return;
+    }
 
     const feeLabel = getFeeTypeLabel(formData.fee);
 
@@ -625,7 +637,7 @@ function PaymentForm() {
             <hr className="my-6 border-dark-red" />
             <p className="mb-5 font-semibold">Payment Details</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <SelectField
                 name="fee"
                 id="fee"
@@ -635,36 +647,48 @@ function PaymentForm() {
                 value={formData.fee}
                 onChange={handleInputChange}
               />
-              <LabelledInputField
-                name="amount"
-                id="amount"
-                label="Amount (PHP)*"
-                type="number"
-                required={true}
-                placeholder="0.00"
-                min="1"
-                max="1000000"
-                step="0.01"
-                value={formData.amount}
-                onChange={handleInputChange}
-                readOnly={
-                  isAuthenticated &&
-                  user?.role === "student" &&
-                  formData.fee === "document_fee"
-                }
-                className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                  isAuthenticated &&
-                  user?.role === "student" &&
-                  formData.fee === "document_fee"
-                    ? "bg-gray-100"
-                    : ""
-                }`}
-              />
+              <div>
+                <LabelledInputField
+                  name="amount"
+                  id="amount"
+                  label="Amount (PHP)*"
+                  type="number"
+                  required={true}
+                  placeholder="0.00"
+                  min={formData.fee === "down_payment" ? "3000" : "1"}
+                  max="1000000"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={handleInputChange}
+                  readOnly={
+                    isAuthenticated &&
+                    user?.role === "student" &&
+                    formData.fee === "document_fee"
+                  }
+                  className={`[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                    amountError ? "border-red-500 focus:border-red-500" : ""
+                  } ${
+                    isAuthenticated &&
+                    user?.role === "student" &&
+                    formData.fee === "document_fee"
+                      ? "bg-gray-100"
+                      : ""
+                  }`}
+                />
+                {amountError && (
+                  <p className="text-red-500 text-sm mt-1">{amountError}</p>
+                )}
+                {formData.fee === "down_payment" && (
+                  <p className="text-gray-600 text-xs mt-1">
+                    Minimum down payment: ₱3,000
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Submit Button */}
             <div className="flex justify-center">
-              <SmallButton type="submit" disabled={loading || nameError}>
+              <SmallButton type="submit" disabled={loading || nameError || amountError}>
                 {loading ? (
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

@@ -3,7 +3,7 @@ import { getCookieItem } from '../../utils/jwt';
 import { useLedgerStore } from "../../stores/ledgerStore";
 import axios from "axios";
 import ThinRedButton from "../../components/buttons/ThinRedButton";
-import Pagination from "../../components/common/Pagination";
+import LedgerPagination from "../../components/common/LedgerPagination";
 
 const printStyles = `
   @media print {
@@ -201,7 +201,7 @@ function Ledger() {
                             </table>
                         </div>
                         <div className="mt-4">
-                            <Pagination
+                            <LedgerPagination
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={(page) => setCurrentPage(page)}

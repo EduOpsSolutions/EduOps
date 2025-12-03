@@ -24,6 +24,8 @@ import {
   PAYMENT_INCLUDES,
 } from "../constants/payment_constants.js";
 import pkg from "@prisma/client";
+import { cleanupOrphanedPayments } from "../services/payment_service.js";
+
 const { PrismaClient } = pkg;
 
 const prisma = new PrismaClient();
@@ -90,11 +92,15 @@ const refreshPaymentStatus = async (req, res) => {
 /* Get all transactions for admin management */
 const getAllPaymentTransactions = async (req, res) => {
   try {
-    const { page, limit, status, searchTerm } = req.query;
+    const { page, limit, status, paymentMethod, feeType, dateFrom, dateTo, searchTerm } = req.query;
     const result = await getAllTransactions({
       page,
       limit,
       status,
+      paymentMethod,
+      feeType,
+      dateFrom,
+      dateTo,
       searchTerm,
     });
     return sendSuccess(res, result);
@@ -559,6 +565,20 @@ const checkPaymentStatus = async (req, res) => {
   }
 };
 
+const adminCleanupOrphanedPayments = async (req, res) => {
+  try {
+    const result = await cleanupOrphanedPayments();
+    return sendSuccess(res, result, "Orphaned payments cleanup completed");
+  } catch (error) {
+    return sendError(
+      res,
+      error.message || ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
+      500,
+      error.message
+    );
+  }
+};
+
 //Export Controller Functions
 export {
   createManualTransaction,
@@ -571,6 +591,7 @@ export {
   checkPaymentStatus,
   handleWebhook,
   manualSyncPayment,
+  adminCleanupOrphanedPayments,
 };
 
 // Export default object for backward compatibility
@@ -585,4 +606,5 @@ export default {
   sendPaymentLinkEmail,
   checkPaymentStatus,
   handleWebhook,
+  adminCleanupOrphanedPayments,
 };

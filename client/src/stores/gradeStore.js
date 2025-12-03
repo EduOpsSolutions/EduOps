@@ -78,25 +78,29 @@ const useGradeStore = create((set, get) => ({
 
   getStudentGrade: (studentGradeId, userId) => {
     const { localGrades, students } = get();
-    
-    // If studentGradeId is null, prioritize userId lookup
+
+    // Prefer CSV-uploaded grade if present
+    let grade = null;
     if (!studentGradeId || studentGradeId === null) {
       if (userId) {
         const localGradeByUser = localGrades.find(item => item.userId === userId);
         if (localGradeByUser) {
-          return localGradeByUser.grade;
+          grade = localGradeByUser.grade;
         }
       }
     } else {
-      // Only try studentGradeId lookup if it's not null
       const localGrade = localGrades.find(item => item.studentGradeId === studentGradeId);
       if (localGrade) {
-        return localGrade.grade;
+        grade = localGrade.grade;
       }
     }
-    
-    const student = students.find(s => s.studentGradeId === studentGradeId);
-    return student ? student.grade : null;
+
+    // If no CSV-uploaded grade, fall back to original
+    if (grade === null || grade === undefined) {
+      const student = students.find(s => s.studentGradeId === studentGradeId);
+      grade = student ? student.grade : null;
+    }
+    return grade;
   },
 
   // Handle grade changes - updates local state only, using studentGradeId and userId
@@ -199,33 +203,12 @@ const useGradeStore = create((set, get) => ({
       // Always save visibility 
       await get().saveVisibility();
 
-      // Only update students array after successful backend save
-      if (localGrades.length > 0) {
-        set(state => {
-          const updatedStudents = state.students.map(student => {
-            let localGrade = null;
-            
-            if (!student.studentGradeId || student.studentGradeId === null) {
-              const userId = student.user?.id || student.userId;
-              localGrade = localGrades.find(item => item.userId === userId);
-            } else {
-              localGrade = localGrades.find(item => item.studentGradeId === student.studentGradeId);
-            }
-            
-            if (localGrade) {
-              return { ...student, grade: localGrade.grade };
-            }
-            return student;
-          });
-
-          return { students: updatedStudents };
-        });
-      }
+      // Do not update students array locally after save; rely on backend refetch
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
       set({
-        localGrades: [],
+        // Do not clear localGrades after save
         changesMade: false,
         saving: false
       });
@@ -285,29 +268,26 @@ const useGradeStore = create((set, get) => ({
     const token = getCookieItem('token');
     // Map frontend grade values to Prisma enum values
     const mapGradeValue = (grade) => {
-      if (grade === 'pass') return 'Pass';
-      if (grade === 'fail') return 'Fail';
+      if (grade === 'PASS' || grade === 'pass') return 'Pass';
+      if (grade === 'FAIL' || grade === 'fail') return 'Fail';
+      if (grade === 'NOGRADE' || grade === 'nograde') return 'NoGrade';
       return 'NoGrade';
     };
     // Prepare batch payload
-    const payload = localGrades.map(lg => {
-      let student = null;
-      
-      if (!lg.studentGradeId || lg.studentGradeId === null) {
-        if (lg.userId) {
-          student = students.find(s => (s.user?.id || s.userId) === lg.userId);
-        }
-      } else {
-        student = students.find(s => s.studentGradeId === lg.studentGradeId);
-      }
-      
-      return {
-        studentId: student?.user?.id || student?.userId || student?.id || lg.userId,
-        courseId,
-        periodId,
-        grade: mapGradeValue(lg.grade)
-      };
-    });
+        const payload = students.map(student => {
+          // Match localGrades by studentGradeId, readable userId, or internal userId
+          const localGrade = localGrades.find(lg =>
+            lg.studentGradeId === student.studentGradeId ||
+            lg.studentId === student.user?.userId ||
+            lg.userId === student.user?.id
+          );
+          return {
+            studentId: student.user?.id, // internal ID for backend
+            courseId,
+            periodId,
+            grade: localGrade ? mapGradeValue(localGrade.grade) : mapGradeValue(student.grade)
+          };
+        });
   const apiUrl = process.env.REACT_APP_API_URL;
   const res = await fetch(`${apiUrl}/grades/`, {
       method: 'POST',
@@ -417,7 +397,7 @@ const useGradeStore = create((set, get) => ({
   },
 
   setLocalGrades: (grades) => {
-    set({ localGrades: grades, changesMade: true });
+  set({ localGrades: Array.isArray(grades) ? grades : [], changesMade: true });
   },
 
   resetStore: () => {

@@ -1,54 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Bg_image from '../../assets/images/Bg7.jpg';
-import SmallButton from '../../components/buttons/SmallButton';
-import UserNavbar from '../../components/navbars/UserNav';
-import FileUploadButton from '../../components/textFields/FileUploadButton';
-import LabelledInputField from '../../components/textFields/LabelledInputField';
-import NotLabelledInputField from '../../components/textFields/NotLabelledInputField';
-import SelectField from '../../components/textFields/SelectField';
-import { guestUploadFile } from '../../utils/files';
-import useEnrollmentStore from '../../stores/enrollmentProgressStore';
-import axiosInstance from '../../utils/axios';
-import { checkOngoingEnrollmentPeriod } from '../../utils/enrollmentPeriodUtils';
-import Swal from 'sweetalert2';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Bg_image from "../../assets/images/Bg7.jpg";
+import SmallButton from "../../components/buttons/SmallButton";
+import UserNavbar from "../../components/navbars/UserNav";
+import FileUploadButton from "../../components/textFields/FileUploadButton";
+import LabelledInputField from "../../components/textFields/LabelledInputField";
+import NotLabelledInputField from "../../components/textFields/NotLabelledInputField";
+import SelectField from "../../components/textFields/SelectField";
+import MultiSelectField from "../../components/textFields/MultiSelectField";
+import { guestUploadFile } from "../../utils/files";
+import useEnrollmentStore from "../../stores/enrollmentProgressStore";
+import useAuthStore from "../../stores/authStore";
+import axiosInstance from "../../utils/axios";
+import { checkOngoingEnrollmentPeriod } from "../../utils/enrollmentPeriodUtils";
+import Swal from "sweetalert2";
 
 function SignUp() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { setEnrollmentData } = useEnrollmentStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
   // Add any missing options
   const civilStatusOptions = [
-    { value: 'single', label: 'Single' },
-    { value: 'married', label: 'Married' },
-    { value: 'divorced', label: 'Divorced' },
-    { value: 'widowed', label: 'Widowed' },
+    { value: "single", label: "Single" },
+    { value: "married", label: "Married" },
+    { value: "divorced", label: "Divorced" },
+    { value: "widowed", label: "Widowed" },
   ];
 
   const honorrificOptions = [
-    { value: 'Mr.', label: 'Mr.' },
-    { value: 'Ms.', label: 'Ms.' },
-    { value: 'Mrs.', label: 'Mrs.' },
+    { value: "Mr.", label: "Mr." },
+    { value: "Ms.", label: "Ms." },
+    { value: "Mrs.", label: "Mrs." },
   ];
 
   const sexOptions = [
-    { value: 'M', label: 'Male' },
-    { value: 'F', label: 'Female' },
+    { value: "M", label: "Male" },
+    { value: "F", label: "Female" },
   ];
 
   // Please check if reffered by options are complete and add the missing fields
   const referredByOptions = [
-    { value: 'family', label: 'Family' },
-    { value: 'colleague', label: 'Colleague' },
-    { value: 'social media', label: 'Social Media' },
-    { value: 'website', label: 'Website' },
-    { value: 'other', label: 'Other' },
+    { value: "family", label: "Family" },
+    { value: "colleague", label: "Colleague" },
+    { value: "social media", label: "Social Media" },
+    { value: "website", label: "Website" },
+    { value: "other", label: "Other" },
   ];
 
   const [courseOptions, setCourseOptions] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [coursesData, setCoursesData] = useState([]);
+  const [selectedCourses, setSelectedCourses] = useState([]);
   const [enrollmentPeriodCheck, setEnrollmentPeriodCheck] = useState({
     loading: true,
     hasOngoingPeriod: false,
@@ -62,18 +68,25 @@ function SignUp() {
       let visibleCourses = [];
       let academicPeriodCourseIds = [];
       // If there is an open batch, fetch academic_period_courses for that period
-      if (enrollmentPeriodCheck.currentPeriod && enrollmentPeriodCheck.currentPeriod.id) {
-        const apcRes = await axiosInstance.get(`/academic-period-courses/${enrollmentPeriodCheck.currentPeriod.id}/courses`);
-        academicPeriodCourseIds = apcRes.data.map(apc => apc.courseId);
+      if (
+        enrollmentPeriodCheck.currentPeriod &&
+        enrollmentPeriodCheck.currentPeriod.id
+      ) {
+        const apcRes = await axiosInstance.get(
+          `/academic-period-courses/${enrollmentPeriodCheck.currentPeriod.id}/courses`
+        );
+        academicPeriodCourseIds = apcRes.data.map((apc) => apc.courseId);
       }
       // Fetch all courses
-      const response = await axiosInstance.get('/courses');
+      const response = await axiosInstance.get("/courses");
       visibleCourses = response.data.filter(
-        (course) => course.visibility === 'visible'
+        (course) => course.visibility === "visible"
       );
       // If we have academic period course IDs, filter to only those
       if (academicPeriodCourseIds.length > 0) {
-        visibleCourses = visibleCourses.filter(course => academicPeriodCourseIds.includes(course.id));
+        visibleCourses = visibleCourses.filter((course) =>
+          academicPeriodCourseIds.includes(course.id)
+        );
       }
       setCoursesData(visibleCourses);
       const courseOptions = visibleCourses.map((course) => ({
@@ -82,33 +95,121 @@ function SignUp() {
         price: course.price,
         disabled: false,
       }));
-      // Fetch course requisites for all visible courses
+
+      // Fetch ALL course requisites (prerequisites and co-requisites)
       if (visibleCourses.length > 0) {
         try {
-          const courseIds = visibleCourses.map(c => c.id);
-          const res = await axiosInstance.get(`/course-requisites?courseIds=${courseIds.join(',')}`);
+          const courseIds = visibleCourses.map((c) => c.id);
+          const requisitesRes = await axiosInstance.get(
+            `/course-requisites?courseIds=${courseIds.join(",")}`
+          );
+
+          // Build a map of courseId -> { prerequisites: [...], corequisites: [...] }
           const requisitesMap = {};
-          res.data.forEach(r => {
-            requisitesMap[r.courseId] = true;
-          });
-          // Update disabled property and label for options with requisites
-          courseOptions.forEach(opt => {
-            if (requisitesMap[opt.value]) {
-              opt.disabled = true;
-              opt.label = `${opt.label} (Requires prerequisite)`;
+          requisitesRes.data.forEach((req) => {
+            if (!requisitesMap[req.courseId]) {
+              requisitesMap[req.courseId] = {
+                prerequisites: [],
+                corequisites: [],
+              };
+            }
+            if (req.type === "prerequisite") {
+              requisitesMap[req.courseId].prerequisites.push({
+                id: req.requisiteCourseId,
+                name: req.requisiteCourse.name,
+              });
+            } else if (req.type === "corequisite") {
+              requisitesMap[req.courseId].corequisites.push({
+                id: req.requisiteCourseId,
+                name: req.requisiteCourse.name,
+              });
             }
           });
+
+          // For logged-in students, check eligibility
+          if (isAuthenticated && user?.id) {
+            try {
+              const eligibilityRes = await axiosInstance.get(
+                `/course-requisites/check-student?studentId=${
+                  user.id
+                }&courseIds=${courseIds.join(",")}`
+              );
+
+              const eligibilityMap = {};
+              eligibilityRes.data.forEach((item) => {
+                eligibilityMap[item.courseId] = item;
+              });
+
+              // Update course options based on eligibility
+              courseOptions.forEach((opt) => {
+                const requisites = requisitesMap[opt.value];
+                const eligibility = eligibilityMap[opt.value];
+
+                // Add all co-requisites for auto-selection
+                if (
+                  requisites?.corequisites &&
+                  requisites.corequisites.length > 0
+                ) {
+                  opt.corequisites = requisites.corequisites.map((c) => c.id);
+                }
+
+                // Disable if student hasn't passed prerequisites
+                if (eligibility && !eligibility.eligible) {
+                  opt.disabled = true;
+                  const missingNames = eligibility.missingPrerequisites
+                    .map((p) => p.name)
+                    .join(", ");
+                  opt.helperText = `Prerequisites not met: ${missingNames}`;
+                } else if (
+                  requisites?.corequisites &&
+                  requisites.corequisites.length > 0
+                ) {
+                  // Show co-requisites info (but don't disable)
+                  const coReqNames = requisites.corequisites
+                    .map((c) => c.name)
+                    .join(", ");
+                  opt.helperText = `Co-requisite: ${coReqNames} (will be auto-selected)`;
+                }
+              });
+            } catch (e) {
+              console.error("Failed to check student eligibility:", e);
+            }
+          } else {
+            // For guests: disable courses with prerequisites or co-requisites
+            courseOptions.forEach((opt) => {
+              const requisites = requisitesMap[opt.value];
+              if (
+                requisites?.prerequisites &&
+                requisites.prerequisites.length > 0
+              ) {
+                opt.disabled = true;
+                const prereqNames = requisites.prerequisites
+                  .map((p) => p.name)
+                  .join(", ");
+                opt.helperText = `Requires: ${prereqNames} (Login to check eligibility)`;
+              } else if (
+                requisites?.corequisites &&
+                requisites.corequisites.length > 0
+              ) {
+                opt.disabled = true;
+                const coReqNames = requisites.corequisites
+                  .map((c) => c.name)
+                  .join(", ");
+                opt.helperText = `Co-requisite: ${coReqNames} (Login required)`;
+              }
+            });
+          }
         } catch (e) {
-          // If error, just skip disabling
+          console.error("Failed to fetch course requisites:", e);
         }
       }
       setCourseOptions(courseOptions);
     } catch (error) {
-      console.error('Failed to fetch courses:', error);
+      console.error("Failed to fetch courses:", error);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to load available courses. Please refresh the page.',
+        icon: "error",
+        title: "Error",
+        text: "Failed to load available courses. Please refresh the page.",
       });
     } finally {
       setCoursesLoading(false);
@@ -134,11 +235,11 @@ function SignUp() {
 
       return result;
     } catch (error) {
-      console.error('Failed to check enrollment periods:', error);
+      console.error("Failed to check enrollment periods:", error);
       const errorResult = {
         hasOngoingPeriod: false,
         currentPeriod: null,
-        error: 'Failed to check enrollment availability',
+        error: "Failed to check enrollment availability",
       };
 
       setEnrollmentPeriodCheck({
@@ -152,6 +253,37 @@ function SignUp() {
 
   useEffect(() => {
     const initializePage = async () => {
+      // Check if user is logged in
+      if (isAuthenticated && user?.email) {
+        setIsLoggedIn(true);
+        // Check for existing enrollment
+        try {
+          const response = await axiosInstance.get(
+            `/enrollment/track/email/${user.email}`
+          );
+          if (response.data && response.data.data) {
+            // User has an existing enrollment, redirect to enrollment page
+            const enrollmentData = response.data.data;
+            setEnrollmentData(enrollmentData);
+            await Swal.fire({
+              title: "Existing Enrollment Found",
+              text: "You already have an active enrollment. Redirecting to your enrollment status.",
+              icon: "info",
+              confirmButtonColor: "#992525",
+            });
+            navigate("/enrollment");
+            return;
+          }
+        } catch (error) {
+          // No existing enrollment found (404), continue with enrollment
+          if (error.response?.status !== 404) {
+            console.error("Error checking existing enrollment:", error);
+          }
+        }
+        // If no existing enrollment, pre-fill user data
+        setUserProfile(user);
+      }
+
       const periodCheck = await checkEnrollmentPeriod();
 
       // Only fetch courses if enrollment is available
@@ -165,7 +297,10 @@ function SignUp() {
 
   useEffect(() => {
     // Refetch courses whenever the open enrollment period changes
-    if (enrollmentPeriodCheck.hasOngoingPeriod && enrollmentPeriodCheck.currentPeriod) {
+    if (
+      enrollmentPeriodCheck.hasOngoingPeriod &&
+      enrollmentPeriodCheck.currentPeriod
+    ) {
       fetchCourses();
     } else {
       setCourseOptions([]);
@@ -177,56 +312,77 @@ function SignUp() {
   const [idPhoto, setIdPhoto] = useState(null);
   const [validIdUploading, setValidIdUploading] = useState(false);
   const [idPhotoUploading, setIdPhotoUploading] = useState(false);
+  const [validIdFileName, setValidIdFileName] = useState(null);
+  const [idPhotoFileName, setIdPhotoFileName] = useState(null);
 
   const [contactNumbers, setContactNumbers] = useState({
-    contactNumber: '',
-    altContactNumber: '',
-    motherContact: '',
-    fatherContact: '',
-    guardianContact: '',
+    contactNumber: "",
+    altContactNumber: "",
+    motherContact: "",
+    fatherContact: "",
+    guardianContact: "",
   });
+
+  // Pre-fill contact numbers when userProfile is available
+  useEffect(() => {
+    if (isLoggedIn && userProfile && userProfile.phoneNumber) {
+      setContactNumbers((prev) => ({
+        ...prev,
+        contactNumber: userProfile.phoneNumber,
+      }));
+    }
+  }, [isLoggedIn, userProfile]);
 
   // Handle contact number input - only allow numbers
   const handleContactNumberChange = (e) => {
     const { name, value } = e.target;
     // Remove all non-digit characters
-    const numericValue = value.replace(/\D/g, '');
+    const numericValue = value.replace(/\D/g, "");
     setContactNumbers((prev) => ({
       ...prev,
       [name]: numericValue,
     }));
+
+    // Trigger live validation only for main contact number and alt contact number
+    if (name === "contactNumber" || name === "altContactNumber") {
+      handlePhoneValidation(numericValue);
+    }
   };
 
   const handleFileChange = async (event, setFile) => {
     const file = event.target.files[0];
+    if (!file) return; // User canceled file selection
+
     setFile(file);
 
     try {
-      if (event.target.id === 'validId') {
+      if (event.target.id === "validId") {
         setValidIdUploading(true);
-        const result = await guestUploadFile(file, 'proof-ids');
-        console.log('result', result);
+        const result = await guestUploadFile(file, "proof-ids");
+        console.log("result", result);
         if (result.error) {
           Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to Upload Valid ID',
+            icon: "error",
+            title: "Error",
+            text: "Failed to Upload Valid ID",
           });
           return;
         }
         setValidId(result.data.downloadURL);
-      } else if (event.target.id === 'idPhoto') {
+        setValidIdFileName(file.name);
+      } else if (event.target.id === "idPhoto") {
         setIdPhotoUploading(true);
-        const result = await guestUploadFile(file, 'enrollment');
+        const result = await guestUploadFile(file, "enrollment");
         if (result.error) {
           Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to Upload 2x2 ID Photo',
+            icon: "error",
+            title: "Error",
+            text: "Failed to Upload 2x2 ID Photo",
           });
           return;
         }
         setIdPhoto(result.data.downloadURL);
+        setIdPhotoFileName(file.name);
       }
     } finally {
       setValidIdUploading(false);
@@ -234,8 +390,22 @@ function SignUp() {
     }
   };
 
+  const handleRemoveValidId = () => {
+    setValidId(null);
+    setValidIdFileName(null);
+  };
+
+  const handleRemoveIdPhoto = () => {
+    setIdPhoto(null);
+    setIdPhotoFileName(null);
+  };
+
   const [emailError, setEmailError] = useState("");
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const emailDebounceRef = useRef(null);
+  const phoneDebounceRef = useRef(null);
 
   // Email format validator (simple regex)
   const isValidEmailFormat = (email) => {
@@ -243,9 +413,17 @@ function SignUp() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  // Phone format validator
+  const isValidPhoneFormat = (phone) => {
+    // Check if phone is 11-15 digits
+    return phone && phone.length >= 11 && phone.length <= 15;
+  };
+
   // Async email validator using new public endpoint, only if format is valid
   const validateEmailUnique = async (email) => {
     setEmailError("");
+    if (!email) return;
+
     if (!isValidEmailFormat(email)) {
       setEmailError("Please enter a valid email address.");
       return;
@@ -256,7 +434,9 @@ function SignUp() {
         params: { email },
       });
       if (res.data && res.data.exists) {
-        setEmailError("This email is already used.");
+        setEmailError(
+          "This email is already used. Please use a different email address or login to your account."
+        );
       } else {
         setEmailError("");
       }
@@ -267,6 +447,77 @@ function SignUp() {
     }
   };
 
+  // Async phone validator using new public endpoint
+  const validatePhoneUnique = async (phone) => {
+    setPhoneError("");
+    if (!phone) return;
+
+    if (!isValidPhoneFormat(phone)) {
+      setPhoneError("Phone number must be 11-15 digits.");
+      return;
+    }
+    setCheckingPhone(true);
+    try {
+      const res = await axiosInstance.get(`/enrollment/check-phone`, {
+        params: { phone },
+      });
+      if (res.data && res.data.exists) {
+        setPhoneError(
+          "This phone number is already registered. Please use a different number."
+        );
+      } else {
+        setPhoneError("");
+      }
+    } catch (e) {
+      setPhoneError("Could not validate phone number. Try again later.");
+    } finally {
+      setCheckingPhone(false);
+    }
+  };
+
+  // Debounced email validation - triggers as user types
+  const handleEmailChange = (e) => {
+    const email = e.target.value;
+    setEmailError("");
+
+    // Clear existing timeout
+    if (emailDebounceRef.current) {
+      clearTimeout(emailDebounceRef.current);
+    }
+
+    // Set new timeout for validation
+    emailDebounceRef.current = setTimeout(() => {
+      validateEmailUnique(email);
+    }, 800); // Wait 800ms after user stops typing
+  };
+
+  // Debounced phone validation - triggers as user types
+  const handlePhoneValidation = (phone) => {
+    setPhoneError("");
+
+    // Clear existing timeout
+    if (phoneDebounceRef.current) {
+      clearTimeout(phoneDebounceRef.current);
+    }
+
+    // Set new timeout for validation
+    phoneDebounceRef.current = setTimeout(() => {
+      validatePhoneUnique(phone);
+    }, 800); // Wait 800ms after user stops typing
+  };
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (emailDebounceRef.current) {
+        clearTimeout(emailDebounceRef.current);
+      }
+      if (phoneDebounceRef.current) {
+        clearTimeout(phoneDebounceRef.current);
+      }
+    };
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -275,35 +526,35 @@ function SignUp() {
 
     try {
       if (!validId || !idPhoto) {
-        throw new Error('Both Valid ID and 2x2 ID Photo are required');
+        throw new Error("Both Valid ID and 2x2 ID Photo are required");
       }
 
       // Ensure files are uploaded as URLs, not File objects
-      if (typeof validId !== 'string' || typeof idPhoto !== 'string') {
+      if (typeof validId !== "string" || typeof idPhoto !== "string") {
         throw new Error(
-          'Please wait for file uploads to complete before submitting'
+          "Please wait for file uploads to complete before submitting"
         );
       }
 
       // Check if uploads are still in progress
       if (validIdUploading || idPhotoUploading) {
-        throw new Error('Please wait for file uploads to complete');
+        throw new Error("Please wait for file uploads to complete");
       }
 
-      console.log('validId', validId);
-      console.log('idPhoto', idPhoto);
-      enrollmentData['validIdPath'] = validId;
-      enrollmentData['idPhotoPath'] = idPhoto;
+      console.log("validId", validId);
+      console.log("idPhoto", idPhoto);
+      enrollmentData["validIdPath"] = validId;
+      enrollmentData["idPhotoPath"] = idPhoto;
       for (let [key, value] of formData.entries()) {
         if (
-          key !== 'validIdPath' &&
-          key !== 'idPhotoPath' &&
+          key !== "validIdPath" &&
+          key !== "idPhotoPath" &&
           ![
-            'contactNumber',
-            'altContactNumber',
-            'motherContact',
-            'fatherContact',
-            'guardianContact',
+            "contactNumber",
+            "altContactNumber",
+            "motherContact",
+            "fatherContact",
+            "guardianContact",
           ].includes(key)
         ) {
           enrollmentData[key] = value;
@@ -317,23 +568,57 @@ function SignUp() {
       enrollmentData.fatherContact = contactNumbers.fatherContact;
       enrollmentData.guardianContact = contactNumbers.guardianContact;
 
-      // Get selected course details (name and price) based on course ID
-      const selectedCourseId = enrollmentData.coursesToEnroll;
-      const selectedCourse = coursesData.find(
-        (course) => course.id === selectedCourseId
-      );
+      // Add userId if user is logged in
+      if (isLoggedIn && userProfile && userProfile.id) {
+        enrollmentData.userId = userProfile.id;
 
-      if (selectedCourse) {
-        enrollmentData.coursesToEnroll = selectedCourse.name;
+        // Add pre-filled fields from user profile (disabled fields are not included in FormData)
+        enrollmentData.firstName = userProfile.firstName;
+        enrollmentData.lastName = userProfile.lastName;
+        enrollmentData.preferredEmail = userProfile.email;
+
+        // Format birthDate from userProfile
+        if (
+          userProfile.birthyear &&
+          userProfile.birthmonth &&
+          userProfile.birthdate
+        ) {
+          enrollmentData.birthDate = `${userProfile.birthyear}-${String(
+            userProfile.birthmonth
+          ).padStart(2, "0")}-${String(userProfile.birthdate).padStart(
+            2,
+            "0"
+          )}`;
+        }
+
+        // Add middleName if present
+        if (userProfile.middleName) {
+          enrollmentData.middleName = userProfile.middleName;
+        }
       }
 
-      console.log('enrollmentData', enrollmentData);
+      // Get selected course details (name and price) based on course IDs
+      const selectedCourseIds = selectedCourses;
+      const selectedCourseObjects = coursesData.filter((course) =>
+        selectedCourseIds.includes(course.id)
+      );
+
+      if (selectedCourseObjects.length > 0) {
+        // Store course names as comma-separated string
+        enrollmentData.coursesToEnroll = selectedCourseObjects
+          .map((c) => c.name)
+          .join(", ");
+      } else {
+        throw new Error("Please select at least one course");
+      }
+
+      console.log("enrollmentData", enrollmentData);
 
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/enrollment/enroll`,
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(enrollmentData),
         }
       );
@@ -342,41 +627,47 @@ function SignUp() {
       if (!response.ok) throw new Error(result.message);
 
       // Set enrollment data in store with proper initial state
+      // Calculate total price for all selected courses
+      const totalPrice = selectedCourseObjects.reduce(
+        (sum, course) => sum + parseFloat(course.price || 0),
+        0
+      );
+
       const enrollmentStoreData = {
         enrollmentId: result.data.enrollmentId,
-        status: 'PENDING', // Default status for new enrollments
+        status: "PENDING", // Default status for new enrollments
         currentStep: 2,
         completedSteps: [1],
         remarkMsg:
-          'Your enrollment form has been submitted. Please wait for verification.',
+          "Your enrollment form has been submitted. Please wait for verification.",
         fullName: `${result.data.firstName} ${
-          result.data.middleName ? result.data.middleName + ' ' : ''
+          result.data.middleName ? result.data.middleName + " " : ""
         }${result.data.lastName}`,
         email: result.data.preferredEmail,
         coursesToEnroll: result.data.coursesToEnroll,
-        coursePrice: selectedCourse?.price,
-        courseName: selectedCourse?.name,
+        coursePrice: totalPrice,
+        courseName: selectedCourseObjects.map((c) => c.name).join(", "),
         createdAt: result.data.createdAt,
       };
 
       setEnrollmentData(enrollmentStoreData);
 
       await Swal.fire({
-        title: 'Success!',
-        text: 'Enrollment form submitted successfully!',
-        icon: 'success',
-        confirmButtonColor: '#992525',
-        confirmButtonText: 'Continue',
+        title: "Success!",
+        text: "Enrollment form submitted successfully!",
+        icon: "success",
+        confirmButtonColor: "#992525",
+        confirmButtonText: "Continue",
       });
-      navigate('/enrollment');
+      navigate("/enrollment");
     } catch (error) {
-      console.error('Error details:', error);
+      console.error("Error details:", error);
       await Swal.fire({
-        title: 'Error!',
+        title: "Error!",
         text: error.message,
-        icon: 'error',
-        confirmButtonColor: '#992525',
-        confirmButtonText: 'Try Again',
+        icon: "error",
+        confirmButtonColor: "#992525",
+        confirmButtonText: "Try Again",
       });
     } finally {
       setIsSubmitting(false);
@@ -385,13 +676,13 @@ function SignUp() {
 
   return (
     <>
-      <UserNavbar role="public" />
+      <UserNavbar role={isAuthenticated && user ? user.role : "public"} />
       <section
         className="flex justify-center items-center bg-white-yellow-tone bg-center bg-cover bg-no-repeat bg-blend-multiply"
         style={{
           backgroundImage: `url(${Bg_image})`,
-          minHeight: '100vh',
-          backgroundPosition: '100% 35%',
+          minHeight: "100vh",
+          backgroundPosition: "100% 35%",
         }}
       >
         <div className="relative max-w-full mx-auto bg-white-yellow-tone w-11/12 px-8 py-4 mt-8 mb-12 flex flex-col rounded-lg">
@@ -505,7 +796,7 @@ function SignUp() {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate("/")}
                         className="bg-dark-red hover:bg-dark-red-2 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                       >
                         Return to Home
@@ -530,24 +821,53 @@ function SignUp() {
                         </h2>
                         <p className="text-green-700">
                           <strong>
-                            Batch:{' '}
+                            Batch:{" "}
                             {enrollmentPeriodCheck.currentPeriod.batchName}
                           </strong>
                         </p>
                         <p className="text-sm text-green-600">
-                          Ends:{' '}
+                          Ends:{" "}
                           {new Date(
                             enrollmentPeriodCheck.currentPeriod.endAt
-                          ).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
                           })}
                         </p>
                       </div>
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200">
                         Enrollment Open
                       </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Logged-in User Info Banner */}
+                {isLoggedIn && userProfile && (
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center">
+                      <svg
+                        className="w-5 h-5 text-blue-600 mr-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <div>
+                        <h3 className="text-sm font-semibold text-blue-800">
+                          Welcome back, {userProfile.firstName}!
+                        </h3>
+                        <p className="text-sm text-blue-700">
+                          Some fields have been pre-filled with your account
+                          information. Fields marked with a lock cannot be
+                          edited.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -569,6 +889,12 @@ function SignUp() {
                       label="First name*"
                       type="text"
                       required={true}
+                      value={
+                        isLoggedIn && userProfile
+                          ? userProfile.firstName
+                          : undefined
+                      }
+                      disabled={isLoggedIn && userProfile}
                     />
                     <NotLabelledInputField
                       name="middleName"
@@ -576,6 +902,12 @@ function SignUp() {
                       label="Middle name"
                       type="text"
                       required={false}
+                      value={
+                        isLoggedIn && userProfile
+                          ? userProfile.middleName || ""
+                          : undefined
+                      }
+                      disabled={isLoggedIn && userProfile}
                     />
                     <NotLabelledInputField
                       name="lastName"
@@ -583,6 +915,12 @@ function SignUp() {
                       label="Last name*"
                       type="text"
                       required={true}
+                      value={
+                        isLoggedIn && userProfile
+                          ? userProfile.lastName
+                          : undefined
+                      }
+                      disabled={isLoggedIn && userProfile}
                     />
                   </div>
                   <div className="grid md:grid-cols-4 md:gap-6">
@@ -616,6 +954,16 @@ function SignUp() {
                       label="Birth Date*"
                       type="date"
                       required={true}
+                      value={
+                        isLoggedIn && userProfile
+                          ? `${userProfile.birthyear}-${String(
+                              userProfile.birthmonth
+                            ).padStart(2, "0")}-${String(
+                              userProfile.birthdate
+                            ).padStart(2, "0")}`
+                          : undefined
+                      }
+                      disabled={isLoggedIn && userProfile}
                     />
                     <SelectField
                       name="civilStatus"
@@ -647,18 +995,50 @@ function SignUp() {
                     </div>
                   </div>
                   <div className="grid md:grid-cols-2 md:gap-6">
-                    <LabelledInputField
-                      name="contactNumber"
-                      id="contact_number"
-                      label="Contact Number*"
-                      type="tel"
-                      required={true}
-                      placeholder="09xxxxxxxxx"
-                      value={contactNumbers.contactNumber}
-                      onChange={handleContactNumberChange}
-                      minLength="11"
-                      maxLength="15"
-                    />
+                    <div className="flex flex-col">
+                      <LabelledInputField
+                        name="contactNumber"
+                        id="contact_number"
+                        label="Contact Number*"
+                        type="tel"
+                        required={true}
+                        placeholder="09xxxxxxxxx"
+                        value={contactNumbers.contactNumber}
+                        onChange={handleContactNumberChange}
+                        minLength="11"
+                        maxLength="15"
+                        error={phoneError}
+                      />
+                      {checkingPhone && (
+                        <div className="text-blue-600 text-sm mt-1 mb-2 flex items-center">
+                          <svg
+                            className="animate-spin h-4 w-4 mr-2"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          Checking phone availability...
+                        </div>
+                      )}
+                      {phoneError && (
+                        <div className="text-red-600 text-sm mt-1 mb-2">
+                          {phoneError}
+                        </div>
+                      )}
+                    </div>
                     <LabelledInputField
                       name="altContactNumber"
                       id="alt_contact_number"
@@ -681,12 +1061,47 @@ function SignUp() {
                         type="email"
                         required={true}
                         placeholder="johndoe@gmail.com"
-                        onBlur={e => validateEmailUnique(e.target.value)}
-                        onChange={e => { handleContactNumberChange(e); setEmailError(""); }}
+                        value={
+                          isLoggedIn && userProfile
+                            ? userProfile.email
+                            : undefined
+                        }
+                        disabled={isLoggedIn && userProfile}
+                        onChange={(e) => {
+                          if (!isLoggedIn) {
+                            handleEmailChange(e);
+                          }
+                        }}
                         error={emailError}
                       />
+                      {checkingEmail && (
+                        <div className="text-blue-600 text-sm mt-1 mb-2 flex items-center">
+                          <svg
+                            className="animate-spin h-4 w-4 mr-2"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          Checking email availability...
+                        </div>
+                      )}
                       {emailError && (
-                        <div className="text-red-600 text-sm mt-1 mb-2">{emailError}</div>
+                        <div className="text-red-600 text-sm mt-1 mb-2">
+                          {emailError}
+                        </div>
                       )}
                     </div>
                     <LabelledInputField
@@ -765,22 +1180,56 @@ function SignUp() {
                     />
                   </div>
 
-                  <div className="grid md:grid-cols-3 md:gap-6">
+                  <div className="grid md:grid-cols-3 md:gap-6 mb-4">
                     <div>
-                      <SelectField
+                      <MultiSelectField
                         name="coursesToEnroll"
                         id="courses_to_enroll"
-                        label="Select Course(s) to Enroll*"
+                        label="Select Course(s) to Enroll"
                         required={true}
+                        value={selectedCourses}
+                        onChange={(e) => setSelectedCourses(e.target.value)}
                         options={
                           coursesLoading
-                            ? [{ value: '', label: 'Loading courses...' }]
+                            ? [
+                                {
+                                  value: "",
+                                  label: "Loading courses...",
+                                  disabled: true,
+                                },
+                              ]
                             : courseOptions.length > 0
                             ? courseOptions
-                            : [{ value: '', label: 'No courses available' }]
+                            : [
+                                {
+                                  value: "",
+                                  label: "No courses available",
+                                  disabled: true,
+                                },
+                              ]
                         }
                         disabled={coursesLoading}
+                        placeholder="Search and select courses..."
+                        searchPlaceholder="Search courses..."
                       />
+                      {selectedCourses.length > 0 && (
+                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm font-semibold text-blue-800 mb-1">
+                            {selectedCourses.length} course
+                            {selectedCourses.length > 1 ? "s" : ""} selected
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            Total Price: ₱
+                            {coursesData
+                              .filter((c) => selectedCourses.includes(c.id))
+                              .reduce(
+                                (sum, c) => sum + parseFloat(c.price || 0),
+                                0
+                              )
+                              .toLocaleString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -789,29 +1238,51 @@ function SignUp() {
                     id="validId"
                     name="validIdPath"
                     onChange={(e) => handleFileChange(e, setValidId)}
+                    onRemove={handleRemoveValidId}
                     ariaDescribedBy="valid_id_help"
                     isUploading={validIdUploading}
+                    isUploaded={!!validId && typeof validId === "string"}
+                    uploadedFileName={validIdFileName}
+                    helperText="Required: Upload a clear photo of both sides of your valid government-issued ID"
                   />
                   <FileUploadButton
                     label="Upload 2X2 ID Photo (white background)*"
                     id="idPhoto"
                     name="idPhotoPath"
                     onChange={(e) => handleFileChange(e, setIdPhoto)}
+                    onRemove={handleRemoveIdPhoto}
                     ariaDescribedBy="2x2_id_help"
                     isUploading={idPhotoUploading}
+                    isUploaded={!!idPhoto && typeof idPhoto === "string"}
+                    uploadedFileName={idPhotoFileName}
+                    helperText="Required: Upload a 2x2 photo with white background"
                   />
                   {/* Button navigates to enrollment page after submission */}
                   <SmallButton
                     type="submit"
                     disabled={
-                      isSubmitting || validIdUploading || idPhotoUploading || !!emailError || checkingEmail
+                      isSubmitting ||
+                      validIdUploading ||
+                      idPhotoUploading ||
+                      !!emailError ||
+                      !!phoneError ||
+                      checkingEmail ||
+                      checkingPhone ||
+                      !validId ||
+                      !idPhoto ||
+                      typeof validId !== "string" ||
+                      typeof idPhoto !== "string"
                     }
                   >
                     {isSubmitting
-                      ? 'Submitting...'
+                      ? "Submitting..."
                       : validIdUploading || idPhotoUploading
-                      ? 'Uploading...'
-                      : 'Proceed'}
+                      ? "Uploading..."
+                      : checkingEmail || checkingPhone
+                      ? "Validating..."
+                      : !validId || !idPhoto
+                      ? "Please upload required files"
+                      : "Proceed"}
                   </SmallButton>
                 </form>
               </>

@@ -7,6 +7,7 @@ const useEnrollmentStore = create((set, get) => ({
   studentId: null,
   enrollmentStatus: "pending",
   remarkMsg: "Please track your enrollment to view progress.",
+  remarks: null,
   fullName: "",
   email: "",
   coursesToEnroll: "",
@@ -39,6 +40,7 @@ const useEnrollmentStore = create((set, get) => ({
       currentStep,
       completedSteps,
       remarkMsg: data.remarkMsg,
+      remarks: data.remarks || null,
       fullName: data.fullName,
       email: data.email,
       coursesToEnroll: data.coursesToEnroll,
@@ -56,6 +58,7 @@ const useEnrollmentStore = create((set, get) => ({
       studentId: null,
       enrollmentStatus: "pending",
       remarkMsg: "Please track your enrollment to view progress.",
+      remarks: null,
       fullName: "",
       email: "",
       coursesToEnroll: "",
@@ -72,13 +75,58 @@ const useEnrollmentStore = create((set, get) => ({
   fetchEnrollmentData: async () => {
     const { enrollmentId } = get();
     if (!enrollmentId) {
-      console.log('No enrollment ID available for fetching data');
+      console.log("No enrollment ID available for fetching data");
       return;
     }
     // Data is already available in store from tracking
-    console.log('Enrollment data already available in store');
+    console.log("Enrollment data already available in store");
   },
 
+  fetchEnrollmentDataByUserEmail: async (email) => {
+    if (!email) {
+      console.log("No email provided for fetching enrollment data");
+      return null;
+    }
+
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const response = await fetch(
+        `${apiUrl}/enrollment/track/email/${email}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("token="))
+                ?.split("=")[1]
+            }`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log("No enrollment found for this user");
+          return null;
+        }
+        throw new Error("Failed to fetch enrollment data");
+      }
+
+      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.message || "Failed to fetch enrollment data");
+      }
+
+      const data = result.data;
+      get().setEnrollmentData(data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching enrollment data by userId:", error);
+      return null;
+    }
+  },
 
   advanceToNextStep: () => {
     const { currentStep, paymentProof, hasPaymentProof, coursePrice } = get();
@@ -86,22 +134,26 @@ const useEnrollmentStore = create((set, get) => ({
     if (currentStep >= 5) return;
 
     if (currentStep === 3 && !paymentProof && !hasPaymentProof) {
-      alert('Please upload your proof of payment before proceeding.');
+      alert("Please upload your proof of payment before proceeding.");
       return;
     }
 
     const statusUpdates = {
       2: {
-        enrollmentStatus: 'verified',
-        remarkMsg: `Please pay the Downpayment of ₱3000 or the full amount of ₱${coursePrice || 'TBA'} to proceed with your enrollment.`,
+        enrollmentStatus: "verified",
+        remarkMsg: `Please pay the Downpayment of ₱3000 or the full amount of ₱${
+          coursePrice || "TBA"
+        } to proceed with your enrollment.`,
       },
       3: {
-        enrollmentStatus: 'payment_pending',
-        remarkMsg: 'Your payment is being verified. This may take 1-2 business days.',
+        enrollmentStatus: "payment_pending",
+        remarkMsg:
+          "Your payment is being verified. This may take 1-2 business days.",
       },
       4: {
-        enrollmentStatus: 'approved',
-        remarkMsg: 'Your payment has been verified. Enrollment is being processed.',
+        enrollmentStatus: "approved",
+        remarkMsg:
+          "Your payment has been verified. Enrollment is being processed.",
       },
     };
 
@@ -126,21 +178,21 @@ const useEnrollmentStore = create((set, get) => ({
   uploadPaymentProof: async () => {
     const { paymentProof, enrollmentId } = get();
     if (!paymentProof) return null;
-    
+
     const confirmResult = await Swal.fire({
-      title: 'Confirm Payment Proof Upload',
-      text: 'Are you sure you want to upload this payment proof? Please make sure it\'s the correct receipt.',
-      icon: 'question',
+      title: "Confirm Payment Proof Upload",
+      text: "Are you sure you want to upload this payment proof? Please make sure it's the correct receipt.",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Yes, upload it',
-      cancelButtonText: 'No, let me check',
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
-      reverseButtons: true
+      confirmButtonText: "Yes, upload it",
+      cancelButtonText: "No, let me check",
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
+      reverseButtons: true,
     });
 
     if (!confirmResult.isConfirmed) {
-      return null; 
+      return null;
     }
 
     set({ isUploadingPaymentProof: true });
@@ -157,14 +209,11 @@ const useEnrollmentStore = create((set, get) => ({
       }
 
       const apiUrl = process.env.REACT_APP_API_URL;
-      const apiResponse = await fetch(
-        `${apiUrl}/enrollment/payment-proof`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enrollmentId, paymentProofPath: downloadURL }),
-        }
-      );
+      const apiResponse = await fetch(`${apiUrl}/enrollment/payment-proof`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enrollmentId, paymentProofPath: downloadURL }),
+      });
 
       const result = await apiResponse.json();
       if (!apiResponse.ok || result.error) {
@@ -177,7 +226,7 @@ const useEnrollmentStore = create((set, get) => ({
         icon: "success",
         title: "Success",
         text: "Payment proof uploaded successfully. Proceeding to payment verification.",
-        confirmButtonColor: '#992525'
+        confirmButtonColor: "#992525",
       });
 
       const { advanceToNextStep } = get();

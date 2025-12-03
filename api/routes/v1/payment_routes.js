@@ -16,7 +16,8 @@ const {
     checkPaymentStatus,
     handleWebhook,
     getPaymentDetails,
-    refreshPaymentStatus
+    refreshPaymentStatus,
+    adminCleanupOrphanedPayments
 } = paymentController;
 
 const router = express.Router();
@@ -29,6 +30,7 @@ router.post('/webhook', handleWebhook);
 // Admin endpoints
 router.post('/manual', verifyToken, validateUserIsAdmin, validateCreateManualTransaction, createManualTransaction);
 router.get('/admin/allTransactions', verifyToken, validateUserIsAdmin, validatePagination, getAllTransactions);
+router.post('/admin/cleanup-orphaned-payments', verifyToken, validateUserIsAdmin, adminCleanupOrphanedPayments);
 
 // PIPM Flow endpoints
 router.post('/create-intent', createPaymentIntent);

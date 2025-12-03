@@ -114,6 +114,13 @@ const UserAccountDetailsModal = React.memo(
         }
 
         await handleSave(updatedFormData);
+        // Show success SweetAlert after saving
+        Swal.fire({
+          title: 'Success',
+          text: 'User details have been updated successfully.',
+          icon: 'success',
+          confirmButtonColor: '#dc2626', // Change to your preferred color
+        });
         // refresh baseline so close confirmation doesn't appear after successful save
         setInitialData({
           firstName: updatedFormData.firstName || '',
@@ -235,7 +242,7 @@ const UserAccountDetailsModal = React.memo(
           title: 'User Deleted',
           text: 'The user account has been permanently deleted and all PII has been redacted.',
           icon: 'success',
-          confirmButtonColor: '#059669',
+          confirmButtonColor: '#992525',
         });
 
         handleClose();
