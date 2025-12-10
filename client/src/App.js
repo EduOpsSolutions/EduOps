@@ -43,6 +43,7 @@ import TeacherHome from "./pages/teacher/Home";
 import TeacherSchedule from "./pages/teacher/TeacherSchedule";
 import TeachingLoad from "./pages/teacher/TeachingLoad";
 import TeacherDocuments from "./pages/teacher/Documents";
+import TeacherTransactions from "./pages/teacher/Transactions";
 
 /* Admin Pages */
 import AdminLayout from "./components/layout/AdminLayout";
@@ -128,6 +129,7 @@ function App() {
                 <Route path="schedule" element={<TeacherSchedule />} />
                 <Route path="teachingLoad" element={<TeachingLoad />} />
                 <Route path="documents" element={<TeacherDocuments />} />
+                <Route path="transactions" element={<TeacherTransactions />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="terms" element={<Terms />} />

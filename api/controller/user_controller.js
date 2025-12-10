@@ -462,10 +462,7 @@ const deleteUser = async (req, res) => {
         phoneNumber: null,
         password: redactedPasswordHash,
         profilePicLink: null,
-        // Reset birthdate to Jan 1, 2000
-        birthyear: 2000,
-        birthmonth: 1,
-        birthdate: 1,
+
         // Set status and deletion timestamp
         status: "deleted",
         deletedAt: new Date(),
@@ -714,7 +711,8 @@ const createStudentAccount = async (req, res) => {
       // Send enrollment verification email
       try {
         const studentName = `${updatedEnrollment.firstName} ${updatedEnrollment.lastName}`;
-        const studentEmail = updatedEnrollment.preferredEmail || updatedEnrollment.altEmail;
+        const studentEmail =
+          updatedEnrollment.preferredEmail || updatedEnrollment.altEmail;
 
         // Fetch the academic period details if available
         let periodInfo = "";
@@ -746,10 +744,14 @@ const createStudentAccount = async (req, res) => {
                   </p>
                   <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 16px; margin: 24px 0;">
                     <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
-                      <strong>✓ Enrollment ID:</strong> ${updatedEnrollment.enrollmentId}
+                      <strong>✓ Enrollment ID:</strong> ${
+                        updatedEnrollment.enrollmentId
+                      }
                     </p>
                     <p style="margin: 8px 0; font-size: 0.95rem; color: #155724;">
-                      <strong>✓ Courses:</strong> ${updatedEnrollment.coursesToEnroll}
+                      <strong>✓ Courses:</strong> ${
+                        updatedEnrollment.coursesToEnroll
+                      }
                     </p>
                     ${periodInfo}
                   </div>
@@ -798,10 +800,15 @@ This email was sent to the address you provided during enrollment.
           `;
 
           await sendEmail(studentEmail, subject, text, html);
-          console.log(`[createStudentAccount] Verification email sent to ${studentEmail}`);
+          console.log(
+            `[createStudentAccount] Verification email sent to ${studentEmail}`
+          );
         }
       } catch (emailError) {
-        console.error("[createStudentAccount] Failed to send verification email:", emailError);
+        console.error(
+          "[createStudentAccount] Failed to send verification email:",
+          emailError
+        );
         // Don't fail the request if email fails
       }
     }
@@ -1103,8 +1110,11 @@ const updateProfilePicture = async (req, res) => {
       });
     }
 
+    // Use email from decoded JWT token
+    const userEmail = decoded.payload.data.email;
+
     // Get user by email from JWT payload
-    const userResult = await getUserByEmail(decoded.payload.data.email);
+    const userResult = await getUserByEmail(userEmail);
     if (userResult.error) {
       return res.status(404).json({
         error: true,
@@ -1125,6 +1135,15 @@ const updateProfilePicture = async (req, res) => {
       data: { profilePicLink: result.downloadURL },
     });
 
+    // Log the activity
+    await createLog({
+      title: "Profile Picture Updated",
+      userId: user.userId,
+      moduleType: MODULE_TYPES.AUTH,
+      content: `User [${user.userId}] ${user.firstName} ${user.lastName} updated their profile picture`,
+      type: LogTypes.USER_ACTIVITY,
+    });
+
     res.json({
       error: false,
       message: "Profile picture updated successfully",
@@ -1134,6 +1153,7 @@ const updateProfilePicture = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("Error updating profile picture:", error);
     res.status(500).json({
       error: true,
       message: "Error updating profile picture",

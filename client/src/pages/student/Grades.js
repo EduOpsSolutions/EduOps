@@ -10,67 +10,100 @@ function Grades() {
   const [error, setError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewFile, setPreviewFile] = useState({ url: null, title: "" });
+  const [academicPeriods, setAcademicPeriods] = useState([]);
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
+  const [periodsLoading, setPeriodsLoading] = useState(true);
 
   // Get studentId from JWT
   const token = getCookieItem("token");
   const decoded = decodeToken(token);
   const studentId = decoded?.data?.id;
 
-  // Fetch grades on mount
+  // Fetch academic periods on mount
+  useEffect(() => {
+    const fetchAcademicPeriods = async () => {
+      setPeriodsLoading(true);
+      try {
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const res = await fetch(`${apiUrl}/academic-periods`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch academic periods");
+        const periods = await res.json();
+
+        // Sort periods by startAt date (latest first)
+        const sortedPeriods = periods.sort(
+          (a, b) => new Date(b.startAt) - new Date(a.startAt)
+        );
+
+        setAcademicPeriods(sortedPeriods);
+
+        // Set default to the latest/current period (first in sorted list)
+        if (sortedPeriods.length > 0) {
+          setSelectedPeriod(sortedPeriods[0].id);
+        }
+      } catch (err) {
+        console.error("[Grades Page] Error fetching academic periods:", err);
+      } finally {
+        setPeriodsLoading(false);
+      }
+    };
+    fetchAcademicPeriods();
+  }, [token]);
+
+  // Fetch grades when selectedPeriod changes
   useEffect(() => {
     const fetchGrades = async () => {
       setLoading(true);
       setError(null);
       try {
         const apiUrl = process.env.REACT_APP_API_URL;
-        
-        // Fetch all courses and student grades in parallel
-        const [coursesRes, gradesRes] = await Promise.all([
-          fetch(`${apiUrl}/courses`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }),
-          fetch(`${apiUrl}/grades/student/${studentId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          })
-        ]);
 
-        if (!coursesRes.ok) throw new Error("Failed to fetch courses");
-        if (!gradesRes.ok) throw new Error("Failed to fetch grades");
+        // Build URL with optional periodId parameter
+        const gradesUrl = selectedPeriod
+          ? `${apiUrl}/grades/student/${studentId}?periodId=${selectedPeriod}`
+          : `${apiUrl}/grades/student/${studentId}`;
 
-        const coursesData = await coursesRes.json();
-        const gradesData = await gradesRes.json();
+        console.log('[Grades Debug] Selected Period:', selectedPeriod);
+        console.log('[Grades Debug] Fetching URL:', gradesUrl);
 
-        // Sort courses alphabetically (A1, A2, B1, B2, etc.)
-        const sortedCourses = coursesData.sort((a, b) => a.name.localeCompare(b.name));
-
-        // Create a map of student grades by courseId for quick lookup
-        const gradesMap = {};
-        gradesData.forEach(grade => {
-          gradesMap[grade.courseId] = grade;
+        const gradesRes = await fetch(gradesUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
 
-        // Map all courses with student grades (if any)
-        const mapped = sortedCourses.map(course => {
-        const grade = gradesMap[course.id];
-        return {
-          id: grade?.id || course.id,
-          courseName: course.name,
-          status: grade
-            ? (grade.grade === "Pass" ? "PASS" : grade.grade === "Fail" ? "FAIL" : "NO GRADE")
-            : "NO GRADE",
-          completedDate: grade?.updatedAt || null,
-          courseId: course.id,
+        if (!gradesRes.ok) throw new Error("Failed to fetch grades");
+
+        const gradesData = await gradesRes.json();
+        console.log('[Grades Debug] Received data count:', gradesData.length);
+        console.log('[Grades Debug] Received data:', gradesData);
+
+        // Sort courses alphabetically (A1, A2, B1, B2, etc.)
+        const sortedGrades = gradesData.sort((a, b) =>
+          a.course.name.localeCompare(b.course.name)
+        );
+
+        // Map grades to the expected format
+        const mapped = sortedGrades.map((grade) => ({
+          id: grade.id,
+          courseName: grade.course.name,
+          status:
+            grade.grade === "Pass"
+              ? "PASS"
+              : grade.grade === "Fail"
+              ? "FAIL"
+              : "NO GRADE",
+          completedDate: grade.updatedAt || null,
+          courseId: grade.courseId,
           studentId: studentId,
-          batchId: grade?.periodId || null,
-          files: grade?.files || [],
-        };
-      });
+          batchId: grade.periodId || null,
+          files: grade.files || [],
+        }));
 
         setGradesData(mapped);
       } catch (err) {
@@ -79,22 +112,25 @@ function Grades() {
         setLoading(false);
       }
     };
-    if (studentId) {
+    if (studentId && !periodsLoading) {
       fetchGrades();
-    } else {
+    } else if (!studentId) {
       console.warn("[Grades Page] No studentId found, not fetching grades.");
     }
-  }, [studentId, token]);
+  }, [studentId, token, selectedPeriod, periodsLoading]);
 
   const fetchAssessmentList = async (studentId, courseId, batchId) => {
     try {
       const apiUrl = process.env.REACT_APP_API_URL;
-      const res = await fetch(`${apiUrl}/assessment/student/${studentId}?courseId=${courseId}&academicPeriodId=${batchId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `${apiUrl}/assessment/student/${studentId}?courseId=${courseId}&academicPeriodId=${batchId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
       if (!res.ok) throw new Error("Failed to fetch assessments");
       const data = await res.json();
       return data;
@@ -131,29 +167,50 @@ function Grades() {
   const handleViewDetails = async (grade) => {
     if (grade.status === "NO GRADE") {
       Swal.fire({
-        title: 'Not Available',
-        text: 'Grade has not been graded or you have not completed the course yet.',
-        icon: 'info',
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#992525'
+        title: "Not Available",
+        text: "Grade has not been graded or you have not completed the course yet.",
+        icon: "info",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#992525",
       });
       return;
     }
 
-    try{
-      const assessmentData = await fetchAssessmentList(grade.studentId, grade.courseId, grade.batchId);
-      console.log('Calling fetchAssessmentList with:', grade.studentId, grade.courseId, grade.batchId);
-      console.log('Assessment Data:', assessmentData);
-      if (Array.isArray(assessmentData) && assessmentData.length > 0 && assessmentData[0].remainingBalance > 0) {
+    try {
+      const assessmentData = await fetchAssessmentList(
+        grade.studentId,
+        grade.courseId,
+        grade.batchId
+      );
+      console.log(
+        "Calling fetchAssessmentList with:",
+        grade.studentId,
+        grade.courseId,
+        grade.batchId
+      );
+      console.log("Assessment Data:", assessmentData);
+
+      // Find the specific assessment for this course and batch
+      const specificAssessment = Array.isArray(assessmentData)
+        ? assessmentData.find(
+            (assessment) =>
+              assessment.courseId === grade.courseId &&
+              assessment.batchId === grade.batchId
+          )
+        : null;
+
+      console.log("Specific Assessment for this course:", specificAssessment);
+
+      if (specificAssessment && specificAssessment.remainingBalance > 0) {
         Swal.fire({
           title: "Outstanding Balance",
-          text: "You have an outstanding balance for this course. Please clear your dues to access the certificate.",
+          text: `You have an outstanding balance of ₱${specificAssessment.remainingBalance.toLocaleString()} for this course. Please clear your dues to access the certificate.`,
           icon: "warning",
           confirmButtonText: "OK",
           confirmButtonColor: "#992525",
         });
         return;
-      } 
+      }
     } catch (err) {
       console.error("[Grades Page] Error checking assessment balance:", err);
       Swal.fire({
@@ -164,8 +221,8 @@ function Grades() {
         confirmButtonColor: "#992525",
       });
       return;
-     }
-    
+    }
+
     if (grade.files && grade.files.length > 0) {
       // Sort files by uploadedAt descending (latest first)
       const sortedFiles = [...grade.files].sort(
@@ -199,7 +256,11 @@ function Grades() {
     <div className="bg-white-yellow-tone min-h-screen">
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <Spinner size="lg" color="text-dark-red-2" message="Loading grades..." />
+          <Spinner
+            size="lg"
+            color="text-dark-red-2"
+            message="Loading grades..."
+          />
         </div>
       )}
       {error && (
@@ -227,6 +288,30 @@ function Grades() {
                 My Grades
               </h1>
             </div>
+          </div>
+
+          {/* Batch Filter */}
+          <div className="mb-6 flex justify-start items-center">
+            <label
+              htmlFor="batch-select"
+              className="mr-3 text-sm md:text-base font-medium text-gray-700"
+            >
+              Academic Period:
+            </label>
+            <select
+              id="batch-select"
+              value={selectedPeriod || ""}
+              onChange={(e) => setSelectedPeriod(e.target.value || null)}
+              disabled={periodsLoading || academicPeriods.length === 0}
+              className="px-4 py-2 border-2 border-dark-red rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-dark-red-2 disabled:bg-gray-100 disabled:text-gray-500 text-sm md:text-base"
+            >
+              <option value="">All Periods</option>
+              {academicPeriods.map((period) => (
+                <option key={period.id} value={period.id}>
+                  {period.batchName}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Grades Table */}
@@ -343,7 +428,6 @@ function Grades() {
           )}
         </div>
       </div>
-
 
       <CommonModal
         title={previewFile.title}

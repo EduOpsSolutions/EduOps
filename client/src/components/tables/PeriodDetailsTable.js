@@ -142,9 +142,14 @@ function PeriodDetailsTable({
       <div className="flex justify-between items-center pb-4 border-b-2 border-dark-red-2">
         <h2 className="text-base sm:text-lg font-bold">Course Offered</h2>
         <button
-          className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-1.5 px-2 flex items-center justify-center text-sm sm:text-base font-semibold"
+          className={`bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-1.5 px-2 flex items-center justify-center text-sm sm:text-base font-semibold ${
+            selectedPeriod.batchStatus === "Ended"
+              ? "opacity-60 cursor-not-allowed"
+              : ""
+          }`}
           onClick={onAddCourse}
           aria-label="Add course"
+          disabled={selectedPeriod.batchStatus === "Ended"}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -170,55 +175,90 @@ function PeriodDetailsTable({
             {new Date(selectedPeriod.startAt).getFullYear()})
           </p>
 
-          {/* Show End Enrollment button only if enrollment is open */}
-          {selectedPeriod.enrollmentStatus === "Open" && (
+          <div className="flex gap-2">
+            {/* Edit Period button - always visible */}
             <button
-              className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-2 px-4 text-sm font-semibold whitespace-nowrap"
-              onClick={async () => {
-                const result = await Swal.fire({
-                  title: "End Enrollment?",
-                  html: `Are you sure you want to end enrollment for <strong>${selectedPeriod.batchName}</strong>?<br><br>This will:<br>• Set enrollment status to Closed<br>• Set enrollment close date to now<br>• Prevent new enrollment requests`,
-                  icon: "warning",
-                  showCancelButton: true,
-                  confirmButtonText: "Yes, end enrollment",
-                  cancelButtonText: "Cancel",
-                  confirmButtonColor: "#ff0000",
-                  cancelButtonColor: "#6b7280",
-                  reverseButtons: true,
+              className={`bg-dark-red-2 hover:bg-dark-red-5 flex-row flex items-center text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-2 px-4 text-sm font-semibold whitespace-nowrap ${
+                selectedPeriod.batchStatus === "Ended"
+                  ? "opacity-60 cursor-not-allowed"
+                  : ""
+              }
+              }`}
+              disabled={selectedPeriod.batchStatus === "Ended"}
+              onClick={() => {
+                useEnrollmentPeriodStore.setState({
+                  editAcademicPeriodModal: true,
+                  selectedPeriodForEdit: selectedPeriod,
                 });
-                if (result.isConfirmed) {
-                  const { endEnrollment, fetchPeriods, handleBackToResults } =
-                    useEnrollmentPeriodStore.getState();
-                  const response = await endEnrollment(selectedPeriod.id);
-                  if (response.success) {
-                    await Swal.fire({
-                      title: "Enrollment Ended!",
-                      text: "The enrollment period has been closed successfully.",
-                      icon: "success",
-                      confirmButtonColor: "#ff0000",
-                      timer: 2000,
-                      showConfirmButton: false,
-                    });
-                    await fetchPeriods();
-                    // Go back to results to show updated enrollment status
-                    handleBackToResults();
-                  } else {
-                    await Swal.fire({
-                      title: "Error!",
-                      text:
-                        response.error ||
-                        "Failed to end enrollment. Please try again.",
-                      icon: "error",
-                      confirmButtonColor: "#ff0000",
-                    });
-                  }
-                }
               }}
-              aria-label="End enrollment"
+              aria-label="Edit period"
             >
-              End Enrollment
+              {selectedPeriod.batchStatus === "Ended" && (
+                <svg
+                  className="w-3 h-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+              Edit Period
             </button>
-          )}
+
+            {/* Show End Enrollment button only if enrollment is open */}
+            {selectedPeriod.enrollmentStatus === "Open" && (
+              <button
+                className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-2 px-4 text-sm font-semibold whitespace-nowrap"
+                onClick={async () => {
+                  const result = await Swal.fire({
+                    title: "End Enrollment?",
+                    html: `Are you sure you want to end enrollment for <strong>${selectedPeriod.batchName}</strong>?<br><br>This will:<br>• Set enrollment status to Closed<br>• Set enrollment close date to now<br>• Prevent new enrollment requests`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Yes, end enrollment",
+                    cancelButtonText: "Cancel",
+                    confirmButtonColor: "#ff0000",
+                    cancelButtonColor: "#6b7280",
+                    reverseButtons: true,
+                  });
+                  if (result.isConfirmed) {
+                    const { endEnrollment, fetchPeriods, handleBackToResults } =
+                      useEnrollmentPeriodStore.getState();
+                    const response = await endEnrollment(selectedPeriod.id);
+                    if (response.success) {
+                      await Swal.fire({
+                        title: "Enrollment Ended!",
+                        text: "The enrollment period has been closed successfully.",
+                        icon: "success",
+                        confirmButtonColor: "#ff0000",
+                        timer: 2000,
+                        showConfirmButton: false,
+                      });
+                      await fetchPeriods();
+                      // Go back to results to show updated enrollment status
+                      handleBackToResults();
+                    } else {
+                      await Swal.fire({
+                        title: "Error!",
+                        text:
+                          response.error ||
+                          "Failed to end enrollment. Please try again.",
+                        icon: "error",
+                        confirmButtonColor: "#ff0000",
+                      });
+                    }
+                  }
+                }}
+                aria-label="End enrollment"
+              >
+                End Enrollment
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -234,9 +274,11 @@ function PeriodDetailsTable({
                 <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
                   Capacity
                 </th>
-                <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
-                  Action
-                </th>
+                {selectedPeriod.batchStatus !== "Ended" && (
+                  <th className="py-2 sm:py-3 font-semibold text-center text-sm sm:text-base">
+                    Action
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -271,6 +313,7 @@ function PeriodDetailsTable({
                                     : ""}
                                 </div>
                               </div>
+                              {/* {selectedPeriod.batchStatus === 'Ended' && ( */}
                               <button
                                 type="button"
                                 onClick={() => handleOpenManage(s)}
@@ -279,6 +322,7 @@ function PeriodDetailsTable({
                               >
                                 Manage
                               </button>
+                              {/* )} */}
                             </div>
                           ))}
                         </div>
@@ -290,36 +334,38 @@ function PeriodDetailsTable({
                       {course.enrolledStudents}
                     </td>
                     <td className="py-2 sm:py-3 text-center">
-                      <button
-                        className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
-                        onClick={async () => {
-                          const result = await Swal.fire({
-                            title: "Delete Course?",
-                            text: "Are you sure you want to remove this course from the period?",
-                            icon: "warning",
-                            showCancelButton: true,
-                            confirmButtonText: "Yes, delete",
-                            cancelButtonText: "Cancel",
-                            confirmButtonColor: "#992525",
-                            cancelButtonColor: "#6b7280",
-                            reverseButtons: true,
-                          });
-                          if (result.isConfirmed) {
-                            await onDeleteCourse(course.id);
-                            await Swal.fire({
-                              title: "Deleted!",
-                              text: "The course has been removed from the period.",
-                              icon: "success",
-                              confirmButtonColor: "#890E07",
-                              timer: 2000,
-                              showConfirmButton: false,
+                      {selectedPeriod.batchStatus !== "Ended" && (
+                        <button
+                          className="bg-dark-red-2 rounded-md hover:bg-dark-red-5 focus:outline-none text-white font-semibold text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 text-center shadow-sm shadow-black ease-in duration-150"
+                          onClick={async () => {
+                            const result = await Swal.fire({
+                              title: "Delete Course?",
+                              text: "Are you sure you want to remove this course from the period?",
+                              icon: "warning",
+                              showCancelButton: true,
+                              confirmButtonText: "Yes, delete",
+                              cancelButtonText: "Cancel",
+                              confirmButtonColor: "#992525",
+                              cancelButtonColor: "#6b7280",
+                              reverseButtons: true,
                             });
-                          }
-                        }}
-                        aria-label="Delete course"
-                      >
-                        Delete
-                      </button>
+                            if (result.isConfirmed) {
+                              await onDeleteCourse(course.id);
+                              await Swal.fire({
+                                title: "Deleted!",
+                                text: "The course has been removed from the period.",
+                                icon: "success",
+                                confirmButtonColor: "#890E07",
+                                timer: 2000,
+                                showConfirmButton: false,
+                              });
+                            }
+                          }}
+                          aria-label="Delete course"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

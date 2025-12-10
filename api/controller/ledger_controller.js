@@ -163,7 +163,47 @@ export const getStudentLedger = async (req, res) => {
   }
 };
 
+// Returns payment transactions for a teacher
+export const getTeacherLedger = async (req, res) => {
+  const { teacherId } = req.params;
+  try {
+    // Get all payments for this teacher
+    const payments = await prisma.payments.findMany({
+      where: {
+        userId: teacherId,
+      },
+      include: {
+        course: true,
+        academicPeriod: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    // Format payments as ledger entries
+    const ledgerRows = payments.map((payment) => ({
+      date: payment.paidAt || payment.createdAt,
+      transactionId: payment.transactionId,
+      description:
+        payment.remarks ||
+        `Payment${payment.course ? ` - ${payment.course.name}` : ""}${
+          payment.academicPeriod ? ` (${payment.academicPeriod.batchName})` : ""
+        }`,
+      amount: Number(payment.amount),
+      paymentMethod: payment.paymentMethod || "N/A",
+      referenceNumber: payment.referenceNumber || "",
+      type: payment.feeType || "Payment",
+      status: payment.status,
+    }));
+
+    res.json(ledgerRows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch teacher ledger." });
+  }
+};
+
 export default {
   getStudentsWithOngoingPeriod,
   getStudentLedger,
+  getTeacherLedger,
 };

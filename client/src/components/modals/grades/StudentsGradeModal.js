@@ -54,6 +54,8 @@ function StudentsGradeModal(props) {
     getPendingFile,
     hasPendingFile,
     pendingFiles,
+    isPeriodLocked,
+    academicPeriod,
   } = useGradeStore();
 
   // Defensive: ensure localGrades is always an array
@@ -297,6 +299,19 @@ function StudentsGradeModal(props) {
               )}
             </p>
             <Modal.Body>
+              {isPeriodLocked && academicPeriod && (
+                <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="font-semibold">Academic Period Locked</p>
+                      <p className="text-sm">The academic period "{academicPeriod.batchName}" has ended. Grades cannot be modified.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div class="h-[450px]">
                 <div className="h-[85%] border-y-dark-red-2 border-y-2 overflow-y-auto">
                   <GradeStudentsTable
@@ -310,6 +325,7 @@ function StudentsGradeModal(props) {
                     hasPendingFile={hasPendingFile}
                     getPendingFile={getPendingFile}
                     localGrades={localGrades}
+                    isPeriodLocked={isPeriodLocked}
                   />
                 </div>
               </div>
@@ -321,6 +337,7 @@ function StudentsGradeModal(props) {
                 saving={saving}
                 setLocalGrades={setLocalGrades}
                 setChangesMade={setChangesMade}
+                isPeriodLocked={isPeriodLocked}
               />
             </Modal.Body>
           </div>
