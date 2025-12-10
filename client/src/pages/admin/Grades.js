@@ -4,6 +4,7 @@ import StudentsGradeModal from "../../components/modals/grades/StudentsGradeModa
 import SearchField from "../../components/textFields/SearchField";
 import Pagination from "../../components/common/Pagination";
 import useGradeStore, { useGradeSearchStore } from "../../stores/gradeStore";
+import { convertTo12Hour } from "../../utils/scheduleUtils";
 
 function Grades() {
   const {
@@ -109,10 +110,10 @@ function Grades() {
                           Course
                         </th>
                         <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                          Schedule
+                          Batch Name
                         </th>
                         <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
-                          Time
+                          Schedule & Time
                         </th>
                         <th className="text-left py-2 md:py-3 px-2 sm:px-3 md:px-4 font-semibold border-t-2 border-b-2 border-red-900 text-xs sm:text-sm md:text-base">
                           Room
@@ -140,9 +141,9 @@ function Grades() {
                           <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
                             <div
                               className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none"
-                              title={schedule.days}
+                              title={schedule.academicPeriodName}
                             >
-                              {schedule.days}
+                              {schedule.academicPeriodName}
                             </div>
                           </td>
                           <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">
@@ -150,7 +151,10 @@ function Grades() {
                               className="truncate max-w-20 sm:max-w-28 md:max-w-36 lg:max-w-none"
                               title={`${schedule.time_start} - ${schedule.time_end}`}
                             >
-                              {`${schedule.time_start} - ${schedule.time_end}`}
+                              {schedule.days} <br />
+                              {`${convertTo12Hour(
+                                schedule.time_start
+                              )} - ${convertTo12Hour(schedule.time_end)}`}
                             </div>
                           </td>
                           <td className="py-2 md:py-3 px-2 sm:px-3 md:px-4 border-t border-b border-red-900 text-xs sm:text-sm md:text-base">

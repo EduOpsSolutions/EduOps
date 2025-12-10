@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import ThinRedButton from '../../components/buttons/ThinRedButton';
 import AddCourseModal from '../../components/modals/enrollment/AddCourseModal';
 import AcademicPeriodModal from '../../components/modals/enrollment/AddAcademicPeriodModal';
+import EditAcademicPeriodModal from '../../components/modals/enrollment/EditAcademicPeriodModal';
 import PeriodDetailsTable from '../../components/tables/PeriodDetailsTable';
 import SearchForm from '../../components/common/SearchFormHorizontal';
 import SearchResults from '../../components/common/SearchResults';
@@ -22,6 +23,8 @@ function EnrollmentPeriod() {
     showCourses,
     addCourseModal,
     addAcademicPeriodModal,
+    editAcademicPeriodModal,
+    selectedPeriodForEdit,
     fetchPeriods,
     fetchPeriodCourses,
     handlePeriodSelect,
@@ -256,6 +259,15 @@ function EnrollmentPeriod() {
               useEnrollmentPeriodStore.setState({ addAcademicPeriodModal: show })
             }
             fetchPeriods={fetchPeriods}
+          />
+          <EditAcademicPeriodModal
+            editAcademicPeriodModal={editAcademicPeriodModal}
+            setEditAcademicPeriodModal={(show) =>
+              useEnrollmentPeriodStore.setState({ editAcademicPeriodModal: show })
+            }
+            selectedPeriod={selectedPeriodForEdit}
+            fetchPeriods={fetchPeriods}
+            enrollmentStatus={selectedPeriodForEdit?.enrollmentStatus}
           />
         </>
       )}

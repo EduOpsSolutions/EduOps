@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import Swal from 'sweetalert2';
-import axiosInstance from '../../../utils/axios';
-import useAuthStore from '../../../stores/authStore';
-import { BsEye, BsEyeSlash } from 'react-icons/bs';
+import React, { useState } from "react";
+import Swal from "sweetalert2";
+import axiosInstance from "../../../utils/axios";
+import useAuthStore from "../../../stores/authStore";
+import { BsEye, BsEyeSlash } from "react-icons/bs";
 
 const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const { user } = useAuthStore();
 
   // Password visibility states
@@ -18,21 +18,21 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const changePassword = async () => {
-    setError('');
+    setError("");
 
     // Validate inputs
     if (!currentPassword || !newPassword || !confirmNewPassword) {
-      setError('Please fill in all password fields');
+      setError("Please fill in all password fields");
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      setError('New password and confirm password do not match');
+      setError("New password and confirm password do not match");
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters long');
+      setError("New password must be at least 6 characters long");
       return;
     }
 
@@ -48,29 +48,29 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
       );
       if (response.status === 200) {
         Swal.fire({
-          title: 'Success',
-          text: 'Password changed successfully!',
-          icon: 'success',
-          confirmButtonColor: '#890E07',
+          title: "Success",
+          text: "Password changed successfully!",
+          icon: "success",
+          confirmButtonColor: "#890E07",
         });
         // Clear the form and close modal
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-        setError('');
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setError("");
         setShowCurrentPassword(false);
         setShowNewPassword(false);
         setShowConfirmPassword(false);
         setEditPasswordModal(false);
       } else {
-        setError(response.data.message || 'Something went wrong!');
+        setError(response.data.message || "Something went wrong!");
       }
     } catch (error) {
-      console.error('Something went wrong!', error);
+      console.error("Something went wrong!", error);
       setError(
         error.response?.data?.message ||
           error.message ||
-          'Something went wrong!'
+          "Something went wrong!"
       );
     } finally {
       setIsLoading(false);
@@ -84,9 +84,9 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
   const handleClose = () => {
     if (hasChanges()) {
       Swal.fire({
-        title: 'Unsaved Changes',
-        text: 'You have unsaved changes that will be lost. Do you want to continue?',
-        icon: 'warning',
+        title: "Unsaved Changes",
+        text: "You have unsaved changes that will be lost. Do you want to continue?",
+        icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Yes, discard",
         cancelButtonText: "No, keep editing",
@@ -94,14 +94,11 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
         cancelButtonColor: "#6b7280",
         reverseButtons: true,
       }).then((result) => {
-        if (
-          result.isDismissed ||
-          result.dismiss === Swal.DismissReason.cancel
-        ) {
-          setCurrentPassword('');
-          setNewPassword('');
-          setConfirmNewPassword('');
-          setError('');
+        if (result.isConfirmed) {
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmNewPassword("");
+          setError("");
           setShowCurrentPassword(false);
           setShowNewPassword(false);
           setShowConfirmPassword(false);
@@ -142,12 +139,12 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
               </label>
               <div className="relative">
                 <input
-                  type={showCurrentPassword ? 'text' : 'password'}
+                  type={showCurrentPassword ? "text" : "password"}
                   name="currentPassword"
                   value={currentPassword}
                   onChange={(e) => {
                     setCurrentPassword(e.target.value);
-                    if (error) setError('');
+                    if (error) setError("");
                   }}
                   placeholder="Enter current password"
                   required
@@ -174,12 +171,12 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
               </label>
               <div className="relative">
                 <input
-                  type={showNewPassword ? 'text' : 'password'}
+                  type={showNewPassword ? "text" : "password"}
                   name="newPassword"
                   value={newPassword}
                   onChange={(e) => {
                     setNewPassword(e.target.value);
-                    if (error) setError('');
+                    if (error) setError("");
                   }}
                   placeholder="Enter new password"
                   required
@@ -206,12 +203,12 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
               </label>
               <div className="relative">
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmNewPassword"
                   value={confirmNewPassword}
                   onChange={(e) => {
                     setConfirmNewPassword(e.target.value);
-                    if (error) setError('');
+                    if (error) setError("");
                   }}
                   placeholder="Confirm new password"
                   required
@@ -252,7 +249,7 @@ const EditPasswordModal = ({ edit_password_modal, setEditPasswordModal }) => {
                     <span>Changing...</span>
                   </div>
                 ) : (
-                  'Change Password'
+                  "Change Password"
                 )}
               </button>
             </div>
