@@ -306,14 +306,98 @@ export const getStudentsBySchedule = async (req, res) => {
 export const getGradesByStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
+    const { periodId } = req.query; // Optional batch filter
+
+    console.log('[Grades Debug] studentId:', studentId);
+    console.log('[Grades Debug] periodId from query:', periodId);
+
+    // Build where clause for grades
+    const whereClause = { studentId };
+    if (periodId) {
+      whereClause.periodId = periodId;
+    }
+
+    console.log('[Grades Debug] Where clause:', whereClause);
+
     let grades = await prisma.student_grade.findMany({
-      where: { studentId },
+      where: whereClause,
       include: {
         course: true,
         files: true,
       },
       orderBy: { createdAt: "desc" },
     });
+
+    console.log('[Grades Debug] Found grades count:', grades.length);
+
+    // Fetch courses the student is enrolled in (via user_schedule)
+    // even if they don't have a grade yet
+    const scheduleWhere = {
+      deletedAt: null,
+    };
+
+    // If periodId is provided, filter schedules for that period only
+    if (periodId) {
+      scheduleWhere.periodId = periodId;
+    }
+
+    // Get all schedules (for specific period or all periods)
+    const schedules = await prisma.schedule.findMany({
+      where: scheduleWhere,
+      include: {
+        course: true,
+        userSchedules: {
+          where: {
+            userId: studentId,
+            deletedAt: null,
+          },
+        },
+      },
+    });
+
+    console.log('[Grades Debug] Found schedules:', schedules.length);
+
+    // Filter schedules where the student is enrolled
+    const enrolledSchedules = schedules.filter(
+      (schedule) => schedule.userSchedules.length > 0
+    );
+
+    console.log('[Grades Debug] Student enrolled in schedules:', enrolledSchedules.length);
+
+    // Create a map of existing grades by courseId and periodId combination
+    const gradeMap = new Map();
+    grades.forEach((g) => {
+      const key = `${g.courseId}-${g.periodId || 'null'}`;
+      gradeMap.set(key, g);
+    });
+
+    // Add enrolled courses without grades
+    enrolledSchedules.forEach((schedule) => {
+      if (schedule.course) {
+        const key = `${schedule.course.id}-${schedule.periodId || 'null'}`;
+
+        // Only add if this course+period combination doesn't have a grade yet
+        if (!gradeMap.has(key)) {
+          grades.push({
+            id: `temp-${schedule.course.id}-${schedule.periodId || 'null'}`,
+            studentId: studentId,
+            courseId: schedule.course.id,
+            periodId: schedule.periodId,
+            grade: "NoGrade",
+            visibility: "hidden",
+            approvedBy: null,
+            approvedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            course: schedule.course,
+            files: [],
+          });
+        }
+      }
+    });
+
+    console.log('[Grades Debug] Total records after adding enrolled courses:', grades.length);
+
     // For each grade, keep only the latest file (by uploadedAt)
     // If visibility is 'hidden', show grade as 'NoGrade' and no files
     grades = grades.map((g) => {

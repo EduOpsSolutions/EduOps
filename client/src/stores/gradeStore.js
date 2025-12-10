@@ -4,7 +4,7 @@ import { getCookieItem } from '../utils/jwt';
 export const useGradeSearchStore = create((set, get) => ({
   searchTerm: '',
   currentPage: 1,
-  itemsPerPage: 5,
+  itemsPerPage: 10,
   filteredSchedules: [],
   totalItems: 0,
   totalPages: 0,
@@ -48,7 +48,7 @@ export const useGradeSearchStore = create((set, get) => ({
     set({
       searchTerm: '',
       currentPage: 1,
-      itemsPerPage: 5
+      itemsPerPage: 10
     });
     const store = get();
     store.filterSchedules();

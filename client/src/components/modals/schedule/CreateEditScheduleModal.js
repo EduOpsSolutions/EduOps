@@ -129,7 +129,8 @@ function CreateEditScheduleModal({
         teacherName: aiPrefillData.teacherName || "",
         notes: aiPrefillData.notes || "",
         color: aiPrefillData.color || "#FFCF00",
-        capacity: aiPrefillData.capacity !== undefined ? aiPrefillData.capacity : 30,
+        capacity:
+          aiPrefillData.capacity !== undefined ? aiPrefillData.capacity : 30,
       });
     } else if (selectedDate) {
       // Creating new event with default time from selectedDate if available
@@ -221,34 +222,31 @@ function CreateEditScheduleModal({
       return;
     }
 
-    // Check academic period status and warn if needed
+    // Check academic period status and lock if both enrollment AND batch have ended
     const selectedPeriod = academicPeriods.find(
       (p) => p.id === formData.academicPeriodId
     );
     if (selectedPeriod) {
-      if (selectedPeriod.batchStatus === "ended") {
+      // LOCK schedule creation if BOTH enrollment AND batch period have ended
+      const enrollmentEnded = selectedPeriod.enrollmentStatus === "closed" || selectedPeriod.enrollmentStatus === "ended";
+      const batchEnded = selectedPeriod.batchStatus === "ended";
+
+      if (enrollmentEnded && batchEnded) {
         Swal.fire({
-          title: "Warning",
-          text: "This academic period has ended. Are you sure you want to create a schedule for it?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonText: "Yes, continue",
-          cancelButtonText: "Cancel",
-          confirmButtonColor: "#992525",
-          cancelButtonColor: "#6B7280",
-          reverseButtons: true,
-        }).then((result) => {
-          if (!result.isConfirmed) return;
-          // Continue with validation
-          continueValidation();
+          title: "Cannot Create/Edit Schedule",
+          text: "Both the enrollment period and academic period have ended. You cannot create or edit schedules for this period.",
+          icon: "error",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#ff0000",
         });
         return;
       }
 
-      if (selectedPeriod.enrollmentStatus === "closed") {
+      // Warn if only enrollment is closed (but batch is still ongoing)
+      if (enrollmentEnded && !batchEnded) {
         Swal.fire({
           title: "Warning",
-          text: "Enrollment for this academic period is closed. Students may not be able to enroll in this schedule.",
+          text: "Enrollment for this academic period is closed. New students cannot be added to this schedule.",
           icon: "warning",
           showCancelButton: true,
           confirmButtonText: "Yes, continue",
@@ -930,7 +928,40 @@ function CreateEditScheduleModal({
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-dark-red-2 hover:bg-dark-red-3 text-white rounded transition-colors"
+                disabled={
+                  event &&
+                  (academicPeriods.find((p) => p.id === formData.academicPeriodId)
+                    ?.enrollmentStatus === "closed" ||
+                    academicPeriods.find((p) => p.id === formData.academicPeriodId)
+                      ?.enrollmentStatus === "ended")
+                }
+                className={`px-6 py-2 rounded transition-colors ${
+                  event &&
+                  (academicPeriods.find((p) => p.id === formData.academicPeriodId)
+                    ?.enrollmentStatus === "closed" ||
+                    academicPeriods.find((p) => p.id === formData.academicPeriodId)
+                      ?.enrollmentStatus === "ended")
+                    ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    : "bg-dark-red-2 hover:bg-dark-red-3 text-white"
+                }`}
+                onClick={(e) => {
+                  if (
+                    event &&
+                    (academicPeriods.find((p) => p.id === formData.academicPeriodId)
+                      ?.enrollmentStatus === "closed" ||
+                      academicPeriods.find((p) => p.id === formData.academicPeriodId)
+                        ?.enrollmentStatus === "ended")
+                  ) {
+                    e.preventDefault();
+                    Swal.fire({
+                      title: "Cannot Edit Schedule",
+                      text: "The enrollment period for this academic period has ended. You cannot edit this schedule.",
+                      icon: "error",
+                      confirmButtonText: "OK",
+                      confirmButtonColor: "#ff0000",
+                    });
+                  }
+                }}
               >
                 Save Event
               </button>
@@ -940,7 +971,7 @@ function CreateEditScheduleModal({
       </div>
 
       <ViewStudentsModal
-        key={`students-modal-${event?.id || 'new'}-${formData.courseId}`}
+        key={`students-modal-${event?.id || "new"}-${formData.courseId}`}
         isOpen={showStudentsModal}
         onClose={() => setShowStudentsModal(false)}
         courseId={formData.courseId}
@@ -951,6 +982,10 @@ function CreateEditScheduleModal({
         refreshToken={studentsRefreshTick}
         scheduleId={event?.id}
         capacity={formData.capacity}
+        batchStatus={
+          academicPeriods.find((p) => p.id === formData.academicPeriodId)
+            ?.batchStatus
+        }
         onStudentSelected={({ student, conflict }) => {
           if (conflict?.hasConflicts) {
             Swal.fire({
@@ -962,6 +997,22 @@ function CreateEditScheduleModal({
             });
             return;
           }
+
+          // Check if batch has ended - prevent adding students
+          const selectedPeriod = academicPeriods.find(
+            (p) => p.id === formData.academicPeriodId
+          );
+          if (selectedPeriod && selectedPeriod.batchStatus === "ended") {
+            Swal.fire({
+              title: "Cannot Add Student",
+              text: "The academic period has ended. You cannot add students to this schedule.",
+              icon: "error",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#ff0000",
+            });
+            return;
+          }
+
           if (!event?.id) {
             Swal.fire({
               title: "Schedule Not Saved",

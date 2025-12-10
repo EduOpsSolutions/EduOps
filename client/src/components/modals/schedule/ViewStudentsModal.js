@@ -17,6 +17,7 @@ function ViewStudentsModal({
   refreshToken,
   scheduleId,
   capacity,
+  batchStatus,
 }) {
   const [query, setQuery] = useState('');
   const [enrolledStudents, setEnrolledStudents] = useState([]);
@@ -186,6 +187,19 @@ function ViewStudentsModal({
 
   const handleBatchDelete = async () => {
     if (!scheduleId || selectedIds.length === 0) return;
+
+    // Prevent detaching students if batch has ended
+    if (batchStatus === 'ended') {
+      Swal.fire({
+        title: 'Cannot Remove Students',
+        text: 'The academic period has ended. You cannot remove students from this schedule.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ff0000',
+      });
+      return;
+    }
+
     const result = await Swal.fire({
       title: 'Remove selected students?',
       text: 'This will detach them from this schedule.',
@@ -276,6 +290,18 @@ function ViewStudentsModal({
 
     // Reset file input
     e.target.value = '';
+
+    // Prevent CSV import if batch has ended
+    if (batchStatus === 'ended') {
+      Swal.fire({
+        title: 'Cannot Import Students',
+        text: 'The academic period has ended. You cannot add students to this schedule via CSV import.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ff0000',
+      });
+      return;
+    }
 
     try {
       setCsvLoading(true);
@@ -640,6 +666,7 @@ ViewStudentsModal.propTypes = {
   refreshToken: PropTypes.number,
   scheduleId: PropTypes.number,
   capacity: PropTypes.number,
+  batchStatus: PropTypes.oneOf(['upcoming', 'ongoing', 'ended']),
 };
 
 export default ViewStudentsModal;

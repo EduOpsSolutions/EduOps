@@ -4,9 +4,10 @@ import {
   validatePassword,
   validateUserIsAdmin,
   validateIsActiveUser,
+  validateUserIsTeacher,
   verifyToken
 } from "../../middleware/authValidator.js";
-import { getStudentsWithOngoingPeriod, getStudentLedger } from '../../controller/ledger_controller.js';
+import { getStudentsWithOngoingPeriod, getStudentLedger, getTeacherLedger } from '../../controller/ledger_controller.js';
 
 const router = express.Router();
 
@@ -22,6 +23,13 @@ router.get('/student/:studentId',
     validateIsActiveUser,
     //validateUserIsAdmin,
     getStudentLedger
+);
+
+router.get('/teacher/:teacherId',
+    verifyToken,
+    validateIsActiveUser,
+    // validateUserIsTeacher,
+    getTeacherLedger
 );
 
 export { router };

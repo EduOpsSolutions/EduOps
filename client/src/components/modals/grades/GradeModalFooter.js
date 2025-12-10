@@ -200,8 +200,8 @@ function GradeModalFooter({
             isPeriodLocked ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          {isPeriodLocked && (
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
+            {isPeriodLocked && (
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
@@ -209,10 +209,10 @@ function GradeModalFooter({
                   clipRule="evenodd"
                 />
               </svg>
+            )}
 
-              {saving ? "Saving..." : "Save"}
-            </div>
-          )}
+            {saving ? "Saving..." : "Save"}
+          </div>
         </ThinRedButton>
       </div>
     </div>
