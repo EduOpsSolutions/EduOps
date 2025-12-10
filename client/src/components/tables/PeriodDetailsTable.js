@@ -170,8 +170,23 @@ function PeriodDetailsTable({
             {new Date(selectedPeriod.startAt).getFullYear()})
           </p>
 
-          {/* Show End Enrollment button only if enrollment is open */}
-          {selectedPeriod.enrollmentStatus === "Open" && (
+          <div className="flex gap-2">
+            {/* Edit Period button - always visible */}
+            <button
+              className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-2 px-4 text-sm font-semibold whitespace-nowrap"
+              onClick={() => {
+                useEnrollmentPeriodStore.setState({
+                  editAcademicPeriodModal: true,
+                  selectedPeriodForEdit: selectedPeriod
+                });
+              }}
+              aria-label="Edit period"
+            >
+              Edit Period
+            </button>
+
+            {/* Show End Enrollment button only if enrollment is open */}
+            {selectedPeriod.enrollmentStatus === "Open" && (
             <button
               className="bg-dark-red-2 hover:bg-dark-red-5 text-white rounded focus:outline-none shadow-sm shadow-black ease-in duration-150 py-2 px-4 text-sm font-semibold whitespace-nowrap"
               onClick={async () => {
@@ -219,6 +234,7 @@ function PeriodDetailsTable({
               End Enrollment
             </button>
           )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">

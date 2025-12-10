@@ -6,6 +6,24 @@ import upload from "../middleware/multerMiddleware.js";
 
 const prisma = new PrismaClient();
 
+// Helper function to check if an academic period is locked for grade changes
+const isAcademicPeriodLocked = async (periodId) => {
+  if (!periodId) return false; // If no period is associated, allow changes
+
+  const period = await prisma.academic_period.findUnique({
+    where: { id: periodId },
+    select: { endAt: true, batchName: true },
+  });
+
+  if (!period) return false; // If period not found, allow changes
+
+  // Check if the period's end date has passed
+  const now = new Date();
+  const isLocked = new Date(period.endAt) < now;
+
+  return { isLocked, periodName: period.batchName };
+};
+
 // List all students and their grades for a course
 export const getGradesByCourse = async (req, res) => {
   try {
@@ -28,6 +46,20 @@ export const setOrUpdateGrade = async (req, res) => {
   try {
     console.log("Incoming grades payload:", req.body);
     const grades = Array.isArray(req.body) ? req.body : [req.body];
+
+    // Check if any of the grades are for a locked academic period
+    const periodIds = [...new Set(grades.map(g => g.periodId).filter(Boolean))];
+    for (const periodId of periodIds) {
+      const lockStatus = await isAcademicPeriodLocked(periodId);
+      if (lockStatus.isLocked) {
+        return res.status(403).json({
+          error: "Cannot modify grades for a completed academic period.",
+          reason: "PERIOD_LOCKED",
+          periodName: lockStatus.periodName,
+        });
+      }
+    }
+
     const results = [];
     for (const { studentId, courseId, periodId, grade, visibility } of grades) {
       let studentGrade = await prisma.student_grade.findFirst({
@@ -68,6 +100,7 @@ export const setOrUpdateGrade = async (req, res) => {
 export const uploadGradeFile = async (req, res) => {
   try {
     let { studentGradeId } = req.params;
+    let periodIdToCheck = null;
 
     // Handle case where studentGradeId is null or "null" (when student doesn't have a grade record yet)
     if (
@@ -84,6 +117,8 @@ export const uploadGradeFile = async (req, res) => {
             "Missing required fields. When studentGradeId is null, studentId and courseId must be provided.",
         });
       }
+
+      periodIdToCheck = periodId || null;
 
       // Find or create a grade record for this student/course/period
       let studentGrade = await prisma.student_grade.findFirst({
@@ -107,6 +142,25 @@ export const uploadGradeFile = async (req, res) => {
       }
 
       studentGradeId = studentGrade.id;
+    } else {
+      // Fetch the existing grade record to get the periodId
+      const existingGrade = await prisma.student_grade.findUnique({
+        where: { id: studentGradeId },
+        select: { periodId: true },
+      });
+      periodIdToCheck = existingGrade?.periodId || null;
+    }
+
+    // Check if the academic period is locked
+    if (periodIdToCheck) {
+      const lockStatus = await isAcademicPeriodLocked(periodIdToCheck);
+      if (lockStatus.isLocked) {
+        return res.status(403).json({
+          error: "Cannot upload files for grades in a completed academic period.",
+          reason: "PERIOD_LOCKED",
+          periodName: lockStatus.periodName,
+        });
+      }
     }
 
     if (!req.file) return res.status(400).json({ error: "No file uploaded." });
@@ -152,6 +206,29 @@ export const getGradeFiles = async (req, res) => {
 export const approveGrade = async (req, res) => {
   try {
     const { studentGradeId } = req.params;
+
+    // Fetch the grade record to get the periodId
+    const gradeRecord = await prisma.student_grade.findUnique({
+      where: { id: studentGradeId },
+      select: { periodId: true },
+    });
+
+    if (!gradeRecord) {
+      return res.status(404).json({ error: "Grade record not found." });
+    }
+
+    // Check if the academic period is locked
+    if (gradeRecord.periodId) {
+      const lockStatus = await isAcademicPeriodLocked(gradeRecord.periodId);
+      if (lockStatus.isLocked) {
+        return res.status(403).json({
+          error: "Cannot approve grades for a completed academic period.",
+          reason: "PERIOD_LOCKED",
+          periodName: lockStatus.periodName,
+        });
+      }
+    }
+
     const approvedGrade = await prisma.student_grade.update({
       where: { id: studentGradeId },
       data: {
@@ -271,6 +348,19 @@ export const updateGradesVisibility = async (req, res) => {
         error: "courseId and visibility (visible or hidden) are required.",
       });
     }
+
+    // Check if the academic period is locked
+    if (periodId) {
+      const lockStatus = await isAcademicPeriodLocked(periodId);
+      if (lockStatus.isLocked) {
+        return res.status(403).json({
+          error: "Cannot change grade visibility for a completed academic period.",
+          reason: "PERIOD_LOCKED",
+          periodName: lockStatus.periodName,
+        });
+      }
+    }
+
     const result = await prisma.student_grade.updateMany({
       where: {
         courseId,

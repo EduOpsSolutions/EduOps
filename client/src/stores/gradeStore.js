@@ -64,11 +64,13 @@ const useGradeStore = create((set, get) => ({
   gradeNotReadyModal: false,
   gradeDetailsModal: false,
   studentsGradeModal: false,
-  gradesVisible: 'hidden', 
+  gradesVisible: 'hidden',
   localGrades: [],
   changesMade: false,
   saving: false,
-  pendingFiles: {}, 
+  pendingFiles: {},
+  academicPeriod: null,
+  isPeriodLocked: false,
   gradeStatusOptions: [
     { value: 'ng', label: 'NG', color: 'bg-gray-300' },
     { value: 'pass', label: 'PASS', color: 'bg-green-500' },
@@ -184,7 +186,11 @@ const useGradeStore = create((set, get) => ({
           );
 
           if (!res.ok) {
-            throw new Error(`Failed to upload file for ${fileData.userId}`);
+            const errorData = await res.json();
+            if (errorData.reason === 'PERIOD_LOCKED') {
+              throw new Error(`Cannot upload files: The academic period "${errorData.periodName}" has ended and is locked.`);
+            }
+            throw new Error(errorData.error || `Failed to upload file for ${fileData.userId}`);
           }
           return res.json();
         });
@@ -297,7 +303,13 @@ const useGradeStore = create((set, get) => ({
       },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to save grades');
+    if (!res.ok) {
+      const errorData = await res.json();
+      if (errorData.reason === 'PERIOD_LOCKED') {
+        throw new Error(`Cannot save grades: The academic period "${errorData.periodName}" has ended and is locked.`);
+      }
+      throw new Error(errorData.error || 'Failed to save grades');
+    }
     return await res.json();
   },
 
@@ -325,8 +337,14 @@ const useGradeStore = create((set, get) => ({
       },
       body: JSON.stringify(payload),
     });
-    
-    if (!res.ok) throw new Error('Failed to save visibility setting');
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      if (errorData.reason === 'PERIOD_LOCKED') {
+        throw new Error(`Cannot change visibility: The academic period "${errorData.periodName}" has ended and is locked.`);
+      }
+      throw new Error(errorData.error || 'Failed to save visibility setting');
+    }
     return await res.json();
   },
 
@@ -362,8 +380,8 @@ const useGradeStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const token = getCookieItem('token');
-  const apiUrl = process.env.REACT_APP_API_URL;
-  const res = await fetch(`${apiUrl}/grades/schedule/${schedule.id}`, {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const res = await fetch(`${apiUrl}/grades/schedule/${schedule.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -379,14 +397,42 @@ const useGradeStore = create((set, get) => ({
           initialVisibility = firstStudentWithGrade.visibility;
         }
       }
-      
+
+      // Fetch academic period information if periodId exists
+      let academicPeriod = null;
+      let isPeriodLocked = false;
+      const periodId = schedule.academicPeriodId || schedule.periodId;
+
+      if (periodId) {
+        try {
+          const periodRes = await fetch(`${apiUrl}/academic-periods/${periodId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (periodRes.ok) {
+            academicPeriod = await periodRes.json();
+            // Check if period is locked (endAt date has passed)
+            const now = new Date();
+            const endDate = new Date(academicPeriod.endAt);
+            isPeriodLocked = endDate < now;
+          }
+        } catch (periodError) {
+          console.error('Failed to fetch academic period:', periodError);
+          // Don't block the modal from opening if period fetch fails
+        }
+      }
+
       set({
         students: data.students || [],
         studentsGradeModal: true,
         gradesVisible: initialVisibility,
         localGrades: [],
         changesMade: false,
-        loading: false
+        loading: false,
+        academicPeriod,
+        isPeriodLocked,
       });
     } catch (error) {
       set({
@@ -408,7 +454,9 @@ const useGradeStore = create((set, get) => ({
       studentsGradeModal: false,
       error: null,
       localGrades: [],
-      changesMade: false
+      changesMade: false,
+      academicPeriod: null,
+      isPeriodLocked: false,
     });
   }
 }));

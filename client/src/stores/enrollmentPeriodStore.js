@@ -32,6 +32,8 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
   showCourses: false,
   addCourseModal: false,
   addAcademicPeriodModal: false,
+  editAcademicPeriodModal: false,
+  selectedPeriodForEdit: null,
 
   fetchPeriods: async () => {
     try {
@@ -220,6 +222,33 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
     }
   },
 
+  updateAcademicPeriod: async (periodId, updateData) => {
+    try {
+      set({ loading: true, error: '' });
+
+      const response = await axiosInstance.put(
+        `/academic-periods/${periodId}`,
+        updateData
+      );
+
+      // Refresh the periods list
+      const { fetchPeriods } = get();
+      await fetchPeriods();
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Failed to update academic period:', error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to update academic period. Please try again.';
+      set({ error: errorMessage });
+      return { success: false, error: errorMessage };
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   resetStore: () =>
     set({
       selectedPeriod: null,
@@ -229,5 +258,7 @@ export const useEnrollmentPeriodStore = create((set, get) => ({
       showCourses: false,
       addCourseModal: false,
       addAcademicPeriodModal: false,
+      editAcademicPeriodModal: false,
+      selectedPeriodForEdit: null,
     }),
 }));

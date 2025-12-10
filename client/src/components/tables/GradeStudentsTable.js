@@ -10,7 +10,8 @@ function GradeStudentsTable({
   handleViewDocument,
   hasPendingFile,
   getPendingFile,
-  localGrades
+  localGrades,
+  isPeriodLocked = false,
 }) {
   // Debug: print localGrades prop on every render
   // Use a ref to keep track of file inputs for each student
@@ -86,10 +87,20 @@ function GradeStudentsTable({
                       </button>
                       {/* Upload/Replace button */}
                       <button
-                        className="px-2 sm:px-3 py-1 sm:py-2 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 border border-yellow-300 text-base"
-                        onClick={() => triggerFileInput(uniqueStudentKey)}
-                        title={hasFile ? "Replace Document" : "Upload Document"}
+                        className={`px-2 sm:px-3 py-1 sm:py-2 rounded border text-base flex items-center gap-1 ${
+                          isPeriodLocked
+                            ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'
+                            : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300'
+                        }`}
+                        onClick={() => !isPeriodLocked && triggerFileInput(uniqueStudentKey)}
+                        title={isPeriodLocked ? "Period locked - cannot upload files" : (hasFile ? "Replace Document" : "Upload Document")}
+                        disabled={isPeriodLocked}
                       >
+                        {isPeriodLocked && (
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
                         {hasFile ? "Replace" : "Upload"}
                       </button>
                       {/* Hidden file input */}
@@ -135,6 +146,7 @@ function GradeStudentsTable({
                           options={gradeStatusOptions}
                           defaultValue={grade}
                           onChange={value => handleGradeChange(gradeId, value, student.user?.id || student.userId)}
+                          disabled={isPeriodLocked}
                         />
                       );
                     })()}

@@ -122,9 +122,15 @@ async function adminResetPassword(req, res) {
     return res.status(401).json({ error: true, message: "User not found" });
   }
 
-  const password = `${user.firstName.slice(0, 3).toLowerCase()}${user.lastName
-    .slice(0, 2)
-    .toLowerCase()}${user.birthmonth}${user.birthdate}${user.birthyear}`;
+  // Generate default password using same format as account creation
+  // Format: lastname(no spaces) + first 2 letters of firstname + birthyear
+  const cleanLastName = user.lastName.replace(/\s+/g, "").toLowerCase();
+  const firstNamePart =
+    user.firstName.length >= 2
+      ? user.firstName.substring(0, 2).toLowerCase()
+      : user.firstName.substring(0, 1).toLowerCase();
+  const password = `${cleanLastName}${firstNamePart}${user.birthyear}`;
+
   const hashedPassword = bcrypt.hashSync(password, bcryptSalt);
   const updated = await prisma.users.update({
     where: {
@@ -137,17 +143,51 @@ async function adminResetPassword(req, res) {
   });
   await sendEmail(
     user.email,
-    "Password Reset",
+    "Password Reset - Sprach Institut",
     "",
     `
-    <h3>Your account password has been reset</h3>
-    <p>Please use the following instructions to login. Your account password is "&lt;First Name (first 3 letters)&gt;&lt;Last Name (first 2 letters)&gt;&lt;Birthmonth&gt;&lt;Birthdate&gt;&lt;Birthyear&gt;" All in lowercase. You might be prompted to change your password on your next login.</p>
-    <p>If you didn't request this, please ignore this email</p>`
+    <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 32px;">
+      <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden;">
+        <div style="background: #890E07; color: #fff; padding: 24px 32px;">
+          <h1 style="margin: 0; font-size: 2rem;">Password Reset</h1>
+        </div>
+        <div style="padding: 32px;">
+          <h2 style="color: #890E07; margin-top: 0;">Your password has been reset</h2>
+          <p style="font-size: 1.1rem; color: #333; line-height: 1.6;">
+            An administrator has reset your account password to the default password.
+          </p>
+          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; margin: 24px 0;">
+            <p style="margin: 8px 0; font-size: 0.95rem; color: #856404;">
+              <strong>Password Format:</strong>
+            </p>
+            <p style="margin: 8px 0; font-size: 0.95rem; color: #856404;">
+              &lt;Last Name (no spaces)&gt;&lt;First Name (first 2 letters)&gt;&lt;Birth Year&gt;
+            </p>
+            <p style="margin: 8px 0; font-size: 0.85rem; color: #856404; font-style: italic;">
+              All in lowercase. Example: If your name is John Smith and you were born in 2000, your password would be: smithjo2000
+            </p>
+          </div>
+          <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 16px; margin: 24px 0;">
+            <p style="margin: 0; font-size: 0.95rem; color: #155724;">
+              <strong>Important:</strong> You will be required to change your password upon your next login for security purposes.
+            </p>
+          </div>
+          <hr style="margin: 32px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #555; font-size: 0.9rem;">
+            If you did not request this password reset, please contact the administrator immediately.
+          </p>
+        </div>
+        <div style="background: #f1f1f1; color: #888; text-align: center; padding: 16px 0; font-size: 0.9rem;">
+          &copy; ${new Date().getFullYear()} Sprach Institut. All rights reserved.
+        </div>
+      </div>
+    </div>`
   );
   if (updated) {
-    res
-      .status(200)
-      .json({ error: false, message: "Password updated successfully" });
+    res.status(200).json({
+      error: false,
+      message: "Password reset to default successfully",
+    });
   }
 }
 
@@ -421,7 +461,6 @@ const requestResetPassword = async (req, res) => {
     }
 
     const token = await signJWT({ email });
-    console.log("token", token);
     const updatedUser = await prisma.users.update({
       where: { email },
       data: {
@@ -435,6 +474,7 @@ const requestResetPassword = async (req, res) => {
       },
     });
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token.token}`;
+    console.log("resetUrl", resetUrl);
     const html = `
         <h3>You requested a password reset</h3>
         <p>Click this <a href="${resetUrl}">link</a> to reset your password</p>

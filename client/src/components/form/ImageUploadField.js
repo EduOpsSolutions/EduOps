@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { BsPencilFill, BsTrash } from 'react-icons/bs';
+import React, { useState, useRef, useEffect } from "react";
+import { BsPencilFill, BsTrash } from "react-icons/bs";
 
 const ImageUploadField = ({
   label,
@@ -7,30 +7,40 @@ const ImageUploadField = ({
   onImageChange,
   onImageRemove,
   disabled = false,
-  accept = '.jpg,.jpeg,.png',
+  accept = ".jpg,.jpeg,.png",
   maxSize = 100 * 1024 * 1024, // 100MB default
-  className = '',
+  className = "",
+  loading = false,
 }) => {
   // Only set previewUrl if currentImage is a valid URL (contains http or blob)
   const [previewUrl, setPreviewUrl] = useState(
     currentImage &&
-      (currentImage.startsWith('http') || currentImage.startsWith('blob'))
+      (currentImage.startsWith("http") || currentImage.startsWith("blob"))
       ? currentImage
       : null
   );
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+
+  // Update previewUrl when currentImage prop changes
+  useEffect(() => {
+    if (currentImage && (currentImage.startsWith("http") || currentImage.startsWith("blob"))) {
+      setPreviewUrl(currentImage);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [currentImage]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
-    setError('');
+    setError("");
 
     if (!file) return;
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
     if (!allowedTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPG or PNG only)');
+      setError("Please select a valid image file (JPG or PNG only)");
       return;
     }
 
@@ -52,9 +62,9 @@ const ImageUploadField = ({
 
   const handleRemoveImage = () => {
     setPreviewUrl(null);
-    setError('');
+    setError("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
     if (onImageRemove) {
       onImageRemove();
@@ -68,8 +78,8 @@ const ImageUploadField = ({
   };
 
   const getUserInitials = (name) => {
-    if (!name) return 'U';
-    const parts = name.split(' ');
+    if (!name) return "U";
+    const parts = name.split(" ");
     if (parts.length >= 2) {
       return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
     }
@@ -86,8 +96,12 @@ const ImageUploadField = ({
 
       {/* Image Preview */}
       <div className="relative group">
-        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-dark-red-2 bg-gray-100 flex items-center justify-center">
-          {previewUrl ? (
+        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover overflow-hidden border-2 border-dark-red-2 bg-gray-100 flex items-center justify-center">
+          {loading ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+            </div>
+          ) : previewUrl ? (
             <img
               src={previewUrl}
               alt="Profile preview"
