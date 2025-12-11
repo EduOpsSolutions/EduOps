@@ -157,6 +157,12 @@ function Assessment() {
         if (searchParams.year) {
             filtered = filtered.filter(e => String(e.year) === String(searchParams.year));
         }
+        // Sort by startAt date descending (newest first)
+        filtered = filtered.sort((a, b) => {
+            const dateA = a.startAt ? new Date(a.startAt) : new Date(0);
+            const dateB = b.startAt ? new Date(b.startAt) : new Date(0);
+            return dateB - dateA;
+        });
         setFilteredEnrollments(filtered);
     }, [enrollments, searchParams]);
 
@@ -245,6 +251,30 @@ function Assessment() {
                     }
                 });
             }
+
+            // Calculate available credit from ONLY the immediate previous course
+            // Sort all enrollments by startAt date
+            const sortedEnrollments = [...enrollments].sort((a, b) => {
+                const dateA = new Date(a.startAt);
+                const dateB = new Date(b.startAt);
+                return dateA - dateB;
+            });
+            
+            // Find the current course index
+            const currentIndex = sortedEnrollments.findIndex(e => 
+                e.courseId === enroll.courseId && e.batchId === enroll.batchId
+            );
+            
+            // Get credit only from the immediate previous course (if exists and has overpayment)
+            let availableCreditFromOthers = 0;
+            if (currentIndex > 0) {
+                const previousCourse = sortedEnrollments[currentIndex - 1];
+                const previousBalance = Number(String(previousCourse.remainingBalance).replace(/,/g, ''));
+                if (previousBalance < 0) {
+                    availableCreditFromOthers = Math.abs(previousBalance);
+                }
+            }
+
             setSelectedEnrollment({
                 id: data.studentId,
                 name: data.name || '',
@@ -257,7 +287,9 @@ function Assessment() {
                 studentFees: data.studentFees || [],
                 netAssessment: Number(data.netAssessment || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
                 totalPayments: Number(data.totalPayments || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
-                remainingBalance: Number(data.remainingBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                remainingBalance: Number(data.remainingBalance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                overpayment: Number(data.overpayment || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }),
+                availableCreditFromOthers: availableCreditFromOthers.toLocaleString('en-US', { minimumFractionDigits: 2 }),
             });
         } catch (err) {
             setSelectedEnrollment(enroll); // fallback to basic info
@@ -290,26 +322,53 @@ function Assessment() {
                                 {filteredEnrollments.length === 0 ? "No assessments found." : `Your Assessments (${filteredEnrollments.length})`}
                             </p>
                             <div className="space-y-2 mb-5">
-                                {filteredEnrollments.map((enroll, idx) => (
-                                    <div
-                                        key={idx}
-                                        onClick={() => handleSelectEnrollment(enroll)}
-                                        className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-                                    >
-                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
-                                            <div>
-                                                <p className="font-semibold text-sm sm:text-base">{enroll.course}</p>
-                                                <p className="text-xs sm:text-sm text-gray-600">
-                                                    {enroll.batch} | {enroll.year}
-                                                </p>
-                                            </div>
-                                            <div className="text-left sm:text-right">
-                                                <p className="text-xs sm:text-sm text-gray-600">Remaining Balance:</p>
-                                                <p className="font-semibold text-sm sm:text-base">{Number(enroll.remainingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                {filteredEnrollments.map((enroll, idx) => {
+                                    // Calculate credit from immediate previous course for list view
+                                    const sortedEnrollments = [...filteredEnrollments].sort((a, b) => {
+                                        const dateA = new Date(a.startAt);
+                                        const dateB = new Date(b.startAt);
+                                        return dateA - dateB;
+                                    });
+                                    const currentIndex = sortedEnrollments.findIndex(e => 
+                                        e.courseId === enroll.courseId && e.batchId === enroll.batchId
+                                    );
+                                    let availableCredit = 0;
+                                    if (currentIndex > 0) {
+                                        const previousCourse = sortedEnrollments[currentIndex - 1];
+                                        const previousBalance = Number(String(previousCourse.remainingBalance).replace(/,/g, ''));
+                                        if (previousBalance < 0) {
+                                            availableCredit = Math.abs(previousBalance);
+                                        }
+                                    }
+                                    const rawBalance = Number(enroll.remainingBalance);
+                                    const balanceAfterCredit = rawBalance > 0 ? Math.max(0, rawBalance - availableCredit) : rawBalance;
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onClick={() => handleSelectEnrollment(enroll)}
+                                            className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                                        >
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                                                <div>
+                                                    <p className="font-semibold text-sm sm:text-base">{enroll.course}</p>
+                                                    <p className="text-xs sm:text-sm text-gray-600">
+                                                        {enroll.batch} | {enroll.year}
+                                                    </p>
+                                                </div>
+                                                <div className="text-left sm:text-right">
+                                                    <p className="text-xs sm:text-sm text-gray-600">Remaining Balance:</p>
+                                                    <p className="font-semibold text-sm sm:text-base">₱{Number(enroll.remainingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                                    {availableCredit > 0 && rawBalance > 0 && (
+                                                        <p className="text-xs text-green-600 font-semibold mt-1">
+                                                            After Credits: ₱{balanceAfterCredit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </>
                     ) : studentDetailsLoading ? (
@@ -397,18 +456,46 @@ function Assessment() {
                             )}
                             <div className="w-full pt-3 border-t-2 border-dark-red-2">
                                 <div className="flex flex-col gap-2 text-xs sm:text-sm lg:text-base">
+                                    {selectedEnrollment.overpayment && parseFloat(selectedEnrollment.overpayment.replace(/,/g, '')) > 0 && (
+                                        <div className="flex justify-between text-green-600 font-semibold bg-green-50 p-2 rounded">
+                                            <p className="font-bold">Overpayment (This Course)</p>
+                                            <p>₱{selectedEnrollment.overpayment}</p>
+                                        </div>
+                                    )}
+                                    {selectedEnrollment.availableCreditFromOthers && 
+                                     parseFloat(selectedEnrollment.availableCreditFromOthers.replace(/,/g, '')) > 0 && (
+                                        <div className="flex justify-between text-blue-600 font-semibold bg-blue-50 p-2 rounded">
+                                            <p className="font-bold">Available Credit from Previous Courses</p>
+                                            <p>₱{selectedEnrollment.availableCreditFromOthers}</p>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between">
                                         <p className="font-bold">Net Assessment</p>
-                                        <p>{selectedEnrollment.netAssessment}</p>
+                                        <p>₱{selectedEnrollment.netAssessment}</p>
                                     </div>
                                     <div className="flex justify-between">
                                         <p className="font-bold">Total Payments</p>
-                                        <p>{selectedEnrollment.totalPayments}</p>
+                                        <p>₱{selectedEnrollment.totalPayments}</p>
                                     </div>
                                     <div className="flex justify-between">
                                         <p className="font-bold">Remaining Balance</p>
-                                        <p>{selectedEnrollment.remainingBalance}</p>
+                                        <p className={parseFloat(selectedEnrollment.remainingBalance.replace(/,/g, '')) < 0 ? 'text-green-600' : parseFloat(selectedEnrollment.remainingBalance.replace(/,/g, '')) > 0 ? 'text-red-600' : ''}>
+                                            ₱{selectedEnrollment.remainingBalance}
+                                        </p>
                                     </div>
+                                    {selectedEnrollment.availableCreditFromOthers && 
+                                     parseFloat(selectedEnrollment.availableCreditFromOthers.replace(/,/g, '')) > 0 && 
+                                     parseFloat(selectedEnrollment.remainingBalance.replace(/,/g, '')) > 0 && (
+                                        <div className="flex justify-between pt-2 border-t border-gray-300 mt-2">
+                                            <p className="font-bold text-lg">Balance After Applying Credits</p>
+                                            <p className="font-bold text-lg text-green-600">
+                                                ₱{Math.max(0, 
+                                                    parseFloat(selectedEnrollment.remainingBalance.replace(/,/g, '')) - 
+                                                    parseFloat(selectedEnrollment.availableCreditFromOthers.replace(/,/g, ''))
+                                                ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <Link to="/paymentform" className="flex flex-row justify-end mt-10">
