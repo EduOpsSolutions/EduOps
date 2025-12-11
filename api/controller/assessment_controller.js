@@ -289,6 +289,7 @@ export const getAllAssessmentsForStudent = async (req, res) => {
           year: us.schedule.period.startAt
             ? new Date(us.schedule.period.startAt).getFullYear()
             : null,
+          startAt: us.schedule.createdAt,
         };
       }
     });
@@ -350,6 +351,7 @@ export const getAllAssessmentsForStudent = async (req, res) => {
           0
         );
         const remainingBalance = netAssessment - totalPayments;
+        const overpayment = totalPayments > netAssessment ? totalPayments - netAssessment : 0;
 
         return {
           studentId: entry.studentId,
@@ -359,10 +361,12 @@ export const getAllAssessmentsForStudent = async (req, res) => {
           batch: entry.batch,
           batchId: entry.batchId,
           year: entry.year,
+          startAt: entry.startAt,
           netAssessment,
           totalPayments,
           remainingBalance,
           studentFees,
+          overpayment,
         };
       })
     );

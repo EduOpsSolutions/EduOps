@@ -9,9 +9,9 @@ const AddNewDocumentModal = ({ isOpen, onClose }) => {
     const [formData, setFormData] = useState({
         documentName: "",
         description: "",
-        privacy: "teacher_only",
-        requestBasis: true,
-        downloadable: true,
+        privacy: "public",
+        requestBasis: false,
+        downloadable: false,
         price: "free",
         amount: "",
     });
@@ -24,9 +24,9 @@ const AddNewDocumentModal = ({ isOpen, onClose }) => {
             setFormData({
                 documentName: "",
                 description: "",
-                privacy: "teacher_only",
-                requestBasis: true,
-                downloadable: true,
+                privacy: "public",
+                requestBasis: false,
+                downloadable: false,
                 price: "free",
                 amount: "",
             });
@@ -109,7 +109,7 @@ const AddNewDocumentModal = ({ isOpen, onClose }) => {
                 cancelButtonColor: "#6b7280",
                 reverseButtons: true,
             }).then((result) => {
-                if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
+                if (result.isConfirmed) {
                     onClose();
                 }
             });

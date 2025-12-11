@@ -83,8 +83,8 @@ function ManageDocuments() {
                 placeholder: "Select privacy",
                 options: [
                     { value: "", label: "All" },
-                    { value: "teacher_only", label: "Teacher's Only" },
-                    { value: "student_only", label: "Student's Only" },
+                    { value: "teacher_only", label: "Teacher Only" },
+                    { value: "student_only", label: "Student Only" },
                     { value: "public", label: "Public" },
                 ],
             },

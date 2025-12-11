@@ -1,5 +1,22 @@
 import React from 'react';
 
+const formatPrivacy = (privacy) => {
+  const privacyMap = {
+    'public': 'Public',
+    'teacher_only': 'Teacher Only',
+    'student_only': 'Student Only'
+  };
+  return privacyMap[privacy] || privacy;
+};
+
+const formatPrice = (price) => {
+  const priceMap = {
+    'free': 'Free',
+    'paid': 'Paid'
+  };
+  return priceMap[price.toLowerCase()] || price;
+};
+
 const DocumentsTable = ({
   documents,
   hasSearched,
@@ -48,18 +65,18 @@ const DocumentsTable = ({
                     <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
                       <div
                         className="truncate max-w-24 sm:max-w-32 md:max-w-40 lg:max-w-none"
-                        title={document.privacy}
+                        title={formatPrivacy(document.privacy)}
                       >
-                        {document.privacy}
+                        {formatPrivacy(document.privacy)}
                       </div>
                     </td>
 
                     <td className="py-4 px-4 text-xs sm:text-sm lg:text-base">
                       <div className="flex flex-col">
-                        {document.price === "Paid" && document.amount ? (
-                          <span>{document.amount}</span>
+                        {document.price === "paid" && document.amount ? (
+                          <span>₱{document.amount}</span>
                         ) : (
-                          <span>{document.price}</span>
+                          <span>{formatPrice(document.price)}</span>
                         )}
                       </div>
                     </td>
