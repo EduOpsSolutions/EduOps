@@ -42,8 +42,8 @@ const DocumentForm = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-dark-red-2 focus:border-dark-red-2"
           required
         >
-          <option value="teacher_only">Teacher's Only</option>
-          <option value="student_only">Student's Only</option>
+          <option value="teacher_only">Teacher Only</option>
+          <option value="student_only">Student Only</option>
           <option value="public">Public</option>
         </select>
       </div>

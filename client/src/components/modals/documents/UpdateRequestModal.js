@@ -40,8 +40,8 @@ function UpdateDocumentRequestModal({
         showCancelButton: true,
         confirmButtonText: 'No, keep editing.',
         cancelButtonText: 'Yes, discard changes.',
-        confirmButtonColor: '#992525',
-        cancelButtonColor: '#6B7280',
+        confirmButtonColor: '#6B7280',
+        cancelButtonColor: '#992525',
       }).then((result) => {
         if (result.isDismissed) {
           onClose();
