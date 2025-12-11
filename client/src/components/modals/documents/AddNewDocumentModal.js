@@ -109,7 +109,7 @@ const AddNewDocumentModal = ({ isOpen, onClose }) => {
                 cancelButtonColor: "#6b7280",
                 reverseButtons: true,
             }).then((result) => {
-                if (result.isDismissed || result.dismiss === Swal.DismissReason.cancel) {
+                if (result.isConfirmed) {
                     onClose();
                 }
             });
