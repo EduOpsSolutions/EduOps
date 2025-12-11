@@ -265,15 +265,21 @@ function Assessment() {
                 e.courseId === enroll.courseId && e.batchId === enroll.batchId
             );
             
-            // Get credit only from the immediate previous course (if exists and has overpayment)
-            let availableCreditFromOthers = 0;
-            if (currentIndex > 0) {
-                const previousCourse = sortedEnrollments[currentIndex - 1];
-                const previousBalance = Number(String(previousCourse.remainingBalance).replace(/,/g, ''));
-                if (previousBalance < 0) {
-                    availableCreditFromOthers = Math.abs(previousBalance);
+            // Calculate available credit by consuming credits progressively
+            let runningCredit = 0;
+            for (let i = 0; i < currentIndex; i++) {
+                const course = sortedEnrollments[i];
+                const courseBalance = Number(String(course.remainingBalance).replace(/,/g, ''));
+                
+                if (courseBalance < 0) {
+                    // This course has overpayment, add to running credit
+                    runningCredit += Math.abs(courseBalance);
+                } else if (courseBalance > 0) {
+                    // This course has balance due, consume credit
+                    runningCredit = Math.max(0, runningCredit - courseBalance);
                 }
             }
+            const availableCreditFromOthers = runningCredit;
 
             setSelectedEnrollment({
                 id: data.studentId,
@@ -332,14 +338,22 @@ function Assessment() {
                                     const currentIndex = sortedEnrollments.findIndex(e => 
                                         e.courseId === enroll.courseId && e.batchId === enroll.batchId
                                     );
-                                    let availableCredit = 0;
-                                    if (currentIndex > 0) {
-                                        const previousCourse = sortedEnrollments[currentIndex - 1];
-                                        const previousBalance = Number(String(previousCourse.remainingBalance).replace(/,/g, ''));
-                                        if (previousBalance < 0) {
-                                            availableCredit = Math.abs(previousBalance);
+                                    
+                                    // Calculate available credit by consuming credits progressively
+                                    let runningCredit = 0;
+                                    for (let i = 0; i < currentIndex; i++) {
+                                        const course = sortedEnrollments[i];
+                                        const courseBalance = Number(String(course.remainingBalance).replace(/,/g, ''));
+                                        
+                                        if (courseBalance < 0) {
+                                            // This course has overpayment, add to running credit
+                                            runningCredit += Math.abs(courseBalance);
+                                        } else if (courseBalance > 0) {
+                                            // This course has balance due, consume credit
+                                            runningCredit = Math.max(0, runningCredit - courseBalance);
                                         }
                                     }
+                                    const availableCredit = runningCredit;
                                     const rawBalance = Number(enroll.remainingBalance);
                                     const balanceAfterCredit = rawBalance > 0 ? Math.max(0, rawBalance - availableCredit) : rawBalance;
 
