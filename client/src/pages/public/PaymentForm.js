@@ -80,8 +80,11 @@ function PaymentForm() {
 
   // State for enrollments (courses/batches)
   const [enrollments, setEnrollments] = useState([]);
+  const [guestEnrollments, setGuestEnrollments] = useState([]);
   const [courses, setCourses] = useState([]);
   const [batches, setBatches] = useState([]);
+  const [selectedEnrollmentBalance, setSelectedEnrollmentBalance] =
+    useState(null);
 
   // Fetch enrollments for logged-in students
   useEffect(() => {
@@ -145,10 +148,25 @@ function PaymentForm() {
     if (!value) {
       updateFormField("courseId", null);
       updateFormField("batchId", null);
+      setSelectedEnrollmentBalance(null);
     } else {
       const [courseId, batchId] = value.split("|");
       updateFormField("courseId", courseId);
       updateFormField("batchId", batchId);
+
+      // Find the selected enrollment and set its outstanding balance
+      const enrollmentList = isAuthenticated ? enrollments : guestEnrollments;
+      const selectedEnrollment = enrollmentList.find(
+        (e) => e.courseId === courseId && e.batchId === batchId
+      );
+
+      if (selectedEnrollment) {
+        const balance = parseFloat(selectedEnrollment.outstandingBalance);
+        setSelectedEnrollmentBalance(balance);
+
+        // Clear the amount field when course/batch changes
+        updateFormField("amount", "");
+      }
     }
   };
 
@@ -171,6 +189,13 @@ function PaymentForm() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     updateFormField(name, value);
+
+    // Clear guest enrollments if student_id is changed/cleared
+    if (name === "student_id" && !isAuthenticated) {
+      setGuestEnrollments([]);
+      updateFormField("courseId", null);
+      updateFormField("batchId", null);
+    }
   };
 
   const handleStudentIdBlur = async (e) => {
@@ -179,6 +204,19 @@ function PaymentForm() {
     // Authenticated users already have auto-filled data
     if (studentId && !isAuthenticated) {
       await validateAndFetchStudentByID(studentId);
+
+      // Fetch guest enrollments with outstanding balances
+      try {
+        const apiBase = process.env.REACT_APP_API_URL || "/api";
+        const res = await fetch(
+          `${apiBase}/enrollment/student/${studentId}/enrollments-with-balance`
+        );
+        const data = await res.json();
+        setGuestEnrollments(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching guest enrollments:", err);
+        setGuestEnrollments([]);
+      }
     }
   };
 
@@ -205,6 +243,26 @@ function PaymentForm() {
         confirmButtonColor: "#992525",
       });
       return;
+    }
+
+    // Validate payment amount does not exceed outstanding balance
+    if (
+      selectedEnrollmentBalance !== null &&
+      formData.courseId &&
+      formData.batchId
+    ) {
+      const paymentAmount = parseFloat(formData.amount);
+      if (paymentAmount > selectedEnrollmentBalance) {
+        await showDialog({
+          icon: "warning",
+          title: "Payment Amount Exceeds Balance",
+          text: `You cannot pay more than your outstanding balance of ₱${selectedEnrollmentBalance.toFixed(
+            2
+          )}. Please adjust the amount.`,
+          confirmButtonColor: "#992525",
+        });
+        return;
+      }
     }
 
     const feeLabel = getFeeTypeLabel(formData.fee);
@@ -469,7 +527,7 @@ function PaymentForm() {
                         value: `${e.courseId}|${e.batchId}`,
                         label: `${e.course} - ${e.batch}${
                           e.year ? ` (${e.year})` : ""
-                        }`,
+                        } - Outstanding: ₱${e.outstandingBalance}`,
                       })),
                     ]}
                     value={
@@ -482,47 +540,59 @@ function PaymentForm() {
                 </div>
               )}
 
+            {/* Show message if logged-in student has no enrollments with outstanding balance */}
+            {isAuthenticated &&
+              user?.role === "student" &&
+              enrollments.length === 0 && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    You don't have any courses with outstanding balance. All
+                    your enrolled courses are fully paid or you have no active
+                    enrollments.
+                  </p>
+                </div>
+              )}
+
             {/* Course & Batch selection for guest payments */}
-            {!isAuthenticated && courses.length > 0 && batches.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {!isAuthenticated && guestEnrollments.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <SelectField
-                  name="course"
-                  id="course"
-                  label="Course*"
+                  name="courseBatch"
+                  id="courseBatch"
+                  label="Course & Batch*"
                   required={true}
                   options={[
-                    { value: "", label: "Select course" },
-                    ...courses
-                      .filter((c) => !c.deletedAt)
-                      .map((c) => ({
-                        value: c.id,
-                        label: c.name,
-                      })),
+                    { value: "", label: "Select course & batch" },
+                    ...guestEnrollments.map((e) => ({
+                      value: `${e.courseId}|${e.batchId}`,
+                      label: `${e.course} - ${e.batch}${
+                        e.year ? ` (${e.year})` : ""
+                      } - Outstanding: ₱${e.outstandingBalance}`,
+                    })),
                   ]}
-                  value={formData.courseId || ""}
-                  onChange={(e) => updateFormField("courseId", e.target.value)}
-                />
-                <SelectField
-                  name="batch"
-                  id="batch"
-                  label="Batch/Academic Period*"
-                  required={true}
-                  options={[
-                    { value: "", label: "Select batch" },
-                    ...batches
-                      .filter((b) => !b.deletedAt)
-                      .map((b) => ({
-                        value: b.id,
-                        label: `${b.batchName || b.name}${
-                          b.schoolYear ? ` (${b.schoolYear})` : ""
-                        }`,
-                      })),
-                  ]}
-                  value={formData.batchId || ""}
-                  onChange={(e) => updateFormField("batchId", e.target.value)}
+                  value={
+                    formData.courseId && formData.batchId
+                      ? `${formData.courseId}|${formData.batchId}`
+                      : ""
+                  }
+                  onChange={handleCourseBatchChange}
                 />
               </div>
             )}
+
+            {/* Show message if guest has no enrollments with outstanding balance */}
+            {!isAuthenticated &&
+              formData.student_id &&
+              formData.first_name &&
+              guestEnrollments.length === 0 && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    You don't have any courses with outstanding balance. All
+                    your enrolled courses are fully paid or you have no active
+                    enrollments.
+                  </p>
+                </div>
+              )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <div className="relative">
@@ -651,12 +721,16 @@ function PaymentForm() {
                 <LabelledInputField
                   name="amount"
                   id="amount"
-                  label="Amount (PHP)*"
+                  label={`Amount (PHP)*`}
                   type="number"
                   required={true}
                   placeholder="0.00"
                   min={formData.fee === "down_payment" ? "3000" : "1"}
-                  max="1000000"
+                  max={
+                    selectedEnrollmentBalance !== null
+                      ? selectedEnrollmentBalance.toString()
+                      : "1000000"
+                  }
                   step="0.01"
                   value={formData.amount}
                   onChange={handleInputChange}
@@ -683,12 +757,24 @@ function PaymentForm() {
                     Minimum down payment: ₱3,000
                   </p>
                 )}
+                {selectedEnrollmentBalance !== null &&
+                  formData.courseId &&
+                  formData.batchId && (
+                    <p className="text-blue-600 text-xs mt-1">
+                      Outstanding balance: ₱
+                      {selectedEnrollmentBalance.toFixed(2)}. You can pay any
+                      amount up to this balance.
+                    </p>
+                  )}
               </div>
             </div>
 
             {/* Submit Button */}
             <div className="flex justify-center">
-              <SmallButton type="submit" disabled={loading || nameError || amountError}>
+              <SmallButton
+                type="submit"
+                disabled={loading || nameError || amountError}
+              >
                 {loading ? (
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

@@ -1365,7 +1365,7 @@ const updateEnrollment = async (req, res) => {
   }
 };
 
-// Get student enrollments grouped by course and batch
+// Get student enrollments grouped by course and batch (with outstanding balances for logged-in users)
 const getStudentEnrollments = async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -1382,16 +1382,19 @@ const getStudentEnrollments = async (req, res) => {
             period: true,
           },
         },
+        user: true,
       },
     });
 
     // Group by course and batch (period)
-    const enrollmentMap = {};
+    const assessmentMap = {};
     userSchedules.forEach((us) => {
-      if (!us.schedule || !us.schedule.course || !us.schedule.period) return;
+      if (!us.user || !us.schedule || !us.schedule.course || !us.schedule.period) return;
       const key = `${us.schedule.course.id}|${us.schedule.period.id}`;
-      if (!enrollmentMap[key]) {
-        enrollmentMap[key] = {
+      if (!assessmentMap[key]) {
+        assessmentMap[key] = {
+          studentId: us.user.id,
+          name: `${us.user.firstName} ${us.user.lastName}`,
           courseId: us.schedule.course.id,
           course: us.schedule.course.name,
           batchId: us.schedule.period.id,
@@ -1403,9 +1406,97 @@ const getStudentEnrollments = async (req, res) => {
       }
     });
 
-    res.json(Object.values(enrollmentMap));
+    // Calculate balances using the same logic as assessment endpoint
+    const results = await Promise.all(
+      Object.values(assessmentMap).map(async (entry) => {
+        // Get fees for this course and batch
+        const fees = await prisma.fees.findMany({
+          where: {
+            courseId: entry.courseId,
+            batchId: entry.batchId,
+            isActive: true,
+          },
+        });
+
+        // Get student_fee records for this student, course, and batch
+        const studentFees = await prisma.student_fee.findMany({
+          where: {
+            studentId: entry.studentId,
+            courseId: entry.courseId,
+            batchId: entry.batchId,
+            deletedAt: null,
+          },
+        });
+
+        // Get course base price
+        const course = await prisma.course.findUnique({
+          where: { id: entry.courseId },
+          select: { price: true },
+        });
+        const courseBasePrice = course ? Number(course.price) : 0;
+
+        // Get paid payments for this student, course, and batch
+        const payments = await prisma.payments.findMany({
+          where: {
+            userId: entry.studentId,
+            status: "paid",
+            courseId: entry.courseId,
+            academicPeriodId: entry.batchId,
+          },
+        });
+
+        // Get adjustments for this student
+        const adjustments = await prisma.adjustments.findMany({
+          where: {
+            userId: entry.studentId,
+          },
+        });
+
+        // Calculate student fee total (add fees, subtract discounts)
+        const studentFeeTotal = studentFees.reduce((sum, sf) => {
+          if (sf.type === "fee") return sum + Number(sf.amount);
+          if (sf.type === "discount") return sum - Number(sf.amount);
+          return sum;
+        }, 0);
+
+        // Calculate net assessment
+        const netAssessment =
+          fees.reduce((sum, f) => sum + Number(f.price), 0) +
+          courseBasePrice +
+          studentFeeTotal -
+          adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
+
+        // Calculate total payments
+        const totalPayments = payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0
+        );
+
+        // Calculate remaining balance
+        const remainingBalance = netAssessment - totalPayments;
+
+        return {
+          courseId: entry.courseId,
+          course: entry.course,
+          batchId: entry.batchId,
+          batch: entry.batch,
+          year: entry.year,
+          outstandingBalance: remainingBalance.toFixed(2),
+          netAssessment: netAssessment.toFixed(2),
+          totalPayments: totalPayments.toFixed(2),
+          remainingBalance: remainingBalance,
+        };
+      })
+    );
+
+    // Filter to only return enrollments with positive remaining balance
+    const enrollmentsWithBalance = results.filter(
+      (result) => result.remainingBalance > 0
+    );
+
+    res.json(enrollmentsWithBalance);
   } catch (error) {
-    console.error(error);
+    console.error("Error in getStudentEnrollments:", error);
     res.status(500).json({ error: "Failed to fetch student enrollments." });
   }
 };
@@ -1557,6 +1648,159 @@ const trackEnrollmentByUserEmail = async (req, res) => {
   }
 };
 
+// Get student enrollments by userId (readable ID) with outstanding balances - for guest payments
+const getStudentEnrollmentsByUserId = async (req, res) => {
+  const { userId } = req.params;
+  try {
+    // First, find the user by their userId (readable ID like "STU-2024-001" or "S2025000001")
+    const user = await prisma.users.findFirst({
+      where: {
+        userId: userId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!user) {
+      return res.json([]);
+    }
+
+    // Get all user_schedules for this student (active only)
+    const userSchedules = await prisma.user_schedule.findMany({
+      where: {
+        userId: user.id,
+        deletedAt: null,
+      },
+      include: {
+        schedule: {
+          include: {
+            course: true,
+            period: true,
+          },
+        },
+      },
+    });
+
+    // Group by course and batch (period)
+    const assessmentMap = {};
+    userSchedules.forEach((us) => {
+      if (!us.schedule || !us.schedule.course || !us.schedule.period) return;
+      const key = `${us.schedule.course.id}|${us.schedule.period.id}`;
+      if (!assessmentMap[key]) {
+        assessmentMap[key] = {
+          studentId: user.id,
+          name: `${user.firstName} ${user.lastName}`,
+          courseId: us.schedule.course.id,
+          course: us.schedule.course.name,
+          batchId: us.schedule.period.id,
+          batch: us.schedule.period.batchName,
+          year: us.schedule.period.startAt
+            ? new Date(us.schedule.period.startAt).getFullYear()
+            : null,
+        };
+      }
+    });
+
+    // Calculate balances using the same logic as assessment endpoint
+    const results = await Promise.all(
+      Object.values(assessmentMap).map(async (entry) => {
+        // Get fees for this course and batch
+        const fees = await prisma.fees.findMany({
+          where: {
+            courseId: entry.courseId,
+            batchId: entry.batchId,
+            isActive: true,
+          },
+        });
+
+        // Get student_fee records for this student, course, and batch
+        const studentFees = await prisma.student_fee.findMany({
+          where: {
+            studentId: entry.studentId,
+            courseId: entry.courseId,
+            batchId: entry.batchId,
+            deletedAt: null,
+          },
+        });
+
+        // Get course base price
+        const course = await prisma.course.findUnique({
+          where: { id: entry.courseId },
+          select: { price: true },
+        });
+        const courseBasePrice = course ? Number(course.price) : 0;
+
+        // Get paid payments for this student, course, and batch
+        const payments = await prisma.payments.findMany({
+          where: {
+            userId: entry.studentId,
+            status: "paid",
+            courseId: entry.courseId,
+            academicPeriodId: entry.batchId,
+          },
+        });
+
+        // Get adjustments for this student
+        const adjustments = await prisma.adjustments.findMany({
+          where: {
+            userId: entry.studentId,
+          },
+        });
+
+        // Calculate student fee total (add fees, subtract discounts)
+        const studentFeeTotal = studentFees.reduce((sum, sf) => {
+          if (sf.type === "fee") return sum + Number(sf.amount);
+          if (sf.type === "discount") return sum - Number(sf.amount);
+          return sum;
+        }, 0);
+
+        // Calculate net assessment
+        const netAssessment =
+          fees.reduce((sum, f) => sum + Number(f.price), 0) +
+          courseBasePrice +
+          studentFeeTotal -
+          adjustments.reduce((sum, a) => sum + Number(a.amount), 0);
+
+        // Calculate total payments
+        const totalPayments = payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0
+        );
+
+        // Calculate remaining balance
+        const remainingBalance = netAssessment - totalPayments;
+
+        return {
+          courseId: entry.courseId,
+          course: entry.course,
+          batchId: entry.batchId,
+          batch: entry.batch,
+          year: entry.year,
+          outstandingBalance: remainingBalance.toFixed(2),
+          netAssessment: netAssessment.toFixed(2),
+          totalPayments: totalPayments.toFixed(2),
+          remainingBalance: remainingBalance,
+        };
+      })
+    );
+
+    // Filter to only return enrollments with positive remaining balance
+    const enrollmentsWithBalance = results.filter(
+      (result) => result.remainingBalance > 0
+    );
+
+    res.json(enrollmentsWithBalance);
+  } catch (error) {
+    console.error("Error in getStudentEnrollmentsByUserId:", error);
+    res.status(500).json({ error: "Failed to fetch student enrollments." });
+  }
+};
+
 export {
   createEnrollmentRequest,
   getEnrollmentRequests,
@@ -1568,4 +1812,5 @@ export {
   checkEmailExists,
   checkPhoneExists,
   getStudentEnrollments,
+  getStudentEnrollmentsByUserId,
 };

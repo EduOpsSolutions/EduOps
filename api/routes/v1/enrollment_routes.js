@@ -10,6 +10,7 @@ import {
   checkEmailExists,
   checkPhoneExists,
   getStudentEnrollments,
+  getStudentEnrollmentsByUserId,
 } from "../../controller/enrollment_controller.js";
 import { validateEnrollment } from "../../middleware/enrollmentValidator.js";
 import { verifyToken } from "../../utils/verifyToken.js";
@@ -37,6 +38,9 @@ router.get("/check-email", checkEmailExists);
 
 // Public endpoint to check if phone number is already used in an enrollment request
 router.get("/check-phone", checkPhoneExists);
+
+// Public endpoint to get student enrollments by userId (for guest payments)
+router.get("/student/:userId/enrollments-with-balance", getStudentEnrollmentsByUserId);
 
 // Logged-in user route to track their enrollment
 router.get(

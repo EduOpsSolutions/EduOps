@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { FaGear } from 'react-icons/fa6';
-import { MdNavigateBefore, MdNavigateNext } from 'react-icons/md';
-import DateTile from '../../components/calendar/DateTile';
-import DaysWeek from './DaysWeek';
-import WeekView from './WeekView';
-import Spinner from '../common/Spinner';
-import CalendarSettingsModal from '../modals/calendar/CalendarSettingsModal';
+import React, { useEffect, useRef, useState } from "react";
+import { FaGear } from "react-icons/fa6";
+import { MdNavigateBefore, MdNavigateNext } from "react-icons/md";
+import DateTile from "../../components/calendar/DateTile";
+import DaysWeek from "./DaysWeek";
+import WeekView from "./WeekView";
+import Spinner from "../common/Spinner";
+import CalendarSettingsModal from "../modals/calendar/CalendarSettingsModal";
 
 function Calendar(schedule) {
   const { events = [], onDateTimeClick } = schedule;
@@ -20,37 +20,37 @@ function Calendar(schedule) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [calendarSettings, setCalendarSettings] = useState({
-    timeFormat: localStorage.getItem('calendarTimeFormat') || '12h',
-    viewDensity: localStorage.getItem('calendarViewDensity') || 'default',
+    timeFormat: localStorage.getItem("calendarTimeFormat") || "12h",
+    viewDensity: localStorage.getItem("calendarViewDensity") || "default",
   });
   const current_year_ref = useRef(null);
   const year_range = Array.from(
-    { length: 21 },
+    { length: 30 },
     (_, i) => current_year - 10 + i
   );
   const [first_day, setfirst_day] = useState(0);
   const weekdays = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
   ];
   const monthName = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   // const daysInMonth = (month, year) => new Date(year, month, 0).getDate();
@@ -183,8 +183,8 @@ function Calendar(schedule) {
   useEffect(() => {
     if (show_year_dropdown && current_year_ref.current) {
       current_year_ref.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
+        behavior: "smooth",
+        block: "nearest",
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,11 +205,11 @@ function Calendar(schedule) {
       setWindowWidth(window.innerWidth);
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     // Cleanup listener on component unmount
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -229,7 +229,7 @@ function Calendar(schedule) {
     <div className="w-full max-w-7xl mx-auto px-2 md:px-4 lg:px-6">
       <div className="flex justify-center items-center w-full mt-2 flex-col">
         <div className="items-center w-full mt-4 min-h-14 px-4 md:px-8 flex flex-col md:flex-row justify-center overflow-visible gap-2 md:gap-0">
-          {' '}
+          {" "}
           {/*div upper container*/}
           <button
             onClick={() => setShowSettingsModal(true)}
@@ -278,8 +278,8 @@ function Calendar(schedule) {
                         onClick={() => changeMonth(index)}
                         className={`${
                           current_month === index
-                            ? 'bg-dark-red-2 text-white'
-                            : ''
+                            ? "bg-dark-red-2 text-white"
+                            : ""
                         } w-full text-start block px-4 py-2 hover:bg-dark-red-2 hover:text-white dark:hover:bg-gray-600 dark:hover:text-white`}
                       >
                         {month}
@@ -329,8 +329,8 @@ function Calendar(schedule) {
                       onClick={() => changeYear(year)}
                       className={`w-full text-start block px-4 py-2 cursor-pointer ${
                         year === current_year
-                          ? 'bg-dark-red-2 text-white'
-                          : 'hover:bg-dark-red-2 hover:text-white dark:hover:bg-gray-600 dark:hover:text-white'
+                          ? "bg-dark-red-2 text-white"
+                          : "hover:bg-dark-red-2 hover:text-white dark:hover:bg-gray-600 dark:hover:text-white"
                       }`}
                     >
                       {year}
@@ -351,7 +351,7 @@ function Calendar(schedule) {
                   }
                 }}
                 className={
-                  'mx-2 md:mx-4 lg:mx-6 rounded-full hover:bg-german-red hover:bg-opacity-35 transition duration-100'
+                  "mx-2 md:mx-4 lg:mx-6 rounded-full hover:bg-german-red hover:bg-opacity-35 transition duration-100"
                 }
                 size={windowWidth < 768 ? 24 : 28}
               />
@@ -366,7 +366,7 @@ function Calendar(schedule) {
                   }
                 }}
                 className={
-                  'mx-2 md:mx-4 lg:mx-6 rounded-full hover:bg-german-red hover:bg-opacity-35 transition duration-100'
+                  "mx-2 md:mx-4 lg:mx-6 rounded-full hover:bg-german-red hover:bg-opacity-35 transition duration-100"
                 }
                 size={windowWidth < 768 ? 24 : 28}
               />
@@ -379,9 +379,9 @@ function Calendar(schedule) {
               disabled={isLoadingView}
               className={`rounded-tr-none rounded-br-none w-full focus:outline-none border-rad hover:border-none font-medium rounded-md text-xs md:text-sm px-2 md:px-5 py-2 md:py-2.5 transition-colors ${
                 view_mode === 0
-                  ? 'text-white bg-dark-red-2'
-                  : 'hover:bg-dark-red-3 hover:text-white text-german-red'
-              } ${isLoadingView ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? "text-white bg-dark-red-2"
+                  : "hover:bg-dark-red-3 hover:text-white text-german-red"
+              } ${isLoadingView ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               Month
             </button>
@@ -390,9 +390,9 @@ function Calendar(schedule) {
               disabled={isLoadingView}
               className={`rounded-tl-none rounded-bl-none w-full focus:outline-none font-medium rounded-md text-xs md:text-sm px-2 md:px-5 py-2 md:py-2.5 transition-colors ${
                 view_mode === 1
-                  ? 'text-white bg-dark-red-2'
-                  : 'hover:bg-dark-red-3 hover:text-white text-german-red'
-              } ${isLoadingView ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  ? "text-white bg-dark-red-2"
+                  : "hover:bg-dark-red-3 hover:text-white text-german-red"
+              } ${isLoadingView ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               Week
             </button>
@@ -414,8 +414,8 @@ function Calendar(schedule) {
                 {weekdays.map((day, index) => {
                   let mobileTitle = day.substring(0, 1); // Default to first letter
                   // Special cases for Thursday and Sunday
-                  if (day === 'Thursday') mobileTitle = 'Th';
-                  if (day === 'Sunday') mobileTitle = 'Su';
+                  if (day === "Thursday") mobileTitle = "Th";
+                  if (day === "Sunday") mobileTitle = "Su";
 
                   return (
                     <DaysWeek

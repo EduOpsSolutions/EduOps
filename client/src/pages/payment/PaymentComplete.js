@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import UserNavbar from '../../components/navbars/UserNav';
-import useAuthStore from '../../stores/authStore';
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import UserNavbar from "../../components/navbars/UserNav";
+import useAuthStore from "../../stores/authStore";
 
 const PaymentComplete = () => {
   const { user, isAuthenticated } = useAuthStore();
@@ -16,18 +16,18 @@ const PaymentComplete = () => {
     async (paymentIntentId) => {
       try {
         setLoading(true);
-        console.log('Checking payment status for:', paymentIntentId);
+        console.log("Checking payment status for:", paymentIntentId);
 
         const response = await fetch(
           `${reactAppApiUrl}/payments/check-status/${paymentIntentId}`
         );
         const data = await response.json();
 
-        console.log('Payment status response:', data);
+        console.log("Payment status response:", data);
 
         if (
           data.success &&
-          (data.data.status === 'succeeded' || data.data.dbStatus === 'paid')
+          (data.data.status === "succeeded" || data.data.dbStatus === "paid")
         ) {
           setPaymentData(data.data);
         } else if (response.status === 404 && retryCount < 3) {
@@ -41,14 +41,14 @@ const PaymentComplete = () => {
           return;
         } else if (response.status === 404) {
           setError(
-            'Payment is being processed. Please wait a moment and refresh the page, or contact support if the issue persists.'
+            "Payment is being processed. Please wait a moment and refresh the page, or contact support if the issue persists."
           );
         } else {
-          setError(data.message || 'Payment was not completed');
+          setError(data.message || "Payment was not completed");
         }
       } catch (error) {
-        console.error('Error checking payment status:', error);
-        setError('Unable to verify payment status. Please contact support.');
+        console.error("Error checking payment status:", error);
+        setError("Unable to verify payment status. Please contact support.");
       } finally {
         setLoading(false);
       }
@@ -57,12 +57,12 @@ const PaymentComplete = () => {
   );
 
   useEffect(() => {
-    const paymentIntentId = searchParams.get('payment_intent_id');
+    const paymentIntentId = searchParams.get("payment_intent_id");
 
     // Validate payment intent ID format for security
     const isValidPaymentIntentId = (id) => {
       return (
-        id && typeof id === 'string' && id.startsWith('pi_') && id.length > 10
+        id && typeof id === "string" && id.startsWith("pi_") && id.length > 10
       );
     };
 
@@ -70,7 +70,7 @@ const PaymentComplete = () => {
       checkPaymentStatus(paymentIntentId);
     } else {
       setError(
-        'Invalid payment information. Please contact support if you believe this is an error.'
+        "Invalid payment information. Please contact support if you believe this is an error."
       );
       setLoading(false);
     }
@@ -80,7 +80,9 @@ const PaymentComplete = () => {
   if (loading) {
     return (
       <div className="bg_custom bg-white-yellow-tone">
-        <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
+        <UserNavbar
+          role={isAuthenticated && user?.role ? user.role : "public"}
+        />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-dark-red mx-auto mb-4"></div>
@@ -90,7 +92,7 @@ const PaymentComplete = () => {
             <p className="text-sm text-gray-500 mt-2">
               {retryCount > 0
                 ? `Retry ${retryCount}/3 - Please wait a moment`
-                : 'Please wait a moment'}
+                : "Please wait a moment"}
             </p>
           </div>
         </div>
@@ -102,14 +104,16 @@ const PaymentComplete = () => {
   if (paymentData && !error) {
     // Show error UI for failed or expired payments
     if (
-      paymentData.dbStatus === 'expired' ||
-      paymentData.status === 'expired' ||
-      paymentData.dbStatus === 'failed' ||
-      paymentData.status === 'failed'
+      paymentData.dbStatus === "expired" ||
+      paymentData.status === "expired" ||
+      paymentData.dbStatus === "failed" ||
+      paymentData.status === "failed"
     ) {
       return (
         <div className="bg_custom bg-white-yellow-tone">
-          <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
+          <UserNavbar
+            role={isAuthenticated && user?.role ? user.role : "public"}
+          />
           <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8 min-h-[calc(100vh-80px)]">
             <div className="w-full max-w-2xl bg-white border-2 border-dark-red rounded-lg p-6 sm:p-8 md:p-10 shadow-lg">
               {/* Error Icon */}
@@ -136,7 +140,9 @@ const PaymentComplete = () => {
 
               {/* Error Details */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-red-800 mb-2">Common Reasons:</h3>
+                <h3 className="font-semibold text-red-800 mb-2">
+                  Common Reasons:
+                </h3>
                 <ul className="list-disc list-inside space-y-1 text-red-700 text-sm">
                   <li>Payment session expired or failed</li>
                   <li>Insufficient funds in account</li>
@@ -147,8 +153,9 @@ const PaymentComplete = () => {
               {/* Help Section */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-800">
-                  <strong>Need Help?</strong> If you believe this is an error or if
-                  the amount was deducted from your account, please contact support.
+                  <strong>Need Help?</strong> If you believe this is an error or
+                  if the amount was deducted from your account, please contact
+                  support.
                 </p>
               </div>
 
@@ -159,7 +166,7 @@ const PaymentComplete = () => {
                     if (isAuthenticated && user?.role) {
                       navigate(`/${user.role}`);
                     } else {
-                      navigate('/login');
+                      navigate("/login");
                     }
                   }}
                   className="w-full px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
@@ -187,7 +194,9 @@ const PaymentComplete = () => {
     }
     return (
       <div className="bg_custom bg-white-yellow-tone">
-        <UserNavbar role={isAuthenticated && user?.role ? user.role : "public"} />
+        <UserNavbar
+          role={isAuthenticated && user?.role ? user.role : "public"}
+        />
         <div className="flex flex-col justify-center items-center px-4 sm:px-8 md:px-12 lg:px-20 py-6 md:py-8 min-h-[calc(100vh-80px)]">
           <div className="w-full max-w-2xl bg-white border-2 border-dark-red rounded-lg p-6 sm:p-8 md:p-10 shadow-lg">
             {/* Success Icon */}
@@ -217,7 +226,7 @@ const PaymentComplete = () => {
             </div>
 
             {/* Payment Details Card */}
-            <div className="bg-green-50 rounded-lg p-6 mb-6">
+            <div className="bg-green-50 rounded-lg p-6 mb-6 overflow-x-hidden">
               <h2 className="text-lg font-semibold text-green-800 mb-4">
                 Transaction Details
               </h2>
@@ -237,7 +246,7 @@ const PaymentComplete = () => {
                     <span className="text-gray-700 font-medium">
                       Reference Number:
                     </span>
-                    <span className="text-gray-900 font-mono text-sm bg-white px-3 py-1 rounded border border-gray-200">
+                    <span className="break-all text-gray-900 font-mono text-sm bg-white px-3 py-1 rounded border border-gray-200">
                       {paymentData.referenceNumber}
                     </span>
                   </div>
@@ -248,7 +257,7 @@ const PaymentComplete = () => {
                     Payment Method:
                   </span>
                   <span className="text-green-600 font-semibold">
-                    {paymentData.paymentMethod || 'Online Payment'}
+                    {paymentData.paymentMethod || "Online Payment"}
                   </span>
                 </div>
 
@@ -265,12 +274,12 @@ const PaymentComplete = () => {
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600">Payment Date:</span>
                     <span className="text-gray-700">
-                      {new Date(paymentData.paidAt).toLocaleString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(paymentData.paidAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </span>
                   </div>
@@ -285,7 +294,7 @@ const PaymentComplete = () => {
                   if (isAuthenticated && user?.role) {
                     navigate(`/${user.role}`);
                   } else {
-                    navigate('/login');
+                    navigate("/login");
                   }
                 }}
                 className="w-full px-6 py-3 bg-dark-red hover:bg-dark-red-5 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
@@ -364,7 +373,7 @@ const PaymentComplete = () => {
                 if (isAuthenticated && user?.role) {
                   navigate(`/${user.role}`);
                 } else {
-                  navigate('/login');
+                  navigate("/login");
                 }
               }}
               className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-dark-red border-2 border-dark-red font-semibold rounded-lg transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center"
