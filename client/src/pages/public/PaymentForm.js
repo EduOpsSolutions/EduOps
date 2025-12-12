@@ -33,8 +33,13 @@ function PaymentForm() {
     sendPaymentLinkEmail,
   } = usePaymentStore();
 
-  // Filtered fee options based on user role
+  // Filtered fee options based on user role and enrollment context
   const getFilteredFeeOptions = () => {
+    // If coming from enrollment page, only allow down_payment
+    if (location.state?.fromEnrollment) {
+      return feesOptions.filter((option) => option.value === "down_payment");
+    }
+    // Teachers can only pay document fees
     if (isAuthenticated && user?.role === "teacher") {
       return feesOptions.filter((option) => option.value === "document_fee");
     }
@@ -76,6 +81,14 @@ function PaymentForm() {
         }
       }
     }
+    // Auto-select down_payment when coming from enrollment
+    if (location.state?.fromEnrollment) {
+      updateFormField("fee", "down_payment");
+      // Set minimum amount to 3000 for down payment
+      if (!formData.amount || parseFloat(formData.amount) < 3000) {
+        updateFormField("amount", "3000");
+      }
+    }
   }, [location.state, updateFormField]);
 
   // State for enrollments (courses/batches)
@@ -102,7 +115,29 @@ function PaymentForm() {
             }
           );
           const data = await res.json();
-          setEnrollments(Array.isArray(data) ? data : []);
+          let enrollmentData = Array.isArray(data) ? data : [];
+
+          // Filter enrollments if coming from enrollment page
+          if (
+            location.state?.fromEnrollment &&
+            location.state?.enrollmentData
+          ) {
+            const { courseId, periodId } = location.state.enrollmentData;
+            if (courseId && periodId) {
+              enrollmentData = enrollmentData.filter(
+                (e) => e.courseId === courseId && e.batchId === periodId
+              );
+            }
+          }
+
+          setEnrollments(enrollmentData);
+
+          // Auto-select if coming from enrollment and only one option
+          if (location.state?.fromEnrollment && enrollmentData.length === 1) {
+            const enrollment = enrollmentData[0];
+            updateFormField("courseId", enrollment.courseId);
+            updateFormField("batchId", enrollment.batchId);
+          }
         } catch (err) {
           setEnrollments([]);
         }
@@ -111,7 +146,7 @@ function PaymentForm() {
       }
     };
     fetchEnrollments();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, location.state]);
 
   // Fetch courses and batches for guest payments
   useEffect(() => {
@@ -123,12 +158,37 @@ function PaymentForm() {
           // Fetch courses
           const coursesRes = await fetch(`${apiBase}/courses`);
           const coursesData = await coursesRes.json();
-          setCourses(Array.isArray(coursesData) ? coursesData : []);
+          let coursesArray = Array.isArray(coursesData) ? coursesData : [];
 
           // Fetch academic periods (batches)
           const batchesRes = await fetch(`${apiBase}/academic-periods`);
           const batchesData = await batchesRes.json();
-          setBatches(Array.isArray(batchesData) ? batchesData : []);
+          let batchesArray = Array.isArray(batchesData) ? batchesData : [];
+
+          // Filter if coming from enrollment page
+          if (
+            location.state?.fromEnrollment &&
+            location.state?.enrollmentData
+          ) {
+            const { courseId, periodId } = location.state.enrollmentData;
+            if (courseId) {
+              coursesArray = coursesArray.filter((c) => c.id === courseId);
+            }
+            if (periodId) {
+              batchesArray = batchesArray.filter((b) => b.id === periodId);
+            }
+
+            // Auto-select if filtered to single options
+            if (courseId) {
+              updateFormField("courseId", courseId);
+            }
+            if (periodId) {
+              updateFormField("batchId", periodId);
+            }
+          }
+
+          setCourses(coursesArray);
+          setBatches(batchesArray);
         } catch (err) {
           console.error("Error fetching courses/batches:", err);
           setCourses([]);
@@ -137,7 +197,7 @@ function PaymentForm() {
       }
     };
     fetchCoursesAndBatches();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, location.state]);
 
   // Handle course/batch selection
   const handleCourseBatchChange = (e) => {
@@ -453,6 +513,48 @@ function PaymentForm() {
               />
             </div>
 
+            {/* Notice when coming from enrollment page */}
+            {location.state?.fromEnrollment &&
+              location.state?.enrollmentData && (
+                <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                  <div className="flex items-start">
+                    <svg
+                      className="w-5 h-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-800">
+                        Enrollment Payment
+                      </p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        You're paying for:{" "}
+                        <strong>
+                          {location.state.enrollmentData.courseName}
+                        </strong>
+                        {location.state.enrollmentData.coursePrice && (
+                          <span>
+                            {" "}
+                            (Course fee: ₱
+                            {location.state.enrollmentData.coursePrice})
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Payment type is set to <strong>Down Payment</strong>{" "}
+                        (minimum ₱3,000) or <strong>Full Tuition</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             {/* Course & Batch selection for logged-in students */}
             {isAuthenticated &&
               user?.role === "student" &&
@@ -688,7 +790,10 @@ function PaymentForm() {
 
             {/* Submit Button */}
             <div className="flex justify-center">
-              <SmallButton type="submit" disabled={loading || nameError || amountError}>
+              <SmallButton
+                type="submit"
+                disabled={loading || nameError || amountError}
+              >
                 {loading ? (
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
