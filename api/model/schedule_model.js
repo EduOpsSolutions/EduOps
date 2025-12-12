@@ -362,15 +362,12 @@ export const checkScheduleConflicts = async (
   // Parse days array
   const daysArray = days.split(",").map((d) => d.trim());
 
-  // Find schedules with same teacher and overlapping days
+  // Find all schedules with same teacher (we'll filter for day/time overlaps below)
   const conflictingSchedules = await prisma.schedule.findMany({
     where: {
       teacherId,
       deletedAt: null,
       ...(excludeId ? { id: { not: parseInt(excludeId) } } : {}),
-      days: {
-        in: daysArray.map((day) => days), // This is a simplified check
-      },
     },
     include: {
       course: {
