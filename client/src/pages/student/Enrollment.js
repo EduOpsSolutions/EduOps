@@ -31,6 +31,8 @@ function Enrollment() {
     completedSteps,
     courseName,
     coursePrice,
+    courseId,
+    periodId,
   } = useEnrollmentStore();
 
   const { user, isAuthenticated } = useAuthStore();
@@ -98,7 +100,17 @@ function Enrollment() {
 
   // Handle Pay Now - redirect to payment form to create PayMongo link
   const handlePayNow = () => {
-    navigate("/paymentForm");
+    navigate("/paymentForm", {
+      state: {
+        fromEnrollment: true,
+        enrollmentData: {
+          courseId: courseId,
+          periodId: periodId,
+          courseName: courseName,
+          coursePrice: coursePrice,
+        },
+      },
+    });
   };
 
   // Copy Student ID to clipboard
