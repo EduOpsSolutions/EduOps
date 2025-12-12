@@ -58,6 +58,8 @@ export const createRequisite = async (req, res) => {
         .status(400)
         .json({ error: "This course-requisite pair already exists." });
     }
+    
+    // Create the primary requisite
     const newRequisite = await prisma.course_requisite.create({
       data: {
         courseId,
@@ -66,6 +68,28 @@ export const createRequisite = async (req, res) => {
         ruleName,
       },
     });
+    
+    // If it's a corequisite, automatically create the reverse relationship
+    if (type === "corequisite") {
+      const reverseExists = await prisma.course_requisite.findFirst({
+        where: {
+          courseId: requisiteCourseId,
+          requisiteCourseId: courseId,
+        },
+      });
+      
+      if (!reverseExists) {
+        await prisma.course_requisite.create({
+          data: {
+            courseId: requisiteCourseId,
+            requisiteCourseId: courseId,
+            type: "corequisite",
+            ruleName,
+          },
+        });
+      }
+    }
+    
     res.status(201).json(newRequisite);
   } catch (error) {
     res.status(500).json({ error: "Failed to create requisite." });
@@ -95,7 +119,33 @@ export const updateRequisite = async (req, res) => {
 export const deleteRequisite = async (req, res) => {
   const { id } = req.params;
   try {
+    // First, get the requisite details before deleting
+    const requisite = await prisma.course_requisite.findUnique({
+      where: { id },
+    });
+    
+    if (!requisite) {
+      return res.status(404).json({ error: "Requisite not found." });
+    }
+    
+    // Delete the primary requisite
     await prisma.course_requisite.delete({ where: { id } });
+    
+    // If it's a corequisite, also delete the reverse relationship
+    if (requisite.type === "corequisite") {
+      const reverseRequisite = await prisma.course_requisite.findFirst({
+        where: {
+          courseId: requisite.requisiteCourseId,
+          requisiteCourseId: requisite.courseId,
+          type: "corequisite",
+        },
+      });
+      
+      if (reverseRequisite) {
+        await prisma.course_requisite.delete({ where: { id: reverseRequisite.id } });
+      }
+    }
+    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete requisite." });

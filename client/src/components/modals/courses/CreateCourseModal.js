@@ -35,6 +35,7 @@ function CreateCourseModal({
   // Fetch all courses for dropdown (for requisites)
   useEffect(() => {
     async function fetchAllCourses() {
+      if (!create_course_modal) return;
       try {
   const token = (typeof getCookieItem === "function" ? getCookieItem("token") : "") || "";
         const res = await fetch(`${process.env.REACT_APP_API_URL}/courses`, {
@@ -47,7 +48,7 @@ function CreateCourseModal({
       }
     }
     fetchAllCourses();
-  }, []);
+  }, [create_course_modal]);
 
   // Helper to reset all modal state
   const resetModalState = () => {
