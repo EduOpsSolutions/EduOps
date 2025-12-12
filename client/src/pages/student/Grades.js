@@ -201,15 +201,49 @@ function Grades() {
 
       console.log("Specific Assessment for this course:", specificAssessment);
 
-      if (specificAssessment && specificAssessment.remainingBalance > 0) {
-        Swal.fire({
-          title: "Outstanding Balance",
-          text: `You have an outstanding balance of ₱${specificAssessment.remainingBalance.toLocaleString()} for this course. Please clear your dues to access the certificate.`,
-          icon: "warning",
-          confirmButtonText: "OK",
-          confirmButtonColor: "#992525",
-        });
-        return;
+      if (specificAssessment) {
+        // Sort all enrollments by date to calculate credit properly
+        const sortedEnrollments = [...assessmentData].sort(
+          (a, b) => new Date(a.startAt) - new Date(b.startAt)
+        );
+        
+        // Find current enrollment index
+        const currentIndex = sortedEnrollments.findIndex(
+          (e) => e.courseId === grade.courseId && e.batchId === grade.batchId
+        );
+
+        // Calculate available credit from previous courses (progressive consumption)
+        let runningCredit = 0;
+        for (let i = 0; i < currentIndex; i++) {
+          const course = sortedEnrollments[i];
+          const courseBalance = Number(String(course.remainingBalance).replace(/,/g, ''));
+          if (courseBalance < 0) {
+            // Course was overpaid, add to running credit
+            runningCredit += Math.abs(courseBalance);
+          } else if (courseBalance > 0) {
+            // Course has balance due, consume credit
+            runningCredit = Math.max(0, runningCredit - courseBalance);
+          }
+        }
+
+        // Calculate balance after applying credits for this course
+        const currentBalance = Number(String(specificAssessment.remainingBalance).replace(/,/g, ''));
+        const balanceAfterCredits = Math.max(0, currentBalance - runningCredit);
+
+        console.log("[Grades Debug] Current Balance:", currentBalance);
+        console.log("[Grades Debug] Available Credit:", runningCredit);
+        console.log("[Grades Debug] Balance After Credits:", balanceAfterCredits);
+
+        if (balanceAfterCredits > 0) {
+          Swal.fire({
+            title: "Outstanding Balance",
+            text: `You have an outstanding balance of ₱${balanceAfterCredits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} for this course (after applying credits). Please clear your dues to access the certificate.`,
+            icon: "warning",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#992525",
+          });
+          return;
+        }
       }
     } catch (err) {
       console.error("[Grades Page] Error checking assessment balance:", err);
