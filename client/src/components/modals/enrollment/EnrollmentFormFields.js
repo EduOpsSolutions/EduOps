@@ -270,6 +270,29 @@ export default function EnrollmentFormFields({
             />
           </div>
 
+          {/* Courses Selected Section */}
+          <div className="mt-6">
+            <div className="bg-gray-50 rounded p-4 border border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Courses Selected
+              </label>
+              <ul className="list-disc ml-6">
+                {formData?.coursesToEnroll &&
+                  formData?.coursesToEnroll?.split(",").map((course, idx) => {
+                    return (
+                      <li key={idx} className="break-all">
+                        {course}
+                      </li>
+                    );
+                  })}
+              </ul>
+              <p className="text-xs text-gray-500 mt-1">
+                These courses will be visible to the student on their enrollment
+                tracking page.
+              </p>
+            </div>
+          </div>
+
           {/* Admin Remarks Section */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-4 text-dark-red">

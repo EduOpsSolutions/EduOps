@@ -7,31 +7,43 @@ import LedgerPagination from "../../components/common/LedgerPagination";
 
 const printStyles = `
   @media print {
+    @page {
+      size: landscape;
+      margin: 0.5in;
+    }
     body * { visibility: hidden !important; }
     .print-ledger-container, .print-ledger-container * { visibility: visible !important; }
     .print-ledger-container {
       position: absolute !important;
       left: 0;
       top: 0;
-      width: 100vw !important;
-      max-width: 100vw !important;
+      width: 100% !important;
+      max-width: 100% !important;
       min-width: 0 !important;
       overflow: visible !important;
       box-sizing: border-box !important;
       background: #fff !important;
+      padding: 0 !important;
+      margin: 0 !important;
     }
     table {
       width: 100% !important;
-      max-width: 100vw !important;
-      table-layout: auto !important;
-      font-size: 12px !important;
+      max-width: 100% !important;
+      table-layout: fixed !important;
+      font-size: 9px !important;
+      border-collapse: collapse !important;
     }
     th, td {
-      white-space: normal !important;
-      word-break: break-word !important;
-      overflow-wrap: break-word !important;
-      font-size: 12px !important;
-      padding: 4px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      font-size: 9px !important;
+      padding: 2px 4px !important;
+      border: 1px solid #ddd !important;
+    }
+    th {
+      font-weight: bold !important;
+      background-color: #f5f5f5 !important;
     }
     .no-print { display: none !important; }
   }
