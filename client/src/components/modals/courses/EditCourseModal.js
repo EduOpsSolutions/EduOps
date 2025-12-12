@@ -65,6 +65,7 @@ function EditCourseModal({
   // Fetch all courses for dropdown
   useEffect(() => {
     async function fetchAllCourses() {
+      if (!edit_course_modal) return;
       try {
         const token = getCookieItem("token") || "";
         const res = await fetch(`${process.env.REACT_APP_API_URL}/courses`, {
@@ -77,7 +78,7 @@ function EditCourseModal({
       }
     }
     fetchAllCourses();
-  }, []);
+  }, [edit_course_modal]);
 
   // Fetch requisites for this course
   useEffect(() => {
