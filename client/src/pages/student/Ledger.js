@@ -9,7 +9,30 @@ const printStyles = `
   @media print {
     body * { visibility: hidden !important; }
     .print-ledger-container, .print-ledger-container * { visibility: visible !important; }
-    .print-ledger-container { position: absolute !important; left: 0; top: 0; width: 100vw !important; background: #fff !important; box-shadow: none !important; border: 1px solid #000 !important; z-index: 9999; }
+    .print-ledger-container {
+      position: absolute !important;
+      left: 0;
+      top: 0;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      min-width: 0 !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
+      background: #fff !important;
+    }
+    table {
+      width: 100% !important;
+      max-width: 100vw !important;
+      table-layout: auto !important;
+      font-size: 12px !important;
+    }
+    th, td {
+      white-space: normal !important;
+      word-break: break-word !important;
+      overflow-wrap: break-word !important;
+      font-size: 12px !important;
+      padding: 4px !important;
+    }
     .no-print { display: none !important; }
   }
 `;
