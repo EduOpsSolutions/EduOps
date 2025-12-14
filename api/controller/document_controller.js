@@ -986,7 +986,9 @@ export const getAllDocumentValidations = async (req, res) => {
 export const getDocumentValidationBySignature = async (req, res) => {
   try {
     const { signature } = req.params;
-    const userRole = req.user.data.role;
+    
+    // Check if user is authenticated (optional for this endpoint)
+    const userRole = req.user?.data?.role || 'guest';
 
     // Anyone can validate a document signature (public endpoint)
     const validation = await DocumentModel.getDocumentValidationBySignature(
@@ -1000,7 +1002,7 @@ export const getDocumentValidationBySignature = async (req, res) => {
       });
     }
 
-    // Return limited information for non-admins
+    // Return limited information for non-admins and guests
     const responseData =
       userRole === "admin"
         ? validation

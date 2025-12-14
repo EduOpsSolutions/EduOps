@@ -70,6 +70,7 @@ import AdminSchedule from "./pages/admin/Schedule";
 import Logs from "./pages/admin/Logs";
 import Reports from "./pages/admin/Reports";
 import ReportSummary from "./pages/admin/ReportSummary";
+import GuestDocumentValidation from "./pages/public/GuestDocumentValidation";
 
 function App() {
   const { isAuthenticated, validateToken } = useAuthStore();
@@ -98,6 +99,7 @@ function App() {
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
           <Route path="enrollment" element={<Enrollment />} />
+          <Route path="validate-document" element={<GuestDocumentValidation />} />
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>
