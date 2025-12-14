@@ -2,12 +2,16 @@ import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDocumentValidationStore } from "../../stores/documentValidationStore";
 import Spinner from "../../components/common/Spinner";
+import jsQR from "jsqr";
 
 function DocumentValidation() {
   const [searchParams] = useSearchParams();
   const [signature, setSignature] = useState("");
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [qrUploadError, setQrUploadError] = useState("");
+  const [scanningQR, setScanningQR] = useState(false);
   const fileInputRef = useRef(null);
+  const qrInputRef = useRef(null);
 
   const {
     loading,
@@ -27,6 +31,67 @@ function DocumentValidation() {
       validateSignature(signatureParam);
     }
   }, [searchParams, documentInfo, validateSignature]);
+
+  const handleQRUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setQrUploadError("");
+    setScanningQR(true);
+
+    try {
+      // Read the image file
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas and get image data
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+          // Scan for QR code
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+          if (code) {
+            try {
+              // Extract signature from the URL
+              const url = new URL(code.data);
+              const signatureParam = url.searchParams.get("signature");
+              
+              if (signatureParam) {
+                setSignature(signatureParam);
+                validateSignature(signatureParam);
+              } else {
+                setQrUploadError("No signature found in QR code");
+              }
+            } catch (err) {
+              setQrUploadError("Invalid QR code format");
+            }
+          } else {
+            setQrUploadError("No QR code detected in the image");
+          }
+          setScanningQR(false);
+        };
+        img.onerror = () => {
+          setQrUploadError("Failed to load image");
+          setScanningQR(false);
+        };
+        img.src = event.target.result;
+      };
+      reader.onerror = () => {
+        setQrUploadError("Failed to read file");
+        setScanningQR(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setQrUploadError("Error processing QR code");
+      setScanningQR(false);
+    }
+  };
 
   const handleSignatureSubmit = async (e) => {
     e.preventDefault();
@@ -54,9 +119,13 @@ function DocumentValidation() {
   const handleValidateAnother = () => {
     setSignature("");
     setUploadedFile(null);
+    setQrUploadError("");
     resetValidation();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+    if (qrInputRef.current) {
+      qrInputRef.current.value = "";
     }
   };
 
@@ -133,33 +202,73 @@ function DocumentValidation() {
               </div>
             </div>
 
+            {/* QR Code Upload Section */}
             <div className="text-center">
-              <h3 className="text-lg font-semibold mb-3">Upload QR Code</h3>
-              <div className="flex justify-center">
-                <div className="w-24 h-24 border-2 border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-12 h-12 text-gray-400"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"
-                    />
-                  </svg>
+              <h3 className="text-lg font-semibold mb-3">Upload QR Code Image</h3>
+              
+              {qrUploadError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm">{qrUploadError}</p>
                 </div>
-              </div>
-              <p className="text-gray-500 text-sm mt-2">
-                QR Code scanning coming soon
+              )}
+
+              <input
+                ref={qrInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleQRUpload}
+                disabled={loading || scanningQR}
+                className="hidden"
+                id="qr-upload"
+              />
+              
+              <label
+                htmlFor="qr-upload"
+                className={`inline-flex flex-col items-center justify-center w-full max-w-xs mx-auto p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  scanningQR || loading
+                    ? "border-gray-300 bg-gray-50 cursor-not-allowed"
+                    : "border-gray-400 hover:border-dark-red-2 bg-gray-50 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex flex-col items-center">
+                  {scanningQR ? (
+                    <>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dark-red-2 mb-3"></div>
+                      <p className="text-sm text-gray-600">Scanning QR Code...</p>
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-12 h-12 text-gray-400 mb-3"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
+                        />
+                      </svg>
+                      <p className="text-sm font-medium text-gray-700 mb-1">
+                        Click to upload QR code
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        PNG, JPG, JPEG (Max 5MB)
+                      </p>
+                    </>
+                  )}
+                </div>
+              </label>
+              <p className="text-xs text-gray-500 mt-3">
+                Upload a screenshot or photo of the document's QR code to automatically validate
               </p>
             </div>
           </div>

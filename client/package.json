@@ -20,6 +20,7 @@
     "flowbite-react": "^0.7.5",
     "jose": "^6.0.11",
     "js-cookie": "^3.0.5",
+    "jsqr": "^1.4.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.519.0",
     "moment": "^2.30.1",
