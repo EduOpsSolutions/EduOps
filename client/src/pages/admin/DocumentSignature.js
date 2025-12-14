@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Pagination from "../../components/common/Pagination";
 import SearchFormVertical from "../../components/common/SearchFormVertical";
 import UploadDocumentSignatureModal from "../../components/modals/documents/UploadDocumentSignatureModal";
 import { useDocumentSignatureSearchStore, useDocumentSignatureStore } from "../../stores/documentSignatureStore";
 
 function DocumentSignature() {
+  const navigate = useNavigate();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   
   const searchStore = useDocumentSignatureSearchStore();
@@ -162,6 +164,23 @@ function DocumentSignature() {
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 View File
+                              </button>
+                              <button
+                                onClick={() => navigate(`/admin/document-validation?signature=${document.fileSignature}`)}
+                                className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 hover:text-green-900 hover:underline transition-all duration-200"
+                                title="Validate Document"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.5}
+                                  stroke="currentColor"
+                                  className="w-4 h-4"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                                Validate
                               </button>
                             </div>
                           </td>

@@ -84,6 +84,10 @@ const getNavigationConfig = (role) => {
             path: `/${role}/document-signature`,
             label: "Document Signature",
           },
+          {
+            path: `/${role}/document-validation`,
+            label: "Document Validation",
+          },
         ],
       },
       reports: {
