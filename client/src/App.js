@@ -59,6 +59,7 @@ import AdminLedger from "./pages/admin/Ledger";
 import AdminAssessment from "./pages/admin/Assessment";
 import ManageFees from "./pages/admin/ManageFees";
 import DocumentSignature from "./pages/admin/DocumentSignature";
+import DocumentValidation from "./pages/student/DocumentValidation";
 import Archives from "./pages/admin/Archives";
 import AdminGrades from "./pages/admin/Grades";
 import DocumentRequests from "./pages/admin/DocumentRequests";
@@ -115,6 +116,7 @@ function App() {
                 <Route path="assessment" element={<Assessment />} />
                 <Route path="ledger" element={<Ledger />} />
                 <Route path="documents" element={<StudentDocuments />} />
+                <Route path="document-validation" element={<DocumentValidation />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
@@ -129,6 +131,7 @@ function App() {
                 <Route path="schedule" element={<TeacherSchedule />} />
                 <Route path="teachingLoad" element={<TeachingLoad />} />
                 <Route path="documents" element={<TeacherDocuments />} />
+                <Route path="document-validation" element={<DocumentValidation />} />
                 <Route path="transactions" element={<TeacherTransactions />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />

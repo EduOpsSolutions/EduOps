@@ -65,7 +65,7 @@ export const useDocumentSignatureStore = create((set, get) => ({
         throw new Error(response.message || 'Failed to search document signatures');
       }
 
-      const searchStore = useDocumentValidationSearchStore.getState();
+      const searchStore = useDocumentSignatureSearchStore.getState();
       searchStore.setData(response.data);
 
       set({ error: '' });
