@@ -100,6 +100,14 @@ export const useDocumentValidationStore = create((set, get) => ({
     });
   },
 
+  // Clear only comparison result (keep document info)
+  clearComparisonResult: () => {
+    set({ 
+      comparisonResult: null,
+      error: null
+    });
+  },
+
   // Reset entire store
   resetStore: () => {
     set({ 

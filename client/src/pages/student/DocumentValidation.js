@@ -21,6 +21,7 @@ function DocumentValidation() {
     validateSignature,
     compareFileSignature,
     resetValidation,
+    clearComparisonResult,
   } = useDocumentValidationStore();
 
   // Auto-fill and validate signature from URL parameter
@@ -110,6 +111,7 @@ function DocumentValidation() {
 
   const handleUploadNewFile = () => {
     setUploadedFile(null);
+    clearComparisonResult();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
       fileInputRef.current.click();
