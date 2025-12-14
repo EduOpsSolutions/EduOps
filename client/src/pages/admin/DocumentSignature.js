@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Pagination from "../../components/common/Pagination";
 import SearchFormVertical from "../../components/common/SearchFormVertical";
-import UploadDocumentValidationModal from "../../components/modals/documents/UploadDocumentValidationModal";
-import { useDocumentValidationSearchStore, useDocumentValidationStore } from "../../stores/documentValidationStore";
+import UploadDocumentSignatureModal from "../../components/modals/documents/UploadDocumentSignatureModal";
+import { useDocumentSignatureSearchStore, useDocumentSignatureStore } from "../../stores/documentSignatureStore";
 
-function DocumentValidation() {
+function DocumentSignature() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   
-  const searchStore = useDocumentValidationSearchStore();
+  const searchStore = useDocumentSignatureSearchStore();
   const { initializeSearch, resetSearch } = searchStore;
 
   const {
@@ -15,9 +15,9 @@ function DocumentValidation() {
     error,
     fetchDocuments,
     handleViewFile,
-    createDocumentValidation,
+    createDocumentSignature,
     resetStore
-  } = useDocumentValidationStore();
+  } = useDocumentSignatureStore();
 
   useEffect(() => {
     fetchDocuments();
@@ -66,7 +66,7 @@ function DocumentValidation() {
             <div className="flex justify-between items-center">
               <span>{error}</span>
               <button
-                onClick={() => useDocumentValidationStore.setState({ error: '' })}
+                onClick={() => useDocumentSignatureStore.setState({ error: '' })}
                 className="text-red-700 hover:text-red-900"
               >
                 ✕
@@ -87,7 +87,7 @@ function DocumentValidation() {
           <div className="w-full lg:flex-1 bg-white border-dark-red-2 border-2 rounded-lg p-4 sm:p-6 lg:p-10">
             <div className="flex justify-between items-center mb-6">
               <p className="font-bold text-lg sm:text-xl lg:text-2xl">
-                Document Validation
+                Document Signature
               </p>
               <button
                 onClick={() => setIsUploadModalOpen(true)}
@@ -178,7 +178,7 @@ function DocumentValidation() {
             {!loading && searchStore.totalItems === 0 && (
               <div className="text-center py-10">
                 <p className="text-gray-500 text-sm sm:text-base">
-                  No document validations found. Upload a document to get started.
+                  No document signatures found. Upload a document to get started.
                 </p>
               </div>
             )}
@@ -187,15 +187,15 @@ function DocumentValidation() {
 
       </div>
 
-      <UploadDocumentValidationModal
+      <UploadDocumentSignatureModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onUpload={async ({ documentName, file }) => {
-          await createDocumentValidation({ documentName }, file);
+          await createDocumentSignature({ documentName }, file);
         }}
       />
     </>
   );
 }
 
-export default DocumentValidation; 
+export default DocumentSignature; 

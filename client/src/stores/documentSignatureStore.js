@@ -3,7 +3,7 @@ import createSearchStore from './searchStore';
 import documentApi from '../utils/documentApi';
 import Swal from 'sweetalert2';
 
-export const useDocumentValidationSearchStore = createSearchStore({
+export const useDocumentSignatureSearchStore = createSearchStore({
   initialData: [],
   defaultSearchParams: {
     fileSignature: '',
@@ -23,14 +23,14 @@ export const useDocumentValidationSearchStore = createSearchStore({
   }
 });
 
-export const useDocumentValidationStore = create((set, get) => ({
+export const useDocumentSignatureStore = create((set, get) => ({
   loading: false,
   error: '',
   isValidateModalOpen: false,
   validateResult: null,
   validateSignature: '',
 
-  // Fetch all document validations (admin only)
+  // Fetch all document signatures (admin only)
   fetchDocuments: async () => {
     try {
       set({ loading: true, error: '' });
@@ -38,10 +38,10 @@ export const useDocumentValidationStore = create((set, get) => ({
       const response = await documentApi.validations.getAll();
       
       if (response.error) {
-        throw new Error(response.message || 'Failed to fetch document validations');
+        throw new Error(response.message || 'Failed to fetch document signatures');
       }
 
-      const searchStore = useDocumentValidationSearchStore.getState();
+      const searchStore = useDocumentSignatureSearchStore.getState();
       searchStore.setData(response.data);
       searchStore.initializeSearch();
 
@@ -54,7 +54,7 @@ export const useDocumentValidationStore = create((set, get) => ({
     }
   },
 
-  // Search document validations
+  // Search document signatures
   searchDocuments: async (filters = {}) => {
     try {
       set({ loading: true, error: '' });
@@ -62,7 +62,7 @@ export const useDocumentValidationStore = create((set, get) => ({
       const response = await documentApi.validations.search(filters);
       
       if (response.error) {
-        throw new Error(response.message || 'Failed to search document validations');
+        throw new Error(response.message || 'Failed to search document signatures');
       }
 
       const searchStore = useDocumentValidationSearchStore.getState();
@@ -77,16 +77,16 @@ export const useDocumentValidationStore = create((set, get) => ({
     }
   },
 
-  // Create new document validation (admin only)
-  createDocumentValidation: async (validationData, file) => {
+  // Create new document signature (admin only)
+  createDocumentSignature: async (signatureData, file) => {
     try {
       set({ loading: true, error: '' });
 
-      const formData = documentApi.helpers.createFormData(validationData, file);
+      const formData = documentApi.helpers.createFormData(signatureData, file);
       const response = await documentApi.validations.create(formData);
       
       if (response.error) {
-        throw new Error(response.message || 'Failed to create document validation');
+        throw new Error(response.message || 'Failed to create document signature');
       }
 
       await get().fetchDocuments(); // Refresh the list
@@ -117,7 +117,7 @@ export const useDocumentValidationStore = create((set, get) => ({
       console.error("Failed to create document validation:", error);
       
       // Extract detailed error message
-      let errorMessage = 'Failed to create document validation';
+      let errorMessage = 'Failed to create document signature';
       if (error.response?.data) {
         const errorData = error.response.data;
         if (errorData.details && Array.isArray(errorData.details)) {

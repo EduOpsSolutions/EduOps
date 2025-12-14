@@ -69,8 +69,8 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/document-requests`, label: "Document Requests" },
           //{ path: `/${role}/chatbot`, label: 'Chatbot' },
           {
-            path: `/${role}/document-validation`,
-            label: "Document Validation",
+            path: `/${role}/document-signature`,
+            label: "Document Signature",
           },
         ],
       },

@@ -58,7 +58,7 @@ import useAuthStore from "./stores/authStore";
 import AdminLedger from "./pages/admin/Ledger";
 import AdminAssessment from "./pages/admin/Assessment";
 import ManageFees from "./pages/admin/ManageFees";
-import DocumentValidation from "./pages/admin/DocumentValidation";
+import DocumentSignature from "./pages/admin/DocumentSignature";
 import Archives from "./pages/admin/Archives";
 import AdminGrades from "./pages/admin/Grades";
 import DocumentRequests from "./pages/admin/DocumentRequests";
@@ -161,8 +161,8 @@ function App() {
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
                 <Route
-                  path="document-validation"
-                  element={<DocumentValidation />}
+                  path="document-signature"
+                  element={<DocumentSignature />}
                 />
                 <Route path="grades" element={<AdminGrades />} />
                 <Route
