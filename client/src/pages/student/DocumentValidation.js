@@ -1,8 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useDocumentValidationStore } from "../../stores/documentValidationStore";
 import Spinner from "../../components/common/Spinner";
 
 function DocumentValidation() {
+  const [searchParams] = useSearchParams();
   const [signature, setSignature] = useState("");
   const [uploadedFile, setUploadedFile] = useState(null);
   const fileInputRef = useRef(null);
@@ -16,6 +18,15 @@ function DocumentValidation() {
     compareFileSignature,
     resetValidation,
   } = useDocumentValidationStore();
+
+  // Auto-fill and validate signature from URL parameter
+  useEffect(() => {
+    const signatureParam = searchParams.get("signature");
+    if (signatureParam && !documentInfo) {
+      setSignature(signatureParam);
+      validateSignature(signatureParam);
+    }
+  }, [searchParams, documentInfo, validateSignature]);
 
   const handleSignatureSubmit = async (e) => {
     e.preventDefault();

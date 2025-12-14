@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import documentApi from "../../../utils/documentApi";
@@ -560,10 +561,6 @@ function ViewRequestDetailsModal() {
               </div>
             )}
 
-          </div>
-
-          {/* Right Column - Documents & Files */}
-          <div className="space-y-3">
             {/* Payment Status - Only show for paid documents */}
             {!isFreeDocument && (
               <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -734,6 +731,10 @@ function ViewRequestDetailsModal() {
               </div>
             )}
 
+          </div>
+
+          {/* Right Column - Completed Document */}
+          <div className="space-y-3">
             {/* Completed Document */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
               <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Completed Document</h4>
@@ -782,12 +783,43 @@ function ViewRequestDetailsModal() {
                           )}
                         </button>
                       </div>
-                      <p className="text-xs text-gray-600 mt-2">
+                      <p className="text-xs text-gray-600 mt-2 mb-3">
                         <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Use this signature to verify document authenticity
                       </p>
+
+                      {/* QR Code and Validation Link */}
+                      <div className="border-t border-green-200 pt-3 mt-2">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="bg-white p-3 rounded-lg border-2 border-green-300 shadow-sm">
+                            <QRCodeSVG 
+                              value={`${window.location.origin}/${user?.role || 'student'}/document-validation?signature=${signature}`}
+                              size={120}
+                              level="M"
+                              includeMargin={false}
+                            />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs font-semibold text-gray-700 mb-2">Scan QR to validate your document</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const validationUrl = `/${user?.role || 'student'}/document-validation?signature=${signature}`;
+                                navigate(validationUrl);
+                                closeViewDetailsModal();
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800 underline font-medium flex items-center gap-1 mx-auto"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Or click here to validate
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     ) : null;
                   })()}
