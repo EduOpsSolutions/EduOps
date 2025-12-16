@@ -347,16 +347,16 @@ function Login() {
             </div>
 
             {/* Pay as Guest and Validate Documents Options */}
-            <div className="flex items-end justify-center gap-4 mt-4 px-4">
+            <div className="flex items-end justify-center gap-4 mt-4 px-4 flex-col">
               <button
                 onClick={() => navigate("/paymentForm")}
-                className="flex flex-col w-1/2 lg:w-1/3 text-black text-lg font-sans py-2 px-4 bg-yellow-300 hover:bg-yellow-400 font-bold transition-colors duration-200"
+                className="flex flex-col w-full text-black text-lg font-sans py-2 px-4 bg-yellow-300 hover:bg-yellow-400 font-bold transition-colors duration-200"
               >
                 Pay as Guest
               </button>
               <button
                 onClick={() => navigate("/validate-document")}
-                className="flex-col w-1/2 lg:w-1/3 text-white text-lg font-sans py-2 px-4 bg-blue-700 hover:bg-blue-800 font-bold transition-colors duration-200 flex items-center gap-2"
+                className="flex-col w-full text-white text-lg font-sans py-2 px-4 bg-blue-700 hover:bg-blue-800 font-bold transition-colors duration-200 flex items-center gap-2"
               >
                 Validate Documents
               </button>

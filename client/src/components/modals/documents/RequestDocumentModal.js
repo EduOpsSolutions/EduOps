@@ -428,7 +428,7 @@ function RequestDocumentModal(props) {
                                     disabled={loading}
                                     className="px-4 py-2 text-sm font-medium text-white bg-dark-red-2 rounded-md hover:bg-dark-red-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-[110px]"
                                 >
-                                    {loading ? 'Confirm' : 'Confirm'}
+                                    Submit
                                 </button>
                             </div>
                         </div>

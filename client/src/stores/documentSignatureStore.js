@@ -12,12 +12,12 @@ export const useDocumentSignatureSearchStore = createSearchStore({
   initialItemsPerPage: 10,
   showResultsOnLoad: true,
   filterFunction: (data, searchParams) => {
-    return data.filter(document => {
+    return data.filter(doc => {
       return (
         (searchParams.fileSignature === '' ||
-          document.fileSignature.toLowerCase().includes(searchParams.fileSignature.toLowerCase())) &&
+          doc.fileSignature.toLowerCase().includes(searchParams.fileSignature.toLowerCase())) &&
         (searchParams.documentName === '' ||
-          document.documentName.toLowerCase().includes(searchParams.documentName.toLowerCase()))
+          doc.documentName.toLowerCase().includes(searchParams.documentName.toLowerCase()))
       );
     });
   }
@@ -180,10 +180,10 @@ export const useDocumentSignatureStore = create((set, get) => ({
     }
   },
 
-  handleViewFile: (document) => {
+  handleViewFile: (documentData) => {
     // Open file directly in new tab
-    if (document.filePath) {
-      window.open(document.filePath, '_blank', 'noopener,noreferrer');
+    if (documentData.filePath) {
+      window.open(documentData.filePath, '_blank', 'noopener,noreferrer');
     }
   },
 
@@ -207,11 +207,11 @@ export const useDocumentSignatureStore = create((set, get) => ({
     set({ validateSignature: signature });
   },
 
-  handleDownload: async (document) => {
+  handleDownload: async (documentData) => {
     try {
       const result = await Swal.fire({
         title: 'Download Document',
-        text: `Do you want to download "${document.documentName}"?`,
+        text: `Do you want to download "${documentData.documentName}"?`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Download',
@@ -237,16 +237,16 @@ export const useDocumentSignatureStore = create((set, get) => ({
         });
 
         // If the document has a file path, download it
-        if (document.filePath) {
+        if (documentData.filePath) {
           const success = await documentApi.helpers.downloadFile(
-            document.filePath, 
-            `${document.fileSignature}_${document.documentName}`
+            documentData.filePath,
+            `${documentData.fileSignature}_${documentData.documentName}`
           );
-          
+
           if (success) {
             Swal.fire({
               title: 'Download Successful',
-              text: `"${document.documentName}" has been downloaded successfully.`,
+              text: `"${documentData.documentName}" has been downloaded successfully.`,
               icon: 'success',
               confirmButtonColor: '#992525',
               buttonsStyling: true,
@@ -261,8 +261,8 @@ export const useDocumentSignatureStore = create((set, get) => ({
           // Fallback: create a text file with document info
           const element = document.createElement('a');
           element.setAttribute('href', 'data:text/plain;charset=utf-8,' +
-            encodeURIComponent(`Document: ${document.documentName}\nFile Signature: ${document.fileSignature}\nCreated: ${document.createdAt}`));
-          element.setAttribute('download', `${document.fileSignature}.txt`);
+            encodeURIComponent(`Document: ${documentData.documentName}\nFile Signature: ${documentData.fileSignature}\nCreated: ${documentData.createdAt}`));
+          element.setAttribute('download', `${documentData.fileSignature}.txt`);
           element.style.display = 'none';
           document.body.appendChild(element);
           element.click();
@@ -270,7 +270,7 @@ export const useDocumentSignatureStore = create((set, get) => ({
 
           Swal.fire({
             title: 'Download Successful',
-            text: `"${document.documentName}" information has been downloaded successfully.`,
+            text: `"${documentData.documentName}" information has been downloaded successfully.`,
             icon: 'success',
             confirmButtonColor: '#992525',
             buttonsStyling: true,
@@ -284,7 +284,7 @@ export const useDocumentSignatureStore = create((set, get) => ({
       console.error("Download failed:", error);
       Swal.fire({
         title: 'Download Failed',
-        text: `Failed to download "${document.documentName}". Please try again.`,
+        text: `Failed to download "${documentData.documentName}". Please try again.`,
         icon: 'error',
         confirmButtonColor: '#992525',
         buttonsStyling: true,
