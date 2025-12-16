@@ -25,7 +25,10 @@ const getNavigationConfig = (role) => {
         label: "Documents",
         items: [
           { path: `/${role}/documents`, label: "Browse Documents" },
-          { path: `/${role}/document-validation`, label: "Document Validation" },
+          {
+            path: `/${role}/document-validation`,
+            label: "Document Validation",
+          },
         ],
       },
     },
@@ -49,7 +52,10 @@ const getNavigationConfig = (role) => {
         label: "Documents",
         items: [
           { path: `/${role}/documents`, label: "Browse Documents" },
-          { path: `/${role}/document-validation`, label: "Document Validation" },
+          {
+            path: `/${role}/document-validation`,
+            label: "Document Validation",
+          },
         ],
       },
     },
@@ -82,7 +88,7 @@ const getNavigationConfig = (role) => {
           //{ path: `/${role}/chatbot`, label: 'Chatbot' },
           {
             path: `/${role}/document-signature`,
-            label: "Document Signature",
+            label: "Document Signatures",
           },
           {
             path: `/${role}/document-validation`,

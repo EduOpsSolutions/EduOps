@@ -70,7 +70,7 @@ function GuestDocumentValidation() {
             try {
               const url = new URL(code.data);
               const signatureParam = url.searchParams.get("signature");
-              
+
               if (signatureParam) {
                 setSignature(signatureParam);
                 validateSignature(signatureParam);
@@ -172,8 +172,12 @@ function GuestDocumentValidation() {
               />
             </svg>
             <div className="ml-3">
-              <p className="text-2xl sm:text-3xl font-semibold">Verify Document Authenticity</p>
-              <p className="text-sm text-gray-600 mt-1">Guest Access - No login required</p>
+              <p className="text-2xl sm:text-3xl font-semibold">
+                Verify Document Authenticity
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Guest Access - No login required
+              </p>
             </div>
           </div>
 
@@ -229,8 +233,10 @@ function GuestDocumentValidation() {
 
               {/* QR Code Upload Section */}
               <div className="text-center">
-                <h3 className="text-lg font-semibold mb-3">Upload QR Code Image</h3>
-                
+                <h3 className="text-lg font-semibold mb-3">
+                  Upload QR Code Image
+                </h3>
+
                 {qrUploadError && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-red-700 text-sm">{qrUploadError}</p>
@@ -246,7 +252,7 @@ function GuestDocumentValidation() {
                   className="hidden"
                   id="qr-upload"
                 />
-                
+
                 <label
                   htmlFor="qr-upload"
                   className={`inline-flex flex-col items-center justify-center w-full max-w-xs mx-auto p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
@@ -259,7 +265,9 @@ function GuestDocumentValidation() {
                     {scanningQR ? (
                       <>
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dark-red-2 mb-3"></div>
-                        <p className="text-sm text-gray-600">Scanning QR Code...</p>
+                        <p className="text-sm text-gray-600">
+                          Scanning QR Code...
+                        </p>
                       </>
                     ) : (
                       <>
@@ -293,7 +301,8 @@ function GuestDocumentValidation() {
                   </div>
                 </label>
                 <p className="text-xs text-gray-500 mt-3">
-                  Upload a screenshot or photo of the document's QR code to automatically validate
+                  Upload a screenshot or photo of the document's QR code to
+                  automatically validate
                 </p>
               </div>
             </div>
@@ -489,10 +498,11 @@ function GuestDocumentValidation() {
                       ✗ File signatures does not match!
                     </p>
                     <p className="text-red-700 text-sm">
-                      Uploaded file signature: {comparisonResult.uploadedSignature}
+                      Uploaded file signature:{" "}
+                      {comparisonResult.uploadedSignature}
                     </p>
                     <p className="text-red-600 text-xs mt-2">
-                      This document may not be authentic. Please verify with the issuing institution.
+                      This document may not be authentic.
                     </p>
                   </div>
                   <button
