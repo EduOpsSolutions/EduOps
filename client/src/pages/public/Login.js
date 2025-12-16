@@ -132,7 +132,7 @@ function Login() {
   return (
     // Backgroung image and overlay
     <div
-      className="flex justify-center items-center bg-white-yellow-tone"
+      className="flex justify-center items-center bg-white-yellow-tone h-[calc(100vh + 100px)]"
       style={{
         backgroundImage: `url(${Bg_image})`,
         backgroundSize: "135%",
@@ -143,7 +143,7 @@ function Login() {
       <div className="absolute inset-0 bg-white-yellow-tone opacity-75"></div>
 
       {/* Login Form */}
-      <div className="relative flex bg-dark-red-3 w-[1200px] h-[640px] z-10 overflow-hidden shadow-login-form rounded-tr-md rounded-bl-md rounded-tl-[5rem] rounded-br-[5rem]">
+      <div className="relative flex bg-dark-red-3 w-[1200px] h-[700px] z-10 overflow-hidden shadow-login-form rounded-tr-md rounded-bl-md rounded-tl-[5rem] rounded-br-[5rem]">
         <div className="flex w-full h-full relative">
           <div className="flex-[1.3] flex items-center justify-center relative">
             {/* Left Section */}
@@ -321,7 +321,7 @@ function Login() {
             </form>
 
             {/* New Student and Enrollment Tracker Area */}
-            <div className="container flex items-center justify-center mt-4 mr-8 lg:mr-0">
+            <div className="container flex items-end justify-center mt-4 px-4 lg:mr-0">
               <div className="flex flex-col w-1/2 lg:w-1/3">
                 <p className="text-white-yellow-tone text-xs font-sans -mb-3 px-2">
                   New Student?
@@ -346,13 +346,19 @@ function Login() {
               </div>
             </div>
 
-            {/* Pay as Guest Option */}
-            <div className="flex items-center justify-center mt-4">
+            {/* Pay as Guest and Validate Documents Options */}
+            <div className="flex items-end justify-center gap-4 mt-4 px-4 flex-col">
               <button
                 onClick={() => navigate("/paymentForm")}
-                className="text-black text-lg font-sans py-2 px-4 bg-yellow-300  hover:bg-yellow-400 font-bold transition-colors duration-200"
+                className="flex flex-col w-full text-black text-lg font-sans py-2 px-4 bg-yellow-300 hover:bg-yellow-400 font-bold transition-colors duration-200"
               >
                 Pay as Guest
+              </button>
+              <button
+                onClick={() => navigate("/validate-document")}
+                className="flex-col w-full text-white text-lg font-sans py-2 px-4 bg-blue-700 hover:bg-blue-800 font-bold transition-colors duration-200 flex items-center gap-2"
+              >
+                Validate Documents
               </button>
             </div>
 

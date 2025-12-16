@@ -58,7 +58,9 @@ import useAuthStore from "./stores/authStore";
 import AdminLedger from "./pages/admin/Ledger";
 import AdminAssessment from "./pages/admin/Assessment";
 import ManageFees from "./pages/admin/ManageFees";
-import DocumentValidation from "./pages/admin/DocumentValidation";
+import DocumentSignature from "./pages/admin/DocumentSignature";
+import StudentDocumentValidation from "./pages/student/DocumentValidation";
+import AdminDocumentValidation from "./pages/admin/DocumentValidation";
 import Archives from "./pages/admin/Archives";
 import AdminGrades from "./pages/admin/Grades";
 import DocumentRequests from "./pages/admin/DocumentRequests";
@@ -68,6 +70,7 @@ import AdminSchedule from "./pages/admin/Schedule";
 import Logs from "./pages/admin/Logs";
 import Reports from "./pages/admin/Reports";
 import ReportSummary from "./pages/admin/ReportSummary";
+import GuestDocumentValidation from "./pages/public/GuestDocumentValidation";
 
 function App() {
   const { isAuthenticated, validateToken } = useAuthStore();
@@ -96,6 +99,7 @@ function App() {
           <Route path="sign-up" element={<SignUp />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
           <Route path="enrollment" element={<Enrollment />} />
+          <Route path="validate-document" element={<GuestDocumentValidation />} />
 
           {/* Public legal Routes */}
           <Route path="legal" element={<PublicLayout />}>
@@ -115,6 +119,7 @@ function App() {
                 <Route path="assessment" element={<Assessment />} />
                 <Route path="ledger" element={<Ledger />} />
                 <Route path="documents" element={<StudentDocuments />} />
+                <Route path="document-validation" element={<StudentDocumentValidation />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
@@ -129,6 +134,7 @@ function App() {
                 <Route path="schedule" element={<TeacherSchedule />} />
                 <Route path="teachingLoad" element={<TeachingLoad />} />
                 <Route path="documents" element={<TeacherDocuments />} />
+                <Route path="document-validation" element={<StudentDocumentValidation />} />
                 <Route path="transactions" element={<TeacherTransactions />} />
                 <Route path="legal">
                   <Route path="privacy-policy" element={<PrivacyPolicy />} />
@@ -161,8 +167,12 @@ function App() {
                 <Route path="assessment" element={<AdminAssessment />} />
                 <Route path="managefees" element={<ManageFees />} />
                 <Route
+                  path="document-signature"
+                  element={<DocumentSignature />}
+                />
+                <Route
                   path="document-validation"
-                  element={<DocumentValidation />}
+                  element={<AdminDocumentValidation />}
                 />
                 <Route path="grades" element={<AdminGrades />} />
                 <Route

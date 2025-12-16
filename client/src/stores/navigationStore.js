@@ -21,7 +21,16 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/ledger`, label: "Ledger" },
         ],
       },
-      documents: { path: `/${role}/documents`, label: "Documents" },
+      documents: {
+        label: "Documents",
+        items: [
+          { path: `/${role}/documents`, label: "Browse Documents" },
+          {
+            path: `/${role}/document-validation`,
+            label: "Document Validation",
+          },
+        ],
+      },
     },
     teacher: {
       home: { path: `/${role}`, label: "Home" },
@@ -39,7 +48,16 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/transactions`, label: "Transactions" },
         ],
       },
-      documents: { path: `/${role}/documents`, label: "Documents" },
+      documents: {
+        label: "Documents",
+        items: [
+          { path: `/${role}/documents`, label: "Browse Documents" },
+          {
+            path: `/${role}/document-validation`,
+            label: "Document Validation",
+          },
+        ],
+      },
     },
     admin: {
       home: { path: `/${role}`, label: "Home" },
@@ -68,6 +86,10 @@ const getNavigationConfig = (role) => {
           { path: `/${role}/manage-documents`, label: "Manage Documents" },
           { path: `/${role}/document-requests`, label: "Document Requests" },
           //{ path: `/${role}/chatbot`, label: 'Chatbot' },
+          {
+            path: `/${role}/document-signature`,
+            label: "Document Signatures",
+          },
           {
             path: `/${role}/document-validation`,
             label: "Document Validation",

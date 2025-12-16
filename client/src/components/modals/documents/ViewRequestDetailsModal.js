@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import { useDocumentRequestStore } from "../../../stores/documentRequestStore";
 import useAuthStore from "../../../stores/authStore";
 import documentApi from "../../../utils/documentApi";
@@ -9,7 +10,13 @@ import { copyToClipboard } from "../../../utils/clipboard";
 
 function ViewRequestDetailsModal() {
   const navigate = useNavigate();
-  const { viewDetailsModal, closeViewDetailsModal, selectedRequest, fetchDocumentRequests, refreshSelectedRequest } = useDocumentRequestStore();
+  const {
+    viewDetailsModal,
+    closeViewDetailsModal,
+    selectedRequest,
+    fetchDocumentRequests,
+    refreshSelectedRequest,
+  } = useDocumentRequestStore();
   const user = useAuthStore((state) => state.user);
   const [uploading, setUploading] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -26,14 +33,18 @@ function ViewRequestDetailsModal() {
       if (selectedRequest?.validationSignature) {
         setLoadingValidation(true);
         try {
-          const response = await documentApi.validations.validateSignature(selectedRequest.validationSignature);
+          const response = await documentApi.validations.validateSignature(
+            selectedRequest.validationSignature
+          );
           if (response.data) {
             setValidationData(response.data);
           }
         } catch (error) {
-          console.log('Could not fetch validation details:', error);
+          console.log("Could not fetch validation details:", error);
           // Set basic data if we have the signature even if fetch fails
-          setValidationData({ fileSignature: selectedRequest.validationSignature });
+          setValidationData({
+            fileSignature: selectedRequest.validationSignature,
+          });
         } finally {
           setLoadingValidation(false);
         }
@@ -48,58 +59,67 @@ function ViewRequestDetailsModal() {
   if (!viewDetailsModal || !selectedRequest) return null;
 
   const isOwnRequest = user && selectedRequest.userId === user.id;
-  const canUploadProof = isOwnRequest && (user.role === 'student' || user.role === 'teacher');
-  const isAdmin = user && user.role === 'admin';
-  
-  const isFreeDocument = selectedRequest.document?.price === 'free' || selectedRequest.price === 'free';
+  const canUploadProof =
+    isOwnRequest && (user.role === "student" || user.role === "teacher");
+  const isAdmin = user && user.role === "admin";
+
+  const isFreeDocument =
+    selectedRequest.document?.price === "free" ||
+    selectedRequest.price === "free";
 
   const handleProceedToPayment = () => {
     closeViewDetailsModal();
-    navigate('/paymentForm', {
+    navigate("/paymentForm", {
       state: {
         documentFee: {
-          feeType: 'document_fee',
-          amount: selectedRequest.document?.amount || selectedRequest.amount
-        }
-      }
+          feeType: "document_fee",
+          amount: selectedRequest.document?.amount || selectedRequest.amount,
+        },
+      },
     });
   };
 
   const handleAttachTransaction = async () => {
     if (!selectedTransaction) {
       await Swal.fire({
-        title: 'Error',
-        text: 'Please select a transaction first',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error",
+        text: "Please select a transaction first",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
       return;
     }
 
-    console.log('[handleAttachTransaction] Attaching:', {
+    console.log("[handleAttachTransaction] Attaching:", {
       requestId: selectedRequest.id,
       transactionId: selectedTransaction.transactionId,
-      selectedTransaction
+      selectedTransaction,
     });
 
     const result = await Swal.fire({
-      title: 'Attach Transaction?',
+      title: "Attach Transaction?",
       html: `
         <div style="text-align: left;">
           <p style="margin-bottom: 10px;">Are you sure you want to attach this transaction?</p>
           <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-top: 12px;">
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Transaction ID:</strong> ${selectedTransaction.transactionId}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Amount:</strong> ₱${parseFloat(selectedTransaction.amount).toFixed(2)}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>User:</strong> ${selectedTransaction.firstName} ${selectedTransaction.lastName}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Transaction ID:</strong> ${
+              selectedTransaction.transactionId
+            }</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Amount:</strong> ₱${parseFloat(
+              selectedTransaction.amount
+            ).toFixed(2)}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>User:</strong> ${
+              selectedTransaction.firstName
+            } ${selectedTransaction.lastName}</p>
           </div>
         </div>
       `,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, attach it',
-      cancelButtonText: 'Cancel'
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, attach it",
+      cancelButtonText: "Cancel",
     });
 
     if (result.isConfirmed) {
@@ -107,38 +127,45 @@ function ViewRequestDetailsModal() {
         setAttachingTransaction(true);
 
         Swal.fire({
-          title: 'Attaching Transaction...',
-          text: 'Please wait...',
+          title: "Attaching Transaction...",
+          text: "Please wait...",
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
-          }
+          },
         });
 
-        console.log('[handleAttachTransaction] Calling API with:', selectedRequest.id, selectedTransaction.transactionId);
-        await documentApi.requests.attachTransaction(selectedRequest.id, selectedTransaction.transactionId);
+        console.log(
+          "[handleAttachTransaction] Calling API with:",
+          selectedRequest.id,
+          selectedTransaction.transactionId
+        );
+        await documentApi.requests.attachTransaction(
+          selectedRequest.id,
+          selectedTransaction.transactionId
+        );
 
-        await Promise.all([
-          fetchDocumentRequests(),
-          refreshSelectedRequest()
-        ]);
+        await Promise.all([fetchDocumentRequests(), refreshSelectedRequest()]);
 
         Swal.fire({
-          title: 'Success!',
-          text: 'Transaction attached successfully. Payment status updated to verified.',
-          icon: 'success',
-          confirmButtonColor: '#992525',
+          title: "Success!",
+          text: "Transaction attached successfully. Payment status updated to verified.",
+          icon: "success",
+          confirmButtonColor: "#992525",
         });
 
         setSelectedTransaction(null);
       } catch (error) {
-        console.error('Attach transaction error:', error);
-        console.error('Error response:', error.response);
+        console.error("Attach transaction error:", error);
+        console.error("Error response:", error.response);
         Swal.fire({
-          title: 'Error!',
-          text: error.response?.data?.message || error.message || 'Failed to attach transaction',
-          icon: 'error',
-          confirmButtonColor: '#992525',
+          title: "Error!",
+          text:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to attach transaction",
+          icon: "error",
+          confirmButtonColor: "#992525",
         });
       } finally {
         setAttachingTransaction(false);
@@ -153,62 +180,66 @@ function ViewRequestDetailsModal() {
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       Swal.fire({
-        title: 'Error!',
-        text: 'File size must be less than 5MB',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error!",
+        text: "File size must be less than 5MB",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
       return;
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type)) {
       Swal.fire({
-        title: 'Error!',
-        text: 'Only images (JPG, PNG, GIF) and PDF files are allowed',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error!",
+        text: "Only images (JPG, PNG, GIF) and PDF files are allowed",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
       return;
     }
 
     try {
       setUploading(true);
-      
+
       Swal.fire({
-        title: 'Uploading...',
-        text: 'Please wait while we upload your proof of payment.',
+        title: "Uploading...",
+        text: "Please wait while we upload your proof of payment.",
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
-        }
+        },
       });
 
       await documentApi.requests.uploadProofOfPayment(selectedRequest.id, file);
-      
-      await Promise.all([
-        fetchDocumentRequests(),
-        refreshSelectedRequest()
-      ]);
+
+      await Promise.all([fetchDocumentRequests(), refreshSelectedRequest()]);
 
       Swal.fire({
-        title: 'Success!',
-        text: 'Proof of payment uploaded successfully',
-        icon: 'success',
-        confirmButtonColor: '#992525',
+        title: "Success!",
+        text: "Proof of payment uploaded successfully",
+        icon: "success",
+        confirmButtonColor: "#992525",
       });
 
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       Swal.fire({
-        title: 'Error!',
-        text: error.response?.data?.message || 'Failed to upload proof of payment',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error!",
+        text:
+          error.response?.data?.message || "Failed to upload proof of payment",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
     } finally {
       setUploading(false);
@@ -217,49 +248,48 @@ function ViewRequestDetailsModal() {
 
   const handleRemoveProof = async () => {
     const result = await Swal.fire({
-      title: 'Remove Proof of Payment?',
-      text: 'Are you sure you want to remove this proof of payment?',
-      icon: 'warning',
+      title: "Remove Proof of Payment?",
+      text: "Are you sure you want to remove this proof of payment?",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, remove it',
-      cancelButtonText: 'Cancel'
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, remove it",
+      cancelButtonText: "Cancel",
     });
 
     if (result.isConfirmed) {
       try {
         setUploading(true);
-        
+
         Swal.fire({
-          title: 'Removing...',
-          text: 'Please wait...',
+          title: "Removing...",
+          text: "Please wait...",
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
-          }
+          },
         });
 
         await documentApi.requests.removeProofOfPayment(selectedRequest.id);
-        
-        await Promise.all([
-          fetchDocumentRequests(),
-          refreshSelectedRequest()
-        ]);
+
+        await Promise.all([fetchDocumentRequests(), refreshSelectedRequest()]);
 
         Swal.fire({
-          title: 'Removed!',
-          text: 'Proof of payment has been removed',
-          icon: 'success',
-          confirmButtonColor: '#992525',
+          title: "Removed!",
+          text: "Proof of payment has been removed",
+          icon: "success",
+          confirmButtonColor: "#992525",
         });
       } catch (error) {
-        console.error('Remove error:', error);
+        console.error("Remove error:", error);
         Swal.fire({
-          title: 'Error!',
-          text: error.response?.data?.message || 'Failed to remove proof of payment',
-          icon: 'error',
-          confirmButtonColor: '#992525',
+          title: "Error!",
+          text:
+            error.response?.data?.message ||
+            "Failed to remove proof of payment",
+          icon: "error",
+          confirmButtonColor: "#992525",
         });
       } finally {
         setUploading(false);
@@ -269,7 +299,11 @@ function ViewRequestDetailsModal() {
 
   const handleViewProof = () => {
     if (selectedRequest.proofOfPayment) {
-      window.open(selectedRequest.proofOfPayment, '_blank', 'noopener,noreferrer');
+      window.open(
+        selectedRequest.proofOfPayment,
+        "_blank",
+        "noopener,noreferrer"
+      );
     }
   };
 
@@ -280,69 +314,71 @@ function ViewRequestDetailsModal() {
     // Validate file size (10MB max for completed documents)
     if (file.size > 10 * 1024 * 1024) {
       Swal.fire({
-        title: 'Error!',
-        text: 'File size must be less than 10MB',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error!",
+        text: "File size must be less than 10MB",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
       return;
     }
 
     // Validate file type
     const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/jpg',
-      'image/png'
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
     ];
     if (!allowedTypes.includes(file.type)) {
       Swal.fire({
-        title: 'Error!',
-        text: 'Only PDF, DOC, DOCX, JPG, and PNG files are allowed',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error!",
+        text: "Only PDF, DOC, DOCX, JPG, and PNG files are allowed",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
       return;
     }
 
     try {
       setUploading(true);
-      
+
       Swal.fire({
-        title: 'Uploading...',
-        text: 'Please wait while we upload the completed document.',
+        title: "Uploading...",
+        text: "Please wait while we upload the completed document.",
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
-        }
+        },
       });
 
-      await documentApi.requests.uploadCompletedDocument(selectedRequest.id, file);
-      
-      await Promise.all([
-        fetchDocumentRequests(),
-        refreshSelectedRequest()
-      ]);
+      await documentApi.requests.uploadCompletedDocument(
+        selectedRequest.id,
+        file
+      );
+
+      await Promise.all([fetchDocumentRequests(), refreshSelectedRequest()]);
 
       Swal.fire({
-        title: 'Success!',
-        text: 'Completed document uploaded successfully',
-        icon: 'success',
-        confirmButtonColor: '#992525',
+        title: "Success!",
+        text: "Completed document uploaded successfully",
+        icon: "success",
+        confirmButtonColor: "#992525",
       });
 
       if (completedDocInputRef.current) {
-        completedDocInputRef.current.value = '';
+        completedDocInputRef.current.value = "";
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       Swal.fire({
-        title: 'Error!',
-        text: error.response?.data?.message || 'Failed to upload completed document',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error!",
+        text:
+          error.response?.data?.message ||
+          "Failed to upload completed document",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
     } finally {
       setUploading(false);
@@ -351,14 +387,14 @@ function ViewRequestDetailsModal() {
 
   const handleRemoveCompletedDocument = async () => {
     const result = await Swal.fire({
-      title: 'Remove Completed Document?',
-      text: 'Are you sure you want to remove this completed document?',
-      icon: 'warning',
+      title: "Remove Completed Document?",
+      text: "Are you sure you want to remove this completed document?",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#992525',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, remove it',
-      cancelButtonText: 'Cancel'
+      confirmButtonColor: "#992525",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, remove it",
+      cancelButtonText: "Cancel",
     });
 
     if (result.isConfirmed) {
@@ -366,34 +402,33 @@ function ViewRequestDetailsModal() {
         setUploading(true);
 
         Swal.fire({
-          title: 'Removing...',
-          text: 'Please wait...',
+          title: "Removing...",
+          text: "Please wait...",
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
-          }
+          },
         });
 
         await documentApi.requests.removeCompletedDocument(selectedRequest.id);
-        
-        await Promise.all([
-          fetchDocumentRequests(),
-          refreshSelectedRequest()
-        ]);
+
+        await Promise.all([fetchDocumentRequests(), refreshSelectedRequest()]);
 
         Swal.fire({
-          title: 'Removed!',
-          text: 'Completed document has been removed',
-          icon: 'success',
-          confirmButtonColor: '#992525',
+          title: "Removed!",
+          text: "Completed document has been removed",
+          icon: "success",
+          confirmButtonColor: "#992525",
         });
       } catch (error) {
-        console.error('Remove error:', error);
+        console.error("Remove error:", error);
         Swal.fire({
-          title: 'Error!',
-          text: error.response?.data?.message || 'Failed to remove completed document',
-          icon: 'error',
-          confirmButtonColor: '#992525',
+          title: "Error!",
+          text:
+            error.response?.data?.message ||
+            "Failed to remove completed document",
+          icon: "error",
+          confirmButtonColor: "#992525",
         });
       } finally {
         setUploading(false);
@@ -402,13 +437,14 @@ function ViewRequestDetailsModal() {
   };
 
   const handleCopySignature = async () => {
-    const signature = validationData?.fileSignature || selectedRequest?.validationSignature;
-    if (!signature || signature === 'undefined' || signature === 'null') {
+    const signature =
+      validationData?.fileSignature || selectedRequest?.validationSignature;
+    if (!signature || signature === "undefined" || signature === "null") {
       Swal.fire({
-        title: 'Error',
-        text: 'No signature available to copy',
-        icon: 'error',
-        confirmButtonColor: '#992525',
+        title: "Error",
+        text: "No signature available to copy",
+        icon: "error",
+        confirmButtonColor: "#992525",
       });
       return;
     }
@@ -419,45 +455,45 @@ function ViewRequestDetailsModal() {
 
       // Optional: Show success toast
       Swal.fire({
-        title: 'Copied!',
-        text: 'Signature copied to clipboard',
-        icon: 'success',
+        title: "Copied!",
+        text: "Signature copied to clipboard",
+        icon: "success",
         timer: 1500,
         showConfirmButton: false,
-        position: 'top-end',
+        position: "top-end",
         toast: true,
       });
     } catch (error) {
-      console.error('Failed to copy signature:', error);
+      console.error("Failed to copy signature:", error);
       Swal.fire({
-        title: 'Copy Failed',
+        title: "Copy Failed",
         html: `
           <p>Could not copy automatically. Please copy manually:</p>
           <div style="background: #f3f4f6; padding: 8px; margin-top: 8px; border-radius: 4px; font-family: monospace; word-break: break-all;">
             ${signature}
           </div>
         `,
-        icon: 'warning',
-        confirmButtonColor: '#992525',
-        confirmButtonText: 'OK',
+        icon: "warning",
+        confirmButtonColor: "#992525",
+        confirmButtonText: "OK",
       });
     }
   };
 
   const getStatusBadgeColor = (status) => {
     switch (status) {
-      case 'Fulfilled':
-        return 'bg-green-100 text-green-800 border border-green-200';
-      case 'Delivered':
-        return 'bg-blue-100 text-blue-800 border border-blue-200';
-      case 'In Transit':
-        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-      case 'In Process':
-        return 'bg-purple-100 text-purple-800 border border-purple-200';
-      case 'Failed':
-        return 'bg-red-100 text-red-800 border border-red-200';
+      case "Fulfilled":
+        return "bg-green-100 text-green-800 border border-green-200";
+      case "Delivered":
+        return "bg-blue-100 text-blue-800 border border-blue-200";
+      case "In Transit":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+      case "In Process":
+        return "bg-purple-100 text-purple-800 border border-purple-200";
+      case "Failed":
+        return "bg-red-100 text-red-800 border border-red-200";
       default:
-        return 'bg-gray-100 text-gray-800 border border-gray-200';
+        return "bg-gray-100 text-gray-800 border border-gray-200";
     }
   };
 
@@ -471,8 +507,18 @@ function ViewRequestDetailsModal() {
             className="bg-dark-red-2 rounded-lg p-1.5 text-white hover:bg-dark-red-5 transition-colors duration-150"
             onClick={closeViewDetailsModal}
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -484,70 +530,133 @@ function ViewRequestDetailsModal() {
             {/* User Information */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-base font-bold text-gray-900">{selectedRequest.name || 'Unknown Student'}</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeColor(selectedRequest.status)}`}>
+                <h3 className="text-base font-bold text-gray-900">
+                  {selectedRequest.name || "Unknown Student"}
+                </h3>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusBadgeColor(
+                    selectedRequest.status
+                  )}`}
+                >
                   {selectedRequest.status}
                 </span>
               </div>
-              
+
               {/* Contact Information */}
               <div className="space-y-2">
                 {selectedRequest.email && (
                   <div className="flex items-center gap-2 text-sm">
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <svg
+                      className="w-4 h-4 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
                     </svg>
-                    <span className="text-gray-700 truncate">{selectedRequest.email}</span>
+                    <span className="text-gray-700 truncate">
+                      {selectedRequest.email}
+                    </span>
                   </div>
                 )}
                 {selectedRequest.phone && (
                   <div className="flex items-center gap-2 text-sm">
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    <svg
+                      className="w-4 h-4 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                      />
                     </svg>
-                    <span className="text-gray-700">{selectedRequest.phone}</span>
+                    <span className="text-gray-700">
+                      {selectedRequest.phone}
+                    </span>
                   </div>
                 )}
-                {selectedRequest.mode === 'delivery' && selectedRequest.address && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="text-gray-700">{selectedRequest.address}{selectedRequest.city && `, ${selectedRequest.city}`}</span>
-                  </div>
-                )}
+                {selectedRequest.mode === "delivery" &&
+                  selectedRequest.address && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <svg
+                        className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                      <span className="text-gray-700">
+                        {selectedRequest.address}
+                        {selectedRequest.city && `, ${selectedRequest.city}`}
+                      </span>
+                    </div>
+                  )}
               </div>
             </div>
 
             {/* Document Information */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Document Info</h4>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                Document Info
+              </h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Type:</span>
-                  <span className="font-medium text-gray-900">{selectedRequest.documentName || selectedRequest.document?.documentName || 'Unknown'}</span>
+                  <span className="font-medium text-gray-900">
+                    {selectedRequest.documentName ||
+                      selectedRequest.document?.documentName ||
+                      "Unknown"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Date:</span>
-                  <span className="font-medium text-gray-900">{selectedRequest.displayDate}</span>
+                  <span className="font-medium text-gray-900">
+                    {selectedRequest.displayDate}
+                  </span>
                 </div>
                 {selectedRequest.purpose && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Purpose:</span>
-                    <span className="font-medium text-gray-900">{selectedRequest.purpose}</span>
+                    <span className="font-medium text-gray-900">
+                      {selectedRequest.purpose}
+                    </span>
                   </div>
                 )}
                 {selectedRequest.mode && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Mode:</span>
-                    <span className="font-medium text-gray-900 capitalize">{selectedRequest.mode}</span>
+                    <span className="font-medium text-gray-900 capitalize">
+                      {selectedRequest.mode}
+                    </span>
                   </div>
                 )}
-                {selectedRequest.remarks && selectedRequest.remarks !== '-' && (
+                {selectedRequest.remarks && selectedRequest.remarks !== "-" && (
                   <div className="pt-2 border-t border-gray-100">
                     <span className="text-gray-600">Remarks:</span>
-                    <p className="text-gray-900 mt-1">{selectedRequest.remarks}</p>
+                    <p className="text-gray-900 mt-1">
+                      {selectedRequest.remarks}
+                    </p>
                   </div>
                 )}
               </div>
@@ -555,52 +664,96 @@ function ViewRequestDetailsModal() {
 
             {selectedRequest.additionalNotes && (
               <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                <h4 className="text-xs font-semibold text-amber-900 uppercase mb-1.5">Notes</h4>
-                <p className="text-sm text-gray-700">{selectedRequest.additionalNotes}</p>
+                <h4 className="text-xs font-semibold text-amber-900 uppercase mb-1.5">
+                  Notes
+                </h4>
+                <p className="text-sm text-gray-700">
+                  {selectedRequest.additionalNotes}
+                </p>
               </div>
             )}
 
-          </div>
-
-          {/* Right Column - Documents & Files */}
-          <div className="space-y-3">
             {/* Payment Status - Only show for paid documents */}
             {!isFreeDocument && (
               <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Payment Status</h4>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  Payment Status
+                </h4>
                 <div className="space-y-2">
-                  {selectedRequest.paymentMethod === 'cash' ? (
+                  {selectedRequest.paymentMethod === "cash" ? (
                     <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
-                      <span className="text-sm text-green-700 flex-1">Cash on {selectedRequest.mode === 'delivery' ? 'Delivery' : 'Pickup'} - Auto-verified</span>
+                      <span className="text-sm text-green-700 flex-1">
+                        Cash on{" "}
+                        {selectedRequest.mode === "delivery"
+                          ? "Delivery"
+                          : "Pickup"}{" "}
+                        - Auto-verified
+                      </span>
                     </div>
-                  ) : selectedRequest.paymentStatus === 'verified' ? (
+                  ) : selectedRequest.paymentStatus === "verified" ? (
                     <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
-                      <span className="text-sm text-green-700 flex-1">Verified</span>
+                      <span className="text-sm text-green-700 flex-1">
+                        Verified
+                      </span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                      <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-4 h-4 text-yellow-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
-                      <span className="text-sm text-yellow-700 flex-1">Pending Verification</span>
+                      <span className="text-sm text-yellow-700 flex-1">
+                        Pending Verification
+                      </span>
                     </div>
                   )}
-                  
+
                   {selectedRequest.paymentId && (
                     <div className="text-xs text-gray-600 mt-2">
-                      <span className="font-semibold">Transaction ID:</span> {selectedRequest.paymentId}
+                      <span className="font-semibold">Transaction ID:</span>{" "}
+                      {selectedRequest.paymentId}
                     </div>
                   )}
-                  
+
                   {selectedRequest.paymentAmount && (
                     <div className="text-xs text-gray-600">
-                      <span className="font-semibold">Amount:</span> ₱{parseFloat(selectedRequest.paymentAmount).toFixed(2)}
+                      <span className="font-semibold">Amount:</span> ₱
+                      {parseFloat(selectedRequest.paymentAmount).toFixed(2)}
                     </div>
                   )}
                 </div>
@@ -608,187 +761,419 @@ function ViewRequestDetailsModal() {
             )}
 
             {/* Admin: Attach Transaction (only for online payments without verified status) */}
-            {!isFreeDocument && isAdmin && selectedRequest.paymentMethod !== 'cash' && selectedRequest.paymentStatus !== 'verified' && (
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Attach Transaction (Admin)</h4>
-                <TransactionSelector
-                  onSelectTransaction={setSelectedTransaction}
-                  selectedTransactionId={selectedTransaction?.transactionId}
-                />
-                {selectedTransaction && (
-                  <button
-                    type="button"
-                    onClick={handleAttachTransaction}
-                    disabled={attachingTransaction}
-                    className="w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center gap-2 mt-3"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    {attachingTransaction ? 'Attaching...' : 'Attach Transaction'}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Proof of Payment - Hidden for free documents and cash payments */}
-            {!isFreeDocument && selectedRequest.paymentMethod !== 'cash' && (
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Proof of Payment</h4>
-              
-              {selectedRequest.proofOfPayment ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-sm text-green-700 flex-1">Uploaded</span>
-                  </div>
-                  {selectedRequest.status === 'In Process' && canUploadProof && (
-                    <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded">
-                      <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-xs text-amber-700">Payment verification is being processed by admin. Please refrain from paying again to avoid duplicate transactions.</span>
-                    </div>
-                  )}
-                  <div className="flex gap-2">
+            {!isFreeDocument &&
+              isAdmin &&
+              selectedRequest.paymentMethod !== "cash" &&
+              selectedRequest.paymentStatus !== "verified" && (
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                    Attach Transaction (Admin)
+                  </h4>
+                  <TransactionSelector
+                    onSelectTransaction={setSelectedTransaction}
+                    selectedTransactionId={selectedTransaction?.transactionId}
+                  />
+                  {selectedTransaction && (
                     <button
                       type="button"
-                      onClick={handleViewProof}
-                      className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
+                      onClick={handleAttachTransaction}
+                      disabled={attachingTransaction}
+                      className="w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center gap-2 mt-3"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                        />
                       </svg>
-                      View
+                      {attachingTransaction
+                        ? "Attaching..."
+                        : "Attach Transaction"}
                     </button>
-                    {canUploadProof && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveProof}
-                        disabled={uploading}
-                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center"
-                        title="Remove proof of payment"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {canUploadProof ? (
-                    <>
-                      <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span className="text-sm text-yellow-700 flex-1">Not uploaded</span>
-                      </div>
-                      {selectedRequest.status === 'In Process' && selectedRequest.paymentStatus !== 'verified' && selectedRequest.paymentMethod !== 'cash' && (
-                        <button
-                          type="button"
-                          onClick={handleProceedToPayment}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                          </svg>
-                          Proceed to Payment
-                        </button>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={handleFileUpload}
-                        disabled={uploading}
-                        className="hidden"
-                        id="proof-upload"
-                      />
-                      <label
-                        htmlFor="proof-upload"
-                        className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        {uploading ? 'Uploading...' : 'Upload Proof'}
-                      </label>
-                      <p className="text-xs text-gray-500 text-center">JPG, PNG, PDF (Max 5MB)</p>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-sm text-gray-500 flex-1">Not available</span>
-                    </div>
                   )}
                 </div>
               )}
+
+            {/* Proof of Payment - Hidden for free documents and cash payments */}
+            {!isFreeDocument && selectedRequest.paymentMethod !== "cash" && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  Proof of Payment
+                </h4>
+
+                {selectedRequest.proofOfPayment ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <svg
+                        className="w-4 h-4 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <span className="text-sm text-green-700 flex-1">
+                        Uploaded
+                      </span>
+                    </div>
+                    {selectedRequest.status === "In Process" &&
+                      canUploadProof && (
+                        <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                          <svg
+                            className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          <span className="text-xs text-amber-700">
+                            Payment verification is being processed by admin.
+                            Please refrain from paying again to avoid duplicate
+                            transactions.
+                          </span>
+                        </div>
+                      )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleViewProof}
+                        className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                        View
+                      </button>
+                      {canUploadProof && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveProof}
+                          disabled={uploading}
+                          className="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center"
+                          title="Remove proof of payment"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {canUploadProof ? (
+                      <>
+                        <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <svg
+                            className="w-4 h-4 text-yellow-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          <span className="text-sm text-yellow-700 flex-1">
+                            Not uploaded
+                          </span>
+                        </div>
+                        {selectedRequest.status === "In Process" &&
+                          selectedRequest.paymentStatus !== "verified" &&
+                          selectedRequest.paymentMethod !== "cash" && (
+                            <button
+                              type="button"
+                              onClick={handleProceedToPayment}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                                />
+                              </svg>
+                              Proceed to Payment
+                            </button>
+                          )}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={handleFileUpload}
+                          disabled={uploading}
+                          className="hidden"
+                          id="proof-upload"
+                        />
+                        <label
+                          htmlFor="proof-upload"
+                          className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2 ${
+                            uploading ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
+                          </svg>
+                          {uploading ? "Uploading..." : "Upload Proof"}
+                        </label>
+                        <p className="text-xs text-gray-500 text-center">
+                          JPG, PNG, PDF (Max 5MB)
+                        </p>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded">
+                        <svg
+                          className="w-4 h-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span className="text-sm text-gray-500 flex-1">
+                          Not available
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
+          </div>
 
+          {/* Right Column - Completed Document */}
+          <div className="space-y-3">
             {/* Completed Document */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Completed Document</h4>
-              
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                Completed Document
+              </h4>
+
               {selectedRequest.fulfilledDocumentUrl ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-4 h-4 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     <span className="text-sm text-blue-700 flex-1">Ready</span>
                   </div>
 
                   {/* File Signature Section */}
                   {(() => {
-                    const signature = validationData?.fileSignature || selectedRequest.validationSignature;
-                    return signature && signature !== 'undefined' && signature !== 'null' ? (
+                    const signature =
+                      validationData?.fileSignature ||
+                      selectedRequest.validationSignature;
+                    return signature &&
+                      signature !== "undefined" &&
+                      signature !== "null" ? (
                       <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
                         <div className="flex items-center gap-2 mb-2">
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          <svg
+                            className="w-4 h-4 text-green-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                            />
                           </svg>
-                          <span className="text-xs font-semibold text-green-800 uppercase">Verified Document</span>
+                          <span className="text-xs font-semibold text-green-800 uppercase">
+                            Verified Document
+                          </span>
                         </div>
                         <div className="flex items-center justify-between gap-2 bg-white p-2 rounded border border-green-200">
                           <div className="flex-1">
-                            <p className="text-xs text-gray-600 mb-1">File Signature:</p>
+                            <p className="text-xs text-gray-600 mb-1">
+                              File Signature:
+                            </p>
                             <p className="text-base font-mono font-bold text-gray-900 tracking-wider">
                               {signature}
                             </p>
                           </div>
-                        <button
-                          type="button"
-                          onClick={handleCopySignature}
-                          className={`${copiedSignature ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'} text-white p-2 rounded transition-colors duration-150 flex-shrink-0`}
-                          title={copiedSignature ? 'Copied!' : 'Copy signature'}
-                        >
-                          {copiedSignature ? (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          )}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={handleCopySignature}
+                            className={`${
+                              copiedSignature
+                                ? "bg-green-700"
+                                : "bg-green-600 hover:bg-green-700"
+                            } text-white p-2 rounded transition-colors duration-150 flex-shrink-0`}
+                            title={
+                              copiedSignature ? "Copied!" : "Copy signature"
+                            }
+                          >
+                            {copiedSignature ? (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            ) : (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2 mb-3">
+                          <svg
+                            className="w-3 h-3 inline mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          Use this signature to verify document authenticity
+                        </p>
+
+                        {/* QR Code and Validation Link */}
+                        <div className="border-t border-green-200 pt-3 mt-2">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="bg-white p-3 rounded-lg border-2 border-green-300 shadow-sm">
+                              <QRCodeSVG
+                                value={`${window.location.origin}/validate-document?signature=${signature}`}
+                                size={120}
+                                level="M"
+                                includeMargin={false}
+                              />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs font-semibold text-gray-700 mb-2">
+                                Scan QR to validate your document
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigate(`/validate-document?signature=${signature}`);
+                                  closeViewDetailsModal();
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline font-medium flex items-center gap-1 mx-auto"
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                Or click here to validate
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-600 mt-2">
-                        <svg className="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Use this signature to verify document authenticity
-                      </p>
-                    </div>
                     ) : null;
                   })()}
 
@@ -796,7 +1181,9 @@ function ViewRequestDetailsModal() {
                     <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                       <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                        <span className="text-xs text-gray-600">Loading validation data...</span>
+                        <span className="text-xs text-gray-600">
+                          Loading validation data...
+                        </span>
                       </div>
                     </div>
                   )}
@@ -804,15 +1191,30 @@ function ViewRequestDetailsModal() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => window.open(selectedRequest.fulfilledDocumentUrl, '_blank')}
+                      onClick={() =>
+                        window.open(
+                          selectedRequest.fulfilledDocumentUrl,
+                          "_blank"
+                        )
+                      }
                       className="flex-1 bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
                       </svg>
                       Download
                     </button>
-                    {user && user.role === 'admin' && (
+                    {user && user.role === "admin" && (
                       <button
                         type="button"
                         onClick={handleRemoveCompletedDocument}
@@ -820,8 +1222,18 @@ function ViewRequestDetailsModal() {
                         className="bg-red-600 hover:bg-red-700 text-white p-2 rounded text-sm font-medium transition-colors duration-150 disabled:opacity-50 flex items-center justify-center"
                         title="Remove completed document"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       </button>
                     )}
@@ -829,13 +1241,25 @@ function ViewRequestDetailsModal() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {user && user.role === 'admin' ? (
+                  {user && user.role === "admin" ? (
                     <>
                       <div className="flex items-center gap-2 p-2 bg-purple-50 border border-purple-200 rounded">
-                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        <svg
+                          className="w-4 h-4 text-purple-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
                         </svg>
-                        <span className="text-sm text-purple-700 flex-1">Not uploaded</span>
+                        <span className="text-sm text-purple-700 flex-1">
+                          Not uploaded
+                        </span>
                       </div>
                       <input
                         ref={completedDocInputRef}
@@ -848,21 +1272,47 @@ function ViewRequestDetailsModal() {
                       />
                       <label
                         htmlFor="completed-doc-upload"
-                        className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`w-full bg-dark-red-2 hover:bg-dark-red-5 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-150 flex items-center justify-center gap-2 ${
+                          uploading ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
                         </svg>
-                        {uploading ? 'Uploading...' : 'Upload Document'}
+                        {uploading ? "Uploading..." : "Upload Document"}
                       </label>
-                      <p className="text-xs text-gray-500 text-center">PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
+                      <p className="text-xs text-gray-500 text-center">
+                        PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                      </p>
                     </>
                   ) : (
                     <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
-                      <span className="text-sm text-gray-500 flex-1">Processing</span>
+                      <span className="text-sm text-gray-500 flex-1">
+                        Processing
+                      </span>
                     </div>
                   )}
                 </div>
