@@ -409,7 +409,7 @@ function GuestDocumentValidation() {
                     <span className="font-medium text-gray-700">
                       Document Name:{" "}
                     </span>
-                    <span className="text-gray-900">
+                    <span className="text-gray-900 break-all">
                       {documentInfo.documentName}
                     </span>
                   </div>
@@ -437,7 +437,7 @@ function GuestDocumentValidation() {
                       </svg>
                     </div>
                   </div>
-                  <p className="text-lg font-medium mb-1">
+                  <p className="text-lg font-medium mb-1 break-all">
                     {uploadedFile?.name || "uploadedfile.pdf"}
                   </p>
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
@@ -490,14 +490,14 @@ function GuestDocumentValidation() {
                       </svg>
                     </div>
                   </div>
-                  <p className="text-lg font-medium mb-1">
+                  <p className="text-lg font-medium mb-1 break-all">
                     {uploadedFile?.name || "uploadedfile.pdf"}
                   </p>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
                     <p className="text-red-900 text-xl font-bold mb-2">
                       ✗ File signatures does not match!
                     </p>
-                    <p className="text-red-700 text-sm">
+                    <p className="text-red-700 text-sm break-all">
                       Uploaded file signature:{" "}
                       {comparisonResult.uploadedSignature}
                     </p>
