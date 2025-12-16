@@ -283,12 +283,37 @@ const validateDocumentAccess = (operation = "read") => {
   };
 };
 
+// Optional authentication - allows both authenticated and guest users
+const verifyTokenOptional = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    // If no token provided, continue as guest
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      req.user = null;
+      return next();
+    }
+
+    const token = authHeader.split(" ")[1];
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jose.jwtVerify(token, secret);
+
+    req.user = payload;
+    next();
+  } catch (error) {
+    // If token is invalid, treat as guest instead of blocking
+    req.user = null;
+    next();
+  }
+};
+
 export {
   validateLogin,
   validateUserIsAdmin,
   validateUserIsTeacher,
   validateUserIsStudent,
   verifyToken,
+  verifyTokenOptional,
   validateIsActiveUser,
   validatePassword,
   validateUserRole,

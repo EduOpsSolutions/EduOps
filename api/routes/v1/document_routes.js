@@ -28,6 +28,7 @@ import {
 
 import {
   verifyToken,
+  verifyTokenOptional,
   validateIsActiveUser,
   validateUserIsAdmin,
   validateUserRole
@@ -45,7 +46,11 @@ import { uploadSingle } from '../../middleware/multerMiddleware.js';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
+// Public/Guest endpoint - must be before authentication middleware
+// GET /api/v1/documents/validate/:signature - Public endpoint (no auth required, optional for enhanced info)
+router.get('/validate/:signature', verifyTokenOptional, getDocumentValidationBySignature);
+
+// Apply authentication middleware to all other routes
 router.use(verifyToken);
 router.use(validateIsActiveUser);
 
@@ -146,9 +151,6 @@ router.get('/validations/search',
   validateUserIsAdmin, 
   searchDocumentValidations
 );
-
-// GET /api/v1/documents/validate/:signature - Public endpoint (limited info for non-admins)
-router.get('/validate/:signature', getDocumentValidationBySignature);
 
 // POST /api/v1/documents/validations - Admin only
 router.post('/validations', 

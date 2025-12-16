@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
 
-function UploadDocumentValidationModal({ isOpen, onClose, onUpload }) {
+function UploadDocumentSignatureModal({ isOpen, onClose, onUpload }) {
   const [documentName, setDocumentName] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -101,7 +101,7 @@ function UploadDocumentValidationModal({ isOpen, onClose, onUpload }) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">
-            Upload Document for Validation
+            Upload Document for Signature
           </h2>
           <button
             onClick={handleClose}
@@ -235,4 +235,4 @@ function UploadDocumentValidationModal({ isOpen, onClose, onUpload }) {
   );
 }
 
-export default UploadDocumentValidationModal;
+export default UploadDocumentSignatureModal;

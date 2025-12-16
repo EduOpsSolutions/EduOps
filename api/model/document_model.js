@@ -98,16 +98,10 @@ class DocumentModel {
       return null;
     }
 
+    // Find validation by exact file path match only
     const validation = await prisma.document_validation.findFirst({
       where: {
-        OR: [
-          { filePath: request.fulfilledDocumentUrl },
-          {
-            documentName: {
-              contains: `${request.user?.firstName} ${request.user?.lastName}`,
-            },
-          },
-        ],
+        filePath: request.fulfilledDocumentUrl,
       },
       orderBy: { createdAt: "desc" },
       take: 1,
