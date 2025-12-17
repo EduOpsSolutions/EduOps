@@ -174,37 +174,16 @@ export default function Logs() {
         setTotal(response.data.total);
         setTotalPages(response.data.max_page);
 
-        // Calculate stats from current page data
+        // Use summary stats from backend
+        const summary = response.data.summary || {};
         const statsCounts = {
-          total: response.data.total,
-          userActivity: 0,
-          systemActivity: 0,
-          apiResponse: 0,
-          errorLog: 0,
-          securityLog: 0,
+          total: summary.total || 0,
+          userActivity: summary.user_activity || 0,
+          systemActivity: summary.system_activity || 0,
+          apiResponse: summary.api_response || 0,
+          errorLog: summary.error_log || 0,
+          securityLog: summary.security_log || 0,
         };
-
-        data.forEach((log) => {
-          switch (log.type) {
-            case "user_activity":
-              statsCounts.userActivity++;
-              break;
-            case "system_activity":
-              statsCounts.systemActivity++;
-              break;
-            case "api_response":
-              statsCounts.apiResponse++;
-              break;
-            case "error_log":
-              statsCounts.errorLog++;
-              break;
-            case "security_log":
-              statsCounts.securityLog++;
-              break;
-            default:
-              break;
-          }
-        });
 
         setStats(statsCounts);
         setLoading(false);

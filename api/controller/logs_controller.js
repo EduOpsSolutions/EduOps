@@ -57,6 +57,37 @@ export const getLogs = async (req, res) => {
       where: whereClause,
     });
 
+    // Calculate summary stats for all log types (respecting filters except type filter)
+    // We want to show counts for ALL types, but still respect date, module, and user filters
+    const statsWhereClause = { ...whereClause };
+    delete statsWhereClause.type; // Remove type filter for stats calculation
+
+    // Get counts grouped by type
+    const typeCounts = await prisma.logs.groupBy({
+      by: ['type'],
+      where: statsWhereClause,
+      _count: {
+        type: true,
+      },
+    });
+
+    // Build summary object
+    const summary = {
+      total: await prisma.logs.count({ where: statsWhereClause }),
+      user_activity: 0,
+      system_activity: 0,
+      api_response: 0,
+      error_log: 0,
+      security_log: 0,
+    };
+
+    // Populate summary from grouped counts
+    typeCounts.forEach((item) => {
+      if (item.type && summary.hasOwnProperty(item.type)) {
+        summary[item.type] = item._count.type;
+      }
+    });
+
     // Fetch logs with user information
     const logs = await prisma.logs.findMany({
       where: whereClause,
@@ -99,6 +130,7 @@ export const getLogs = async (req, res) => {
       page: parseInt(page),
       max_page: maxPage,
       limit: take,
+      summary: summary, // Add summary stats
     });
   } catch (err) {
     console.error("Get logs error:", err);
